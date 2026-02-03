@@ -9,8 +9,8 @@ import type { AppDispatch, RootState } from '../../../../app/store';
 import { fetchServiceSpecifiques } from '../../../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
 import { fetchExigences } from '../../../../app/front_office/parametre_ticketing/exigenceSlice';
 import { fetchDestinations } from '../../../../app/front_office/parametre_ticketing/destinationSlice';
-import { fetchPays, fetchPaysDetails, clearSelectedPays } from '../../../../app/front_office/parametre_ticketing/paysSlice';   // ← NOUVEAU
-import { fetchAssociationsPaysVoyage } from '../../../../app/front_office/parametre_ticketing/associationsPaysVoyageSlice'; // ← NOUVEAU
+import { fetchPays, fetchPaysDetails, clearSelectedPays } from '../../../../app/front_office/parametre_ticketing/paysSlice';
+import { fetchAssociationsPaysVoyage } from '../../../../app/front_office/parametre_ticketing/associationsPaysVoyageSlice';
 import ServiceSpecifiqueModal from '../../../../components/modals/ServiceSpecifiqueModal';
 import ExigenceModal from '../../../../components/modals/ExigenceModal';
 import PaysModal from '../../../../components/modals/PaysModal';
@@ -30,6 +30,8 @@ export default function ParametreTicketing() {
   // Sous-onglets (ajout 'pays')
   const [activeSubTab, setActiveSubTab] = useState<'exigence' | 'pays' | 'destination'>('exigence');
 
+  const [activePaysTab, setActivePaysTab] = useState('destinations');
+
   // Charger les détails quand un pays est sélectionné
   useEffect(() => {
     if (activeSubTab === 'pays' && selectedPaysId) {
@@ -39,7 +41,7 @@ export default function ParametreTicketing() {
     }
   }, [selectedPaysId, activeSubTab, dispatch]);
 
-  // Modals (on ajoute plus tard modalPays si besoin)
+  // Modals
   const [modalServiceOpen, setModalServiceOpen] = useState(false);
   const [modalExigenceOpen, setModalExigenceOpen] = useState(false);
   const [modalPaysOpen, setModalPaysOpen] = useState(false);
@@ -50,8 +52,8 @@ export default function ParametreTicketing() {
   const serviceState = useSelector((state: RootState) => state.serviceSpecifique);
   const exigenceState = useSelector((state: RootState) => state.exigence);
   const destinationState = useSelector((state: RootState) => state.destination);
-  const paysState = useSelector((state: RootState) => state.pays);   // ← NOUVEAU
-  const assocState = useSelector((state: RootState) => state.associationsPaysVoyage); // ← NOUVEAU
+  const paysState = useSelector((state: RootState) => state.pays);
+  const assocState = useSelector((state: RootState) => state.associationsPaysVoyage);
 
   const paysDetails = useSelector((state: RootState) => state.pays.selectedPaysDetails);
   const detailsLoading = useSelector((state: RootState) => state.pays.detailsLoading);
@@ -64,7 +66,7 @@ export default function ParametreTicketing() {
     }
 
     if (activeTab === 'exigences') {
-      // Chargement forcé de la synthèse (pas conditionné au sub-tab)
+      // Chargement forcé de la synthèse
       if (assocState.items.length === 0 && !assocState.loading) {
         dispatch(fetchAssociationsPaysVoyage());
       }
@@ -73,13 +75,13 @@ export default function ParametreTicketing() {
         dispatch(fetchExigences());
       }
       if (activeSubTab === 'pays' && paysState?.items?.length === 0) {
-        dispatch(fetchPays());   // ← NOUVEAU
+        dispatch(fetchPays());
       }
       if (activeSubTab === 'destination' && destinationState?.items?.length === 0) {
         dispatch(fetchDestinations());
       }
     }
-  }, [dispatch, activeTab, activeSubTab /* , autres dépendances si besoin */]);
+  }, [dispatch, activeTab, activeSubTab]);
 
   // Sélection des items + loading + error selon onglet actif
   const getCurrentData = () => {
@@ -94,6 +96,106 @@ export default function ParametreTicketing() {
   const associations = assocState.items || [];
   const assocLoading = assocState.loading;
   const assocError = assocState.error;
+
+  // ═══════════════════════════════════════════════════════════════
+  // FONCTION DE CONFIGURATION DU TABLEAU (AJOUT)
+  // ═══════════════════════════════════════════════════════════════
+  const getTableConfig = () => {
+    if (activeTab === 'services') {
+      return {
+        headers: ['Code', 'Libellé', 'Type', 'Créé le'],
+        renderRow: (item: any) => (
+          <>
+            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{item.code}</td>
+            <td className="px-6 py-4 whitespace-nowrap text-sm">{item.libelle}</td>
+            <td className="px-6 py-4 whitespace-nowrap">
+              <span className={`px-2.5 py-0.5 rounded-full text-xs ${
+                item.type === 'SPECIFIQUE' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+              }`}>
+                {item.type}
+              </span>
+            </td>
+            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+              {new Date(item.createdAt).toLocaleDateString('fr-FR')}
+            </td>
+          </>
+        )
+      };
+    }
+    
+    if (activeSubTab === 'exigence') {
+      return {
+        headers: ['Type', 'Description', 'Périmètre', 'Créé le'],
+        renderRow: (item: any) => (
+          <>
+            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{item.type}</td>
+            <td className="px-6 py-4 text-sm">{item.description}</td>
+            <td className="px-6 py-4 whitespace-nowrap text-sm">{item.perimetre}</td>
+            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+              {new Date(item.createdAt).toLocaleDateString('fr-FR')}
+            </td>
+          </>
+        )
+      };
+    }
+    
+    if (activeSubTab === 'pays') {
+      return {
+        headers: ['Pays', 'Photo', 'Destinations', 'Créé le'],
+        renderRow: (item: any) => (
+          <>
+            <td 
+              className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900 cursor-pointer hover:text-blue-600 transition-colors"
+              onClick={() => setSelectedPaysId(item.id)}
+            >
+              {item.pays}
+            </td>
+            <td className="px-6 py-4">
+              {item.photo ? (
+                <img
+                  src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:6060/'}${item.photo}`}
+                  alt={item.pays}
+                  className="h-12 w-16 object-cover rounded shadow-sm"
+                />
+              ) : (
+                <span className="text-slate-400 text-sm">Aucune photo</span>
+              )}
+            </td>
+            <td className="px-6 py-4 text-sm text-slate-700">
+              {item.DestinationVoyage?.length || 0} destination(s)
+              {item.DestinationVoyage?.length > 0 && (
+                <div className="text-xs text-slate-500 mt-1">
+                  {item.DestinationVoyage.map((d: any) => d.ville).slice(0, 3).join(', ')}
+                  {item.DestinationVoyage.length > 3 && ' ...'}
+                </div>
+              )}
+            </td>
+            <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+              {new Date(item.createdAt).toLocaleDateString('fr-FR')}
+            </td>
+          </>
+        )
+      };
+    }
+    
+    // Destinations par défaut
+    return {
+      headers: ['Code', 'Pays', 'Ville', 'Créé le'],
+      renderRow: (item: any) => (
+        <>
+          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{item.code}</td>
+          <td className="px-6 py-4 whitespace-nowrap text-sm">{item.pays.pays}</td>
+          <td className="px-6 py-4 whitespace-nowrap text-sm">{item.ville}</td>
+          <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+            {new Date(item.createdAt).toLocaleDateString('fr-FR')}
+          </td>
+        </>
+      )
+    };
+  };
+
+  const tableConfig = getTableConfig();
+  // ═══════════════════════════════════════════════════════════════
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-8 mx-auto font-sans text-slate-900">
@@ -143,7 +245,7 @@ export default function ParametreTicketing() {
         </nav>
       </div>
 
-      {/* ─── NOUVELLE SECTION SYNTHÈSE ─────────────────────────────── */}
+      {/* Section Synthèse */}
       {activeTab === 'exigences' && (
         <div className="mb-6 bg-white rounded-lg border border-slate-200 shadow-sm p-5">
           <div className="flex justify-between items-center mb-4">
@@ -175,7 +277,6 @@ export default function ParametreTicketing() {
                 <strong>Total associations :</strong> {associations.length}
               </div>
 
-              {/* Aperçu des 4-5 premières associations (ou toutes si peu) */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {associations.slice(0, 6).map((assoc) => (
                   <div
@@ -205,7 +306,6 @@ export default function ParametreTicketing() {
           )}
         </div>
       )}
-      {/* ────────────────────────────────────────────────────────────── */}
 
       {/* Sous-onglets Exigences */}
       {activeTab === 'exigences' && (
@@ -260,108 +360,26 @@ export default function ParametreTicketing() {
             </div>
           ) : (
             <div className="overflow-x-auto rounded-lg border border-slate-200 shadow-sm">
+              {/* ═══════════════════════════════════════════════════════════════ */}
+              {/* TABLEAU AMÉLIORÉ AVEC getTableConfig() */}
+              {/* ═══════════════════════════════════════════════════════════════ */}
               <table className="min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-100">
                   <tr>
-                    {activeTab === 'services' ? (
-                      <>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Code</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Libellé</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Type</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Créé le</th>
-                      </>
-                    ) : activeSubTab === 'exigence' ? (
-                      <>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Type</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Description</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Périmètre</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Créé le</th>
-                      </>
-                    ) : activeSubTab === 'pays' ? (
-                      <>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Pays</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Photo</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Destinations</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Créé le</th>
-                      </>
-                    ) : (
-                      // → Pays
-                      <>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Code</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Pays</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Ville</th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Créé le</th>
-                      </>
-                    )}
+                    {tableConfig.headers.map((header) => (
+                      <th 
+                        key={header} 
+                        className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase"
+                      >
+                        {header}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-200">
                   {currentItems.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-50">
-                      {activeTab === 'services' ? (
-                        <>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{item.code}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm">{item.libelle}</td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2.5 py-0.5 rounded-full text-xs ${item.type === 'SPECIFIQUE' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'}`}>
-                              {item.type}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                            {new Date(item.createdAt).toLocaleDateString('fr-FR')}
-                          </td>
-                        </>
-                      ) : activeSubTab === 'exigence' ? (
-                        <>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{item.type}</td>
-                          <td className="px-6 py-4 text-sm">{item.description}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm">{item.perimetre}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                            {new Date(item.createdAt).toLocaleDateString('fr-FR')}
-                          </td>
-                        </>
-                      ) : activeSubTab === 'pays' ? (
-                        <>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900"
-                          onClick={() => setSelectedPaysId(item.id)}
-                          >
-                            {item.pays}
-                          </td>
-                          <td className="px-6 py-4">
-                            {item.photo ? (
-                              <img
-                                src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:6060/'}${item.photo}`}
-                                alt={item.pays}
-                                className="h-12 w-16 object-cover rounded shadow-sm"
-                              />
-                            ) : (
-                              <span className="text-slate-400 text-sm">Aucune photo</span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 text-sm text-slate-700">
-                            {item.DestinationVoyage?.length || 0} destination(s)
-                            {item.DestinationVoyage?.length > 0 && (
-                              <div className="text-xs text-slate-500 mt-1">
-                                {item.DestinationVoyage.map(d => d.ville).slice(0, 3).join(', ')}
-                                {item.DestinationVoyage.length > 3 && ' ...'}
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                            {new Date(item.createdAt).toLocaleDateString('fr-FR')}
-                          </td>
-                        </>
-                      ) : (
-                        // → Affichage Pays
-                        <>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{item.code}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm">{item.pays.pays}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm">{item.ville}</td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                            {new Date(item.createdAt).toLocaleDateString('fr-FR')}
-                          </td>
-                        </>
-                      )}
+                    <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                      {tableConfig.renderRow(item)}
                     </tr>
                   ))}
                 </tbody>
@@ -394,55 +412,87 @@ export default function ParametreTicketing() {
                 )}
               </h3>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Bloc Destinations */}
-                <div>
-                  <h4 className="text-lg font-medium mb-4 text-slate-800">
-                    Destinations associées ({paysDetails.DestinationVoyage?.length || 0})
-                  </h4>
-                  {paysDetails.DestinationVoyage?.length > 0 ? (
-                    <ul className="space-y-3">
-                      {paysDetails.DestinationVoyage.map((dest) => (
-                        <li key={dest.id} className="bg-slate-50 p-3 rounded border border-slate-200">
-                          <div className="font-medium">{dest.ville}</div>
-                          <div className="text-sm text-slate-600">Code : {dest.code}</div>
-                          <div className="text-xs text-slate-500 mt-1">
-                            Créée le {new Date(dest.createdAt).toLocaleDateString('fr-FR')}
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-slate-500 italic">Aucune destination pour ce pays.</p>
-                  )}
-                </div>
+              {/* Navigation des Onglets */}
+              <div className="flex border-b border-slate-200">
+                <button
+                  onClick={() => setActivePaysTab('destinations')}
+                  className={`px-6 py-3 text-sm font-medium transition-colors duration-200 ${
+                    activePaysTab === 'destinations'
+                      ? 'border-b-2 border-indigo-500 text-indigo-600'
+                      : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  Destinations ({paysDetails.DestinationVoyage?.length || 0})
+                </button>
+                <button
+                  onClick={() => setActivePaysTab('exigences')}
+                  className={`px-6 py-3 text-sm font-medium transition-colors duration-200 ${
+                    activePaysTab === 'exigences'
+                      ? 'border-b-2 border-indigo-500 text-indigo-600'
+                      : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+                  }`}
+                >
+                  Exigences ({paysDetails.paysVoyage?.length || 0})
+                </button>
+              </div>
 
-                {/* Bloc Exigences */}
-                <div>
-                  <h4 className="text-lg font-medium mb-4 text-slate-800">
-                    Exigences associées ({paysDetails.paysVoyage?.length || 0})
-                  </h4>
-                  {paysDetails.paysVoyage?.length > 0 ? (
-                    <ul className="space-y-3">
-                      {paysDetails.paysVoyage.map((assoc) => (
-                        <li key={assoc.id} className="bg-indigo-50 p-3 rounded border border-indigo-100">
-                          <div className="font-medium text-indigo-800">
-                            {assoc.exigenceVoyage.type}
-                          </div>
-                          <div className="text-sm text-slate-700 mt-1">
-                            {assoc.exigenceVoyage.description}
-                          </div>
-                          <div className="text-xs text-slate-500 mt-2">
-                            Périmètre : {assoc.exigenceVoyage.perimetre} •
-                            Créée le {new Date(assoc.exigenceVoyage.createdAt).toLocaleDateString('fr-FR')}
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-slate-500 italic">Aucune exigence associée à ce pays.</p>
-                  )}
-                </div>
+              {/* Contenu des Onglets */}
+              <div className="p-6">
+                {activePaysTab === 'destinations' && (
+                  <div className="overflow-x-auto">
+                    {paysDetails.DestinationVoyage?.length > 0 ? (
+                      <table className="min-w-full divide-y divide-slate-200">
+                        <thead className="bg-slate-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Code</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Ville</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200">
+                          {paysDetails.DestinationVoyage.map((dest) => (
+                            <tr key={dest.id} className="hover:bg-slate-50">
+                              <td className="px-4 py-3 text-sm font-mono text-indigo-600">{dest.code}</td>
+                              <td className="px-4 py-3 text-sm text-slate-700">{dest.ville}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <p className="text-slate-500 italic py-4">Aucune destination pour ce pays.</p>
+                    )}
+                  </div>
+                )}
+
+                {activePaysTab === 'exigences' && (
+                  <div className="overflow-x-auto">
+                    {paysDetails.paysVoyage?.length > 0 ? (
+                      <table className="min-w-full divide-y divide-slate-200">
+                        <thead className="bg-slate-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Type</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Description</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Périmètre</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200">
+                          {paysDetails.paysVoyage.map((assoc) => (
+                            <tr key={assoc.id} className="hover:bg-slate-50">
+                              <td className="px-4 py-3 text-sm font-medium text-slate-800">
+                                <span className="px-2 py-1 bg-indigo-100 text-indigo-700 rounded text-xs">
+                                  {assoc.exigenceVoyage.type}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-sm text-slate-600">{assoc.exigenceVoyage.description}</td>
+                              <td className="px-4 py-3 text-sm text-slate-500 italic">{assoc.exigenceVoyage.perimetre}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    ) : (
+                      <p className="text-slate-500 italic py-4">Aucune exigence associée à ce pays.</p>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="mt-6 text-right">

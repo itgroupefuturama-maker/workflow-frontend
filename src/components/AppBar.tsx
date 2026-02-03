@@ -44,12 +44,22 @@ export default function AppBar() {
   const user = useSelector((state: RootState) => state.auth.user);
 
   const segmentLabels: Record<string, string> = {
-    "parametre": "Paramètres",
+    "dossiers-communs": "Dossiers",
+    "dossier-detail": "Détails Dossier", // <--- Pour ta route fixe
+    "prestations": "Prestations",
+    "parametres": "Paramètres",
+    "accueil": "Accueil",
+    "pages": "Pages",
     "client-facture": "Clients Facturés",
     "client-beneficiaire": "Bénéficiaires",
     "profil": "Profils",
     "utilisateur": "Utilisateurs",
-    "nouveau": "Création"
+    "nouveau": "Création",
+    "gerer": "Gestion",
+    "prospection": "Prospection",
+    "ticketing": "Billetterie",
+    "devis": "Devis",
+    "billet": "Billet"
   };
 
   // === SOCKET.IO ) ===
@@ -112,7 +122,6 @@ const deleteNotification = async (notificationId: string) => {
 
   try {
     await axiosInstance.delete(`/notifications/${notificationId}`);
-    
     // Au lieu de filtrer par id, on garde seulement les ACTIF
     // (plus sûr si le backend ne supprime pas vraiment)
     setNotifications(prev => prev.filter(n => n.status === 'ACTIF'));
@@ -143,32 +152,40 @@ const markAllAsRead = async () => {
     ?.flatMap(p => p.profile.modules.map(m => m.module.nom)) || [];
 
   return (
-    <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100 px-8">
+    <header className="sticky top-0 z-50 bg-white border-b border-slate-200 backdrop-blur-md px-10 py-2">
       <div className="h-16 flex items-center justify-between">
-        {/* LEFT : Logo + Breadcrumb */}
         <div className="flex items-center gap-8">
           <Link to="/" className="flex items-center gap-2 group">
-            <div className="h-12 w-12 bg-white rounded-full flex items-center justify-center group-hover:rotate-6 transition-transform overflow-hidden shadow-md">
-              <img src={logo} alt="Logo Al Bouraq" className="h-full w-full object-cover rounded-md" />
+            <div className="h-12 w-12 bg-white rounded-full flex items-center justify-center group-hover:rotate-6 transition-transform overflow-hidden">
+              <img src={logo} alt="Logo" className="h-full w-full object-cover rounded-md" />
             </div>
             <span className="font-bold text-gray-700 tracking-tight hidden sm:block">
               AL BOURAQ Travel
             </span>
           </Link>
+
           <nav className="hidden md:flex items-center text-sm font-medium">
             <div className="h-4 w-px bg-gray-200 mx-2" />
             <div className="flex items-center gap-2 text-gray-400">
               {paths.map((p, index) => {
-                const isId = p.length > 15 || (/\d/.test(p) && p.length > 10);
-                const displayLabel = isId
-                  ? "Fiche Détails"
-                  : (segmentLabels[p] || p.replace(/-/g, ' ').charAt(0).toUpperCase() + p.replace(/-/g, ' ').slice(1));
+                // Détection intelligente : est-ce un ID (UUID ou MongoDB ID) ?
+                const isId = p.length > 20 || (/\d/.test(p) && p.length > 12);
+                // Si c'est un ID, on regarde le segment précédent pour savoir comment le nommer
+                let displayLabel = segmentLabels[p] || p.replace(/-/g, ' ').charAt(0).toUpperCase() + p.replace(/-/g, ' ').slice(1);
+                if (isId) {
+                  const previousSegment = paths[index - 1];
+                  if (previousSegment === 'prestations') displayLabel = "Détail Prestation";
+                  else if (previousSegment === 'dossiers-communs') displayLabel = "Réf. Dossier";
+                  else displayLabel = "Détails";
+                }
+
                 const url = `/${paths.slice(0, index + 1).join("/")}`;
+
                 return (
                   <div key={index} className="flex items-center gap-2">
                     <Link
                       to={url}
-                      className={`capitalize transition-colors ${
+                      className={`transition-colors ${
                         index === paths.length - 1
                           ? "text-indigo-600 font-bold"
                           : "hover:text-gray-600"
@@ -248,7 +265,7 @@ const markAllAsRead = async () => {
                             }`}
                           >
                             <div className="flex items-start gap-3">
-                              <div className={`h-2 w-2 rounded-full mt-2 flex-shrink-0 ${
+                              <div className={`h-2 w-2 rounded-full mt-2 shrink-0 ${
                                 !notif.isRead ? 'bg-indigo-600 animate-ping' : 'bg-gray-300'
                               }`} />
                               <div className="flex-1">
@@ -348,7 +365,7 @@ const markAllAsRead = async () => {
 
       {/* === MODAL PROFIL === */}
       {openProfileModal && user && (
-        <div className="fixed top-100 inset-0 z-999 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
+        <div className="fixed top-100 inset-0 z-999 flex items-center justify-center bg-black/500 backdrop-blur-sm animate-in fade-in duration-300">
           <div
             ref={modalRef}
             className="bg-white rounded-3xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden animate-in zoom-in-95 duration-300"

@@ -1,237 +1,457 @@
-import { useParams, useNavigate } from "react-router-dom";
-import { 
-  FiArrowLeft, FiEdit,FiPackage, FiCheckCircle
-} from "react-icons/fi";
-import { useSelector } from "react-redux";
-// import { useState } from "react";
-import type { RootState } from "../../../app/store";
-import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { FiArrowLeft, FiCalendar, FiEdit, FiFileText, FiPackage, FiPhone, FiUser, FiCheckCircle } from "react-icons/fi";
+import { useDispatch, useSelector } from "react-redux";
+import type { AppDispatch, RootState } from "../../../app/store";
+import { useEffect, useState } from "react";
+import { fetchClientFactureById } from "../../../app/back_office/clientFacturesSlice";
+import { fetchClientBeneficiaireInfos } from "../../../app/portail_client/clientBeneficiaireInfosSlice";
+import BeneficiaireInfosModal from "../../../components/modals/BeneficiaireInfosModal";
 
 export default function DossierCommunDetail() {
-  const { id } = useParams();
   const navigate = useNavigate();
-  const [selectedPrestationId, setSelectedPrestationId] = useState<string | null>(null);
+  const dispatch = useDispatch<AppDispatch>();
+
+  const dossierId = useSelector(
+    (state: RootState) => state.dossierCommun.currentClientFactureId?.id
+  );
 
   const { data: dossiers } = useSelector((state: RootState) => state.dossierCommun);
-  const dossier = dossiers.find((d) => String(d.id) === id || String(d.numero) === id);
+  const dossier = dossiers.find((d) => String(d.id) === dossierId || String(d.numero) === dossierId);
   const user = useSelector((state: RootState) => state.auth.user);
 
-  if (!dossier) {
-    return <div className="p-20 text-center text-gray-500">Dossier introuvable</div>;
-  }
+  const { current: clientFacture, error: cfError } = useSelector(
+    (state: RootState) => state.clientFactures
+  );
+
+  const clientFactureId = useSelector(
+    (state: RootState) => state.dossierCommun.currentClientFactureId?.clientfacture?.id
+  );
+
+  const {
+    list: beneficiaireInfosList,
+    loadingList: infosLoading,
+    error: infosError,
+  } = useSelector((state: RootState) => state.clientBeneficiaireInfos);
+
+  useEffect(() => {
+    if (clientFactureId) {
+      dispatch(fetchClientFactureById(clientFactureId));
+    }
+  }, [clientFactureId, dispatch]);
+
+  const beneficiaires = clientFacture?.beneficiaires || [];
+
+  const [selectedPrestationId, setSelectedPrestationId] = useState<string | null>(() => {
+    const firstActiveColab = dossier?.dossierCommunColab?.find(colab =>
+      colab.status === "CREER" && 
+      colab.prestation?.some(p => p.status === "CREER")
+    );
+    
+    const firstPrest = firstActiveColab?.prestation?.find(p => p.status === "CREER");
+    return firstPrest ? firstPrest.id : null;
+  });
 
   const modulesAccessibles = user?.profiles
     ?.filter(p => p.status === 'ACTIF')
     ?.flatMap(p => p.profile.modules.map(m => m.module.nom)) || [];
 
-  // === LOGIQUE DE SÉLECTION AUTOMATIQUE (hors useEffect) ===
-  // On exécute ça à chaque rendu, mais seulement si rien n'est sélectionné
   if (selectedPrestationId === null) {
-    // Parcourir les colabs actifs
-    for (const colab of dossier.dossierCommunColab || []) {
+    for (const colab of dossier?.dossierCommunColab || []) {
       if (colab.status === "CREER" && colab.prestation && colab.prestation.length > 0) {
         const firstActivePrest = colab.prestation.find(p => p.status === "CREER");
         if (firstActivePrest) {
-          // On utilise un setTimeout à 0 pour defer l'appel → évite l'erreur React
           setTimeout(() => {
             setSelectedPrestationId(firstActivePrest.id);
           }, 0);
-          break; // On sort dès qu'on a trouvé
+          break;
         }
       }
     }
   }
 
-  // → Maintenant, on peut faire l'early return en toute sécurité
+  const [infosModalOpen, setInfosModalOpen] = useState(false);
+  const [selectedBenefName, setSelectedBenefName] = useState<string>('');
+  const [selectedBenefId, setSelectedBenefId] = useState<string | null>(null);
+
+  const handleShowBeneficiaireInfos = (benefId: string, libelle: string) => {
+    setSelectedBenefId(benefId);
+    setSelectedBenefName(libelle);
+    setInfosModalOpen(true);
+    dispatch(fetchClientBeneficiaireInfos(benefId));
+  };
+
   if (!dossier) {
     return <div className="p-20 text-center text-gray-500">Dossier introuvable</div>;
   }
 
-  
-
   return (
-    <div className="min-h-screen bg-[#F8FAFC] p-4 md:p-8 mx-auto font-sans text-slate-900">
-      
-      {/* HEADER : Épuré */}
-      <header className="flex justify-between items-center mb-10">
-        <button 
-          onClick={() => navigate(-1)} 
-          className="flex items-center gap-2 text-slate-500 hover:text-slate-800 transition-colors"
-        >
-          <FiArrowLeft size={20} />
-          <span className="text-xs font-bold uppercase tracking-widest">Retour</span>
-        </button>
-
-        <button
-          onClick={() => navigate(`/dossiers-communs/${dossier.numero}/gerer`)}
-          className="flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-all shadow-sm"
-        >
-          <FiEdit size={18} /> Gérer le dossier
-        </button>
-      </header>
-
-      <div className="gap-8">
-
-        {/* COLONNE DROITE (9) : Détails du Dossier */}
-        <main className="lg:col-span-9 space-y-8">
-          {/* Carte d'information principale */}
-          <section className="bg-white overflow-hidden">
-            <div className="p-8 border-b border-slate-50">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h2 className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-1">Fiche Récapitulative</h2>
-                  <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-                    Numéro Dossier Commun : <span className="text-slate-400">{dossier.numero}</span>
-                  </h1>
-
-                  <div className="space-y-1 mt-6">
-                    <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Description</p>
-                    <p className="text-xs text-slate-500 leading-relaxed italic">
-                      {dossier.description || "Aucune description"}
-                    </p>
-                  </div>
+    <div className="min-h-screen bg-slate-50">
+      {/* HEADER */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+        <div className="max-w-[1600px] mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => navigate('/')}
+                className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all group"
+              >
+                <FiArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+                <span className="text-sm font-medium">Retour</span>
+              </button>
+              
+              <div className="h-6 w-px bg-slate-200"></div>
+              
+              <div>
+                <div className="flex items-center gap-3">
+                  <h1 className="text-xl font-bold text-slate-900">{dossier.numero}</h1>
+                  <span className={`px-3 py-1 rounded-md text-xs font-semibold ${
+                    dossier.status === 'ANNULER' 
+                      ? 'bg-red-100 text-red-700 border border-red-200' 
+                      : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                  }`}>
+                    {dossier.status}
+                  </span>
                 </div>
-                <span className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase border ${
-                  dossier.status === 'ANNULER' 
-                    ? 'bg-red-50 text-red-500 border-red-100' 
-                    : 'bg-emerald-50 text-emerald-600 border-emerald-100'
-                }`}>
-                  {dossier.status}
-                </span>
-              </div>
-            </div>
-
-            <div className="p-8 grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="space-y-1">
-                <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Date de Création</p>
-                <p className="text-xs text-slate-500 leading-relaxed italic">
-                  {dossier.createdAt}
+                <p className="text-sm text-slate-500 mt-0.5">
+                  Créé le {new Date(dossier.createdAt).toLocaleDateString('fr-FR')}
                 </p>
               </div>
-
-              <div className="space-y-1">
-                <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Client Facturé</p>
-                <p className="font-bold text-slate-800">{dossier.clientfacture?.libelle || "Non renseigné"}</p>
-              </div>
-
-              <div className="space-y-1">
-                <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Contacts</p>
-                <p className="font-bold text-slate-800 text-sm">{dossier.contactPrincipal || "—"}</p>
-                {dossier.whatsapp && (
-                  <p className="text-[11px] text-emerald-600 font-bold">WhatsApp: {dossier.whatsapp}</p>
-                )}
-              </div>
-
-              <div className="md:col-span-3">
-                <p className="text-[10px] text-slate-400 uppercase font-bold tracking-widest">Raison d'annulation</p>
-                <p className="text-sm font-bold text-red-700">{dossier.raisonAnnulation}</p>
-              </div>
             </div>
-          </section>
 
-          {/* COLONNE BAS : Liste des Modules */}
-          <aside className="lg:col-span-12 space-y-10">
-            <div className="px-3 sm:px-4">
-              <h2 className="text-xs font-extrabold text-gray-500 uppercase tracking-[0.25em] mb-6">
-                Tableau de bord • Modules
-              </h2>
+            <button
+              onClick={() => navigate(`/dossiers-communs/${dossier.numero}/gerer`)}
+              className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-all shadow-sm hover:shadow-md"
+            >
+              <FiEdit size={18} />
+              Gérer le dossier
+            </button>
+          </div>
+        </div>
+      </header>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5 md:gap-6">
-                {/* Carte To Do List – lumineuse et accueillante */}
-                <div
-                  onClick={() => navigate('/dossiers-communs/prestations/todolist')}
-                  className="group relative bg-gradient-to-br from-indigo-50 to-blue-50 rounded-2xl border border-indigo-200 shadow-sm overflow-hidden transition-all duration-300 hover:shadow-md hover:border-indigo-300 hover:-translate-y-1 cursor-pointer flex flex-col items-center justify-center p-7 min-h-[180px]"
-                >
-                  <div className="absolute -top-8 -right-8 opacity-10">
-                    <FiCheckCircle size={90} className="text-indigo-300" />
-                  </div>
-                  <div className="bg-white/70 backdrop-blur-sm p-4 rounded-2xl mb-5 shadow-sm group-hover:scale-110 transition-all duration-300">
-                    <FiCheckCircle size={36} className="text-indigo-600" />
-                  </div>
-                  <h3 className="text-indigo-800 font-bold text-lg tracking-wide">To Do List</h3>
-                  <p className="text-indigo-600/80 text-sm mt-2 font-medium">Gérer mes tâches prioritaires</p>
-                </div>
+      <div className="max-w-[1600px] mx-auto px-6 py-8">
+        {/* SECTION INFORMATIONS GÉNÉRALES */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <FiFileText className="text-indigo-600" size={20} />
+            Informations générales
+          </h2>
+          
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            <table className="min-w-full divide-y divide-slate-200">
+              <tbody className="divide-y divide-slate-100">
+                <tr className="hover:bg-slate-50/50 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-2 text-sm font-medium text-slate-900">
+                      <FiFileText className="text-slate-400" size={16} />
+                      Description
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <p className="text-sm text-slate-700">{dossier.description || "Aucune description"}</p>
+                  </td>
+                </tr>
 
-                {/* Cartes des modules – style clair et aéré */}
-                {dossier.dossierCommunColab
-                  ?.filter((colab) => {
-                    const isCreated = colab.status === "CREER";
-                    const isAssignedToMe = modulesAccessibles.some(
-                      (mod) =>
-                        mod === colab.module.nom &&
-                        user?.prenom === colab.user.prenom &&
-                        user?.nom === colab.user.nom
-                    );
-                    return isCreated && isAssignedToMe;
-                  })
-                  .flatMap((colab) =>
-                    colab.prestation?.map((prest) => (
-                      <div
-                        key={prest.id}
-                        className="group bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all duration-300 overflow-hidden flex flex-col h-full"
-                      >
-                        {/* En-tête cliquable */}
-                        <div
-                          onClick={() => navigate(`/prestations/${prest.id}`)}
-                          className="px-5 py-4 bg-gradient-to-r from-indigo-50/70 to-blue-50/40 border-b border-gray-200 cursor-pointer transition-colors group/header"
-                        >
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="space-y-1.5">
-                              <h3 className="text-base font-bold text-indigo-700 group-hover/header:text-indigo-600 transition-colors">
-                                {colab.module.nom}
-                              </h3>
-                              <p className="text-sm text-gray-600 font-medium">
-                                {colab.user.prenom} {colab.user.nom}
-                              </p>
-                              <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm mt-1">
-                                <span className="font-mono bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-md text-xs">
-                                  {prest.numeroDos}
-                                </span>
-                                <span className="text-gray-500 text-xs">
-                                  {prest.createdAt
-                                    ? new Date(prest.createdAt).toLocaleDateString('fr-FR', {
-                                        day: 'numeric',
-                                        month: 'short',
-                                        year: 'numeric'
-                                      })
-                                    : '—'}
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="p-2.5 rounded-xl bg-indigo-100/60 text-indigo-600 group-hover/header:bg-indigo-200/70 transition-colors">
-                              <FiPackage size={22} />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Zone d’action centrale */}
-                        <div
-                          onClick={() => navigate(`/prestations/${prest.id}`)}
-                          className="flex-1 p-6 flex items-center justify-center cursor-pointer hover:bg-indigo-50/30 transition-colors"
-                        >
-                          <p className="text-sm font-medium text-indigo-600 group-hover:text-indigo-700 flex items-center gap-2">
-                            Ouvrir la prestation <span aria-hidden="true">→</span>
-                          </p>
-                        </div>
+                <tr className="hover:bg-slate-50/50 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-2 text-sm font-medium text-slate-900">
+                      <FiUser className="text-slate-400" size={16} />
+                      Client facturé
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">
+                          {dossier.clientfacture?.libelle || "—"}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Code: {dossier.clientfacture?.code || "—"}
+                        </p>
                       </div>
-                    ))
-                  )}
+                    </div>
+                  </td>
+                </tr>
 
-                {/* Aucun module */}
-                {(!dossier.dossierCommunColab ||
-                  dossier.dossierCommunColab.filter((c) => c.status === "CREER").length === 0) && (
-                  <div className="col-span-full py-14 text-center">
-                    <p className="text-sm text-gray-500">
-                      Aucun module collaboratif actif pour le moment
+                <tr className="hover:bg-slate-50/50 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-2 text-sm font-medium text-slate-900">
+                      <FiPhone className="text-slate-400" size={16} />
+                      Contact principal
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-4">
+                      <p className="text-sm font-medium text-slate-700">
+                        {dossier.contactPrincipal || "Non renseigné"}
+                      </p>
+                      {dossier.whatsapp && (
+                        <a 
+                          href={`https://wa.me/${dossier.whatsapp}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-medium hover:bg-emerald-100 transition-colors"
+                        >
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                          </svg>
+                          {dossier.whatsapp}
+                        </a>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+
+                <tr className="hover:bg-slate-50/50 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="flex items-center gap-2 text-sm font-medium text-slate-900">
+                      <FiCalendar className="text-slate-400" size={16} />
+                      Date de création
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <p className="text-sm text-slate-700">
+                      {new Date(dossier.createdAt).toLocaleDateString('fr-FR', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
                     </p>
-                  </div>
-                )}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* SECTION BÉNÉFICIAIRES */}
+        <div className="mb-8">
+          <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <FiUser className="text-indigo-600" size={20} />
+            Clients bénéficiaires ({beneficiaires.length})
+          </h2>
+          
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            {cfError ? (
+              <div className="p-6 bg-red-50 text-red-700 text-sm">{cfError}</div>
+            ) : beneficiaires.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <FiUser className="text-slate-400" size={24} />
+                </div>
+                <p className="text-slate-500 font-medium">Aucun bénéficiaire associé</p>
               </div>
-            </div>
-          </aside>
-        </main>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-slate-200">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Code
+                      </th>
+                      <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Libellé
+                      </th>
+                      <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Statut
+                      </th>
+                      <th className="px-6 py-3.5 text-right text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {beneficiaires.map((link) => (
+                      <tr
+                        key={link.clientBeneficiaireId}
+                        className="hover:bg-slate-50/70 transition-colors group"
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm font-mono text-slate-600">
+                            {link.clientBeneficiaire.code}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="text-sm font-semibold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                            {link.clientBeneficiaire.libelle}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold ${
+                            link.clientBeneficiaire.statut === 'ACTIF' 
+                              ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' 
+                              : 'bg-red-100 text-red-700 border border-red-200'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                              link.clientBeneficiaire.statut === 'ACTIF' ? 'bg-emerald-500' : 'bg-red-500'
+                            }`}></span>
+                            {link.clientBeneficiaire.statut}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                          <button
+                            onClick={() => handleShowBeneficiaireInfos(link.clientBeneficiaireId, link.clientBeneficiaire.libelle)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-colors"
+                          >
+                            Voir détails
+                            <span className="group-hover:translate-x-0.5 transition-transform">→</span>
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* SECTION PRESTATIONS */}
+        <div>
+          <h2 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
+            <FiPackage className="text-indigo-600" size={20} />
+            Prestations assignées
+          </h2>
+
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+            {(() => {
+              const prestations = dossier.dossierCommunColab
+                ?.filter((colab) => {
+                  const isCreated = colab.status === "CREER";
+                  const isAssignedToMe = modulesAccessibles.some(
+                    (mod) =>
+                      mod === colab.module.nom &&
+                      user?.prenom === colab.user.prenom &&
+                      user?.nom === colab.user.nom
+                  );
+                  return isCreated && isAssignedToMe;
+                })
+                .flatMap((colab) =>
+                  colab.prestation?.map((prest) => ({
+                    ...prest,
+                    moduleName: colab.module.nom,
+                    userName: `${colab.user.prenom} ${colab.user.nom}`
+                  }))
+                ) || [];
+
+              if (prestations.length === 0) {
+                return (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <FiPackage className="text-slate-400" size={24} />
+                    </div>
+                    <p className="text-slate-500 font-medium">Aucune prestation active</p>
+                    <p className="text-slate-400 text-sm mt-1">Les prestations apparaîtront ici une fois assignées</p>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-slate-200">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                          Module
+                        </th>
+                        <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                          Numéro Dossier
+                        </th>
+                        <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                          Assigné à
+                        </th>
+                        <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                          Date création
+                        </th>
+                        <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                          Statut
+                        </th>
+                        <th className="px-6 py-3.5 text-right text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {prestations.map((prest) => (
+                        <tr
+                          key={prest.id}
+                          className="hover:bg-slate-50/70 transition-colors group cursor-pointer"
+                          onClick={() => navigate(`/dossiers-communs/${prest.id}`)}
+                        >
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
+                                <FiPackage className="text-indigo-600" size={16} />
+                              </div>
+                              <span className="text-sm font-semibold text-slate-900">
+                                {prest.moduleName}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm font-mono text-slate-600">
+                              {prest.numeroDos}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 bg-slate-200 rounded-full flex items-center justify-center">
+                                <FiUser className="text-slate-600" size={12} />
+                              </div>
+                              <span className="text-sm text-slate-700">
+                                {prest.userName}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center gap-1.5 text-sm text-slate-600">
+                              <FiCalendar className="text-slate-400" size={14} />
+                              {prest.createdAt
+                                ? new Date(prest.createdAt).toLocaleDateString('fr-FR')
+                                : '—'}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-emerald-100 text-emerald-700 border border-emerald-200">
+                              <FiCheckCircle className="mr-1.5" size={12} />
+                              Active
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/dossiers-communs/${prest.id}`);
+                              }}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-colors"
+                            >
+                              Ouvrir
+                              <span className="group-hover:translate-x-0.5 transition-transform">→</span>
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
       </div>
+
+      {/* MODAL BÉNÉFICIAIRE */}
+      {selectedBenefId && (
+        <BeneficiaireInfosModal
+          isOpen={infosModalOpen}
+          onClose={() => setInfosModalOpen(false)}
+          infos={beneficiaireInfosList}
+          beneficiaireName={selectedBenefName}
+          loading={infosLoading}
+          error={infosError}
+        />
+      )}
     </div>
   );
 }

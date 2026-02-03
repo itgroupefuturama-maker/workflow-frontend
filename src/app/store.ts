@@ -39,6 +39,12 @@ import exigenceReducer from './front_office/parametre_ticketing/exigenceSlice';
 import destinationReducer from './front_office/parametre_ticketing/destinationSlice';
 import paysReducer from './front_office/parametre_ticketing/paysSlice';
 import associationsPaysVoyageReducer from './front_office/parametre_ticketing/associationsPaysVoyageSlice';
+import billetReducer from './front_office/billetSlice';
+import suiviReducer from './front_office/suiviSlice';
+import commentaireReducer from './front_office/commentaireSlice';
+import etatVenteReducer from './front_office/etatVenteSlice';
+import etatAnnulationReducer from './front_office/etatAnnulationSlice';
+import etatMensuelDestinationReducer from './front_office/etatMensuelDestinationSlice';
 
 import {
   FLUSH,
@@ -85,6 +91,12 @@ const appReducer = combineReducers({
   destination: destinationReducer,
   pays: paysReducer,
   associationsPaysVoyage: associationsPaysVoyageReducer,
+  billet: billetReducer,
+  suivi: suiviReducer,
+  commentaire: commentaireReducer,
+  etatVente: etatVenteReducer,
+  etatAnnulation: etatAnnulationReducer,
+  etatMensuelDestination: etatMensuelDestinationReducer,
 
   // Portail-client
   clientBeneficiaireInfos: clientBeneficiaireInfosReducer,

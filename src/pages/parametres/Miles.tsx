@@ -230,7 +230,7 @@ const MilesPage = () => {
                   <tr>
                     <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Borne CA Inférieure</th>
                     <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Borne CA Supérieure</th>
-                    <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest text-indigo-600">Points Miles</th>
+                    <th className="px-6 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest">Points Miles</th>
                     <th className="px-6 py-4 text-center text-[10px] font-black text-gray-400 uppercase tracking-widest">Action</th>
                   </tr>
                 </thead>

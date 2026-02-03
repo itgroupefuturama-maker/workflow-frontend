@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axiosInstance from '../../service/Axios';
+import type { RootState } from '../store';
 
 // Modifiez l'interface pour correspondre exactement à la réponse JSON de votre serveur
 export interface BeneficiaireLink {
@@ -39,14 +40,20 @@ export interface ClientFacture {
   } | null;
 }
 
+export interface ClientFactureDetail extends ClientFacture {
+  beneficiaires: BeneficiaireLink[];
+}
+
 export interface ClientFacturesState {
   data: ClientFacture[];
+  current: ClientFactureDetail | null;
   loading: boolean;
   error: string | null;
 }
 
 const initialState: ClientFacturesState = {
   data: [],
+  current: null,
   loading: false,
   error: null,
 };
@@ -314,6 +321,33 @@ export const assignUserToClientFacture = createAsyncThunk<
   }
 );
 
+export const fetchClientFactureById = createAsyncThunk<
+  ClientFactureDetail,
+  string,  // id du client facture
+  { state: RootState }
+>(
+  'clientFactures/fetchById',
+  async (id, { getState, rejectWithValue }) => {
+    try {
+      const { auth } = getState();
+      if (!auth.token) return rejectWithValue('Token manquant');
+
+      const response = await axiosInstance.get(`/client-factures/${id}`, {
+        headers: { Authorization: `Bearer ${auth.token}` },
+      });
+
+      if (response.data.success && response.data.data) {
+        return response.data.data as ClientFactureDetail;
+      }
+      return rejectWithValue('Client facture non trouvé');
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || 'Erreur lors de la récupération du client facture'
+      );
+    }
+  }
+);
+
 const clientFacturesSlice = createSlice({
   name: 'clientFactures',
   initialState,
@@ -359,6 +393,20 @@ const clientFacturesSlice = createSlice({
       .addCase(assignUserToClientFacture.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+      })
+      // fetchClientFactureById
+      .addCase(fetchClientFactureById.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchClientFactureById.fulfilled, (state, action) => {
+        state.loading = false;
+        state.current = action.payload;
+      })
+      .addCase(fetchClientFactureById.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+        state.current = null;
       });
   },
 });

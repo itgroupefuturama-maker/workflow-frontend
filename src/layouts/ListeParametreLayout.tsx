@@ -119,7 +119,7 @@ export default function ParametreLayout() {
   return (
     <div className="flex flex-col h-screen bg-gray-100">
       <AppBar />
-      <main className="flex-1 p-6 overflow-auto">
+      <main className="flex-1 overflow-auto">
         <Outlet />
       </main>
     </div>

@@ -107,6 +107,24 @@ export const deleteTodo = createAsyncThunk(
   }
 );
 
+// Ajouter ce thunk dans le même fichier
+export const fetchTodosByPrestation = createAsyncThunk(
+  'todos/fetchByPrestation',
+  async (prestationId: string, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.get(`/todolists/prestation/${prestationId}`);
+      if (!res.data.success) {
+        throw new Error('Erreur chargement rappels');
+      }
+      return res.data.data; // tableau de Todo[]
+    } catch (err: any) {
+      return rejectWithValue(
+        err?.response?.data?.message || 'Erreur lors du chargement des rappels'
+      );
+    }
+  }
+);
+
 const todosSlice = createSlice({
   name: 'todos',
   initialState,
@@ -166,6 +184,18 @@ const todosSlice = createSlice({
     .addCase(deleteTodo.fulfilled, (state, action) => {
       const deletedId = action.payload;
       state.items = state.items.filter((t) => t.rappel.id !== deletedId);
+    })
+    .addCase(fetchTodosByPrestation.pending, (state) => {
+      state.loading = true;
+      state.error = null;
+    })
+    .addCase(fetchTodosByPrestation.fulfilled, (state, action: PayloadAction<Todo[]>) => {
+      state.loading = false;
+      state.items = action.payload;
+    })
+    .addCase(fetchTodosByPrestation.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.payload as string;
     });
   },
 });

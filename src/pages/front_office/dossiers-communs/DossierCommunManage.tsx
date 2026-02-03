@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { FiArrowLeft, FiUsers, FiCheck, FiTrash2, FiX } from "react-icons/fi";
+import { FiArrowLeft, FiUsers, FiCheck, FiTrash2, FiX, FiPackage, FiUser, FiFileText } from "react-icons/fi";
 import { useSelector, useDispatch } from "react-redux";
 import { useState, useEffect } from "react";
 import type { RootState, AppDispatch } from "../../../app/store";
@@ -31,18 +31,6 @@ export default function DossierCommunManage() {
   const [currentColabs, setCurrentColabs] = useState<{ moduleId: string; userId: string }[]>([]);
   const [isSavingColabs, setIsSavingColabs] = useState(false);
   const { data: profiles } = useSelector((state: RootState) => state.profiles);
-
-  // useEffect(() => {
-  //   dispatch(fetchDossiersCommuns());
-  //   if (dossier?.dossierCommunColab) {
-  //     setCurrentColabs(
-  //       dossier.dossierCommunColab.map((c: any) => ({
-  //         moduleId: c.module.id,
-  //         userId: c.user.id,
-  //       }))
-  //     );
-  //   }
-  // }, [dossier]);
 
   const [hasLoaded, setHasLoaded] = useState(false);
 
@@ -271,308 +259,446 @@ const handleAnnulerDossier = async () => {
 };
 
   return (
-    <div className="p-8 max-w-6xl mx-auto relative">
-      {/* Notification Toast */}
-      {notification && (
-        <div
-          className={`fixed top-4 right-4 z-50 flex items-center gap-3 px-6 py-4 rounded-xl shadow-2xl text-white font-bold animate-in slide-in-from-top duration-500 ${
-            notification.type === "success" ? "bg-emerald-600" : "bg-red-600"
-          }`}
-        >
-          {notification.type === "success" ? <FiCheck size={20} /> : <FiX size={20} />}
-          <span>{notification.message}</span>
-          <button onClick={() => setNotification(null)} className="ml-4 hover:opacity-70">
-            <FiX size={18} />
-          </button>
-        </div>
-      )}
-
-      <button
-        onClick={() => navigate(-1)}
-        className="flex items-center gap-2 text-gray-600 hover:text-indigo-600 mb-8 font-medium"
+  <div className="min-h-screen bg-slate-50">
+    {/* NOTIFICATION TOAST */}
+    {notification && (
+      <div
+        className={`fixed top-6 right-6 z-50 flex items-center gap-3 px-6 py-4 rounded-xl shadow-lg border text-white font-medium animate-in slide-in-from-top duration-300 ${
+          notification.type === "success" 
+            ? "bg-emerald-600 border-emerald-700" 
+            : "bg-red-600 border-red-700"
+        }`}
       >
-        <FiArrowLeft size={20} />
-        Retour
-      </button>
-
-      {/* Section titre et bouton annuler */}
-      <div className="flex justify-between items-start mb-8">
-        <div>
-          <h1 className="text-4xl font-black text-gray-900">
-            Dossier Commun N°{dossier.numero} {dossier.id}
-          </h1>
-          <span className={`mt-2 inline-block px-3 py-1 rounded-full text-xs font-bold uppercase ${
-            dossier.status === 'ANNULE' ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'
-          }`}>
-            Statut: {dossier.status}
-          </span>
-        </div>
-
-        {dossier.status !== 'ANNULE' && (
-          <button
-            onClick={() => setShowCancelModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-white border-2 border-red-100 text-red-500 rounded-xl font-bold hover:bg-red-50 transition-colors"
-          >
-            <FiTrash2 /> Annuler le dossier
-          </button>
-        )}
+        {notification.type === "success" ? <FiCheck size={20} /> : <FiX size={20} />}
+        <span>{notification.message}</span>
+        <button 
+          onClick={() => setNotification(null)} 
+          className="ml-4 hover:opacity-70 transition-opacity"
+        >
+          <FiX size={18} />
+        </button>
       </div>
+    )}
 
-      {/* === SECTION RESPONSABLES === */}
-      <div className="bg-white rounded-3xl shadow-lg p-10 mb-12">
-        <div className="flex items-center gap-3 mb-8">
-          <FiUsers size={28} className="text-indigo-600" />
-          <h2 className="text-2xl font-black text-gray-900">
-            Attribution des responsables ({currentColabs.length})
+    {/* HEADER */}
+    <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
+      <div className="max-w-[1600px] mx-auto px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate(-1)}
+              className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all group"
+            >
+              <FiArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+              <span className="text-sm font-medium">Retour</span>
+            </button>
+            
+            <div className="h-6 w-px bg-slate-200"></div>
+            
+            <div>
+              <h1 className="text-xl font-bold text-slate-900">
+                Gestion du dossier N°{dossier.numero}
+              </h1>
+              <div className="flex items-center gap-2 mt-1">
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-semibold ${
+                  dossier.status === 'ANNULE' 
+                    ? 'bg-red-100 text-red-700 border border-red-200' 
+                    : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+                    dossier.status === 'ANNULE' ? 'bg-red-500' : 'bg-emerald-500'
+                  }`}></span>
+                  {dossier.status}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {dossier.status !== 'ANNULE' && (
+            <button
+              onClick={() => setShowCancelModal(true)}
+              className="flex items-center gap-2 px-5 py-2.5 bg-white border border-red-200 text-red-600 rounded-lg font-medium hover:bg-red-50 hover:border-red-300 transition-all shadow-sm"
+            >
+              <FiTrash2 size={18} />
+              Annuler le dossier
+            </button>
+          )}
+        </div>
+      </div>
+    </header>
+
+    <div className="max-w-[1600px] mx-auto px-6 py-8">
+      {/* SECTION RESPONSABLES */}
+      <div className="mb-8">
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
+            <FiUsers className="text-indigo-600" size={20} />
+            Attribution des responsables
           </h2>
+          <p className="text-sm text-slate-600">
+            Gérez les responsables de chaque module ({currentColabs.length} module(s) activé(s))
+          </p>
         </div>
 
-        <table className="w-full">
-          <thead>
-            <tr className="text-left text-xs font-medium text-gray-500 uppercase border-b">
-              <th className="pb-4 pl-4">Activer</th>
-              <th className="pb-4">Module</th>
-              <th className="pb-4">Responsable actuel</th>
-              <th className="pb-4">Nouveau responsable</th>
-              {/* <th className="pb-4 text-right pr-4">Action</th> */}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {getModulesWithUsers().map(({ id: moduleId, module, users }) => {
-              const currentColab = currentColabs.find((c) => c.moduleId === moduleId);
-              const isChecked = !!currentColab;
-              // On cherche uniquement celui qui a le statut "CREER"
-              const responsableActuel = dossier.dossierCommunColab?.find(
-                (c: any) => c.module.id === moduleId && c.status === "CREER"
-              );
-
-              return (
-                <tr key={moduleId} className={isChecked ? "bg-emerald-50" : ""}>
-                  <td className="py-4 pl-4">
-                    <input
-                      type="checkbox"
-                      checked={isChecked}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          const firstUserId = users[0]?.userId || "";
-                          setCurrentColabs((prev) => [
-                            ...prev.filter((c) => c.moduleId !== moduleId),
-                            { moduleId, userId: firstUserId },
-                          ]);
-                        } else {
-                          setCurrentColabs((prev) => prev.filter((c) => c.moduleId !== moduleId));
-                        }
-                      }}
-                      className="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500"
-                    />
-                  </td>
-                  <td className="py-4 font-medium text-gray-900">{module.nom} {module.id}</td>
-                  <td className="py-4 text-sm">
-                    {responsableActuel ? (
-                      <div className="flex flex-col">
-                        <span className="text-gray-700 font-medium">
-                          {responsableActuel.user.prenom} {responsableActuel.user.nom}
-                        </span>
-                        <span className="text-gray-700 font-medium">
-                          {responsableActuel.user.id}
-                        </span>
-                        <span className="text-[10px] text-emerald-600 font-bold uppercase">
-                          Responsable Actif
-                        </span>
-                        {currentColab && currentColab.userId !== responsableActuel.user.id && (
-                          <span className="mt-1 text-xs bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full w-fit">
-                            → Remplacement prévu
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="text-gray-400 italic">Aucun responsable actif</span>
-                    )}
-                  </td>
-                  <td className="py-4">
-                    {isChecked && (
-                      <select
-                        value={currentColab?.userId || users[0]?.userId || ""}
-                        onChange={(e) => {
-                          setCurrentColabs((prev) => {
-                            const filtered = prev.filter((c) => c.moduleId !== moduleId);
-                            return [...filtered, { moduleId, userId: e.target.value }];
-                          });
-                        }}
-                        className="px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500"
-                      >
-                        {users.map((user) => (
-                          <option key={user.userId} value={user.userId}>
-                            {user.prenom} {user.nom} {user.id}
-                          </option>
-                        ))}
-                      </select>
-                    )}
-                  </td>
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-slate-200">
+              <thead className="bg-slate-50">
+                <tr>
+                  <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider w-20">
+                    Actif
+                  </th>
+                  <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                    Module
+                  </th>
+                  <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                    Responsable actuel
+                  </th>
+                  <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                    Nouveau responsable
+                  </th>
                 </tr>
-              );
-            })}
-          </tbody>
-        </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {getModulesWithUsers().map(({ id: moduleId, module, users }) => {
+                  const currentColab = currentColabs.find((c) => c.moduleId === moduleId);
+                  const isChecked = !!currentColab;
+                  const responsableActuel = dossier.dossierCommunColab?.find(
+                    (c: any) => c.module.id === moduleId && c.status === "CREER"
+                  );
 
-        <div className="mt-8 flex justify-end">
-          <button
-            onClick={handleSaveColabs}
-            disabled={isSavingColabs}
-            className="px-8 py-3 bg-emerald-600 text-white font-bold rounded-xl hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-2"
-          >
-            {isSavingColabs ? "Sauvegarde..." : "Sauvegarder les responsables"}
-          </button>
+                  return (
+                    <tr 
+                      key={moduleId} 
+                      className={`transition-colors ${
+                        isChecked ? 'bg-emerald-50/30' : 'hover:bg-slate-50/50'
+                      }`}
+                    >
+                      <td className="px-6 py-4">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              const firstUserId = users[0]?.userId || "";
+                              setCurrentColabs((prev) => [
+                                ...prev.filter((c) => c.moduleId !== moduleId),
+                                { moduleId, userId: firstUserId },
+                              ]);
+                            } else {
+                              setCurrentColabs((prev) => prev.filter((c) => c.moduleId !== moduleId));
+                            }
+                          }}
+                          className="w-5 h-5 text-emerald-600 rounded border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-0 cursor-pointer"
+                        />
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center">
+                            <FiPackage className="text-indigo-600" size={14} />
+                          </div>
+                          <span className="text-sm font-semibold text-slate-900">
+                            {module.nom}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        {responsableActuel ? (
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2">
+                              <div className="w-7 h-7 bg-slate-200 rounded-full flex items-center justify-center">
+                                <FiUser className="text-slate-600" size={12} />
+                              </div>
+                              <span className="text-sm font-medium text-slate-900">
+                                {responsableActuel.user.prenom} {responsableActuel.user.nom}
+                              </span>
+                            </div>
+                            <span className="text-xs text-emerald-600 font-medium ml-9">
+                              ● Responsable actif
+                            </span>
+                            {currentColab && currentColab.userId !== responsableActuel.user.id && (
+                              <span className="mt-1 ml-9 text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-md w-fit border border-amber-200">
+                                → Remplacement prévu
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-sm text-slate-400 italic">Aucun responsable actif</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4">
+                        {isChecked && (
+                          <select
+                            value={currentColab?.userId || users[0]?.userId || ""}
+                            onChange={(e) => {
+                              setCurrentColabs((prev) => {
+                                const filtered = prev.filter((c) => c.moduleId !== moduleId);
+                                return [...filtered, { moduleId, userId: e.target.value }];
+                              });
+                            }}
+                            className="px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white"
+                          >
+                            {users.map((user) => (
+                              <option key={user.userId} value={user.userId}>
+                                {user.prenom} {user.nom}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* FOOTER AVEC BOUTON DE SAUVEGARDE */}
+          <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end">
+            <button
+              onClick={handleSaveColabs}
+              disabled={isSavingColabs}
+              className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+            >
+              {isSavingColabs ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Sauvegarde en cours...
+                </>
+              ) : (
+                <>
+                  <FiCheck size={18} />
+                  Sauvegarder les responsables
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* === SECTION BÉNÉFICIAIRES & DOCUMENTS === */}
-      <div className="bg-white rounded-3xl shadow-lg p-10 mt-10">
-        <div className="flex items-center gap-3 mb-8">
-          <FiUsers size={28} className="text-purple-600" />
-          <h2 className="text-2xl font-black text-gray-900">Bénéficiaires et Documents</h2>
+      {/* SECTION BÉNÉFICIAIRES & DOCUMENTS */}
+      <div>
+        <div className="mb-6">
+          <h2 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
+            <FiUsers className="text-purple-600" size={20} />
+            Bénéficiaires et Documents
+          </h2>
+          <p className="text-sm text-slate-600">
+            Attachez des documents aux bénéficiaires du dossier
+          </p>
         </div>
 
-        {/* Onglets des bénéficiaires parents (comme dans le Form) */}
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2 border-b">
-          {clientFactureComplet?.beneficiaires?.map((link) => {
-            const benef = link.clientBeneficiaire;
-            if (!benef) return null;
-            const isSelected = displayedBeneficiaireId === benef.id;
-            const countInDossier = dossier.dossierCommunClient?.filter(
-                c => c.clientbeneficiaireInfo?.id === benef.id
-            ).length || 0;
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+          {/* ONGLETS DES BÉNÉFICIAIRES */}
+          <div className="border-b border-slate-200 bg-slate-50/50">
+            <div className="flex gap-1 p-2 overflow-x-auto scrollbar-thin scrollbar-thumb-slate-300">
+              {clientFactureComplet?.beneficiaires?.map((link) => {
+                const benef = link.clientBeneficiaire;
+                if (!benef) return null;
+                const isSelected = displayedBeneficiaireId === benef.id;
+                const countInDossier = dossier.dossierCommunClient?.filter(
+                  c => c.clientbeneficiaireInfo?.id === benef.id
+                ).length || 0;
 
-            return (
-              <button
-                key={benef.id}
-                onClick={() => setDisplayedBeneficiaireId(benef.id)}
-                className={`px-4 py-2 rounded-t-lg text-sm font-bold transition-all ${
-                  isSelected 
-                    ? "bg-purple-600 text-white shadow-md" 
-                    : "bg-gray-100 text-gray-500 hover:bg-gray-200"
-                }`}
-              >
-                {benef.libelle}
-                {countInDossier > 0 && (
-                  <span className="ml-2 bg-white/20 px-2 py-0.5 rounded-full text-xs">
-                    {countInDossier}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
+                return (
+                  <button
+                    key={benef.id}
+                    onClick={() => setDisplayedBeneficiaireId(benef.id)}
+                    className={`px-5 py-2.5 rounded-lg text-sm font-medium transition-all whitespace-nowrap ${
+                      isSelected 
+                        ? "bg-purple-600 text-white shadow-md" 
+                        : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+                    }`}
+                  >
+                    {benef.libelle}
+                    {countInDossier > 0 && (
+                      <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-semibold ${
+                        isSelected ? 'bg-white/20' : 'bg-purple-100 text-purple-700'
+                      }`}>
+                        {countInDossier}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
-        {/* Liste des infos/documents pour le bénéficiaire choisi */}
-        {displayedBeneficiaireId && (
-          <div className="space-y-6">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead className="text-xs text-gray-400 uppercase bg-gray-50">
-                  <tr>
-                    <th className="p-4">Statut</th>
-                    <th className="p-4">Document / Nom</th>
-                    <th className="p-4">Référence</th>
-                    <th className="p-4 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {loadingInfos ? (
-                    <tr><td colSpan={4} className="p-10 text-center text-gray-400">Chargement...</td></tr>
-                  ) : (
-                    infosList.map((info) => {
-                      const alreadyInDossier = dossier.dossierCommunClient?.find(
-                        (c) => c.clientbeneficiaireInfoId === info.id
-                      );
-                      const isPending = selectedNewInfos.some(i => i.id === info.id);
-
-                      return (
-                        <tr key={info.id} className={`group ${alreadyInDossier ? 'bg-emerald-50/30' : ''}`}>
-                          <td className="p-4">
-                            {alreadyInDossier ? (
-                              <span className="flex items-center gap-1 text-emerald-600 font-bold text-xs">
-                                <FiCheck /> ATTACHÉ
-                              </span>
-                            ) : (
-                              <input 
-                                type="checkbox" 
-                                checked={isPending}
-                                onChange={() => toggleNewInfo(info)}
-                                className="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
-                              />
-                            )}
-                          </td>
-                          <td className="p-4">
-                            <p className="font-bold text-gray-800">{info.prenom} {info.nom}</p>
-                            <p className="text-xs text-gray-500">{info.typeDoc}</p>
-                          </td>
-                          <td className="p-4 text-sm font-mono text-gray-600">{info.referenceDoc}</td>
-                          <td className="p-4 text-right">
-                            {alreadyInDossier && (
-                                <span className="text-xs bg-emerald-100 text-emerald-700 px-2 py-1 rounded">
-                                    Code: {alreadyInDossier.code}
-                                </span>
-                            )}
+          {/* TABLEAU DES DOCUMENTS */}
+          {displayedBeneficiaireId && (
+            <div>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-slate-200">
+                  <thead className="bg-slate-50">
+                    <tr>
+                      <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider w-20">
+                        Statut
+                      </th>
+                      <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Document / Nom
+                      </th>
+                      <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Référence
+                      </th>
+                      <th className="px-6 py-3.5 text-right text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Code
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {loadingInfos ? (
+                      <tr>
+                        <td colSpan={4} className="px-6 py-12 text-center">
+                          <div className="flex flex-col items-center gap-3">
+                            <div className="w-8 h-8 border-3 border-slate-300 border-t-purple-600 rounded-full animate-spin"></div>
+                            <p className="text-sm text-slate-500">Chargement des documents...</p>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : infosList.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="px-6 py-12 text-center">
+                          <div className="flex flex-col items-center gap-3">
+                            <div className="w-14 h-14 bg-slate-100 rounded-full flex items-center justify-center">
+                                <FiFileText className="text-slate-400" size={24} />
+                              </div>
+                              <p className="text-sm text-slate-500 font-medium">Aucun document disponible</p>
+                            </div>
                           </td>
                         </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
+                      ) : (
+                        infosList.map((info) => {
+                          const alreadyInDossier = dossier.dossierCommunClient?.find(
+                            (c) => c.clientbeneficiaireInfoId === info.id
+                          );
+                          const isPending = selectedNewInfos.some(i => i.id === info.id);
 
-            {selectedNewInfos.length > 0 && (
-              <div className="flex justify-end pt-4 border-t">
-                <button
-                  onClick={handleAddClients}
-                  disabled={isAddingClients}
-                  className="px-8 py-3 bg-purple-600 text-white rounded-xl font-black hover:bg-purple-700 shadow-lg shadow-purple-200 transition-all disabled:opacity-50"
-                >
-                  {isAddingClients ? "Ajout..." : `Ajouter les ${selectedNewInfos.length} documents sélectionnés`}
-                </button>
+                          return (
+                            <tr 
+                              key={info.id} 
+                              className={`transition-colors ${
+                                alreadyInDossier ? 'bg-emerald-50/30' : 'hover:bg-slate-50/50'
+                              }`}
+                            >
+                              <td className="px-6 py-4">
+                                {alreadyInDossier ? (
+                                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-100 text-emerald-700 rounded-md text-xs font-semibold border border-emerald-200">
+                                    <FiCheck size={14} />
+                                    Attaché
+                                  </span>
+                                ) : (
+                                  <input 
+                                    type="checkbox" 
+                                    checked={isPending}
+                                    onChange={() => toggleNewInfo(info)}
+                                    className="w-5 h-5 rounded border-slate-300 text-purple-600 focus:ring-2 focus:ring-purple-500 focus:ring-offset-0 cursor-pointer"
+                                  />
+                                )}
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className="flex flex-col gap-1">
+                                  <p className="text-sm font-semibold text-slate-900">
+                                    {info.prenom} {info.nom}
+                                  </p>
+                                  <p className="text-xs text-slate-500">
+                                    {info.typeDoc}
+                                  </p>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className="text-sm font-mono text-slate-600">
+                                  {info.referenceDoc}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                {alreadyInDossier && (
+                                  <span className="inline-flex items-center px-2.5 py-1 bg-slate-100 text-slate-700 rounded-md text-xs font-medium border border-slate-200">
+                                    {alreadyInDossier.code}
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* BOUTON D'AJOUT DES DOCUMENTS SÉLECTIONNÉS */}
+                {selectedNewInfos.length > 0 && (
+                  <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end">
+                    <button
+                      onClick={handleAddClients}
+                      disabled={isAddingClients}
+                      className="flex items-center gap-2 px-6 py-2.5 bg-purple-600 text-white font-medium rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+                    >
+                      {isAddingClients ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          Ajout en cours...
+                        </>
+                      ) : (
+                        <>
+                          <FiCheck size={18} />
+                          Ajouter {selectedNewInfos.length} document(s) sélectionné(s)
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
-        )}
+        </div>
       </div>
-      {/* MODALE D'ANNULATION */}
+
+      {/* MODAL D'ANNULATION */}
       {showCancelModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-[2.5rem] shadow-2xl max-w-md w-full p-8 animate-in zoom-in duration-300">
-            <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-6 mx-auto">
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8 animate-in zoom-in duration-200">
+            <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mb-6 mx-auto">
               <FiX size={32} />
             </div>
-            
-            <h3 className="text-2xl font-black text-center text-gray-900 mb-2">Annuler le dossier ?</h3>
-            <p className="text-gray-500 text-center mb-6">
+            <h3 className="text-2xl font-bold text-center text-slate-900 mb-2">
+              Annuler le dossier ?
+            </h3>
+            <p className="text-slate-600 text-center mb-6">
               Cette action est irréversible. Veuillez indiquer le motif de l'annulation.
             </p>
-
+            
             <div className="mb-6">
-              <label className="block text-xs font-bold text-gray-400 uppercase mb-2 ml-1">Raison de l'annulation</label>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Raison de l'annulation *
+              </label>
               <textarea
                 value={raisonAnnulation}
                 onChange={(e) => setRaisonAnnulation(e.target.value)}
-                className="w-full p-4 bg-gray-50 border-none rounded-2xl focus:ring-2 focus:ring-red-500 min-h-[100px] text-sm"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 min-h-[100px] text-sm resize-none"
                 placeholder="Ex: Le client a changé d'avis..."
               />
             </div>
-
-            <div className="grid grid-cols-2 gap-4">
+            
+            <div className="grid grid-cols-2 gap-3">
               <button
                 onClick={() => setShowCancelModal(false)}
-                className="py-4 bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 transition-colors"
+                className="px-4 py-3 bg-slate-100 text-slate-700 rounded-xl font-medium hover:bg-slate-200 transition-colors"
               >
-                Ignorer
+                Annuler
               </button>
               <button
                 onClick={handleAnnulerDossier}
                 disabled={isCancelling || !raisonAnnulation.trim()}
-                className="py-4 bg-red-500 text-white rounded-2xl font-black hover:bg-red-600 disabled:opacity-50 shadow-lg shadow-red-200 transition-all"
+                className="px-4 py-3 bg-red-600 text-white rounded-xl font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
               >
-                {isCancelling ? "Traitement..." : "Confirmer"}
+                {isCancelling ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Traitement...
+                  </span>
+                ) : (
+                  "Confirmer l'annulation"
+                )}
               </button>
             </div>
           </div>

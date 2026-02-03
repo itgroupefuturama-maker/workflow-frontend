@@ -108,7 +108,7 @@ const TypeTransaction = () => {
       
       {/* Overlay de chargement global */}
       {isSubmitting && !isModalOpen && (
-        <div className="fixed inset-0 z-[60] bg-white/20 backdrop-blur-[1px] flex items-center justify-center">
+        <div className="fixed inset-0 z-60 bg-white/20 backdrop-blur-[1px] flex items-center justify-center">
           <div className="bg-white p-6 rounded-3xl shadow-2xl flex flex-col items-center gap-3 border border-gray-100">
             <FiLoader className="text-indigo-600 animate-spin" size={32} />
             <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Traitement en cours</p>
@@ -247,7 +247,7 @@ const TypeTransaction = () => {
       </div>
 
       {isModalOpen && (
-       <div className="fixed inset-0 z-[70] flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-0 md:p-4 animate-in fade-in duration-300">
+       <div className="fixed inset-0 z-70 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-0 md:p-4 animate-in fade-in duration-300">
           {/* Ajustement : h-full sur mobile pour éviter les bugs de scroll, max-h-screen sur PC */}
           <div className="bg-white shadow-2xl w-full h-full md:h-auto md:max-h-[95vh] md:max-w-3xl overflow-hidden transform transition-all animate-in zoom-in-95 duration-300 flex flex-col">
             {/* HEADER FIXE - Reste en haut */}

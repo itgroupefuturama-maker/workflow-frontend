@@ -87,7 +87,7 @@ const ArticlePage = () => {
     <div className="p-8 max-w-[1600px] mx-auto animate-in fade-in duration-500">
       {/* Overlay loading */}
       {isSubmitting && (
-        <div className="fixed inset-0 z-[60] bg-white/20 backdrop-blur-[1px] flex items-center justify-center">
+        <div className="fixed inset-0 z-60 bg-white/20 backdrop-blur-[1px] flex items-center justify-center">
           <div className="bg-white p-6 rounded-3xl shadow-2xl flex flex-col items-center gap-3 border border-gray-100">
             <FiLoader className="text-indigo-600 animate-spin" size={32} />
             <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Traitement...</p>

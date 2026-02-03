@@ -247,9 +247,9 @@ function LoginPage() {
 
           {/* DIVISEUR SUPPORT */}
           <div className="relative flex py-8 items-center">
-            <div className="flex-grow border-t border-gray-100"></div>
-            <span className="flex-shrink mx-4 text-[10px] text-gray-300 uppercase tracking-widest font-bold">Vous Voulez contactez le support</span>
-            <div className="flex-grow border-t border-gray-100"></div>
+            <div className="flex border-t border-gray-100"></div>
+            <span className="shrink mx-4 text-[10px] text-gray-300 uppercase tracking-widest font-bold">Vous Voulez contactez le support</span>
+            <div className="flex border-t border-gray-100"></div>
           </div>
 
           {/* BOUTON WHATSAPP */}

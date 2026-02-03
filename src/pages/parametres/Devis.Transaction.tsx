@@ -270,9 +270,9 @@ const DevisTransactionPage = () => {
 
       {/* MODALE */}
       {activeModal === 'form' && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-70 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           {/* Ajout de flex flex-col et max-h-full pour le responsive */}
-          <div className="bg-white rounded-[2rem] md:rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in duration-300">
+          <div className="bg-white rounded-2rem md:rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in duration-300">
             
             {/* HEADER : Reste fixe en haut */}
             <div className="p-6 md:p-8 border-b flex justify-between items-center bg-gray-50/50 shrink-0">

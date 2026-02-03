@@ -1,4 +1,4 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { createSlice, createAsyncThunk, createAction, type PayloadAction } from '@reduxjs/toolkit';
 import axiosInstance from '../../service/Axios';
 
 // Interfaces restantes (nettoyées)
@@ -78,6 +78,7 @@ interface CreateDossierCommunPayload {
 
 interface DossierCommunState {
   data: DossierCommun[];
+  currentClientFactureId: DossierCommun | null;
   loading: boolean;
   error: string | null;
   creating: boolean;
@@ -87,12 +88,17 @@ interface DossierCommunState {
 
 const initialState: DossierCommunState = {
   data: [],
+  currentClientFactureId: null,
   loading: false,
   error: null,
   creating: false,
   createSuccess: false,
   createError: null,
 };
+
+export const setCurrentClientFactureId = createAction<DossierCommun | null>(
+  'dossierCommun/setCurrentClientFactureId', 
+);
 
 // Thunks (inchangés)
 export const fetchDossiersCommuns = createAsyncThunk(
@@ -114,7 +120,6 @@ export const createDossierCommun = createAsyncThunk(
   'dossierCommun/create',
   async (payload: CreateDossierCommunPayload, { rejectWithValue }) => {
     try {
-      
       const response = await axiosInstance.post('/dossier-commun', payload);
       if (response.data.success) {
         return response.data.data;
@@ -131,6 +136,9 @@ const dossierCommunSlice = createSlice({
   name: 'dossierCommun',
   initialState,
   reducers: {
+    setCurrentClientFactureId: (state, action: PayloadAction<DossierCommun | null>) => {
+      state.currentClientFactureId = action.payload;
+    },
     resetCreateStatus: (state) => {
       state.creating = false;
       state.createSuccess = false;
@@ -170,5 +178,5 @@ const dossierCommunSlice = createSlice({
   },
 });
 
-export const { resetCreateStatus } = dossierCommunSlice.actions;
+export const { setCurrentClientFacture, resetCreateStatus } = dossierCommunSlice.actions;
 export default dossierCommunSlice.reducer;

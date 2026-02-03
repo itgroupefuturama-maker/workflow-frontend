@@ -223,7 +223,7 @@ const ProfilPage = () => {
 
       {/* MODALE FORMULAIRE */}
       {activeModal === 'form' && (
-        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-70 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden">
             <div className="p-8 border-b flex justify-between items-center bg-gray-50/50">
               <h3 className="text-2xl font-black text-gray-800">

@@ -31,7 +31,7 @@ const AutorisationPage = () => {
 
 
       {loading && autorisations.length > 0 && (
-        <div className="fixed top-4 right-8 flex items-center gap-2 bg-indigo-600 text-white px-3 py-1.5 rounded-full shadow-lg z-[100] animate-bounce">
+        <div className="fixed top-4 right-8 flex items-center gap-2 bg-indigo-600 text-white px-3 py-1.5 rounded-full shadow-lg z-100 animate-bounce">
           <FiLoader className="animate-spin" size={12} />
           <span className="text-[10px] font-black uppercase tracking-tighter">Mise à jour...</span>
         </div>

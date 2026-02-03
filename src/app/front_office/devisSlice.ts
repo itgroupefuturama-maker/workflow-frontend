@@ -1,6 +1,16 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from '../../service/Axios';
 
+export interface AnnulationPayload {
+  raisonAnnul: string;
+  lignes: {
+    id: string;
+    puPenaliteCompagnieDevise: number;
+    montantPenaliteCompagnieDevise: number;
+    conditionAnnul: string;
+  }[];
+}
+
 export interface ServiceSpecifique {
   id: string;
   code: string;                    // ex: "SP-1", "SP-2"
@@ -12,6 +22,7 @@ export interface ServiceSpecifique {
 
 export interface Devis {
   id: string;
+  statut: string;
   reference: string;
   createdAt: string;
   updatedAt: string;
@@ -30,6 +41,14 @@ export interface Entete {
     id : string;
     credit: string;
     typeVol: string;
+    numeroEntete: string;
+    commissionPropose: string;
+    commissionAppliquer: string;
+    prestation: {
+        id: string;
+        numeroDos: string;
+        status: string;
+    }
     fournisseur: {
         id: string;
         code: string;
@@ -146,6 +165,72 @@ export const fetchDevisByEntete = createAsyncThunk(
   }
 );
 
+// Thunk : Changer le statut de l'entête (ex: vers "A Approuver")
+export const updateApprouverDevisStatut = createAsyncThunk(
+  'billet/updateEnteteStatut',
+  async (
+    { enteteId }: { enteteId: string},
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await axios.put(`/devis/${enteteId}/envoyer`);
+      console.log(enteteId);
+      if (!response.data?.success) {
+        throw new Error('Échec du changement de statut');
+      }
+      return response.data;
+    } catch (err: any) {
+      return rejectWithValue(
+        err.response?.data?.message || 'Erreur lors du changement de statut'
+      );
+    }
+  }
+);
+// Thunk : Changer le statut de l'entête (ex: vers "A Approuver")
+export const updateValidateDevisStatut = createAsyncThunk(
+  'billet/updateEnteteStatut',
+  async (
+    { enteteId }: { enteteId: string},
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await axios.put(`/devis/${enteteId}/approuver`);
+      console.log(enteteId);
+      if (!response.data?.success) {
+        throw new Error('Échec du changement de statut');
+      }
+      return response.data;
+    } catch (err: any) {
+      return rejectWithValue(
+        err.response?.data?.message || 'Erreur lors du changement de statut'
+      );
+    }
+  }
+);
+
+// Thunk pour annuler un devis
+export const annulerDevis = createAsyncThunk(
+  'devis/annuler',
+  async (
+    { devisId, payload }: { devisId: string; payload: AnnulationPayload },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await axios.patch(`/devis/${devisId}/annuler`, payload);
+      
+      if (!response.data?.success) {
+        throw new Error('Échec de l\'annulation du devis');
+      }
+      
+      return { devisId, ...response.data };
+    } catch (err: any) {
+      return rejectWithValue(
+        err.response?.data?.message || 'Erreur lors de l\'annulation du devis'
+      );
+    }
+  }
+);
+
 const devisSlice = createSlice({
   name: 'devis',
   initialState,
@@ -161,6 +246,24 @@ const devisSlice = createSlice({
         state.items = action.payload;
       })
       .addCase(fetchDevisByEntete.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      .addCase(annulerDevis.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(annulerDevis.fulfilled, (state, action) => {
+        state.loading = false;
+        // Option 1 : retirer le devis annulé de la liste
+        state.items = state.items.filter(d => d.id !== action.payload.devisId);
+        
+        // Option 2 (alternative) : mettre à jour le statut si l'API le renvoie
+        // const updatedDevis = action.payload.data; // si l'API renvoie le devis mis à jour
+        // const index = state.items.findIndex(d => d.id === updatedDevis.id);
+        // if (index !== -1) state.items[index] = updatedDevis;
+      })
+      .addCase(annulerDevis.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       });
