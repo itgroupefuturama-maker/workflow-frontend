@@ -69,15 +69,6 @@ export default function PrestationDetail({ prestationId: propPrestationId }: Pre
     }
   }, [prestationId, dispatch]);
 
-  // Si aucun dossier n'est cliqué dans la sidebar
-  if (!dossierActif) {
-    return (
-      <div className="flex h-screen"><Sidebar />
-        <div className="flex-1 flex items-center justify-center text-slate-400">Veuillez sélectionner un dossier.</div>
-      </div>
-    );
-  }
-
   const {
     loading: loadingDevis,
   } = useSelector((state: RootState) => state.devisPrestation);
@@ -198,6 +189,14 @@ export default function PrestationDetail({ prestationId: propPrestationId }: Pre
   };
 
   const isLoading = loadingDevis || loadingTodos;
+    // Si aucun dossier n'est cliqué dans la sidebar
+  if (!dossierActif) {
+    return (
+      <div className="flex h-screen"><Sidebar />
+        <div className="flex-1 flex items-center justify-center text-slate-400">Veuillez sélectionner un dossier.</div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return <div className="p-20 text-center animate-pulse text-slate-400">Chargement...</div>;

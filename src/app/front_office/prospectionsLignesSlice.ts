@@ -27,7 +27,8 @@ export interface ProspectionLigne {
   numeroDosRef: string;                    // ex: "DOSTICK_11_1_2"
   numeroVol: string;
   prospectionEnteteId: string;
-  status: string;                          // ex: "CREER"
+  status: string;     
+  origineLine: string | null;                     // ex: "CREER"
   avion: string | null;
   departId: string | null;
   destinationId: string | null;

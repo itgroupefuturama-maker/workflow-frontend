@@ -22,14 +22,25 @@ export const TicketingHeader = ({ items }: TicketingHeaderProps) => {
           <div key={index} className="flex items-center gap-3">
             {item.isCurrent ? (
               // Style pour l'étape actuelle (Jaune)
-              <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-400/90 text-slate-900 font-semibold shadow-sm">
+              <div className="flex items-center gap-2
+                  px-4 py-2
+                  rounded-lg
+                  bg-amber-400/90
+                  border
+                  border-amber-400/90
+                  text-slate-900
+                  hover:bg-amber-300/90
+                  hover:text-slate-900
+                  transition-all
+                  font-bold
+                  ">
                 {item.label}
               </div>
             ) : (
               // Style pour les étapes cliquables (Blanc)
               <button
                 onClick={() => item.path && navigate(item.path, { state: item.state })}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white border text-slate-600 hover:bg-slate-100 transition-all shadow-sm"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-gray-400 text-slate-600 hover:bg-slate-100 transition-all shadow-sm"
               >
                 <span className="font-semibold tracking-wide">{item.label}</span>
               </button>

@@ -1,8 +1,14 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from '../../service/Axios';
 
-export interface AnnulationReservationPayload {
-  raisonAnnul: string;
+export interface AnnulationBilletPayload {
+  tauxChange: number;
+  resaCommissionEnDevise: number;
+  resaCommissionEnAriary: number;
+  emissionCommissionEnDevise: number;
+  emissionCommissionEnAriary: number;
+  rasionAnnulationId: string;     // ← CHANGEMENT ici
+  type: string;                   // "SIMPLE" | "COM" | "PEN" | "COM_PEN" ?
   lignes: {
     id: string;
     puResaPenaliteCompagnieDevise: number;
@@ -19,6 +25,15 @@ export interface AnnulationEmissionPayload {
     puResaMontantPenaliteCompagnieDevise: number;
     conditionAnnul: string;
   }[];
+}
+
+export interface ServiceSpecifique {
+  id: string;
+  code: string;                    // ex: "SP-1", "SP-2"
+  libelle: string;                 // ex: "Choix Siège", "Pet"
+  type: 'SERVICE' | 'SPECIFIQUE';
+  createdAt: string;
+  updatedAt: string;
 }
 
 // ────────────────────────────────────────────────
@@ -136,12 +151,18 @@ export interface ServiceProspectionLigne {
   id: string;
   prospectionLigneId: string;
   serviceSpecifiqueId: string;
-  valeur: string;
+  valeur: string;                  // "true", "false", "23Kg", "rien", etc.
+  createdAt: string;
+  updatedAt: string;
+
+  // Relation incluse (très utile pour l'affichage)
+  serviceSpecifique?: ServiceSpecifique;  // ← souvent présent dans la réponse
 }
 
 export interface BilletLigne {
   id: string;
   statut: string;
+  origineLine: string | null;
   prospectionLigneId: string;
   billetEnteteId: string;
   nombre: number;
@@ -478,18 +499,30 @@ export const reglerFactureClient = createAsyncThunk(
 );
 
 // Thunk annulation réservation (avant émission)
-export const annulerReservationBillet = createAsyncThunk(
-  'billet/annulerReservation',
+export const annulerBillet = createAsyncThunk(
+  'billet/annuler',
   async (
-    { billetId, payload }: { billetId: string; payload: AnnulationReservationPayload },
+    { billetId, payload }: { billetId: string; payload: AnnulationBilletPayload },
     { rejectWithValue }
   ) => {
     try {
-      const res = await axios.patch(`/billet/${billetId}/annuler-reservation`, payload);
-      if (!res.data?.success) throw new Error('Échec annulation réservation');
+      // On renomme le champ pour matcher l'API
+      // const apiPayload = {
+      //   ...payload,
+      //   rasionAnnulationId: payload.raisonAnnulationId,   // ← le nom attendu par le back
+      // };
+
+      const res = await axios.post(`/billet/${billetId}/annuler`, payload);
+      
+      if (!res.data?.success) {
+        throw new Error(res.data?.message || 'Échec annulation billet');
+      }
+      
       return res.data;
     } catch (err: any) {
-      return rejectWithValue(err.response?.data?.message || 'Erreur annulation réservation');
+      return rejectWithValue(
+        err.response?.data?.message || 'Erreur lors de l\'annulation du billet'
+      );
     }
   }
 );
@@ -507,6 +540,19 @@ export const annulerEmissionBillet = createAsyncThunk(
       return res.data;
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.message || 'Erreur annulation émission');
+    }
+  }
+);
+
+export const reprogrammerLigne = createAsyncThunk(
+  'billet/reprogrammer',
+  async ({ billetId, payload }: { billetId: string; payload: any }, { rejectWithValue }) => {
+    try {
+      const res = await axios.patch(`/billet/${billetId}/reprogrammer`, payload);
+      if (!res.data?.success) throw new Error('Échec reprogrammation');
+      return res.data;
+    } catch (err: any) {
+      return rejectWithValue(err.response?.data?.message || 'Erreur reprogrammation');
     }
   }
 );
@@ -634,40 +680,19 @@ const billetSlice = createSlice({
     // ────────────────────────────────────────────────
     // Annulation de la réservation (avant émission)
     // ────────────────────────────────────────────────
-    .addCase(annulerReservationBillet.pending, (state) => {
-      state.loading = true;          // ou state.loadingList si tu as séparé
+    .addCase(annulerBillet.pending, (state) => {
+      state.loading = true;
       state.error = null;
     })
-    .addCase(annulerReservationBillet.fulfilled, (state, action) => {
+    .addCase(annulerBillet.fulfilled, (state, action) => {
       state.loading = false;
-      
-      // Option A : recharger complètement le billet (le plus simple et sûr)
-      // → tu peux aussi le faire depuis le composant après .unwrap()
-      
-      // Option B : mise à jour manuelle si l'API renvoie le billet mis à jour
-      // if (action.payload?.data) {
-      //   state.current = action.payload.data;
-      // }
-      
-      // Option C : mise à jour locale rapide des statuts (exemple)
-      if (state.current && action.meta.arg.payload.lignes.length > 0) {
-        state.current.billetLigne = state.current.billetLigne.map(ligne => {
-          const updated = action.meta.arg.payload.lignes.find(u => u.id === ligne.id);
-          if (updated) {
-            return {
-              ...ligne,
-              statut: 'ANNULE_RESERVATION',   // adapte selon tes vrais statuts
-              // puResaPenaliteCompagnieDevise: updated.puResaPenaliteCompagnieDevise,
-              // etc. si tu veux mettre à jour les pénalités localement
-            };
-          }
-          return ligne;
-        });
-      }
+      state.error = null;
+
+      // Pas de mise à jour manuelle ici → on recharge via fetchBilletById
     })
-    .addCase(annulerReservationBillet.rejected, (state, action) => {
+    .addCase(annulerBillet.rejected, (state, action) => {
       state.loading = false;
-      state.error = action.payload as string || 'Échec annulation réservation';
+      state.error = action.payload as string;
     })
 
     // ────────────────────────────────────────────────

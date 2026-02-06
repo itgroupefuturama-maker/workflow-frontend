@@ -121,47 +121,15 @@ export default function AccueilView() {
   ];
 
   // Calculs dynamiques pour le dashboard
-const dossiers2026 = etatVenteData
-  ? etatVenteData.jours.reduce((acc, jour) => acc + jour.lignes.length, 0)
+  const dossiers2026 = Array.isArray(etatVenteData?.jours)
+  ? etatVenteData.jours.reduce((acc, jour) => acc + (Array.isArray(jour?.lignes) ? jour.lignes.length : 0), 0)
   : 0;
 
-const annulationsTotal = etatAnnulationData?.totalGeneral || 0;
+  const annulationsTotal = etatAnnulationData?.totalGeneral || 0;
 
-const tauxAnnulation = dossiers2026 > 0 
-  ? ((annulationsTotal / dossiers2026) * 100).toFixed(1) 
-  : "0.0";
-
-// Pour le graphique "Année en cours" → agrégation par destination (approximation)
-const chartDataCurrent = React.useMemo(() => {
-  if (!etatVenteData) return [];
-
-  const byDestination: Record<string, { dossiers: number; annulations: number }> = {};
-
-  etatVenteData.jours.forEach(jour => {
-    jour.lignes.forEach(ligne => {
-      const dest = ligne.itineraire.split(' → ')[1] || 'Inconnu'; // ex: "Bashi"
-      if (!byDestination[dest]) {
-        byDestination[dest] = { dossiers: 0, annulations: 0 };
-      }
-      byDestination[dest].dossiers += 1; // 1 dossier par ligne (à ajuster si 1 ligne ≠ 1 dossier)
-    });
-  });
-
-  // Pour les annulations : on n'a pas le détail par destination → approximation ou 0
-  return Object.entries(byDestination).map(([name, values]) => ({
-    name,
-    dossiers: values.dossiers,
-    annulations: 0, // à améliorer quand on aura plus de données
-  }));
-}, [etatVenteData]);
-
-  // Calcul des statistiques globales
-  const currentTotal = dataCurrent.reduce((acc, item) => acc + item.dossiers, 0);
-  const prevTotal = dataPrev.reduce((acc, item) => acc + item.dossiers, 0);
-  const currentAnnulations = dataCurrent.reduce((acc, item) => acc + item.annulations, 0);
-  
-  const growthRate = ((currentTotal - prevTotal) / prevTotal * 100).toFixed(1);
-  const annulationRate = (currentAnnulations / currentTotal * 100).toFixed(1);
+  const tauxAnnulation = dossiers2026 > 0 
+    ? ((annulationsTotal / dossiers2026) * 100).toFixed(1) 
+    : "0.0";
 
   return (
     <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab}>
@@ -541,7 +509,7 @@ const chartDataCurrent = React.useMemo(() => {
                   <div className="bg-white border border-gray-200 p-5 rounded-lg">
                     <div className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">Nombre de lignes</div>
                     <div className="text-2xl font-semibold text-gray-900">
-                      {etatVenteData.jours.reduce((sum, j) => sum + j.lignes.length, 0)}
+                      {etatVenteData?.jours?.reduce?.((sum, j) => sum + (j?.lignes?.length ?? 0), 0) ?? 0}
                     </div>
                   </div>
                 </div>
@@ -561,36 +529,64 @@ const chartDataCurrent = React.useMemo(() => {
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-100">
-                        {etatVenteData.jours.map((jour) => (
-                          <React.Fragment key={jour.date}>
-                            {jour.lignes.map((ligne, idx) => (
-                              <tr key={ligne.id} className="hover:bg-gray-50 transition-colors">
-                                {idx === 0 && (
-                                  <td rowSpan={jour.lignes.length + 1} className="px-5 py-3 font-medium text-gray-900 text-sm border-r border-gray-100">
-                                    {new Date(jour.date).toLocaleDateString('fr-FR')}
+                       {etatVenteData?.jours && Array.isArray(etatVenteData.jours) ? (
+                        etatVenteData.jours.map((jour) => (
+                          <React.Fragment key={jour?.date || Math.random()}>
+                            {jour?.lignes && Array.isArray(jour.lignes) ? (
+                              jour.lignes.map((ligne, idx) => (
+                                <tr key={ligne?.id || `${jour.date}-${idx}`} className="hover:bg-gray-50 transition-colors">
+                                  {idx === 0 && (
+                                    <td
+                                      rowSpan={jour.lignes.length + 1}
+                                      className="px-5 py-3 font-medium text-gray-900 text-sm border-r border-gray-100"
+                                    >
+                                      {jour.date
+                                        ? new Date(jour.date).toLocaleDateString('fr-FR')
+                                        : '—'}
+                                    </td>
+                                  )}
+                                  <td className="px-5 py-3 text-sm text-gray-700">
+                                    {ligne?.itineraire || '—'}
                                   </td>
-                                )}
-                                <td className="px-5 py-3 text-sm text-gray-700">{ligne.itineraire}</td>
-                                <td className="px-5 py-3 text-sm text-gray-700">{ligne.compagnie}</td>
-                                <td className="px-5 py-3 text-right text-sm text-gray-900">{(ligne.tarifsMachine / 100).toLocaleString('fr-FR')} Ar</td>
-                                <td className="px-5 py-3 text-right text-sm text-gray-900">{(ligne.commissions / 100).toLocaleString('fr-FR')} Ar</td>
-                                <td className="px-5 py-3 text-right text-sm font-medium text-gray-900">{(ligne.tarifsTTC / 100).toLocaleString('fr-FR')} Ar</td>
-                              </tr>
-                            ))}
+                                  <td className="px-5 py-3 text-sm text-gray-700">
+                                    {ligne?.compagnie || '—'}
+                                  </td>
+                                  <td className="px-5 py-3 text-right text-sm text-gray-900">
+                                    {(ligne?.tarifsMachine / 100 || 0).toLocaleString('fr-FR')} Ar
+                                  </td>
+                                  <td className="px-5 py-3 text-right text-sm text-gray-900">
+                                    {(ligne?.commissions / 100 || 0).toLocaleString('fr-FR')} Ar
+                                  </td>
+                                  <td className="px-5 py-3 text-right text-sm font-medium text-gray-900">
+                                    {(ligne?.tarifsTTC / 100 || 0).toLocaleString('fr-FR')} Ar
+                                  </td>
+                                </tr>
+                              ))
+                            ) : null}
+
                             <tr className="bg-gray-50">
-                              <td colSpan={3} className="px-5 py-3 text-sm font-semibold text-gray-900">Total journée</td>
-                              <td className="px-5 py-3 text-right text-sm font-semibold text-gray-900">{(jour.total.tarifsMachine / 100).toLocaleString('fr-FR')} Ar</td>
-                              <td className="px-5 py-3 text-right text-sm font-semibold text-gray-900">{(jour.total.commissions / 100).toLocaleString('fr-FR')} Ar</td>
-                              <td className="px-5 py-3 text-right text-sm font-semibold text-gray-900">{(jour.total.tarifsTTC / 100).toLocaleString('fr-FR')} Ar</td>
+                              <td colSpan={3} className="px-5 py-3 text-sm font-semibold text-gray-900">
+                                Total journée
+                              </td>
+                              <td className="px-5 py-3 text-right text-sm font-semibold text-gray-900">
+                                {(jour?.total?.tarifsMachine / 100 || 0).toLocaleString('fr-FR')} Ar
+                              </td>
+                              <td className="px-5 py-3 text-right text-sm font-semibold text-gray-900">
+                                {(jour?.total?.commissions / 100 || 0).toLocaleString('fr-FR')} Ar
+                              </td>
+                              <td className="px-5 py-3 text-right text-sm font-semibold text-gray-900">
+                                {(jour?.total?.tarifsTTC / 100 || 0).toLocaleString('fr-FR')} Ar
+                              </td>
                             </tr>
                           </React.Fragment>
-                        ))}
-                        <tr className="bg-gray-900 text-white">
-                          <td colSpan={3} className="px-5 py-4 text-sm font-bold uppercase">Total général</td>
-                          <td className="px-5 py-4 text-right text-sm font-bold">{(etatVenteData.totalGeneral.tarifsMachine / 100).toLocaleString('fr-FR')} Ar</td>
-                          <td className="px-5 py-4 text-right text-sm font-bold">{(etatVenteData.totalGeneral.commissions / 100).toLocaleString('fr-FR')} Ar</td>
-                          <td className="px-5 py-4 text-right text-base font-bold">{(etatVenteData.totalGeneral.tarifsTTC / 100).toLocaleString('fr-FR')} Ar</td>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={6} className="px-5 py-8 text-center text-gray-500 italic">
+                            {etatVenteLoading ? 'Chargement des données...' : 'Aucune donnée disponible pour cette période'}
+                          </td>
                         </tr>
+                      )}
                       </tbody>
                     </table>
                   </div>

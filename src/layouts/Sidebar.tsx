@@ -86,7 +86,7 @@ export default function Sidebar() {
 
       <nav className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
         {/* SECTION GLOBALE */}
-        <div className="p-3 border-b border-gray-200 bg-gray-50">
+        <div className="p-3 border-b border-gray-200 bg-white">
           <div className="flex items-center gap-2 px-2 mb-3">
             <FiGlobe size={14} className="text-gray-500" />
             <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider">

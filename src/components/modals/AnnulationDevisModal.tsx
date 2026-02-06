@@ -1,20 +1,20 @@
 import { useState } from 'react';
 import { FiX, FiAlertTriangle } from 'react-icons/fi';
-import type { Ligne } from '../../app/front_office/devisSlice'; // ajuste le chemin
+// import type { Ligne } from '../../app/front_office/devisSlice'; // ajuste le chemin
 
 interface AnnulationModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: {
     raisonAnnul: string;
-    lignes: {
-      id: string;
-      puPenaliteCompagnieDevise: number;
-      montantPenaliteCompagnieDevise: number;
-      conditionAnnul: string;
-    }[];
+    // lignes: {
+    //   id: string;
+    //   puPenaliteCompagnieDevise: number;
+    //   montantPenaliteCompagnieDevise: number;
+    //   conditionAnnul: string;
+    // }[];
   }) => void;
-  lignes: Ligne[];
+  // lignes: Ligne[];
   loading?: boolean;
 }
 
@@ -22,33 +22,33 @@ export default function AnnulationDevisModal({
   isOpen,
   onClose,
   onSubmit,
-  lignes,
+  // lignes,
   loading = false,
 }: AnnulationModalProps) {
   const [raison, setRaison] = useState('');
-  const [lignePenalites, setLignePenalites] = useState<
-    Record<string, { pu: number; montant: number; condition: string }>
-  >(
-    lignes.reduce((acc, l) => ({
-      ...acc,
-      [l.id]: { pu: 0, montant: 0, condition: '' },
-    }), {})
-  );
+  // const [lignePenalites, setLignePenalites] = useState<
+  //   Record<string, { pu: number; montant: number; condition: string }>
+  // >(
+  //   lignes.reduce((acc, l) => ({
+  //     ...acc,
+  //     [l.id]: { pu: 0, montant: 0, condition: '' },
+  //   }), {})
+  // );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!raison.trim()) return alert('La raison d\'annulation est obligatoire');
 
-    const lignesData = lignes.map(l => ({
-      id: l.id,
-      puPenaliteCompagnieDevise: Number(lignePenalites[l.id]?.pu || 0),
-      montantPenaliteCompagnieDevise: Number(lignePenalites[l.id]?.montant || 0),
-      conditionAnnul: lignePenalites[l.id]?.condition || '',
-    }));
+    // const lignesData = lignes.map(l => ({
+    //   id: l.id,
+    //   puPenaliteCompagnieDevise: Number(lignePenalites[l.id]?.pu || 0),
+    //   montantPenaliteCompagnieDevise: Number(lignePenalites[l.id]?.montant || 0),
+    //   conditionAnnul: lignePenalites[l.id]?.condition || '',
+    // }));
 
     onSubmit({
       raisonAnnul: raison,
-      lignes: lignesData,
+      // lignes: lignesData,
     });
   };
 
@@ -85,7 +85,7 @@ export default function AnnulationDevisModal({
           </div>
 
           {/* Tableau des pénalités par ligne */}
-          <div>
+          {/* <div>
             <h3 className="text-lg font-semibold mb-3">Pénalités par ligne</h3>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-slate-200">
@@ -155,7 +155,7 @@ export default function AnnulationDevisModal({
                 </tbody>
               </table>
             </div>
-          </div>
+          </div> */}
 
           <div className="flex justify-end gap-4 pt-6 border-t">
             <button

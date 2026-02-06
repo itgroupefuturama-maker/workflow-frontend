@@ -45,6 +45,7 @@ import commentaireReducer from './front_office/commentaireSlice';
 import etatVenteReducer from './front_office/etatVenteSlice';
 import etatAnnulationReducer from './front_office/etatAnnulationSlice';
 import etatMensuelDestinationReducer from './front_office/etatMensuelDestinationSlice';
+import raisonAnnulationReducer from './front_office/parametre_ticketing/raisonAnnulationSlice';
 
 import {
   FLUSH,
@@ -97,6 +98,7 @@ const appReducer = combineReducers({
   etatVente: etatVenteReducer,
   etatAnnulation: etatAnnulationReducer,
   etatMensuelDestination: etatMensuelDestinationReducer,
+  raisonAnnulation: raisonAnnulationReducer,
 
   // Portail-client
   clientBeneficiaireInfos: clientBeneficiaireInfosReducer,

@@ -57,11 +57,11 @@ export const BilletActions = ({
 
       {/* Bouton : Approbation Réservation */}
       <button
-        disabled={!(allLinesReservation && billet?.statut === 'CREER')}
+        disabled={!(allLinesReservation && billet?.statut == 'CREER' )}
         onClick={() => onApprouver(billet.id)}
         className={`
           flex items-center gap-2 px-6 py-2.5 rounded-lg font-semibold transition-all shadow-sm
-          ${allLinesReservation && billet?.statut === 'CREER'
+          ${allLinesReservation && billet?.statut == 'CREER'
             ? 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100'
             : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'}
         `}
@@ -72,11 +72,11 @@ export const BilletActions = ({
 
       {/* Bouton : Marquer comme Émis */}
       <button
-        disabled={!(allLinesEmission && billet?.statut === 'BC_CLIENT_A_APPROUVER')}
+        disabled={!(allLinesEmission && billet?.statut !== 'ANNULER' && billet?.statut !== 'BILLET_EMIS' && billet?.statut !== 'FACTURE_EMISE' && billet?.statut !== 'FACTURE_REGLEE')}
         onClick={onShowEmission}
         className={`
           flex items-center gap-2 px-6 py-2.5 rounded-lg font-semibold transition-all shadow-sm
-          ${allLinesEmission && billet?.statut === 'BC_CLIENT_A_APPROUVER'
+          ${allLinesEmission && billet?.statut !== 'ANNULER' && billet?.statut !== 'BILLET_EMIS' && billet?.statut !== 'FACTURE_EMISE' && billet?.statut !== 'FACTURE_REGLEE'
             ? 'bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100'
             : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'}
         `}
@@ -92,22 +92,22 @@ export const BilletActions = ({
       {/* Annuler la réservation (avant émission) */}
       {/* {allLinesReservation && billet?.statut !== 'CLOTURER' && billet?.statut !== 'ANNULE' && ( */}
         <button
-            disabled={!(allLinesReservation && billet?.statut !== 'CLOTURER' && billet?.statut !== 'ANNULE')}
+            disabled={!(allLinesReservation && billet?.statut !== 'CLOTURER' && billet?.statut !== 'ANNULER')}
             onClick={onAnnulerReservation}
             className={`
             flex items-center gap-2 px-6 py-2.5 rounded-lg font-semibold transition-all shadow-sm
-            ${allLinesReservation && billet?.statut !== 'CLOTURER' && billet?.statut !== 'ANNULE'
-                ? 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100'
+            ${allLinesReservation && billet?.statut !== 'CLOTURER' && billet?.statut !== 'ANNULER'
+                ? 'bg-green-50 text-green-700 border border-green-200 hover:bg-green-100'
                 : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'}
             `}
         >
             <FiX size={18} />
-            Annuler réservation
+            Modification & Annulation
         </button>
       {/* )} */}
 
       {/* Annuler l'émission (après émission) */}
-        <button
+        {/* <button
           disabled={!(allLinesEmission && billet?.statut === 'BILLET_EMIS')}
           onClick={onAnnulerEmission}
           className={
@@ -119,7 +119,7 @@ export const BilletActions = ({
         >
           <FiX size={18} />
           Annuler émission
-        </button>
+        </button> */}
     </div>
   );
 };

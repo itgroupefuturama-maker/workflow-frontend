@@ -14,7 +14,7 @@ const InfoItem = ({
     <label className="text-xs uppercase text-slate-500 font-semibold block mb-1">
       {label}
     </label>
-    <p className={`font-medium text-lg uppercase ${className}`}>{value || '—'}</p>
+    <p className={`font-medium text-xs uppercase ${className}`}>{value || '—'}</p>
   </div>
 );
 
@@ -26,7 +26,7 @@ interface BilletInfoCardsProps {
 
 const BilletInfoCards: React.FC<BilletInfoCardsProps> = ({ billet, clientFacture, dossier }) => {
   return (
-    <div className="bg-white rounded-xl p-6 mb-8 border border-slate-200 shadow-sm">
+    <div className="bg-white rounded-xl p-6 mb-8 border border-slate-200 shadow-sm text-xs">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         
         <InfoItem label="Num Dossier Entete" value={billet?.prospectionEntete?.numeroEntete} />
@@ -41,7 +41,7 @@ const BilletInfoCards: React.FC<BilletInfoCardsProps> = ({ billet, clientFacture
           <label className="text-xs uppercase text-slate-500 font-semibold block mb-1">
             Raison Annulation
           </label>
-          <p className="p-3 font-medium border border-slate-100 bg-slate-50/50 rounded text-lg min-h-3rem">
+          <p className="p-3 font-medium border border-slate-100 bg-slate-50/50 rounded min-h-3rem">
             {billet?.raisonAnnul || 'Aucune'}
           </p>
         </div>

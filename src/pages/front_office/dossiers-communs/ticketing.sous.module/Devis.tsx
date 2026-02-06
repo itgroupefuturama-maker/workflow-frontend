@@ -159,7 +159,7 @@ export default function Devis () {
               label: "Prospection detail",
               path: `/dossiers-communs/${billet?.prospectionEntete.prestationId}/pages/prospection/${enteteId}` 
             },
-            { label: "Liste Entete Devis", isCurrent: true }
+            { label: "Liste Devis", isCurrent: true }
           ]}
         />
         {/* Header */}
@@ -427,10 +427,10 @@ export default function Devis () {
                         <div className="mt-6 flex flex-wrap justify-end gap-3">
                           {/* Bouton Voir liste Billet - Toujours actif */}
                           <button
-                          disabled= { devis.statut == 'ANNULER'}
+                          disabled= { devis.statut == 'ANNULER' || devis.statut == 'DEVIS_A_APPROUVER'}
                             onClick={() => navigate(`/dossiers-communs/${devis.data.entete.prestation.id}/pages/billet/${devis.id}?prospectionEnteteId=${devis.data?.entete?.id}`)}
                             className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-2 font-medium ${
-                              devis.statut !== 'ANNULER'
+                              devis.statut === 'DEVIS_APPROUVE'
                                 ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
                                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                             }`}
@@ -438,6 +438,7 @@ export default function Devis () {
                             <FiFileText size={16} />
                             Liste Billet
                           </button>
+                          
 
                           {/* Bouton Devis à approuver */}
                           <button
@@ -455,7 +456,7 @@ export default function Devis () {
                             title={devis.statut !== 'CREER' ? 'Disponible uniquement pour les devis créés' : ''}
                           >
                             <FiCheckCircle size={16} />
-                            À approuver
+                            À approuver / Client
                           </button>
 
                           {/* Bouton Devis à valider */}
@@ -474,7 +475,7 @@ export default function Devis () {
                             title={devis.statut !== 'DEVIS_A_APPROUVER' ? 'Disponible uniquement pour les devis à approuver' : ''}
                           >
                             <FiCheck size={16} />
-                            À valider
+                            À valider / Client
                           </button>
 
                           {/* Bouton Devis à transformer */}
@@ -493,16 +494,17 @@ export default function Devis () {
                             title={devis.statut !== 'DEVIS_APPROUVE' ? 'Disponible uniquement pour les devis approuvés' : ''}
                           >
                             <FiRefreshCw size={16} />
-                            Transformer
+                            Transformer / Billet
                           </button>
 
                           {/* Bouton Voir/Télécharger PDF - Toujours actif */}
+                          
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleDownloadPdf(devis.id, devis.reference);
                             }}
-                            disabled={isLoadingPdf}
+                            disabled={isLoadingPdf || devis.statut == 'ANNULER'}
                             className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             {isLoadingPdf ? (
@@ -520,18 +522,23 @@ export default function Devis () {
 
                           {/* Nouveau bouton Annuler */}
                           {/* Bouton Annuler - Visible selon le statut */}
-                          {['CREER', 'DEVIS_A_APPROUVER', 'DEVIS_APPROUVE'].includes(devis.statut) && (
+                          {/* {['CREER', 'DEVIS_A_APPROUVER'].includes(devis.statut) && ( */}
                             <button
+                            disabled= { devis.statut == 'ANNULER' || devis.statut == 'DEVIS_APPROUVE'}
                               onClick={() => {
                                 setSelectedDevisForCancel(devis);
                                 setShowAnnulationModal(true);
                               }}
-                              className="px-4 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2 font-medium"
+                              className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-2 font-medium ${
+                                devis.statut === 'CREER' || devis.statut === 'DEVIS_A_APPROUVER'
+                                  ? 'bg-red-600 text-white hover:bg-red-700 cursor-pointer'
+                                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                              }`}
                             >
                               <FiX size={16} />
-                              Annuler le devis
+                              Annuler
                             </button>
-                          )}
+                          {/* )} */}
                         </div>
                       </div>
                     </div>

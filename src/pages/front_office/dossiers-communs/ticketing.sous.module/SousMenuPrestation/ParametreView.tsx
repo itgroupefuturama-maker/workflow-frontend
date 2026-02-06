@@ -14,6 +14,9 @@ import DestinationModal from '../../../../../components/modals/DestinationModal'
 import AssociationModal from '../../../../../components/modals/AssociationModal';
 import TabContainer from '../../../../../layouts/TabContainer';
 import { useLocation } from 'react-router-dom';
+import { fetchRaisonsAnnulation } from '../../../../../app/front_office/parametre_ticketing/raisonAnnulationSlice';
+import RaisonAnnulationListe from './RaisonAnnulationListe';
+import RaisonAnnulationModal from '../../../../../components/modals/RaisonAnnulationModal';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -22,21 +25,28 @@ export default function ParametreView() {
   const dispatch = useAppDispatch();
 
   const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'defaultTab');
+  const raisonState = useSelector((state: RootState) => state.raisonAnnulation);
 
   useEffect(() => {
-  if (location.state?.targetTab) {
-    // Use requestAnimationFrame to defer the state update
-    const timer = setTimeout(() => {
-      setActiveTab(location.state.targetTab);
-    }, 0);
-    return () => clearTimeout(timer);
-  }
-}, [location.state?.targetTab]);
+    if (activeTab === 'listeService' && serviceState.items.length === 0) {
+      dispatch(fetchServiceSpecifiques());
+    }
+    if (activeTab === 'listeExigence') {
+      // ... existant
+    }
+   if (activeTab === 'listeRaisonAnnulation' && raisonState.items.length === 0) {
+    dispatch(fetchRaisonsAnnulation());
+    }
+  }, [dispatch, activeTab]);   // ← activeSubTab reste pour l'onglet Exigence
 
   const tabs = [
     { id: 'listeService', label: 'Services & Spécifiques' },
-    { id: 'listeExigence', label: 'Exigences de Voyage' }
+    { id: 'listeExigence', label: 'Exigences de Voyage' },
+    { id: 'listeRaisonAnnulation', label: 'Raison Annulation' },
   ];
+
+  const [modalRaisonOpen, setModalRaisonOpen] = useState(false);
+  const { createLoading } = useSelector((state: RootState) => state.raisonAnnulation);
 
   const [activeSubTab, setActiveSubTab] = useState<'exigence' | 'pays' | 'destination'>('exigence');
   const [selectedPaysId, setSelectedPaysId] = useState<string | null>(null);
@@ -157,27 +167,25 @@ export default function ParametreView() {
       
 
       <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab}>
-        <header className="flex justify-between items-center mb-8">
-        <button
-          onClick={() => {
-            if (activeTab === 'listeService') setModalServiceOpen(true);
-            else if (activeSubTab === 'exigence') setModalExigenceOpen(true);
-            else if (activeSubTab === 'destination') setModalDestinationOpen(true);
-            else if (activeSubTab === 'pays') setModalPaysOpen(true);
-          }}
-          className="bg-blue-600 text-white px-5 py-2.5 rounded-lg hover:bg-blue-700 shadow-sm text-sm font-medium"
-        >
-          {activeTab === 'listeService' ? 'Nouveau Service' : `Nouvelle ${activeSubTab}`}
-        </button>
-      </header>
+        
 
       <h1 className="text-3xl font-bold mb-6">Paramétrage Ticketing</h1>
         <div className="mt-6">
           {activeTab === 'listeService' ? (
+            
             /* --- SECTION SERVICES --- */
             <div className="bg-white rounded-lg border border-slate-200 overflow-hidden shadow-sm">
               {loading ? <div className="p-10 text-center animate-pulse">Chargement des services...</div> : (
-                <table className="min-w-full divide-y divide-slate-200">
+                <div>
+                  <button
+                    onClick={() => {
+                      setModalServiceOpen(true);
+                    }}
+                    className="bg-blue-600 text-white px-5 py-2.5 rounded-lg hover:bg-blue-700 shadow-sm text-sm font-medium"
+                  >
+                    {activeTab === 'listeService' ? 'Nouveau Service' : `Nouvelle ${activeSubTab}`}
+                  </button>
+                  <table className="min-w-full divide-y divide-slate-200">
                   <thead className="bg-slate-50">
                     <tr>{tableConfig.headers.map(h => <th key={h} className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">{h}</th>)}</tr>
                   </thead>
@@ -185,11 +193,34 @@ export default function ParametreView() {
                     {currentItems.map(item => <tr key={item.id} className="hover:bg-slate-50 transition-colors">{tableConfig.renderRow(item)}</tr>)}
                   </tbody>
                 </table>
+                </div>
               )}
+            </div>
+          ) : activeTab === 'listeRaisonAnnulation' ? (
+            <div>
+              <button
+                onClick={() => {setModalRaisonOpen(true);}}
+                className="bg-blue-600 text-white px-5 py-2.5 rounded-lg hover:bg-blue-700 shadow-sm text-sm font-medium"
+              >
+                Nouvelle Raison d'Annulation
+              </button>
+              <RaisonAnnulationListe />
             </div>
           ) : (
             /* --- SECTION EXIGENCES --- */
             <div className="space-y-6">
+              <header className="flex justify-between items-center mb-8">
+                <button
+                  onClick={() => {
+                    if (activeSubTab === 'exigence') setModalExigenceOpen(true);
+                    else if (activeSubTab === 'destination') setModalDestinationOpen(true);
+                    else if (activeSubTab === 'pays') setModalPaysOpen(true);
+                  }}
+                  className="bg-blue-600 text-white px-5 py-2.5 rounded-lg hover:bg-blue-700 shadow-sm text-sm font-medium"
+                >
+                  {activeTab === 'listeService' ? 'Nouveau Service' : `Nouvelle ${activeSubTab}`}
+                </button>
+              </header>
               {/* Synthèse */}
               <div className="bg-white rounded-lg border border-slate-200 p-5 shadow-sm">
                 <div className="flex justify-between items-center mb-4">
@@ -298,6 +329,7 @@ export default function ParametreView() {
       <PaysModal isOpen={modalPaysOpen} onClose={() => setModalPaysOpen(false)} />
       <DestinationModal isOpen={modalDestinationOpen} onClose={() => setModalDestinationOpen(false)} />
       <AssociationModal isOpen={modalAssociationOpen} onClose={() => setModalAssociationOpen(false)} />
+      <RaisonAnnulationModal isOpen={modalRaisonOpen} onClose={() => setModalRaisonOpen(false)} />
     </div>
   );
 }

@@ -194,6 +194,8 @@ export default function ProspectionDetail() {
           montantServiceClientDevise: Number(newLine.montantServiceClientDevise) || 0,
           montantPenaliteClientDevise: Number(newLine.montantPenaliteClientDevise) || 0,
 
+          nombre: Number(newLine.nombre) || 1,
+
           services: newLine.serviceValues.map((s: any) => ({
             serviceSpecifiqueId: s.serviceSpecifiqueId,
             valeur: s.valeur.trim() || 'false',
@@ -310,42 +312,42 @@ export default function ProspectionDetail() {
               { 
                 label: "Liste Entete Prospection", 
                 path: `/dossiers-communs/${entete?.prestationId}/pages`, 
-                state: { targetTab: 'prospection' } 
+                state: { targetTab: 'prospection' }
               },
               { label: "Prospection detail", isCurrent: true }
             ]} 
           />
         <header className="mb-10">
           <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-            <h1 className="text-2xl font-bold text-slate-800 mb-1">
-              Entête de prospection : {entete?.numeroEntete}
+            <h1 className="font-bold text-slate-800 mb-1 uppercase">
+              N° prospection : {entete?.numeroEntete}
             </h1>
-            <p className="text-slate-600 mb-6">
+            <p className="text-slate-600 mb-6 uppercase">
               Prestation : {entete.prestation?.numeroDos || entete.prestationId || '—'}
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
               <div>
                 <label className="text-xs uppercase text-slate-500 font-semibold">Fournisseur</label>
-                <p className="text-lg font-medium mt-1">
+                <p className="font-medium mt-1">
                   {entete.fournisseur?.libelle || entete.fournisseurId || '—'}
                 </p>
               </div>
               <div>
                 <label className="text-xs uppercase text-slate-500 font-semibold">Type de vol</label>
-                <p className="text-lg font-medium mt-1">{entete?.typeVol}</p>
+                <p className="font-medium mt-1">{entete?.typeVol}</p>
               </div>
               <div>
                 <label className="text-xs uppercase text-slate-500 font-semibold">Crédit</label>
-                <p className="text-lg font-medium mt-1">{entete?.credit}</p>
+                <p className="font-medium mt-1">{entete?.credit}</p>
               </div>
               <div>
                 <label className="text-xs uppercase text-slate-500 font-semibold">Commission proposée</label>
-                <p className="text-lg font-medium mt-1">{entete?.commissionPropose} %</p>
+                <p className="font-medium mt-1">{entete?.commissionPropose} %</p>
               </div>
               <div>
                 <label className="text-xs uppercase text-slate-500 font-semibold">Commission appliquée</label>
-                <p className="text-lg font-medium mt-1">{entete?.commissionAppliquer} %</p>
+                <p className="font-medium mt-1">{entete?.commissionAppliquer} %</p>
               </div>
             </div>
           </div>
@@ -483,6 +485,8 @@ export default function ProspectionDetail() {
                       </th>
                     )}
                     <th className="px-4 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider min-w-[120px]">N° Dos Ref</th>
+                    <th className="px-4 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider min-w-[120px]">Statut</th>
+                    <th className="px-4 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider min-w-[120px]">Origin Line</th>
                     <th className="px-4 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider min-w-[120px]">Numéro de vol</th>
                     <th className="px-4 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider min-w-[120px]">Avion</th>
                     <th className="px-4 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider min-w-[150px]">Départ</th>
@@ -513,14 +517,15 @@ export default function ProspectionDetail() {
                     <th className="px-4 py-4 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider min-w-[190px]">Mt Pénalité Client Ar</th>
                     <th className="px-4 py-4 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider min-w-[160px]">Commission Devise</th>
                     <th className="px-4 py-4 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider min-w-[170px]">Commission Ariary</th>
-                    <th className="px-4 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider min-w-[250px]">Services</th>
+                    <th className="px-4 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider min-w-[250px]">Nb Ligne</th>
+                    <th className="px-4 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider min-w-[250px]">Services & Spécifique</th>
                     <th className="px-4 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider min-w-[100px]">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 bg-white">
                   {Array.isArray(lignes) && lignes.length > 0 ? (
                     lignes.map((ligne) => (
-                      <tr key={ligne.id} className="hover:bg-blue-50/30 transition-colors">
+                      <tr key={ligne.origineLine} className="hover:bg-blue-50/30 transition-colors">
                         {selectionMode && (
                           <td className="px-4 py-4 text-center">
                             <input
@@ -532,6 +537,8 @@ export default function ProspectionDetail() {
                           </td>
                         )}
                         <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{ligne.numeroDosRef || '—'}</td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-700 font-medium">{ligne.status || '—'}</td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-700 font-medium">{ligne.origineLine || '—'}</td>
                         <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-700 font-medium">{ligne.numeroVol || '—'}</td>
                         <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">{ligne.avion || '—'}</td>
                         <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-700">—</td>
@@ -611,8 +618,10 @@ export default function ProspectionDetail() {
                           {ligne.commissionEnAriary?.toLocaleString('fr-FR') || '—'}
                         </td>
 
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-700">—</td>
+
                         <td className="px-4 py-4 text-sm">
-                          <div className="flex flex-wrap gap-1.5 max-w-xs">
+                          <div className="flex flex-row gap-1">
                             {ligne.serviceProspectionLigne?.length > 0 ? (
                               ligne.serviceProspectionLigne.map((service) => {
                                 const label = service.serviceSpecifique?.libelle || service.serviceSpecifiqueId.slice(0, 8);
@@ -620,7 +629,7 @@ export default function ProspectionDetail() {
                                 return (
                                   <span
                                     key={service.id}
-                                    className="inline-flex items-center px-2.5 py-1 bg-blue-100 text-blue-800 rounded-full text-xs font-medium"
+                                    className="inline-flex items-center px-2.5 py-1 bg-blue-100 text-blue-800 text-xs font-medium"
                                     title={`${label} = ${value}`}
                                   >
                                     {label}: {value}
@@ -691,7 +700,9 @@ function NewLineRow({
 
   return (
     <tr className="bg-linear-to-r from-blue-50 to-blue-100/50 border-t-4 border-blue-400">
-      <td className="px-4 py-4 whitespace-nowrap text-sm font-bold text-blue-700">(nouveau)</td>
+      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
+      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
+      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
 
       <td className="px-4 py-3">
         <input
@@ -927,50 +938,28 @@ function NewLineRow({
       <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
       <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
 
-      {/* <td className="px-4 py-3">
-        <input
-          type="number"
-          step="0.01"
-          value={newLine.montantBilletClientDevise}
-          onChange={(e) => updateNewLineField('montantBilletClientDevise', Number(e.target.value))}
-          className={numberInputClassName + " text-blue-700"}
-          placeholder="0.00"
-        />
-      </td>
+      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
+      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
+      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
+      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
+      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
 
       <td className="px-4 py-3">
         <input
           type="number"
-          step="0.01"
-          value={newLine.montantServiceClientDevise}
-          onChange={(e) => updateNewLineField('montantServiceClientDevise', Number(e.target.value))}
-          className={numberInputClassName + " text-blue-700"}
-          placeholder="0.00"
+          step="1"
+          value={newLine.nombre}
+          onChange={(e) => updateNewLineField('nombre', Number(e.target.value))}
+          className={numberInputClassName + " text-emerald-700"}
+          placeholder="1"
         />
       </td>
-
-      <td className="px-4 py-3">
-        <input
-          type="number"
-          step="0.01"
-          value={newLine.montantPenaliteClientDevise}
-          onChange={(e) => updateNewLineField('montantPenaliteClientDevise', Number(e.target.value))}
-          className={numberInputClassName + " text-blue-700"}
-          placeholder="0.00"
-        />
-      </td> */}
-
-      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
-      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
-      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
-      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
-      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
 
       <td className="px-4 py-4">
         {servicesDisponibles.length === 0 ? (
           <div className="text-amber-600 py-2 text-sm">Aucun service</div>
         ) : (
-          <div className="grid grid-cols-1 gap-3 text-sm min-w-[250px]">
+          <div className="flex flex-row gap-3 text-sm">
             {servicesDisponibles.map((svc, idx) => {
               const current = newLine.serviceValues[idx];
               if (!current) return null;
@@ -984,7 +973,7 @@ function NewLineRow({
                 <div key={svc.id} className="flex flex-col gap-1.5 p-3 bg-white rounded-lg border border-slate-200 shadow-sm">
                   <label className="text-xs font-semibold text-slate-700">
                     {svc.libelle}
-                    <span className="ml-1 text-slate-400 font-normal">({svc.code})</span>
+                    {/* <span className="ml-1 text-slate-400 font-normal">({svc.code})</span> */}
                   </label>
                   {isBoolean ? (
                     <label className="inline-flex items-center">

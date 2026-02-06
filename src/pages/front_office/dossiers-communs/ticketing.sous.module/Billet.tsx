@@ -11,9 +11,12 @@ import {
   updateApprouverBilletEnteteStatut,
   emettreFactureClient,
   reglerFactureClient,
+  annulerBillet,
+  type AnnulationBilletPayload,
+  reprogrammerLigne,
+  type ServiceSpecifique,
 } from '../../../../app/front_office/billetSlice';
 import AnnulationBilletModal from '../../../../components/modals/AnnulationBilletModal';
-import { annulerReservationBillet, annulerEmissionBillet } from '../../../../app/front_office/billetSlice';
 import ReservationModal from '../../../../components/modals/ReservationModal';
 import EmissionModal from '../../../../components/modals/EmissionModal';
 import { fetchClientFactureById } from '../../../../app/back_office/clientFacturesSlice';
@@ -30,7 +33,7 @@ import BilletInfoCards from './components.billet/BilletInfoCards';
 import BilletTable from './components.billet/BilletTable';
 import ServiceTable from './components.billet/ServiceTable';
 import SuiviTab from './components.billet/SuiviTable';
-import { FiX } from 'react-icons/fi';
+import ReprogrammationModal from '../../../../components/modals/ReprogrammationModal';
 
 const Billet = () => {
   const navigate = useNavigate();
@@ -66,6 +69,9 @@ const Billet = () => {
   const [showEmissionModal, setShowEmissionModal] = useState(false);
   const [, setEmissionReference] = useState('');
 
+  const [showReprogModal, setShowReprogModal] = useState(false);
+  const [selectedLigneForReprog, setSelectedLigneForReprog] = useState<BilletLigne | null>(null);
+
   // Dans le composant Billet
   const serviceState = useSelector((state: RootState) => state.serviceSpecifique);
   const services = serviceState.items;   // ← tableau des services { id, code, libelle, type, ... }
@@ -73,14 +79,6 @@ const Billet = () => {
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editCommentText, setEditCommentText] = useState('');
   const [updating, setUpdating] = useState(false);
-  
-  const serviceById = useMemo(() => {
-    const map = new Map<string, any>();
-    services.forEach(svc => {
-      map.set(svc.id, svc);
-    });
-    return map;
-  }, [services]);
 
   const tabs = [
     { id: 'prospection', label: 'Listes des entête prospection' },
@@ -112,6 +110,14 @@ const Billet = () => {
   const dossier = useSelector(
     (state: RootState) => state.dossierCommun.currentClientFactureId
   );
+
+  const serviceById = useMemo(() => {
+  const map = new Map<string, ServiceSpecifique>();
+    services.forEach((svc) => {
+      map.set(svc.id, svc);
+    });
+    return map;
+  }, [services]);
 
   // Charger les suivis (une seule fois ou quand l'entête change)
   useEffect(() => {
@@ -191,6 +197,20 @@ const Billet = () => {
     } else {
       setActiveTab(id);
     }
+  };
+
+  // Dans Billet.tsx, avant le return
+  const handleReprogrammer = (ligne: BilletLigne) => {
+    console.log('handleReprogrammer appelé avec :', ligne); // ← AJOUTE ÇA
+
+    if (!ligne || !ligne.id) {
+      console.warn('Ligne invalide reçue pour reprogrammation');
+      alert('Impossible de reprogrammer : ligne invalide');
+      return;
+    }
+
+    setSelectedLigneForReprog(ligne);
+    setShowReprogModal(true);
   };
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -301,7 +321,7 @@ const Billet = () => {
 
   const billetLignes = billet?.billetLigne;
 
-  const allLinesReservation = billetLignes?.every(l => l.statut === 'FAIT') ?? false;
+  const allLinesReservation = billetLignes?.every(l => l.statut === 'FAIT' || l.statut === 'MODIFIER' || l.statut === 'ANNULER' ) ?? false;
   const allLinesEmission    = billetLignes?.every(l => l.statut === 'CLOTURER') ?? false;
 
   const handleMarkAsReserved = async (billetId: string) => {
@@ -520,9 +540,11 @@ const Billet = () => {
                 lignes={lignes}
                 groups={groups}
                 billet={billet}
-                billetLignes={billetLignes || []}
+                billetLignes={billet?.billetLigne || []}
                 handleOpenReservation={handleOpenReservation}
                 handleOpenEmission={handleOpenEmission}
+                handleReprogrammer={handleReprogrammer}
+                serviceById={serviceById}   // ← AJOUT ICI
               />
             )}
 
@@ -538,11 +560,11 @@ const Billet = () => {
 
             {/* Onglet SPÉCIFIQUE */}
             {innerTab === 'specifique' && (
-              <ServiceTable 
+              <ServiceTable
                 lignes={lignes}
                 groups={groups}
                 serviceById={serviceById}
-                typeFilter="SPECIFIQUE"
+                typeFilter="SERVICE"
               />
             )}
 
@@ -616,6 +638,44 @@ const Billet = () => {
             }}
           />
 
+          {showReprogModal && (
+          <>
+            {console.log('Modal Reprogrammation rendu avec ligne :', selectedLigneForReprog)}
+            { selectedLigneForReprog && (
+              <ReprogrammationModal
+                isOpen={showReprogModal}
+                onClose={() => {
+                  setShowReprogModal(false);
+                  setSelectedLigneForReprog(null);
+                }}
+                onSubmit={async (payload) => {
+                if (!billet?.id || !selectedLigneForReprog) return;
+
+                try {
+                  await dispatch(
+                    reprogrammerLigne({
+                      billetId: billet.id,                    // ← ID ENTÊTE ici (dans l'URL)
+                      payload,
+                    })
+                  ).unwrap();
+
+                  alert('Reprogrammation effectuée');
+                  dispatch(fetchBilletById(enteteId!));
+                } catch (err: any) {
+                  alert(err?.message || 'Erreur lors de la reprogrammation');
+                } finally {
+                  setShowReprogModal(false);
+                  setSelectedLigneForReprog(null);
+                }
+              }}
+                ligne={selectedLigneForReprog}
+                loading={false} // à connecter si tu as un loading spécifique
+                serviceById={serviceById}
+              />
+            )}
+            </>
+          )}
+
           {/* Modals */}
           {selectedLigne && (
             <ReservationModal
@@ -647,42 +707,51 @@ const Billet = () => {
             />
           )}
 
-          {showAnnulModal && billet && (
-          <AnnulationBilletModal
-            isOpen={showAnnulModal}
-            onClose={() => {
-              setShowAnnulModal(false);
-              setAnnulType(null);
-            }}
-            onSubmit={async (data) => {
-              if (!billet?.id || !annulType) return;
+          {showAnnulModal && billet && billet.billetLigne?.length > 0 && (
+            <AnnulationBilletModal
+              isOpen={showAnnulModal}
+              onClose={() => {
+                setShowAnnulModal(false);
+                setAnnulType(null);
+              }}
+              onSubmit={async (payload: AnnulationBilletPayload) => {
+              if (!billet?.id) return;
+
               setAnnulLoading(true);
-
               try {
-                const thunk = annulType === 'reservation' ? annulerReservationBillet : annulerEmissionBillet;
-
                 await dispatch(
-                  thunk({
+                  annulerBillet({
                     billetId: billet.id,
-                    payload: data,
+                    payload,
                   })
                 ).unwrap();
 
-                alert(`Annulation ${annulType} effectuée avec succès`);
+                alert('Annulation effectuée avec succès');
                 dispatch(fetchBilletById(enteteId!));
               } catch (err: any) {
-                alert(err?.message || 'Erreur lors de l\'annulation');
+                // ← Correction ici
+                const errorMessage =
+                  err instanceof Error
+                    ? err.message
+                    : typeof err === 'string'
+                    ? err
+                    : 'Erreur inconnue lors de l\'annulation';
+                console.log('Erreur capturée dans catch :', err, typeof err);
+
+                alert(errorMessage);
+                console.error('Erreur annulation détaillée :', err); // ← utile pour debug
               } finally {
                 setAnnulLoading(false);
                 setShowAnnulModal(false);
                 setAnnulType(null);
               }
             }}
-            lignes={billet.billetLigne || []}
-            type={annulType!}
-            loading={annulLoading}
-          />
-        )}
+              lignes={billet?.billetLigne ?? []}           // ?? au lieu de ||  (meilleure gestion null/undefined)
+              type={annulType ?? 'reservation'}
+              loading={annulLoading}
+              enteteId={billet?.id ?? ''}
+            />
+          )}
         </div>
       </div>
     </TabContainer>

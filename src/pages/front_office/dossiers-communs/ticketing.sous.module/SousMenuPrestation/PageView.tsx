@@ -90,12 +90,14 @@ export default function PageView() {
                   flex items-center gap-2
                   px-4 py-2
                   rounded-lg
-                  bg-white
+                bg-amber-400/90
                   border
-                  text-slate-600
-                  hover:bg-slate-100
-                  hover:text-slate-900
+                border-amber-400/90
+                text-slate-900
+                hover:bg-amber-300/90
+                hover:text-slate-900
                   transition-all
+                  font-bold
                 "
               >
                 <span className="font-semibold tracking-wide">
@@ -222,22 +224,24 @@ export default function PageView() {
         /* Onglet Billet */
         <div className="space-y-6">
           {/* Header de la section billets */}
-          <header className="flex items-center justify-between mb-10">
+          <header className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-3 text-sm">
 
               {/* Bouton retour */}
               <button
-                onClick={() => navigate(-1)}
+                // onClick={() => navigate(-1)}
                 className="
                   flex items-center gap-2
                   px-4 py-2
                   rounded-lg
-                  bg-white
+                bg-amber-400/90
                   border
-                  text-slate-600
-                  hover:bg-slate-100
-                  hover:text-slate-900
+                border-amber-400/90
+                text-slate-900
+                hover:bg-amber-300/90
+                hover:text-slate-900
                   transition-all
+                  font-bold
                 "
               >
                 <span className="font-semibold tracking-wide">
