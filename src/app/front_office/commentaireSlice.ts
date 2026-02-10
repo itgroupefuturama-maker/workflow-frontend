@@ -20,7 +20,6 @@ export interface Commentaire {
     id: string;
     numeroDos: string;
     status: string;
-    // ... autres champs si besoin
   };
 }
 

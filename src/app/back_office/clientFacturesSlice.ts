@@ -323,7 +323,7 @@ export const assignUserToClientFacture = createAsyncThunk<
 
 export const fetchClientFactureById = createAsyncThunk<
   ClientFactureDetail,
-  string,  // id du client facture
+  string,
   { state: RootState }
 >(
   'clientFactures/fetchById',
@@ -336,11 +336,14 @@ export const fetchClientFactureById = createAsyncThunk<
         headers: { Authorization: `Bearer ${auth.token}` },
       });
 
+      console.log("Réponse brute fetchById :", response.data); // ← log très important
+
       if (response.data.success && response.data.data) {
         return response.data.data as ClientFactureDetail;
       }
-      return rejectWithValue('Client facture non trouvé');
+      return rejectWithValue('Client facture non trouvé ou réponse invalide');
     } catch (error: any) {
+      console.error("Erreur fetchClientFactureById :", error.response?.data || error.message);
       return rejectWithValue(
         error.response?.data?.message || 'Erreur lors de la récupération du client facture'
       );

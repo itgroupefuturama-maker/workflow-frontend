@@ -78,7 +78,7 @@ export interface Ligne{
     itineraire: string | null;
     classe: string;                          // ex: "ECONOMIE"
     typePassager: string;                    // ex: "ENFANT", "ADULTE"
-    
+    nombre: number;
     dateHeureDepart: string;                 // ISO string
     dateHeureArrive: string | null;
     dureeVol: string | null;                 // ex: "11h30"
@@ -226,6 +226,32 @@ export const annulerDevis = createAsyncThunk(
     } catch (err: any) {
       return rejectWithValue(
         err.response?.data?.message || 'Erreur lors de l\'annulation du devis'
+      );
+    }
+  }
+);
+
+// Thunk : Envoyer à la direction → génère et sauvegarde le PDF commission
+export const approuverDirectionDevis = createAsyncThunk(
+  'devis/approuverDirection',
+  async (
+    { devisId, client, facture }: { devisId: string; client: string; facture: string },
+    { rejectWithValue }
+  ) => {
+    try {
+      const response = await axios.post(`/devis/${devisId}/commission/pdf/save`, {
+        client,
+        facture,
+      });
+
+      if (!response.data?.success) {
+        throw new Error('Échec de la génération du PDF commission');
+      }
+
+      return response.data; // on renvoie toute la réponse pour accéder à data.filepath
+    } catch (err: any) {
+      return rejectWithValue(
+        err.response?.data?.message || 'Erreur lors de l\'envoi à la direction'
       );
     }
   }

@@ -26,7 +26,7 @@ interface BilletInfoCardsProps {
 
 const BilletInfoCards: React.FC<BilletInfoCardsProps> = ({ billet, clientFacture, dossier }) => {
   return (
-    <div className="bg-white rounded-xl p-6 mb-8 border border-slate-200 shadow-sm text-xs">
+    <div className="bg-white rounded-xl p-6 border border-slate-200 text-xs">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         
         <InfoItem label="Num Dossier Entete" value={billet?.prospectionEntete?.numeroEntete} />

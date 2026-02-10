@@ -27,6 +27,12 @@ const useAppDispatch = () => useDispatch<AppDispatch>();
 export default function AccueilView() {
   const location = useLocation();
   const dispatch = useAppDispatch();
+
+  const [isMounted, setIsMounted] = useState(false);
+    useEffect(() => {
+      setIsMounted(true);
+    }, []);
+
   const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'dashboard');
   const { data: fournisseurs, loading: fournisseursLoading } = useSelector((state: RootState) => state.fournisseurs);
   const {
@@ -62,10 +68,7 @@ export default function AccueilView() {
 
   useEffect(() => {
     if (location.state?.targetTab) {
-      const timer = setTimeout(() => {
-        setActiveTab(location.state.targetTab);
-      }, 0);
-      return () => clearTimeout(timer);
+      setActiveTab(location.state.targetTab);
     }
   }, [location.state?.targetTab]);
 
@@ -154,7 +157,7 @@ export default function AccueilView() {
           {/* KPI CARDS */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Dossiers année en cours */}
-            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg">
+            <div className="bg-linear-to-br from-blue-500 to-blue-600 rounded-xl p-6 text-white shadow-lg">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
                   <FiFileText size={24} />
@@ -168,7 +171,7 @@ export default function AccueilView() {
             </div>
 
             {/* Croissance - temporairement désactivée ou N/A */}
-            <div className="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-xl p-6 text-white shadow-lg">
+            <div className="bg-linear-to-br from-emerald-500 to-emerald-600 rounded-xl p-6 text-white shadow-lg">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
                   <FiArrowUp size={24} />
@@ -180,7 +183,7 @@ export default function AccueilView() {
             </div>
 
             {/* Annulations */}
-            <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-xl p-6 text-white shadow-lg">
+            <div className="bg-linear-to-br from-red-500 to-red-600 rounded-xl p-6 text-white shadow-lg">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
                   <FiAlertCircle size={24} />
@@ -194,7 +197,7 @@ export default function AccueilView() {
             </div>
 
             {/* Taux d'annulation */}
-            <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl p-6 text-white shadow-lg">
+            <div className="bg-linear-to-br from-amber-500 to-amber-600 rounded-xl p-6 text-white shadow-lg">
               <div className="flex items-center justify-between mb-4">
                 <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
                   <FiPercent size={24} />
@@ -226,51 +229,57 @@ export default function AccueilView() {
                 </div>
               </div>
               <div className="p-6">
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={dataCurrent}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                      <XAxis 
-                        dataKey="name" 
-                        axisLine={false} 
-                        tickLine={false}
-                        style={{ fontSize: '12px', fontWeight: 500 }}
-                      />
-                      <YAxis 
-                        axisLine={false} 
-                        tickLine={false}
-                        style={{ fontSize: '12px' }}
-                      />
-                      <Tooltip 
-                        cursor={{fill: '#f1f5f9'}} 
-                        contentStyle={{
-                          borderRadius: '12px', 
-                          border: 'none', 
-                          boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                          padding: '12px'
-                        }} 
-                      />
-                      <Legend 
-                        iconType="circle"
-                        wrapperStyle={{ paddingTop: '20px' }}
-                      />
-                      <Bar 
-                        dataKey="dossiers" 
-                        fill="#3b82f6" 
-                        name="Dossiers" 
-                        radius={[6, 6, 0, 0]}
-                        maxBarSize={60}
-                      />
-                      <Bar 
-                        dataKey="annulations" 
-                        fill="#ef4444" 
-                        name="Annulations" 
-                        radius={[6, 6, 0, 0]}
-                        maxBarSize={60}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                {/* <div className="h-80 w-full"style={{ minHeight: '320px'}}>
+                  {isMounted && dataCurrent && dataCurrent.length > 0 ? (
+                    <ResponsiveContainer width="100%" aspect={2}>
+                      <BarChart data={dataCurrent}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                        <XAxis 
+                          dataKey="name" 
+                          axisLine={false} 
+                          tickLine={false}
+                          style={{ fontSize: '12px', fontWeight: 500 }}
+                        />
+                        <YAxis 
+                          axisLine={false} 
+                          tickLine={false}
+                          style={{ fontSize: '12px' }}
+                        />
+                        <Tooltip 
+                          cursor={{fill: '#f1f5f9'}} 
+                          contentStyle={{
+                            borderRadius: '12px', 
+                            border: 'none', 
+                            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                            padding: '12px'
+                          }} 
+                        />
+                        <Legend 
+                          iconType="circle"
+                          wrapperStyle={{ paddingTop: '20px' }}
+                        />
+                        <Bar 
+                          dataKey="dossiers" 
+                          fill="#3b82f6" 
+                          name="Dossiers" 
+                          radius={[6, 6, 0, 0]}
+                          maxBarSize={60}
+                        />
+                        <Bar 
+                          dataKey="annulations" 
+                          fill="#ef4444" 
+                          name="Annulations" 
+                          radius={[6, 6, 0, 0]}
+                          maxBarSize={60}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-slate-400">
+                      Chargement des données...
+                    </div>
+                  )}
+                </div> */}
               </div>
             </div>
 
@@ -288,51 +297,57 @@ export default function AccueilView() {
                 </div>
               </div>
               <div className="p-6">
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={dataPrev}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                      <XAxis 
-                        dataKey="name" 
-                        axisLine={false} 
-                        tickLine={false}
-                        style={{ fontSize: '12px', fontWeight: 500 }}
-                      />
-                      <YAxis 
-                        axisLine={false} 
-                        tickLine={false}
-                        style={{ fontSize: '12px' }}
-                      />
-                      <Tooltip 
-                        cursor={{fill: '#f1f5f9'}} 
-                        contentStyle={{
-                          borderRadius: '12px', 
-                          border: 'none', 
-                          boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                          padding: '12px'
-                        }} 
-                      />
-                      <Legend 
-                        iconType="circle"
-                        wrapperStyle={{ paddingTop: '20px' }}
-                      />
-                      <Bar 
-                        dataKey="dossiers" 
-                        fill="#94a3b8" 
-                        name="Dossiers" 
-                        radius={[6, 6, 0, 0]}
-                        maxBarSize={60}
-                      />
-                      <Bar 
-                        dataKey="annulations" 
-                        fill="#fca5a5" 
-                        name="Annulations" 
-                        radius={[6, 6, 0, 0]}
-                        maxBarSize={60}
-                      />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                {/* <div className="h-80 w-full" style={{ minHeight: '320px' }}>
+                  {isMounted && dataPrev && dataPrev.length > 0 ? (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={dataPrev}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                        <XAxis 
+                          dataKey="name" 
+                          axisLine={false} 
+                          tickLine={false}
+                          style={{ fontSize: '12px', fontWeight: 500 }}
+                        />
+                        <YAxis 
+                          axisLine={false} 
+                          tickLine={false}
+                          style={{ fontSize: '12px' }}
+                        />
+                        <Tooltip 
+                          cursor={{fill: '#f1f5f9'}} 
+                          contentStyle={{
+                            borderRadius: '12px', 
+                            border: 'none', 
+                            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+                            padding: '12px'
+                          }} 
+                        />
+                        <Legend 
+                          iconType="circle"
+                          wrapperStyle={{ paddingTop: '20px' }}
+                        />
+                        <Bar 
+                          dataKey="dossiers" 
+                          fill="#94a3b8" 
+                          name="Dossiers" 
+                          radius={[6, 6, 0, 0]}
+                          maxBarSize={60}
+                        />
+                        <Bar 
+                          dataKey="annulations" 
+                          fill="#fca5a5" 
+                          name="Annulations" 
+                          radius={[6, 6, 0, 0]}
+                          maxBarSize={60}
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-slate-400">
+                      Chargement des données...
+                    </div>
+                  )}
+                </div> */}
               </div>
             </div>
           </div>

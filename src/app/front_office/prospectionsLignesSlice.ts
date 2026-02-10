@@ -35,7 +35,7 @@ export interface ProspectionLigne {
   itineraire: string | null;
   classe: string;                          // ex: "ECONOMIE"
   typePassager: string;                    // ex: "ENFANT", "ADULTE"
-  
+  nombre: number;
   dateHeureDepart: string;                 // ISO string
   dateHeureArrive: string | null;
   dureeVol: string | null;                 // ex: "11h30"

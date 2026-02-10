@@ -243,42 +243,13 @@ const Billet = () => {
   const handleSubmitReservation = async (data: any) => {
     if (!selectedLigne) return;
 
-    // --- AJOUT DU LOG ICI ---
-    console.log("Données envoyées à la réservation :", {
-      ligneId: selectedLigne.id,
-      payload: {
-        nombre: data.nombre,
-        clientbeneficiaireInfoId: data.clientbeneficiaireInfoId,
-        reservation: data.reservation,
-        puResaBilletCompagnieDevise: data.puResaBilletCompagnieDevise,
-        puResaServiceCompagnieDevise: data.puResaServiceCompagnieDevise,
-        puResaPenaliteCompagnieDevise: data.puResaPenaliteCompagnieDevise,
-        devise: data.devise,
-        resaTauxEchange: data.resaTauxEchange,
-        puResaMontantBilletCompagnieDevise: data.puResaMontantBilletCompagnieDevise,
-        puResaMontantServiceCompagnieDevise: data.puResaMontantServiceCompagnieDevise,
-        puResaMontantPenaliteCompagnieDevise: data.puResaMontantPenaliteCompagnieDevise,
-      },
-    });
-    // ------------------------
+    console.log("Payload envoyé → multi-passagers :", data);
 
     try {
       await dispatch(
         addReservationToLigne({
           ligneId: selectedLigne.id,
-          payload: {
-            nombre: data.nombre,
-            clientbeneficiaireInfoId: data.clientbeneficiaireInfoId,
-            reservation: data.reservation,
-            puResaBilletCompagnieDevise: data.puResaBilletCompagnieDevise,
-            puResaServiceCompagnieDevise: data.puResaServiceCompagnieDevise,
-            puResaPenaliteCompagnieDevise: data.puResaPenaliteCompagnieDevise,
-            devise: data.devise,
-            resaTauxEchange: data.resaTauxEchange,
-            puResaMontantBilletCompagnieDevise: data.puResaMontantBilletCompagnieDevise,
-            puResaMontantServiceCompagnieDevise: data.puResaMontantServiceCompagnieDevise,
-            puResaMontantPenaliteCompagnieDevise: data.puResaMontantPenaliteCompagnieDevise,
-          },
+          payload: data,   // ← maintenant compatible avec le format { passagerIds: [...], ... }
         })
       ).unwrap();
 
@@ -286,43 +257,41 @@ const Billet = () => {
       setModalOpen(false);
       setSelectedLigne(null);
     } catch (err: any) {
-      alert('Erreur lors de la réservation : ' + (err.message || 'Erreur inconnue'));
+      alert('Erreur réservation : ' + (err.message || '—'));
     }
   };
 
   const handleOpenEmission = (ligne: BilletLigne) => {
+    console.log("Ligne cliquée → ID:", ligne?.id, "Statut:", ligne?.statut);
+    console.log("Ligne passée au modal →", ligne);
     setSelectedLigneForEmission(ligne);
     setEmissionModalOpen(true);
   };
 
   const handleSubmitEmission = async (data: any) => {
     if (!selectedLigneForEmission) return;
+
     try {
       await dispatch(
         emitBilletLigne({
           ligneId: selectedLigneForEmission.id,
-          payload: {
-            emissionTauxChange: data.emissionTauxChange,
-            numeroBillet: data.numeroBillet,
-            pjBillet: data.pjBillet || undefined,
-            puEmissionBilletCompagnieAriary: data.puEmissionBilletCompagnieAriary,
-            // Ajoute les autres champs si besoin
-          },
+          payload: data, // { emissionTauxChange, billets: [{billetId, numeroBillet}], pjBillets: [File, File, ...] }
         })
       ).unwrap();
 
       if (enteteId) dispatch(fetchBilletById(enteteId));
       setEmissionModalOpen(false);
       setSelectedLigneForEmission(null);
+      alert('Émission effectuée avec succès');
     } catch (err: any) {
-      alert("Erreur lors de l'émission : " + (err.message || 'Erreur inconnue'));
+      alert('Erreur lors de l\'émission : ' + (err.message || '—'));
     }
   };
 
   const billetLignes = billet?.billetLigne;
 
   const allLinesReservation = billetLignes?.every(l => l.statut === 'FAIT' || l.statut === 'MODIFIER' || l.statut === 'ANNULER' ) ?? false;
-  const allLinesEmission    = billetLignes?.every(l => l.statut === 'CLOTURER') ?? false;
+  const allLinesEmission    = billetLignes?.every(l => l.statut === 'CLOTURER' || l.statut === 'MODIFIER' || l.statut === 'ANNULER' || l.statut === 'FAIT' ) ?? false;
 
   const handleMarkAsReserved = async (billetId: string) => {
     if (!enteteId) return;
@@ -430,6 +399,14 @@ const Billet = () => {
     return Array.from(map.values());
   }, [lignes]);
 
+  const [ligneToAnnul, setLigneToAnnul] = useState<BilletLigne | null>(null);
+
+  const handleAnnulerLigne = (ligne: BilletLigne) => {
+    setLigneToAnnul(ligne);
+    setShowAnnulModal(true);
+    // Option : setAnnulType('reservation') ou autre selon ton besoin
+  };
+
   if (!enteteId) return <div className="p-8 text-red-600">ID du billet manquant</div>;
 
   if (loading || cfLoading || cfError) {
@@ -509,14 +486,14 @@ const Billet = () => {
           />
 
           {/* Infos principales */}
-          <BilletInfoCards 
-            billet={billet} 
-            clientFacture={clientFacture} 
-            dossier={dossier} 
+          <BilletInfoCards
+            billet={billet}
+            clientFacture={clientFacture}
+            dossier={dossier}
           />
 
           {/* Tableau groupé avec Sous-Onglets */}
-          <div className="mt-8 p-1 rounded-t-lg flex space-x-1">
+          <div className="mt-2 rounded-t-lg flex space-x-1">
             {innerTabs.map((tab) => (
               <button
                 key={tab.id}
@@ -524,8 +501,8 @@ const Billet = () => {
                 className={`
                   px-6 py-2 text-sm font-semibold rounded-t-lg transition-all
                   ${innerTab === tab.id 
-                    ? 'bg-[#4A77BE] text-white shadow-sm' 
-                    : 'bg-[#CBD5E1] text-[#1E3A8A] hover:bg-[#B9C9E0]'}
+                    ? 'bg-[#4A77BE] text-white shadow-sm'
+                    : 'bg-[#ffffff] text-[#1E3A8A] hover:bg-[#f2f7fe] border-t border-l border-r border-slate-200'}
                 `}
               >
                 {tab.label}
@@ -544,13 +521,14 @@ const Billet = () => {
                 handleOpenReservation={handleOpenReservation}
                 handleOpenEmission={handleOpenEmission}
                 handleReprogrammer={handleReprogrammer}
+                handleRemove={handleAnnulerLigne}
                 serviceById={serviceById}   // ← AJOUT ICI
               />
             )}
 
             {/* Onglet SERVICES */}
             {innerTab === 'services' && (
-              <ServiceTable 
+              <ServiceTable
                 lignes={lignes}
                 groups={groups}
                 serviceById={serviceById}
@@ -564,13 +542,13 @@ const Billet = () => {
                 lignes={lignes}
                 groups={groups}
                 serviceById={serviceById}
-                typeFilter="SERVICE"
+                typeFilter="SPECIFIQUE"
               />
             )}
 
             {/* CONTENU : SUIVI (Déplacé ici pour correspondre à l'image) */}
             {innerTab === 'suivi' && (
-              <SuiviTab 
+              <SuiviTab
                 // Suivis
                 suivis={suivis}
                 suivisLoading={suivisLoading}
@@ -707,46 +685,42 @@ const Billet = () => {
             />
           )}
 
-          {showAnnulModal && billet && billet.billetLigne?.length > 0 && (
+          {showAnnulModal && billet && (
             <AnnulationBilletModal
               isOpen={showAnnulModal}
               onClose={() => {
                 setShowAnnulModal(false);
+                setLigneToAnnul(null);
                 setAnnulType(null);
               }}
               onSubmit={async (payload: AnnulationBilletPayload) => {
-              if (!billet?.id) return;
+                if (!billet?.id) return;
+                setAnnulLoading(true);
+                try {
+                  // Si une seule ligne est sélectionnée → on peut filtrer ou adapter le payload
+                  const adaptedPayload = ligneToAnnul
+                    ? { ...payload, ligneIds: [ligneToAnnul.id] } // ← À adapter selon ton API !
+                    : payload;
 
-              setAnnulLoading(true);
-              try {
-                await dispatch(
-                  annulerBillet({
-                    billetId: billet.id,
-                    payload,
-                  })
-                ).unwrap();
+                  await dispatch(
+                    annulerBillet({
+                      billetId: billet.id,
+                      payload: adaptedPayload,
+                    })
+                  ).unwrap();
 
-                alert('Annulation effectuée avec succès');
-                dispatch(fetchBilletById(enteteId!));
-              } catch (err: any) {
-                // ← Correction ici
-                const errorMessage =
-                  err instanceof Error
-                    ? err.message
-                    : typeof err === 'string'
-                    ? err
-                    : 'Erreur inconnue lors de l\'annulation';
-                console.log('Erreur capturée dans catch :', err, typeof err);
-
-                alert(errorMessage);
-                console.error('Erreur annulation détaillée :', err); // ← utile pour debug
-              } finally {
-                setAnnulLoading(false);
-                setShowAnnulModal(false);
-                setAnnulType(null);
-              }
-            }}
-              lignes={billet?.billetLigne ?? []}           // ?? au lieu de ||  (meilleure gestion null/undefined)
+                  alert('Annulation effectuée');
+                  dispatch(fetchBilletById(enteteId!));
+                } catch (err: any) {
+                  alert(err?.message || "Erreur lors de l'annulation");
+                } finally {
+                  setAnnulLoading(false);
+                  setShowAnnulModal(false);
+                  setLigneToAnnul(null);
+                  setAnnulType(null);
+                }
+              }}
+              lignes={ligneToAnnul ? [ligneToAnnul] : billet?.billetLigne ?? []}
               type={annulType ?? 'reservation'}
               loading={annulLoading}
               enteteId={billet?.id ?? ''}

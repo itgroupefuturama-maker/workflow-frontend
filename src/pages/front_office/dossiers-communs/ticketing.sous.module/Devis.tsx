@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
-import { FiCheck, FiCheckCircle, FiEye, FiFileText, FiRefreshCw, FiX } from 'react-icons/fi';
+import { FiCheck, FiCheckCircle, FiEye, FiFileText, FiList, FiRefreshCw, FiX } from 'react-icons/fi';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { AppDispatch, RootState } from '../../../../app/store';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchDevisByEntete, updateApprouverDevisStatut, updateValidateDevisStatut, type Ligne } from '../../../../app/front_office/devisSlice';
+import { approuverDirectionDevis, fetchDevisByEntete, updateApprouverDevisStatut, updateValidateDevisStatut, type Ligne } from '../../../../app/front_office/devisSlice';
 import { annulerDevis } from '../../../../app/front_office/devisSlice';
 import axios from '../../../../service/Axios';
 import TabContainer from '../../../../layouts/TabContainer';
@@ -27,6 +27,8 @@ export default function Devis () {
   const [showAnnulationModal, setShowAnnulationModal] = useState(false);
   const [selectedDevisForCancel, setSelectedDevisForCancel] = useState<Devis | null>(null);
   const [annulationLoading, setAnnulationLoading] = useState(false);
+
+  const [directionLoading, setDirectionLoading] = useState<{ [key: string]: boolean }>({});
 
   const tabs = [
     { id: 'prospection', label: 'Listes des entête prospection' },
@@ -68,8 +70,8 @@ export default function Devis () {
     setPdfLoading((prev) => ({ ...prev, [devisId]: true }));
 
     try {
-      const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:6060';
-
+      // const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:6060';
+      const apiBaseUrl = 'http://192.168.1.125:5001';
       // Appel POST avec axios – exactement comme le style de ton slice
       const response = await axios.post(`/devis/${devisId}/pdf/save`, {
         // Body → souvent vide suffit, mais tu peux passer des options si besoin
@@ -135,6 +137,59 @@ export default function Devis () {
       alert('Erreur lors du changement de statut');
     }
   };
+
+  const handleApprouverDirection = async (devisId: string, reference: string) => {
+  if (!enteteId) return;
+
+  // Optionnel : demander confirmation
+  if (!window.confirm(`Envoyer le devis ${reference} à la direction ?\nCela générera le PDF commission.`)) {
+    return;
+  }
+
+  setDirectionLoading((prev) => ({ ...prev, [devisId]: true }));
+
+  try {
+    // Valeurs à envoyer – adapte selon tes besoins réels
+    // Ici on utilise des valeurs fictives / placeholders
+    // → À toi de les récupérer du devis ou de demander à l'utilisateur via un modal si besoin
+    const payload = {
+      client: "CLIENT EXAMPLE SAS",          // ← À remplacer dynamiquement
+      facture: `FACT-${new Date().getFullYear()}-${reference.split('-')[2] || 'XXXX'}`,
+    };
+
+    const result = await dispatch(
+      approuverDirectionDevis({
+        devisId,
+        client: payload.client,
+        facture: payload.facture,
+      })
+    ).unwrap();
+
+    // La réponse ressemble à : { success: true, data: { success: true, message: "...", filepath: "..." } }
+    const filepath = result?.data?.filepath;
+
+    if (filepath) {
+      // Construction de l'URL complète
+      const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://192.168.1.125:5001';
+      const pdfUrl = `${apiBaseUrl}/${filepath}`;
+
+      // Ouvrir dans un nouvel onglet
+      window.open(pdfUrl, '_blank');
+      
+      // Optionnel : recharger la liste pour refléter un éventuel changement de statut
+      dispatch(fetchDevisByEntete(enteteId));
+      
+      alert('PDF Commission généré et envoyé à la direction avec succès !');
+    } else {
+      throw new Error('Chemin du PDF non reçu');
+    }
+  } catch (err: any) {
+    console.error('Erreur approuver direction :', err);
+    alert('Erreur : ' + (err.message || 'Impossible de générer le PDF commission'));
+  } finally {
+    setDirectionLoading((prev) => ({ ...prev, [devisId]: false }));
+  }
+};
 
   if (!enteteId) {
     return (
@@ -328,6 +383,7 @@ export default function Devis () {
                                           <span className="text-sm font-semibold text-slate-700">{ligne.itineraire}</span>
                                         </div>
                                         <span className="text-[10px] text-slate-400 mt-1 uppercase font-medium">Réf: {ligne.numeroDosRef || '—'}</span>
+                                        <span className="text-[10px] text-slate-400 mt-1 uppercase font-medium">Nb ligne: {ligne.nombre || '—'}</span>
                                       </div>
                                     </td>
 
@@ -435,10 +491,8 @@ export default function Devis () {
                                 : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                             }`}
                           >
-                            <FiFileText size={16} />
-                            Liste Billet
+                            <FiList size={16} />
                           </button>
-                          
 
                           {/* Bouton Devis à approuver */}
                           <button
@@ -456,7 +510,7 @@ export default function Devis () {
                             title={devis.statut !== 'CREER' ? 'Disponible uniquement pour les devis créés' : ''}
                           >
                             <FiCheckCircle size={16} />
-                            À approuver / Client
+                            Envoyer Client
                           </button>
 
                           {/* Bouton Devis à valider */}
@@ -475,7 +529,34 @@ export default function Devis () {
                             title={devis.statut !== 'DEVIS_A_APPROUVER' ? 'Disponible uniquement pour les devis à approuver' : ''}
                           >
                             <FiCheck size={16} />
-                            À valider / Client
+                            Approuver / Client
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              if (devis.statut === 'DEVIS_APPROUVE') {   // adapte selon le statut où le bouton doit être actif
+                                handleApprouverDirection(devis.id, devis.reference);
+                              }
+                            }}
+                            disabled={devis.statut !== 'DEVIS_APPROUVE' || directionLoading[devis.id]}
+                            className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-2 font-medium min-w-[180px] justify-center ${
+                              devis.statut === 'DEVIS_APPROUVE' && !directionLoading[devis.id]
+                                ? 'bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer'
+                                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            }`}
+                            title={devis.statut !== 'DEVIS_APPROUVE' ? 'Disponible uniquement pour les devis approuvés' : ''}
+                          >
+                            {directionLoading[devis.id] ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-white"></div>
+                                En cours...
+                              </>
+                            ) : (
+                              <>
+                                <FiCheck size={16} />
+                                Envoyer Direction
+                              </>
+                            )}
                           </button>
 
                           {/* Bouton Devis à transformer */}

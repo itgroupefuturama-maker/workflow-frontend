@@ -24,26 +24,37 @@ export default function ParametreView() {
   const location = useLocation();
   const dispatch = useAppDispatch();
 
-  const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'defaultTab');
+  const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'listeService');
   const raisonState = useSelector((state: RootState) => state.raisonAnnulation);
-
-  useEffect(() => {
-    if (activeTab === 'listeService' && serviceState.items.length === 0) {
-      dispatch(fetchServiceSpecifiques());
-    }
-    if (activeTab === 'listeExigence') {
-      // ... existant
-    }
-   if (activeTab === 'listeRaisonAnnulation' && raisonState.items.length === 0) {
-    dispatch(fetchRaisonsAnnulation());
-    }
-  }, [dispatch, activeTab]);   // ← activeSubTab reste pour l'onglet Exigence
 
   const tabs = [
     { id: 'listeService', label: 'Services & Spécifiques' },
     { id: 'listeExigence', label: 'Exigences de Voyage' },
     { id: 'listeRaisonAnnulation', label: 'Raison Annulation' },
   ];
+
+  useEffect(() => {
+    if (activeTab === 'listeService' && serviceState.items.length === 0) {
+      dispatch(fetchServiceSpecifiques());
+    }
+    if (activeTab === 'listeExigence') {
+      if (activeSubTab === 'exigence' && exigenceState.items.length === 0) dispatch(fetchExigences());
+      if (activeSubTab === 'pays' && paysState.items.length === 0) dispatch(fetchPays());
+      if (activeSubTab === 'destination' && destinationState.items.length === 0) dispatch(fetchDestinations());
+    }
+   if (activeTab === 'listeRaisonAnnulation' && raisonState.items.length === 0) {
+    dispatch(fetchRaisonsAnnulation());
+    }
+  }, [dispatch, activeTab]);   // ← activeSubTab reste pour l'onglet Exigence
+
+  useEffect(() => {
+    if (location.state?.targetTab) {
+      const timer = setTimeout(() => {
+        setActiveTab(location.state.targetTab);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [location.state?.targetTab]);
 
   const [modalRaisonOpen, setModalRaisonOpen] = useState(false);
   const { createLoading } = useSelector((state: RootState) => state.raisonAnnulation);
@@ -72,17 +83,17 @@ export default function ParametreView() {
 
   
 
-  useEffect(() => {
-    if (activeTab === 'listeService' && serviceState.items.length === 0) {
-      dispatch(fetchServiceSpecifiques());
-    }
-    if (activeTab === 'listeExigence') {
-      if (assocState.items.length === 0) dispatch(fetchAssociationsPaysVoyage());
-      if (activeSubTab === 'exigence' && exigenceState.items.length === 0) dispatch(fetchExigences());
-      if (activeSubTab === 'pays' && paysState.items.length === 0) dispatch(fetchPays());
-      if (activeSubTab === 'destination' && destinationState.items.length === 0) dispatch(fetchDestinations());
-    }
-  }, [dispatch, activeTab, activeSubTab]);
+  // useEffect(() => {
+  //   if (activeTab === 'listeService' && serviceState.items.length === 0) {
+  //     dispatch(fetchServiceSpecifiques());
+  //   }
+  //   if (activeTab === 'listeExigence') {
+  //     if (assocState.items.length === 0) dispatch(fetchAssociationsPaysVoyage());
+  //     if (activeSubTab === 'exigence' && exigenceState.items.length === 0) dispatch(fetchExigences());
+  //     if (activeSubTab === 'pays' && paysState.items.length === 0) dispatch(fetchPays());
+  //     if (activeSubTab === 'destination' && destinationState.items.length === 0) dispatch(fetchDestinations());
+  //   }
+  // }, [dispatch, activeTab, activeSubTab]);
 
   useEffect(() => {
     if (activeSubTab === 'pays' && selectedPaysId) {

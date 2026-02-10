@@ -1,9 +1,9 @@
 // src/components/modals/ReprogrammationModal.tsx
 import React, { useEffect, useState } from 'react';
-import { FiX, FiAlertTriangle, FiCheckCircle, FiFileText, FiAlertCircle, FiCheck } from 'react-icons/fi';
+import { FiX, FiAlertTriangle, FiCheckCircle, FiTrash2, FiCheck, FiAlertCircle } from 'react-icons/fi';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../app/store';
-import { fetchClientBeneficiaireInfos } from '../../app/portail_client/clientBeneficiaireInfosSlice'; // adapte le chemin
+import { fetchClientBeneficiaireInfos } from '../../app/portail_client/clientBeneficiaireInfosSlice';
 import type { BilletLigne, ServiceSpecifique } from '../../app/front_office/billetSlice';
 import { fetchRaisonsAnnulation } from '../../app/front_office/parametre_ticketing/raisonAnnulationSlice';
 
@@ -13,7 +13,7 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (payload: any) => void;
-  ligne: BilletLigne | null | undefined; // ← accepte null/undefined
+  ligne: BilletLigne | null | undefined;
   loading?: boolean;
   serviceById: Map<string, ServiceSpecifique>;
 }
@@ -28,18 +28,33 @@ export default function ReprogrammationModal({
 }: Props) {
   const dispatch = useDispatch<AppDispatch>();
 
-  // Sélection bénéficiaire (comme ReservationModal)
   const beneficiaires = useSelector(
     (state: RootState) => state.clientFactures.current?.beneficiaires || []
   );
+
   const { list: infosList, loadingList: infosLoading } = useSelector(
     (state: RootState) => state.clientBeneficiaireInfos
   );
 
-  const [selectedBeneficiaireId, setSelectedBeneficiaireId] = useState<string>('');
-  const [clientbeneficiaireInfoId, setClientbeneficiaireInfoId] = useState<string>('');
+  const { items: raisons, loading: raisonsLoading } = useSelector(
+    (state: RootState) => state.raisonAnnulation
+  );
 
-  // Champs du formulaire
+  // ─── État multi-passagers ─────────────────────────────────
+  const [selectedPassagers, setSelectedPassagers] = useState<
+    Array<{
+      beneficiaireId: string;
+      infoId: string;
+      nomComplet: string;
+      typeDoc?: string;
+      referenceDoc?: string;
+    }>
+  >([]);
+
+  const [currentBeneficiaireId, setCurrentBeneficiaireId] = useState('');
+  const [currentInfoId, setCurrentInfoId] = useState('');
+
+  // ─── Autres états du formulaire ───────────────────────────
   const [typeModif, setTypeModif] = useState<ModifType>('SIMPLE');
   const [conditionModif, setConditionModif] = useState('');
   const [tauxChange, setTauxChange] = useState<number | ''>(
@@ -47,13 +62,13 @@ export default function ReprogrammationModal({
   );
   const [numeroVol, setNumeroVol] = useState(ligne?.prospectionLigne?.numeroVol || '');
   const [dateHeureDepartRaw, setDateHeureDepartRaw] = useState(
-    ligne?.prospectionLigne?.dateHeureDepart 
-        ? new Date(ligne.prospectionLigne.dateHeureDepart).toISOString().slice(0, 16) 
-        : ''
+    ligne?.prospectionLigne?.dateHeureDepart
+      ? new Date(ligne.prospectionLigne.dateHeureDepart).toISOString().slice(0, 16)
+      : ''
   );
   const [dateHeureArriveRaw, setDateHeureArriveRaw] = useState(
-  ligne?.prospectionLigne?.dateHeureArrive 
-      ? new Date(ligne.prospectionLigne.dateHeureArrive).toISOString().slice(0, 16) 
+    ligne?.prospectionLigne?.dateHeureArrive
+      ? new Date(ligne.prospectionLigne.dateHeureArrive).toISOString().slice(0, 16)
       : ''
   );
   const [resaCommDevise, setResaCommDevise] = useState(0);
@@ -61,18 +76,9 @@ export default function ReprogrammationModal({
   const [penalitePu, setPenalitePu] = useState(0);
   const [penaliteMontant, setPenaliteMontant] = useState(0);
   const [showPreview, setShowPreview] = useState(false);
-
-  const [classe, setClasse] = useState(
-    ligne?.prospectionLigne?.classe || 'ECONOMIE' // valeur par défaut ou existante
-  );
-
-  // Raison d'annulation (comme dans AnnulationBilletModal)
-  const { items: raisons, loading: raisonsLoading } = useSelector(
-    (state: RootState) => state.raisonAnnulation
-  );
+  const [classe, setClasse] = useState(ligne?.prospectionLigne?.classe || 'ECONOMIE');
   const [rasionAnnulationId, setRasionAnnulationId] = useState<string>('');
 
-  // Services (on garde les existants par défaut, et on permet modification simple)
   const [services, setServices] = useState<
     { serviceSpecifiqueId: string; valeur: string }[]
   >(
@@ -82,23 +88,41 @@ export default function ReprogrammationModal({
     })) || []
   );
 
+  // ─── Pré-sélection des passagers déjà liés à la ligne ─────
+  useEffect(() => {
+    if (isOpen && ligne && ligne.billet && ligne.billet.length > 0) {
+      const preselected = ligne.billet.map((b) => {
+        const info = b.clientbeneficiaireInfo;
+        const nomComplet = `${info.prenom || ''} ${info.nom || ''}`.trim() || 'Passager inconnu';
+        return {
+          beneficiaireId: info.clientbeneficiaireId,
+          infoId: info.id,
+          nomComplet,
+          typeDoc: info.typeDoc,
+          referenceDoc: info.referenceDoc,
+        };
+      });
+
+      setSelectedPassagers(preselected);
+    }
+  }, [isOpen, ligne]);
+
+  // Chargement raisons annulation
   useEffect(() => {
     if (isOpen && raisons.length === 0 && !raisonsLoading) {
       dispatch(fetchRaisonsAnnulation());
     }
   }, [isOpen, raisons.length, raisonsLoading, dispatch]);
 
-  // Fetch infos bénéficiaire quand sélectionné
+  // Chargement infos bénéficiaire quand on change le courant
   useEffect(() => {
-    if (selectedBeneficiaireId) {
-      dispatch(fetchClientBeneficiaireInfos(selectedBeneficiaireId));
-      setClientbeneficiaireInfoId(''); // reset document
+    if (currentBeneficiaireId) {
+      dispatch(fetchClientBeneficiaireInfos(currentBeneficiaireId));
+      setCurrentInfoId('');
     }
-  }, [selectedBeneficiaireId, dispatch]);
+  }, [currentBeneficiaireId, dispatch]);
 
-  // Garde très tôt si ligne manquante
   if (!isOpen) return null;
-
   if (!ligne) {
     return (
       <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
@@ -118,79 +142,98 @@ export default function ReprogrammationModal({
     );
   }
 
+  // ─── Gestion ajout/suppression passagers ──────────────────
+  const addPassager = () => {
+    if (!currentBeneficiaireId || !currentInfoId) {
+      alert('Veuillez sélectionner un bénéficiaire ET son document');
+      return;
+    }
+
+    const beneficiaire = beneficiaires.find((b) => b.clientBeneficiaireId === currentBeneficiaireId);
+    const info = infosList.find((i) => i.id === currentInfoId);
+
+    if (!beneficiaire || !info) return;
+
+    const nomComplet = `${info.prenom || ''} ${info.nom || ''}`.trim() || beneficiaire.clientBeneficiaire.libelle;
+
+    if (selectedPassagers.some((p) => p.infoId === currentInfoId)) {
+      alert('Ce document est déjà sélectionné');
+      return;
+    }
+
+    setSelectedPassagers((prev) => [
+      ...prev,
+      {
+        beneficiaireId: currentBeneficiaireId,
+        infoId: currentInfoId,
+        nomComplet,
+        typeDoc: info.typeDoc,
+        referenceDoc: info.referenceDoc,
+      },
+    ]);
+
+    setCurrentBeneficiaireId('');
+    setCurrentInfoId('');
+  };
+
+  const removePassager = (infoId: string) => {
+    setSelectedPassagers((prev) => prev.filter((p) => p.infoId !== infoId));
+  };
+
+  // ─── Construction payload (format exact demandé) ──────────
   const buildPayload = () => {
-    if (!ligne?.id) {
-      throw new Error("ID de la ligne manquant");
+    if (!ligne?.id) throw new Error('ID de la ligne manquant');
+
+    if (selectedPassagers.length === 0) {
+      throw new Error('Au moins un passager est requis');
     }
-    if (!clientbeneficiaireInfoId) {
-      throw new Error("Document bénéficiaire obligatoire");
-    }
+
     if (tauxChange === '' || isNaN(Number(tauxChange))) {
-      throw new Error("Taux de change obligatoire et valide");
-    }
-    if (!numeroVol.trim()) {
-      throw new Error("Numéro de vol obligatoire");
-    }
-    if (!classe) {
-      throw new Error("Classe obligatoire");
+      throw new Error('Taux de change obligatoire et valide');
     }
 
-    // Dates
+    if (!numeroVol.trim()) throw new Error('Numéro de vol obligatoire');
+    if (!classe) throw new Error('Classe obligatoire');
+
     let finalDepart = '';
-    let finalArrive = '';
-
     if (dateHeureDepartRaw) {
-      const dateObj = new Date(dateHeureDepartRaw);
-      if (!isNaN(dateObj.getTime())) {
-        finalDepart = dateObj.toISOString();
-      } else {
-        throw new Error("Date de départ invalide");
-      }
+      const d = new Date(dateHeureDepartRaw);
+      if (!isNaN(d.getTime())) finalDepart = d.toISOString();
+      else throw new Error('Date de départ invalide');
     }
 
+    let finalArrive = '';
     if (dateHeureArriveRaw) {
-      const dateObj = new Date(dateHeureArriveRaw);
-      if (!isNaN(dateObj.getTime())) {
-        finalArrive = dateObj.toISOString();
-      } else {
-        throw new Error("Date d'arrivée invalide");
-      }
+      const d = new Date(dateHeureArriveRaw);
+      if (!isNaN(d.getTime())) finalArrive = d.toISOString();
+      else throw new Error('Date d’arrivée invalide');
     }
 
-    const payload = {
+    return {
       id: ligne.id,
       type: typeModif,
-      classe,                           // ← nouveau
-      rasionAnnulationId: rasionAnnulationId || null,  // ← nouveau (peut être null)
+      classe,
+      rasionAnnulationId: rasionAnnulationId || null,
       conditionAnnul: typeModif !== 'PEN' ? conditionModif.trim() || null : null,
       conditionModif: typeModif !== 'PEN' ? conditionModif.trim() || null : null,
       resaTauxEchange: Number(tauxChange),
-      clientbeneficiaireInfoId,
+      passagerIds: selectedPassagers.map((p) => p.infoId),
       dateHeureDepart: finalDepart,
       dateHeureArrive: finalArrive,
-
-      // Prix (on garde les valeurs existantes ou 0 si pas remplies)
       puResaBilletCompagnieDevise: ligne.puResaBilletCompagnieDevise || 0,
       puResaServiceCompagnieDevise: ligne.puResaServiceCompagnieDevise || 0,
       puResaPenaliteCompagnieDevise: penalitePu || 0,
       puResaMontantPenaliteCompagnieDevise: penaliteMontant || 0,
       puResaMontantBilletCompagnieDevise: ligne.puResaMontantBilletCompagnieDevise || 0,
       puResaMontantServiceCompagnieDevise: ligne.puResaMontantServiceCompagnieDevise || 0,
-
-      // Commissions
       resaCommissionEnDevise: resaCommDevise || 0,
       resaCommissionEnAriary: resaCommAriary || 0,
-
       devise: ligne.devise || 'EUR',
-
-      // Services modifiés ou conservés
       services: services.map((s) => ({
         serviceSpecifiqueId: s.serviceSpecifiqueId,
-        valeur: s.valeur,  // string pour l'instant (true/false/"23kg"/etc.)
+        valeur: s.valeur,
       })),
     };
-
-    return payload;
   };
 
   const handleSubmit = () => {
@@ -203,12 +246,7 @@ export default function ReprogrammationModal({
     }
   };
 
-  const selectedBeneficiaire = beneficiaires.find(
-    (b) => b.clientBeneficiaireId === selectedBeneficiaireId
-  );
-  const selectedInfo = infosList.find(
-    (info) => info.id === clientbeneficiaireInfoId
-  );
+  const nombrePassagers = selectedPassagers.length;
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
@@ -220,8 +258,7 @@ export default function ReprogrammationModal({
             <div>
               <h2 className="text-xl font-bold">Reprogrammation de la ligne</h2>
               <p className="text-sm text-gray-600">
-                Ligne {ligne.id?.slice(-8) || '—'} •{' '}
-                {ligne.prospectionLigne?.itineraire || 'Itinéraire inconnu'}
+                Ligne {ligne.id?.slice(-8) || '—'} • {ligne.prospectionLigne?.itineraire || '—'}
               </p>
             </div>
           </div>
@@ -246,120 +283,106 @@ export default function ReprogrammationModal({
             </select>
           </div>
 
-          {/* Étape 1 : Bénéficiaire */}
+          {/* Passagers – multi-sélection avec pré-remplissage */}
           <div>
-            <label className="block font-medium mb-1">
-              Bénéficiaire <span className="text-red-600">*</span>
+            <label className="block font-medium mb-2">
+              Passagers associés <span className="text-red-600">*</span> ({nombrePassagers})
             </label>
-            <select
-              value={selectedBeneficiaireId}
-              onChange={(e) => setSelectedBeneficiaireId(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-              required
-            >
-              <option value="">-- Choisir un bénéficiaire --</option>
-              {beneficiaires.map((b) => (
-                <option key={b.clientBeneficiaireId} value={b.clientBeneficiaireId}>
-                  {b.clientBeneficiaire.libelle} • {b.clientBeneficiaire.code} •{' '}
-                  {b.clientBeneficiaire.statut}
-                </option>
-              ))}
-            </select>
 
-            {selectedBeneficiaire && (
-              <div className="mt-3 bg-gray-50 border border-gray-200 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <div className="flex items-center justify-center w-9 h-9 bg-green-100 rounded-lg flex-shrink-0">
-                    <FiCheck className="text-green-600" size={18} />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-xs font-medium text-gray-500 mb-2">Bénéficiaire sélectionné</p>
-                    <div className="grid grid-cols-3 gap-4 text-sm">
-                      <div>
-                        <p className="text-gray-500 text-xs mb-1">Nom</p>
-                        <p className="font-medium">{selectedBeneficiaire.clientBeneficiaire.libelle}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500 text-xs mb-1">Code</p>
-                        <p className="font-medium">{selectedBeneficiaire.clientBeneficiaire.code}</p>
-                      </div>
-                      <div>
-                        <p className="text-gray-500 text-xs mb-1">Statut</p>
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                            selectedBeneficiaire.clientBeneficiaire.statut === 'ACTIF'
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}
-                        >
-                          {selectedBeneficiaire.clientBeneficiaire.statut}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Colonne ajout */}
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Bénéficiaire</label>
+                  <select
+                    value={currentBeneficiaireId}
+                    onChange={(e) => {
+                      setCurrentBeneficiaireId(e.target.value);
+                      setCurrentInfoId('');
+                    }}
+                    className="w-full border rounded-lg p-2.5 focus:ring-amber-500"
+                  >
+                    <option value="">— Choisir un bénéficiaire —</option>
+                    {beneficiaires.map((b) => (
+                      <option key={b.clientBeneficiaireId} value={b.clientBeneficiaireId}>
+                        {b.clientBeneficiaire.libelle} • {b.clientBeneficiaire.code}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              </div>
-            )}
-          </div>
 
-          {/* Étape 2 : Document */}
-          <div>
-            <label className="block font-medium mb-1">
-              Document d'identité <span className="text-red-600">*</span>
-            </label>
-
-            {!selectedBeneficiaireId ? (
-              <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-lg p-3">
-                <FiAlertCircle className="text-amber-600" size={18} />
-                <p className="text-sm text-amber-800">Sélectionnez d'abord un bénéficiaire</p>
-              </div>
-            ) : infosLoading ? (
-              <div className="flex items-center justify-center py-6">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-600" />
-                <span className="ml-3 text-gray-600">Chargement...</span>
-              </div>
-            ) : (
-              <select
-                value={clientbeneficiaireInfoId}
-                onChange={(e) => setClientbeneficiaireInfoId(e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500"
-                required
-              >
-                <option value="">-- Choisir un document --</option>
-                {infosList.map((info) => (
-                  <option key={info.id} value={info.id}>
-                    {info.prenom} {info.nom} • {info.typeDoc} {info.referenceDoc} • Type: {info.clientType}
-                  </option>
-                ))}
-              </select>
-            )}
-
-            {clientbeneficiaireInfoId && (
-              <div className="mt-3 bg-gray-50 border border-gray-200 rounded-lg p-4">
-                <div className="flex items-start gap-3">
-                  <div className="flex items-center justify-center w-9 h-9 bg-blue-100 rounded-lg flex-shrink-0">
-                    <FiFileText className="text-blue-600" size={18} />
+                {currentBeneficiaireId && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Document</label>
+                    {infosLoading ? (
+                      <div className="text-gray-500 italic">Chargement...</div>
+                    ) : infosList.length === 0 ? (
+                      <div className="text-amber-700 bg-amber-50 p-3 rounded">
+                        Aucun document trouvé
+                      </div>
+                    ) : (
+                      <select
+                        value={currentInfoId}
+                        onChange={(e) => setCurrentInfoId(e.target.value)}
+                        className="w-full border rounded-lg p-2.5 focus:ring-amber-500"
+                      >
+                        <option value="">— Choisir un document —</option>
+                        {infosList.map((info) => (
+                          <option key={info.id} value={info.id}>
+                            {info.prenom} {info.nom} • {info.typeDoc} {info.referenceDoc}
+                          </option>
+                        ))}
+                      </select>
+                    )}
                   </div>
-                  <div className="flex-1">
-                    <p className="text-xs font-medium text-gray-500 mb-2">Document sélectionné</p>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-                      {/* Affichage similaire à ReservationModal */}
-                      {infosList
-                        .find((i) => i.id === clientbeneficiaireInfoId)
-                        ?.prenom && (
-                        <div>
-                          <p className="text-gray-500 text-xs mb-1">Nom complet</p>
-                          <p className="font-medium">
-                            {infosList.find((i) => i.id === clientbeneficiaireInfoId)?.prenom}{' '}
-                            {infosList.find((i) => i.id === clientbeneficiaireInfoId)?.nom}
-                          </p>
+                )}
+
+                <button
+                  type="button"
+                  onClick={addPassager}
+                  disabled={!currentBeneficiaireId || !currentInfoId}
+                  className="mt-2 px-5 py-2 bg-green-600 text-white rounded disabled:opacity-50 hover:bg-green-700 transition"
+                >
+                  + Ajouter ce passager
+                </button>
+              </div>
+
+              {/* Colonne liste */}
+              <div>
+                {selectedPassagers.length === 0 ? (
+                  <div className="border border-dashed border-gray-300 rounded p-6 text-center text-gray-500 text-sm">
+                    Aucun passager sélectionné
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-80 overflow-y-auto pr-2">
+                    {selectedPassagers.map((p, idx) => (
+                      <div
+                        key={p.infoId}
+                        className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg p-3 hover:bg-gray-100 group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center font-medium">
+                            {idx + 1}
+                          </div>
+                          <div>
+                            <p className="font-medium">{p.nomComplet}</p>
+                            <p className="text-xs text-gray-600">
+                              {p.typeDoc} {p.referenceDoc ? `(${p.referenceDoc})` : ''}
+                            </p>
+                          </div>
                         </div>
-                      )}
-                    </div>
+                        <button
+                          onClick={() => removePassager(p.infoId)}
+                          className="text-red-600 hover:text-red-800 opacity-70 hover:opacity-100 transition"
+                        >
+                          <FiTrash2 size={18} />
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
 
           {/* Taux de change */}
@@ -370,7 +393,6 @@ export default function ReprogrammationModal({
             <input
               type="number"
               step="0.01"
-              min="0"
               value={tauxChange}
               onChange={(e) => setTauxChange(e.target.value === '' ? '' : Number(e.target.value))}
               className="w-full border rounded-lg p-3 focus:ring-2 focus:ring-amber-500"
@@ -397,12 +419,9 @@ export default function ReprogrammationModal({
             </select>
           </div>
 
-          {/* Raison d'annulation (comme dans annulation) */}
+          {/* Raison d'annulation */}
           <div>
-            <label className="block font-medium mb-1">
-              Raison d'annulation (optionnel)
-            </label>
-
+            <label className="block font-medium mb-1">Raison d'annulation (optionnel)</label>
             {raisonsLoading ? (
               <div className="text-sm text-gray-500">Chargement...</div>
             ) : raisons.length === 0 ? (
@@ -438,29 +457,28 @@ export default function ReprogrammationModal({
               />
             </div>
             <div>
-            <label className="block font-medium mb-1">Départ <span className="text-red-600">*</span></label>
-            <input
+              <label className="block font-medium mb-1">Départ <span className="text-red-600">*</span></label>
+              <input
                 type="datetime-local"
                 value={dateHeureDepartRaw}
                 onChange={(e) => setDateHeureDepartRaw(e.target.value)}
                 className="w-full border rounded-lg p-3 focus:ring-2 focus:ring-amber-500"
                 required
-            />
+              />
             </div>
-
             <div>
-            <label className="block font-medium mb-1">Arrivée <span className="text-red-600">*</span></label>
-            <input
+              <label className="block font-medium mb-1">Arrivée <span className="text-red-600">*</span></label>
+              <input
                 type="datetime-local"
                 value={dateHeureArriveRaw}
                 onChange={(e) => setDateHeureArriveRaw(e.target.value)}
                 className="w-full border rounded-lg p-3 focus:ring-2 focus:ring-amber-500"
                 required
-            />
+              />
             </div>
           </div>
 
-          {/* Condition (sauf PEN) */}
+          {/* Condition */}
           {typeModif !== 'PEN' && (
             <div>
               <label className="block font-medium mb-1">Condition de modification</label>
@@ -530,7 +548,7 @@ export default function ReprogrammationModal({
             </div>
           )}
 
-          {/* Services - édition simple */}
+          {/* Services */}
           <div className="mt-6 border-t pt-4">
             <label className="block font-medium mb-2">Services spécifiques</label>
             {services.length > 0 ? (
@@ -561,32 +579,36 @@ export default function ReprogrammationModal({
           </div>
 
           {/* Bouton preview */}
-            <button
+          <button
             onClick={() => setShowPreview(true)}
-            className="w-full py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-2 mt-6"
             disabled={
-                !clientbeneficiaireInfoId ||
-                tauxChange === '' ||
-                isNaN(Number(tauxChange)) ||
-                !numeroVol.trim() ||
-                !dateHeureDepartRaw.trim() ||    // ← utilise la valeur brute
-                !dateHeureArriveRaw.trim()       // ← utilise la valeur brute
+              selectedPassagers.length === 0 ||
+              tauxChange === '' ||
+              isNaN(Number(tauxChange)) ||
+              !numeroVol.trim() ||
+              !dateHeureDepartRaw.trim() ||
+              !dateHeureArriveRaw.trim()
             }
-            >
+          >
             <FiCheckCircle /> Vérifier avant envoi
-            </button>
+          </button>
         </div>
 
-        {/* Preview */}
+        {/* Preview JSON */}
         {showPreview && (
           <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60]">
-            <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden">
+            <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
               <div className="p-6 border-b">
-                <h3 className="text-lg font-bold">Prévisualisation</h3>
-                <p className="text-sm text-gray-500">Données envoyées :</p>
+                <h3 className="text-xl font-bold">Prévisualisation du payload</h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Ce JSON sera envoyé à l'API PATCH /billet/{ligne.id}/reprogrammer
+                </p>
               </div>
-              <div className="p-6 bg-gray-50 font-mono text-sm max-h-[60vh] overflow-auto">
-                <pre>{JSON.stringify(buildPayload(), null, 2)}</pre>
+              <div className="flex-1 p-6 bg-gray-900 text-green-300 font-mono text-sm overflow-auto">
+                <pre className="whitespace-pre-wrap">
+                  {JSON.stringify(buildPayload(), null, 2)}
+                </pre>
               </div>
               <div className="p-6 flex gap-4 border-t">
                 <button
@@ -598,9 +620,9 @@ export default function ReprogrammationModal({
                 <button
                   onClick={handleSubmit}
                   disabled={loading}
-                  className="flex-1 py-3 bg-red-600 text-white rounded-xl font-medium disabled:opacity-50"
+                  className="flex-1 py-3 bg-green-600 text-white rounded-xl font-medium disabled:opacity-50 hover:bg-green-700"
                 >
-                  {loading ? 'En cours...' : 'Confirmer'}
+                  {loading ? 'En cours...' : 'Confirmer et reprogrammer'}
                 </button>
               </div>
             </div>

@@ -1,12 +1,21 @@
-import React, { useState } from 'react';
-import { FiX, FiUpload, FiCheck, FiAlertCircle } from 'react-icons/fi';
+// src/components/modals/EmissionModal.tsx
+import React, { useState, useEffect } from 'react';
+import { FiX, FiUpload, FiCheck, FiTrash2, FiCheckCircle } from 'react-icons/fi';
+
+interface PassagerEmission {
+  billetId: string;           // ID du billet (de la table billet)
+  infoId: string;             // clientbeneficiaireInfoId
+  nomComplet: string;
+  numeroBillet: string;
+  pjBillet: File | null;
+}
 
 interface EmissionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: any) => void;
   ligne: any;
-  numeroBillet?: string;
+  numeroBillet?: string;      // plus vraiment utilisé car multi
 }
 
 const EmissionModal: React.FC<EmissionModalProps> = ({
@@ -14,320 +23,244 @@ const EmissionModal: React.FC<EmissionModalProps> = ({
   onClose,
   onSubmit,
   ligne,
-  numeroBillet = '',
 }) => {
-  const [formData, setFormData] = useState({
-    emissionTauxChange: ligne?.resaTauxEchange || 4850,
-    numeroBillet: numeroBillet || '',
-    pjBillet: null as File | null,
-    puEmissionBilletCompagnieAriary: 0,
-    puEmissionServiceCompagnieAriary: 0,
-    puEmissionPenaliteCompagnieAriary: 0,
-    puEmissionBilletClientAriary: 0,
-    puEmissionServiceClientAriary: 0,
-    puEmissionPenaliteClientAriary: 0,
-    emissionMontantBilletCompagnieAriary: 0,
-    emissionMontantServiceCompagnieAriary: 0,
-    emissionMontantPenaliteCompagnieAriary: 0,
-    emissionMontantBilletClientAriary: 0,
-    emissionMontantServiceClientAriary: 0,
-    emissionMontantPenaliteClientAriary: 0,
-  });
+  const [tauxChange, setTauxChange] = useState(ligne?.resaTauxEchange || 4850);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, files } = e.target;
+  // Liste des passagers à émettre (pré-remplis depuis ligne.billet)
+  const [passagers, setPassagers] = useState<PassagerEmission[]>([]);
 
-    if (name === 'pjBillet' && files && files[0]) {
-      setFormData((prev) => ({ ...prev, pjBillet: files[0] }));
-      return;
+  useEffect(() => {
+    if (isOpen && ligne?.billet && ligne.billet.length > 0) {
+      const prefilled = ligne.billet.map((b: any) => {
+        const info = b.clientbeneficiaireInfo;
+        const nom = `${info.prenom || ''} ${info.nom || ''}`.trim() || 'Passager inconnu';
+        return {
+          billetId: b.id,
+          infoId: info.id,
+          nomComplet: nom,
+          numeroBillet: '',           // à remplir par l'utilisateur
+          pjBillet: null,
+        };
+      });
+      setPassagers(prefilled);
     }
+  }, [isOpen, ligne]);
 
-    if (name === 'numeroBillet') {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value,
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: value === '' ? 0 : Number(value),
-      }));
-    }
+  const handleNumeroChange = (index: number, value: string) => {
+    const newPassagers = [...passagers];
+    newPassagers[index].numeroBillet = value;
+    setPassagers(newPassagers);
+  };
+
+  const handleFileChange = (index: number, file: File | null) => {
+    const newPassagers = [...passagers];
+    newPassagers[index].pjBillet = file;
+    setPassagers(newPassagers);
+  };
+
+  const removePassager = (index: number) => {
+    const newPassagers = passagers.filter((_, i) => i !== index);
+    setPassagers(newPassagers);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.numeroBillet.trim()) {
-      alert('Le numéro de billet est obligatoire');
+    // Validation
+    if (passagers.length === 0) {
+      alert('Aucun passager à émettre');
       return;
     }
 
-    onSubmit(formData);
+    const hasMissing = passagers.some(p => !p.numeroBillet.trim() || !p.pjBillet);
+    if (hasMissing) {
+      alert('Chaque passager doit avoir un numéro de billet ET un fichier PDF');
+      return;
+    }
+
+    // Préparation des données pour onSubmit (qui ira dans le thunk)
+    const data = {
+      emissionTauxChange: Number(tauxChange),
+      billets: passagers.map(p => ({
+        billetId: p.billetId,
+        numeroBillet: p.numeroBillet.trim(),
+      })),
+      pjBillets: passagers.map(p => p.pjBillet), // tableau de Files
+    };
+
+    onSubmit(data);
   };
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col">
-        
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-white border-b px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">Émission de Billet</h2>
-              <p className="text-sm text-gray-500 mt-1">
-                Vol {ligne?.prospectionLigne?.numeroVol || '---'} • Réservation: {ligne?.reservation || 'N/A'}
-              </p>
-            </div>
-            <button 
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <FiX size={20} />
-            </button>
+        <div className="bg-white border-b px-6 py-4 flex justify-between items-center">
+          <div>
+            <h2 className="text-xl font-semibold text-gray-900">Émission des billets</h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Ligne {ligne?.id?.slice(-8) || '—'} • {ligne?.prospectionLigne?.itineraire || '—'}
+            </p>
           </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-800">
+            <FiX size={24} />
+          </button>
+        </div>
+
+        <div className='p-8'>
+          <p>Montant Billet Companie Devise : {ligne?.prospectionLigne?.montantBilletCompagnieDevise || '—'}</p>
+          <p>Montant Service Companie Devise : {ligne?.prospectionLigne?.montantServiceCompagnieDevise || '—'}</p>
+          <p>Montant penalite Companie Devise : {ligne?.prospectionLigne?.montantPenaliteCompagnieDevise || '—'}</p>
+          <p>Montant Billet Companie Ariary : {ligne?.prospectionLigne?.montantBilletCompagnieAriary || '—'}</p>
+          <p>Montant Service Companie Ariary : {ligne?.prospectionLigne?.montantServiceCompagnieAriary || '—'}</p>
+          <p>Montant penalite Companie Ariary : {ligne?.prospectionLigne?.montantPenaliteCompagnieAriary || '—'}</p>
+          <p>Montant Billet client Devise : {ligne?.prospectionLigne?.montantBilletClientDevise || '—'}</p>
+          <p>Montant Service client Devise : {ligne?.prospectionLigne?.montantServiceClientDevise || '—'}</p>
+          <p>Montant penalite client Devise : {ligne?.prospectionLigne?.montantPenaliteClientDevise || '—'}</p>
+          <p>Montant Billet client Ariary : {ligne?.prospectionLigne?.montantBilletClientAriary || '—'}</p>
+          <p>Montant Service client Ariary : {ligne?.prospectionLigne?.montantServiceClientAriary || '—'}</p>
+          <p>Montant penalite client Ariary : {ligne?.prospectionLigne?.montantPenaliteClientAriary || '—'}</p>
         </div>
 
         {/* Body */}
-        <div className="overflow-y-auto flex-1 p-6">
-          <div className="space-y-8">
-            
-            {/* Étape 1: Informations du vol */}
-            <div>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex items-center justify-center w-7 h-7 bg-blue-600 text-white rounded-full text-sm font-semibold">
-                  1
-                </div>
-                <h3 className="text-base font-semibold text-gray-900">Informations du vol</h3>
-              </div>
-              
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <p className="text-gray-500 text-xs mb-1">Numéro de vol</p>
-                    <p className="font-medium text-gray-900">
-                      {ligne?.prospectionLigne?.numeroVol || '---'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500 text-xs mb-1">Itinéraire</p>
-                    <p className="font-medium text-gray-900">
-                      {ligne?.prospectionLigne?.itineraire || 'N/A'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-gray-500 text-xs mb-1">Date de vol</p>
-                    <p className="font-medium text-gray-900">
-                      {ligne?.prospectionLigne?.dateVol 
-                        ? new Date(ligne.prospectionLigne.dateVol).toLocaleDateString('fr-FR')
-                        : 'N/A'}
-                    </p>
-                  </div>
-                </div>
+        <div className="flex-1 overflow-y-auto p-6 space-y-8">
+          {/* Taux commun */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Taux de change Ariary <span className="text-red-600">*</span>
+            </label>
+            <input
+              type="number"
+              step="1"
+              value={tauxChange}
+              onChange={e => setTauxChange(e.target.value === '' ? '' : Number(e.target.value))}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+              required
+            />
+          </div>
 
-                {/* Informations passager */}
-                {ligne?.clientBeneficiaireInfo && (
-                  <>
-                    <div className="border-t border-gray-200 my-4"></div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+          {/* Liste des passagers à émettre */}
+          <div>
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <FiCheckCircle className="text-blue-600" />
+              Émission par passager ({passagers.length})
+            </h3>
+
+            {passagers.length === 0 ? (
+              <div className="text-center text-gray-500 py-8">
+                Aucun passager associé à cette ligne
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {passagers.map((p, index) => (
+                  <div key={p.billetId} className="border rounded-lg p-5 bg-gray-50">
+                    <div className="flex justify-between items-start mb-4">
                       <div>
-                        <p className="text-gray-500 text-xs mb-1">Passager</p>
-                        <p className="font-medium text-gray-900">
-                          {ligne.clientBeneficiaireInfo.prenom} {ligne.clientBeneficiaireInfo.nom}
+                        <p className="font-medium text-lg">{p.nomComplet}</p>
+                        <p className="text-sm text-gray-600">
+                          Billet ID: {p.billetId.slice(-8)}...
                         </p>
                       </div>
+                      {passagers.length > 1 && (
+                        <button
+                          onClick={() => removePassager(index)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          <FiTrash2 size={18} />
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Numéro de billet */}
                       <div>
-                        <p className="text-gray-500 text-xs mb-1">Document</p>
-                        <p className="font-medium text-gray-900">
-                          {ligne.clientBeneficiaireInfo.typeDoc} {ligne.clientBeneficiaireInfo.referenceDoc}
-                        </p>
+                        <label className="block text-sm font-medium mb-1">
+                          Numéro de billet <span className="text-red-600">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={p.numeroBillet}
+                          onChange={e => handleNumeroChange(index, e.target.value)}
+                          placeholder="ex: TKT-2026-001"
+                          className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                          required
+                        />
                       </div>
+
+                      {/* Upload PDF */}
                       <div>
-                        <p className="text-gray-500 text-xs mb-1">Type de client</p>
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                          {ligne.clientBeneficiaireInfo.clientType}
-                        </span>
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
+                        <label className="block text-sm font-medium mb-1">
+                          Document PDF du billet <span className="text-red-600">*</span>
+                        </label>
+                        <div className="flex items-center gap-3">
+                          <label className="flex-1">
+                            <input
+                              type="file"
+                              accept="application/pdf"
+                              onChange={e => {
+                                if (e.target.files?.[0]) {
+                                  handleFileChange(index, e.target.files[0]);
+                                }
+                              }}
+                              className="hidden"
+                            />
+                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-blue-400">
+                              {p.pjBillet ? (
+                                <div className="text-sm">
+                                  <FiCheck className="inline text-green-600 mr-2" />
+                                  {p.pjBillet.name} ({(p.pjBillet.size / 1024).toFixed(1)} KB)
+                                </div>
+                              ) : (
+                                <div className="text-gray-500">
+                                  <FiUpload className="mx-auto mb-2" size={24} />
+                                  Cliquez pour sélectionner (PDF)
+                                </div>
+                              )}
+                            </div>
+                          </label>
 
-            {/* Séparateur */}
-            <div className="border-t border-gray-200"></div>
-
-            {/* Étape 2: Informations d'émission */}
-            <div>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex items-center justify-center w-7 h-7 bg-blue-600 text-white rounded-full text-sm font-semibold">
-                  2
-                </div>
-                <h3 className="text-base font-semibold text-gray-900">Informations d'émission</h3>
-                <span className="text-xs text-red-600 font-medium">*Obligatoire</span>
-              </div>
-              
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Taux de change (Ariary) <span className="text-red-600">*</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        name="emissionTauxChange"
-                        value={formData.emissionTauxChange}
-                        onChange={handleChange}
-                        step="1"
-                        className="w-full px-4 py-2.5 pr-12 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        required
-                      />
-                      <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-medium">
-                        Ar
-                      </span>
-                    </div>
-                    <p className="mt-1 text-xs text-gray-500">
-                      Taux de conversion appliqué
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Numéro de billet <span className="text-red-600">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      name="numeroBillet"
-                      value={formData.numeroBillet}
-                      onChange={handleChange}
-                      placeholder="ex: TK-2026-001234"
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      required
-                    />
-                    <p className="mt-1 text-xs text-gray-500">
-                      Numéro unique du billet émis
-                    </p>
-                  </div>
-                </div>
-
-                {/* Info devise de réservation */}
-                {ligne?.devise && ligne.devise !== 'MGA' && (
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <div className="flex items-start gap-3">
-                      <FiAlertCircle className="text-blue-600 shrink-0 mt-0.5" size={18} />
-                      <div className="flex-1">
-                        <p className="text-sm text-gray-700">
-                          <span className="font-semibold">Devise de réservation:</span> {ligne.devise}
-                        </p>
-                        <p className="text-xs text-gray-600 mt-1">
-                          Taux de réservation: {ligne.resaTauxEchange} Ar • 
-                          La conversion sera effectuée avec le taux d'émission ci-dessus
-                        </p>
+                          {p.pjBillet && (
+                            <button
+                              type="button"
+                              onClick={() => handleFileChange(index, null)}
+                              className="text-red-600 hover:text-red-800"
+                            >
+                              <FiTrash2 size={18} />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                )}
+                ))}
               </div>
-            </div>
-
-            {/* Séparateur */}
-            <div className="border-t border-gray-200"></div>
-
-            {/* Étape 3: Document du billet */}
-            <div>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex items-center justify-center w-7 h-7 bg-blue-600 text-white rounded-full text-sm font-semibold">
-                  3
-                </div>
-                <h3 className="text-base font-semibold text-gray-900">Document du billet</h3>
-              </div>
-              
-              <div className="space-y-4">
-                <label className="block">
-                  <input
-                    type="file"
-                    name="pjBillet"
-                    accept="application/pdf"
-                    onChange={handleChange}
-                    className="hidden"
-                    id="pjBillet"
-                  />
-                  <div 
-                    className="border-2 border-dashed border-gray-300 rounded-lg p-8 hover:border-blue-400 hover:bg-blue-50/50 transition-colors cursor-pointer"
-                    onClick={() => document.getElementById('pjBillet')?.click()}
-                  >
-                    <div className="flex flex-col items-center text-center">
-                      <div className="bg-blue-100 p-3 rounded-full mb-3">
-                        <FiUpload className="text-blue-600" size={24} />
-                      </div>
-                      <p className="text-sm font-medium text-gray-700 mb-1">
-                        Cliquez pour télécharger un fichier
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        PDF uniquement (max 10 MB)
-                      </p>
-                    </div>
-                  </div>
-                </label>
-
-                {formData.pjBillet && (
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center justify-center w-9 h-9 bg-green-100 rounded-lg flex-shrink-0">
-                        <FiCheck className="text-green-600" size={18} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                          {formData.pjBillet.name}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          {(formData.pjBillet.size / 1024).toFixed(2)} KB
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => setFormData(prev => ({ ...prev, pjBillet: null }))}
-                        className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-colors"
-                      >
-                        <FiX size={18} />
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
+            )}
           </div>
         </div>
 
         {/* Footer */}
-        <div className="border-t bg-gray-50 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-500">
-              Vérifiez toutes les informations avant de confirmer
-            </p>
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                type="button"
-                onClick={handleSubmit}
-                className="px-5 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium transition-colors"
-              >
-                Confirmer l'émission
-              </button>
-            </div>
+        <div className="border-t bg-gray-50 px-6 py-4 flex justify-between items-center">
+          <p className="text-sm text-gray-500">
+            <span className="text-red-600">*</span> champs obligatoires
+          </p>
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="px-6 py-2.5 border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={handleSubmit}
+              className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              disabled={passagers.length === 0}
+            >
+              Confirmer l'émission
+            </button>
           </div>
         </div>
-
       </div>
     </div>
   );

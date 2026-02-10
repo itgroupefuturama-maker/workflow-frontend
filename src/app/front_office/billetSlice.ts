@@ -109,6 +109,7 @@ export interface ProspectionLigne {
   avion: string;
   itineraire: string;
   departId: string;
+  nombre: number;
   destinationId: string;
   classe: string;
   typePassager: string;
@@ -162,7 +163,9 @@ export interface ServiceProspectionLigne {
 export interface BilletLigne {
   id: string;
   statut: string;
+  statusLigne: string;
   origineLine: string | null;
+  referenceLine: string;
   prospectionLigneId: string;
   billetEnteteId: string;
   nombre: number;
@@ -216,6 +219,37 @@ export interface BilletLigne {
   prospectionLigne: ProspectionLigne;
   createdAt: string;
   updatedAt: string;
+  billet: Array<{
+    id: string;
+    clientbeneficiaireInfoId: string;
+    billetLigneId: string;
+    pjBillet: string | null;
+    numeroBillet: string | null;
+    createdAt: string;
+    updatedAt: string;
+    clientbeneficiaireInfo: {
+      id: string;
+      nom: string;
+      prenom: string;
+      nationalite: string;
+      document: string;
+      referenceDoc: string;
+      typeDoc: string;
+      dateDelivranceDoc: string;
+      dateValiditeDoc: string | null;
+      referenceCin: string;
+      cin: string | null;
+      dateDelivranceCin: string | null;
+      dateValiditeCin: string | null;
+      clientType: string;
+      whatsapp: string;
+      tel: string;
+      clientbeneficiaireId: string;
+      statut: string;
+      createdAt: string;
+      updatedAt: string;
+    };
+  }> | [];
 }
 
 export interface BilletEntete {
@@ -378,8 +412,8 @@ export const updateBilletEnteteStatut = createAsyncThunk(
 
 // Thunk pour émettre une ligne
 export const emitBilletLigne = createAsyncThunk<
-  { ligneId: string; updatedData: any },
-  { ligneId: string; payload: EmissionPayload },
+  any,
+  { ligneId: string; payload: any },
   { rejectValue: string }
 >(
   'billet/emitLigne',
@@ -387,20 +421,18 @@ export const emitBilletLigne = createAsyncThunk<
     try {
       const formData = new FormData();
 
-      // Champs texte
+      // Taux commun
       formData.append('emissionTauxChange', payload.emissionTauxChange.toString());
-      formData.append('numeroBillet', payload.numeroBillet);
 
-      // Fichier PDF (si fourni)
-      if (payload.pjBillet) {
-        formData.append('pjBillet', payload.pjBillet);
-      }
+      // Tableau JSON des billets
+      formData.append('billets', JSON.stringify(payload.billets));
 
-      // Autres champs numériques (si tu les envoies)
-      if (payload.puEmissionBilletCompagnieAriary !== undefined) {
-        formData.append('puEmissionBilletCompagnieAriary', payload.puEmissionBilletCompagnieAriary.toString());
-      }
-      // ... même chose pour tous les autres puEmission* et emissionMontant*
+      // Tous les fichiers PDF (un par passager)
+      payload.pjBillets.forEach((file: File, index: number) => {
+        if (file) {
+          formData.append('pjBillets', file);
+        }
+      });
 
       const response = await axios.put(`/billet/ligne/${ligneId}/achat`, formData, {
         headers: {
@@ -412,7 +444,7 @@ export const emitBilletLigne = createAsyncThunk<
         throw new Error('Échec de l\'émission');
       }
 
-      return { ligneId, updatedData: response.data.data };
+      return response.data;
     } catch (err: any) {
       return rejectWithValue(
         err.response?.data?.message || 'Erreur lors de l\'émission du billet'

@@ -59,7 +59,6 @@ export default function PrestationDetail({ prestationId: propPrestationId }: Pre
     ?.find(colab => colab.module?.nom?.toLowerCase() === "ticketing")
     ?.prestation?.[0]?.id || '';
 
-
   // Ajoute dans le useEffect existant :
   useEffect(() => {
     if (prestationId) {
@@ -205,11 +204,10 @@ export default function PrestationDetail({ prestationId: propPrestationId }: Pre
   return (
     <div className="flex h-screen bg-[#F8FAFC] overflow-hidden">
       {/* La Sidebar prendra automatiquement 100% de la hauteur grâce à h-screen */}
-      <Sidebar />
+      <Sidebar module="ticketing"/>
 
       {/* Le contenu principal */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-        
         {/* Header fixe en haut du contenu */}
         <div className="p-5 border-b border-slate-100 bg-white shrink-0">
           <header className="flex items-center justify-between">

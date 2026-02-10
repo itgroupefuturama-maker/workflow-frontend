@@ -24,7 +24,7 @@ export const BilletActions = ({
   onAnnulerEmission,
 }: BilletActionsProps) => {
   return (
-    <div className="flex flex-wrap gap-4 mb-8 justify-end items-center">
+    <div className="flex flex-wrap gap-4 mb-2 justify-end items-center">
       {/* Bouton : Émettre facture client */}
       <button
         disabled={!(allLinesEmission && billet?.statut === 'BILLET_EMIS')}
@@ -91,7 +91,7 @@ export const BilletActions = ({
 
       {/* Annuler la réservation (avant émission) */}
       {/* {allLinesReservation && billet?.statut !== 'CLOTURER' && billet?.statut !== 'ANNULE' && ( */}
-        <button
+        {/* <button
             disabled={!(allLinesReservation && billet?.statut !== 'CLOTURER' && billet?.statut !== 'ANNULER')}
             onClick={onAnnulerReservation}
             className={`
@@ -103,7 +103,7 @@ export const BilletActions = ({
         >
             <FiX size={18} />
             Modification & Annulation
-        </button>
+        </button> */}
       {/* )} */}
 
       {/* Annuler l'émission (après émission) */}

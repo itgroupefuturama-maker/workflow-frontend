@@ -60,9 +60,9 @@ export default function DossierCommunDetail() {
       if (colab.status === "CREER" && colab.prestation && colab.prestation.length > 0) {
         const firstActivePrest = colab.prestation.find(p => p.status === "CREER");
         if (firstActivePrest) {
-          setTimeout(() => {
+          // setTimeout(() => {
             setSelectedPrestationId(firstActivePrest.id);
-          }, 0);
+          // }, 0);
           break;
         }
       }

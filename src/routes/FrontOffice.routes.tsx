@@ -14,6 +14,10 @@ import ParametreView from "../pages/front_office/dossiers-communs/ticketing.sous
 import PageView from "../pages/front_office/dossiers-communs/ticketing.sous.module/SousMenuPrestation/PageView";
 import DossierCommun from "../pages/front_office/dossiers-communs/module.dossier.commun/DossierCommun";
 import TicketingPage from "../pages/front_office/dossiers-communs/module.ticketing/ticketing";
+import Attestation from "../pages/front_office/dossiers-communs/module.attestation.voyage/Attestation";
+import AttestationListPage from "../pages/front_office/dossiers-communs/module.attestation.voyage/PageAttestationList";
+import PageViewAttestation from "../pages/front_office/dossiers-communs/module.attestation.voyage/SousMenuPrestation/PageView";
+import DetailAttestation from "../pages/front_office/dossiers-communs/module.attestation.voyage/SousMenuPrestation/DetailAttestation";
 
 export function frontOfficeRoutes() {
   return (
@@ -21,7 +25,7 @@ export function frontOfficeRoutes() {
       <Route index element={<HomePage />} />
       <Route path="dossiers-communs" element={<DossierCommun />} />
       <Route path="dossiers-communs/todolist" element={<ToDoList />} />
-      <Route path="dossiers-communs/ticketing" element={<TicketingPage />} />
+      <Route path="dossiers-communs/ticketing/list" element={<TicketingPage />} />
       <Route path="dossiers-communs/nouveau" element={<DossierCommunForm />} />
       {/* Plus de route imbriquée pour prestation */}
       <Route path="dossiers-communs/dossier-detail" element={<DossierCommunDetail />} />
@@ -41,6 +45,14 @@ export function frontOfficeRoutes() {
       </Route>
       {/* <Route path="dossiers-communs/:prestationId/prospection/:enteteId" element={<Prospection />} /> */}
       <Route path="dossiers-communs/ticketing/parametres" element={<ParametreTicketing />} />
+      <Route path="dossiers-communs/attestation" element={<Attestation />} >
+        <Route index element={<Navigate to="accueil" replace />} />
+        <Route path="accueil" element={<AccueilView />} />
+        <Route path="parametres" element={<ParametreView />} />
+        <Route path="pages" element={<PageViewAttestation />} />
+        <Route path="details" element={<DetailAttestation />} />
+      </Route>
+      <Route path="dossiers-communs/attestation/list" element={<AttestationListPage />} />
       {/* <Route path="dossiers-communs/ticketing/devis/:enteteId" element={<Devis />} /> */}
       {/* <Route path="dossiers-communs/ticketing/billet/:enteteId" element={<Billet />} /> */}
     </>

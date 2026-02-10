@@ -486,7 +486,7 @@ export default function ProspectionDetail() {
                     )}
                     <th className="px-4 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider min-w-[120px]">N° Dos Ref</th>
                     <th className="px-4 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider min-w-[120px]">Statut</th>
-                    <th className="px-4 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider min-w-[120px]">Origin Line</th>
+                    <th className="px-4 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider min-w-[120px]">Nb passager</th>
                     <th className="px-4 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider min-w-[120px]">Numéro de vol</th>
                     <th className="px-4 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider min-w-[120px]">Avion</th>
                     <th className="px-4 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider min-w-[150px]">Départ</th>
@@ -517,7 +517,6 @@ export default function ProspectionDetail() {
                     <th className="px-4 py-4 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider min-w-[190px]">Mt Pénalité Client Ar</th>
                     <th className="px-4 py-4 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider min-w-[160px]">Commission Devise</th>
                     <th className="px-4 py-4 text-right text-xs font-semibold text-slate-600 uppercase tracking-wider min-w-[170px]">Commission Ariary</th>
-                    <th className="px-4 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider min-w-[250px]">Nb Ligne</th>
                     <th className="px-4 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider min-w-[250px]">Services & Spécifique</th>
                     <th className="px-4 py-4 text-center text-xs font-semibold text-slate-600 uppercase tracking-wider min-w-[100px]">Actions</th>
                   </tr>
@@ -538,7 +537,7 @@ export default function ProspectionDetail() {
                         )}
                         <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{ligne.numeroDosRef || '—'}</td>
                         <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-700 font-medium">{ligne.status || '—'}</td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-700 font-medium">{ligne.origineLine || '—'}</td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-700">{ligne.nombre || '—'}</td>
                         <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-700 font-medium">{ligne.numeroVol || '—'}</td>
                         <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">{ligne.avion || '—'}</td>
                         <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-700">—</td>
@@ -617,8 +616,6 @@ export default function ProspectionDetail() {
                         <td className="px-4 py-4 whitespace-nowrap text-sm font-bold text-green-600 text-right">
                           {ligne.commissionEnAriary?.toLocaleString('fr-FR') || '—'}
                         </td>
-
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-700">—</td>
 
                         <td className="px-4 py-4 text-sm">
                           <div className="flex flex-row gap-1">
@@ -702,8 +699,17 @@ function NewLineRow({
     <tr className="bg-linear-to-r from-blue-50 to-blue-100/50 border-t-4 border-blue-400">
       <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
       <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
-      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
-
+      {/* <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td> */}
+      <td className="px-4 py-3">
+        <input
+          type="number"
+          step="1"
+          value={newLine.nombre}
+          onChange={(e) => updateNewLineField('nombre', Number(e.target.value))}
+          className={numberInputClassName + " text-emerald-700"}
+          placeholder="1"
+        />
+      </td>
       <td className="px-4 py-3">
         <input
           type="text"
@@ -934,26 +940,62 @@ function NewLineRow({
       <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
       <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
 
+      {/* <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
       <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
-      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
-      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
-
-      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
-      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
-      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
-      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
-      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
+      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td> */}
 
       <td className="px-4 py-3">
         <input
           type="number"
-          step="1"
-          value={newLine.nombre}
-          onChange={(e) => updateNewLineField('nombre', Number(e.target.value))}
+          step="0.01"
+          value={newLine.montantBilletClientDevise}
+          onChange={(e) => {
+            const val = e.target.value;
+            // Autorise vide temporairement (pour effacer)
+            if (val === '' || val === '-' || val === '.') {
+              updateNewLineField('montantBilletClientDevise', val);
+            } else {
+              const num = Number(val);
+              if (!isNaN(num)) {
+                updateNewLineField('montantBilletClientDevise', num);
+              }
+              // sinon on ignore (pas de mise à jour si lettre tapée)
+            }
+          }}
           className={numberInputClassName + " text-emerald-700"}
-          placeholder="1"
+          placeholder="0.00"
         />
       </td>
+
+      <td className="px-4 py-3">
+        <input
+          type="number"
+          step="0.01"
+          value={newLine.montantServiceClientDevise}
+          onChange={(e) => updateNewLineField('montantServiceClientDevise', Number(e.target.value))}
+          className={numberInputClassName + " text-emerald-700"}
+          placeholder="0.00"
+        />
+      </td>
+
+      <td className="px-4 py-3">
+        <input
+          type="number"
+          step="0.01"
+          value={newLine.montantPenaliteClientDevise}
+          onChange={(e) => updateNewLineField('montantPenaliteClientDevise', Number(e.target.value))}
+          className={numberInputClassName + " text-emerald-700"}
+          placeholder="0.00"
+        />
+      </td>
+
+      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
+      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
+      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
+      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
+      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
+
+      
 
       <td className="px-4 py-4">
         {servicesDisponibles.length === 0 ? (
