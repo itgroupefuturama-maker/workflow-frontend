@@ -13,7 +13,7 @@ import { fetchDossiersCommuns, setCurrentClientFactureId, type DossierCommun } f
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
 interface SidebarProps {
-  module?: 'ticketing' | 'attestation';
+  module?: 'ticketing' | 'attestation' | 'hotel';
 }
 
 export default function Sidebar({ module }: SidebarProps) {
@@ -62,27 +62,34 @@ export default function Sidebar({ module }: SidebarProps) {
       links: module === 'attestation' 
         ? [
             // Menu spécifique pour ATTESTATION
-            { label: 'Exigence de voyage', path: 'parametres', icon: <FiMap size={16} />, tab: 'listeExigence' },
-            { label: 'Raison Annulation', path: 'parametres', icon: <FiMap size={16} />, tab: 'listeRaisonAnnulation' },
-            { label: 'Gestion de prix', path: 'parametres', icon: <FiLayers size={16} />, tab: 'gestionPrix' },
+            { label: 'Raison Annulation', path: `parametres/${module}`, icon: <FiMap size={16} />, tab: 'listeRaisonAnnulation' },
+            { label: 'Exigence de voyage', path: `parametres/${module}`, icon: <FiMap size={16} />, tab: 'listeExigence' },
+            { label: 'Gestion de prix', path: `parametres/${module}`, icon: <FiLayers size={16} />, tab: 'gestionPrix' },
           ]
-        : [
-            // Menus spécifiques pour TICKETING
-            { label: 'Service & spécifique', path: 'parametres', icon: <FiLayers size={16} />, tab: 'listeService' },
-            { label: 'Exigence de voyage', path: 'parametres', icon: <FiMap size={16} />, tab: 'listeExigence' },
-            { label: 'Raison Annulation', path: 'parametres', icon: <FiMap size={16} />, tab: 'listeRaisonAnnulation' },
-          ]
+        : 
+        module === 'ticketing' ? [
+          // Menus spécifiques pour TICKETING
+          { label: 'Raison Annulation', path: `parametres/${module}`, icon: <FiMap size={16} />, tab: 'listeRaisonAnnulation' },
+          { label: 'Service & spécifique', path: `parametres/${module}`, icon: <FiLayers size={16} />, tab: 'listeService' },
+          { label: 'Exigence de voyage', path: `parametres/${module}`, icon: <FiMap size={16} />, tab: 'listeExigence' },
+        ] 
+        : module === 'hotel' ? [
+          // Menus spécifiques pour TICKETING
+          { label: 'Plateform', path: 'parametres', icon: <FiLayers size={16} />, tab: 'listePlateform' },
+          { label: 'Type chambre', path: 'parametres', icon: <FiMap size={16} />, tab: 'listeTypeChambre' },
+          { label: 'Service', path: 'parametres', icon: <FiMap size={16} />, tab: 'listeService' },
+        ] : [
+          // Menus spécifiques pour TICKETING
+          { label: 'Service & spécifique', path: 'parametres', icon: <FiLayers size={16} />, tab: 'listeService' },
+          { label: 'Exigence de voyage', path: 'parametres', icon: <FiMap size={16} />, tab: 'listeExigence' },
+          { label: 'Raison Annulation', path: 'parametres', icon: <FiMap size={16} />, tab: 'listeRaisonAnnulation' },
+        ] 
     }
   ];
 
   const pageLinks = [
     { label: 'Entête Prospection', path: '/dossiers-communs/prestation-detail/pages', icon: <FiPlusSquare size={16} />, tab: 'prospection' },
     { label: 'Liste Billets', path: '/dossiers-communs/prestation-detail/pages', icon: <FiList size={16} />, tab: 'billet' },
-  ];
-
-  const pageLinksAttestation = [
-    { label: 'Entête Prospection', path: '/dossiers-communs/attestation/pages', icon: <FiPlusSquare size={16} />, tab: 'attestation' },
-    { label: 'Liste Billets', path: '/dossiers-communs/attestation/pages', icon: <FiList size={16} />, tab: 'suivi' },
   ];
 
   const handleDossierSelect = async (dossier: DossierCommun) => {
@@ -95,6 +102,10 @@ export default function Sidebar({ module }: SidebarProps) {
     navigate('/dossiers-communs/attestation/pages', {
       state: { targetTab: 'attestation' }
     }) }
+    {if (module == 'hotel')
+    navigate('/dossiers-communs/hotel/pages', {
+      state: { targetTab: 'hotel' }
+    }) }
   };
 
   const handleSubPageClick = (path: string, tab: string) => {
@@ -105,12 +116,17 @@ export default function Sidebar({ module }: SidebarProps) {
     ticketing: {
       label: "Ticketing",
       icon: <FiList size={16} />,
-      color: "orange"
+      color: "yellow"
     },
     attestation: {
       label: "Attestation",
       icon: <FiFolder size={16} />,
       color: "red"
+    },
+    hotel: {
+      label: "Hotel",
+      icon: <FiFolder size={16} />,
+      color: "orange"
     }
   };
 
@@ -121,6 +137,11 @@ export default function Sidebar({ module }: SidebarProps) {
   };
 
   const colorClasses = {
+    yellow: {
+      border: "border-l-yellow-500",
+      iconBg: "bg-yellow-500",
+      text: "text-yellow-600"
+    },
     orange: {
       border: "border-l-orange-500",
       iconBg: "bg-orange-500",
@@ -136,6 +157,7 @@ export default function Sidebar({ module }: SidebarProps) {
       iconBg: "bg-slate-400",
       text: "text-slate-600"
     }
+
   };
 
   const colors = colorClasses[current.color];
@@ -162,7 +184,7 @@ export default function Sidebar({ module }: SidebarProps) {
           {/* Icône compacte */}
           <div className={`
             ${colors.iconBg} text-white 
-            p-2 rounded-lg flex-shrink-0
+            p-2 rounded-lg shrink-0
           `}>
             {current.icon}
           </div>

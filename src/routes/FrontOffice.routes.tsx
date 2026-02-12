@@ -18,6 +18,11 @@ import Attestation from "../pages/front_office/dossiers-communs/module.attestati
 import AttestationListPage from "../pages/front_office/dossiers-communs/module.attestation.voyage/PageAttestationList";
 import PageViewAttestation from "../pages/front_office/dossiers-communs/module.attestation.voyage/SousMenuPrestation/PageView";
 import DetailAttestation from "../pages/front_office/dossiers-communs/module.attestation.voyage/SousMenuPrestation/DetailAttestation";
+import Parametre from "../pages/front_office/dossiers-communs/module.parametre/Parametre";
+import HomePageHotel from "../pages/front_office/dossiers-communs/module.hotel/HomePage.hotel";
+import PageViewHotel from "../pages/front_office/dossiers-communs/module.hotel/sous.section/PageViewHotel";
+import ParametreViewHotel from "../pages/front_office/dossiers-communs/module.hotel/sous.section/ParametreViewHotel";
+import AccueilViewHotel from "../pages/front_office/dossiers-communs/module.hotel/sous.section/AccueilViewHotel";
 
 export function frontOfficeRoutes() {
   return (
@@ -34,7 +39,7 @@ export function frontOfficeRoutes() {
         {/* Les routes enfants s'affichent à l'endroit où tu mettrais <Outlet /> dans PrestationDetail */}
         <Route index element={<Navigate to="accueil" replace />} />
         <Route path="accueil" element={<AccueilView />} />
-        <Route path="parametres" element={<ParametreView />} />
+        <Route path="parametres/:module" element={<ParametreView />} />
         <Route path="pages">
           <Route index element={<PageView />} />
           <Route path="prospection/:enteteId" element={<Prospection />} />
@@ -48,13 +53,18 @@ export function frontOfficeRoutes() {
       <Route path="dossiers-communs/attestation" element={<Attestation />} >
         <Route index element={<Navigate to="accueil" replace />} />
         <Route path="accueil" element={<AccueilView />} />
-        <Route path="parametres" element={<ParametreView />} />
+        <Route path="parametres/:module" element={<ParametreView />} />
         <Route path="pages" element={<PageViewAttestation />} />
         <Route path="details" element={<DetailAttestation />} />
       </Route>
       <Route path="dossiers-communs/attestation/list" element={<AttestationListPage />} />
-      {/* <Route path="dossiers-communs/ticketing/devis/:enteteId" element={<Devis />} /> */}
-      {/* <Route path="dossiers-communs/ticketing/billet/:enteteId" element={<Billet />} /> */}
+      <Route path="dossiers-communs/parametre" element={<Parametre />} />
+      <Route path="dossiers-communs/hotel" element={<HomePageHotel />}>
+        <Route index element={<Navigate to="accueil" replace />} />
+        <Route path="accueil" element={<AccueilViewHotel />} />
+        <Route path="parametres" element={<ParametreViewHotel />} />
+        <Route path="pages" element={<PageViewHotel />} />
+      </Route>
     </>
   );
 }

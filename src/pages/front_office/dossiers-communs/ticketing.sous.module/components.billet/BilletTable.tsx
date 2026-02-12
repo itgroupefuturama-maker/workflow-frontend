@@ -111,24 +111,38 @@ const BilletTable: React.FC<BilletTableProps> = ({
 
                 <th className="px-4 py-3 text-right font-semibold text-slate-700 uppercase">Taux de change</th>
                 {/* Headers Prix Compagnie */}
-                <th className="px-4 py-3 text-right font-semibold text-slate-700 uppercase">PU Billet Devise</th>
-                <th className="px-4 py-3 text-right font-semibold text-slate-700 uppercase">PU Svc Devise</th>
-                <th className="px-4 py-3 text-right font-semibold text-slate-700 uppercase">PU Pén. Devise</th>
-                <th className="px-4 py-3 text-right font-semibold text-emerald-700 uppercase">PU Billet Ar</th>
-                <th className="px-4 py-3 text-right font-semibold text-emerald-700 uppercase">PU Svc Ar</th>
-                <th className="px-4 py-3 text-right font-semibold text-emerald-700 uppercase">PU Pén. Ar</th>
-                {/* Headers Prix Client */}
-                <th className="px-4 py-3 text-right font-semibold text-slate-700 uppercase">PU Client Billet Devise </th>
-                <th className="px-4 py-3 text-right font-semibold text-slate-700 uppercase">PU Client Svc Devise</th>
-                <th className="px-4 py-3 text-right font-semibold text-slate-700 uppercase">PU Client Pén. Devise</th>
-                <th className="px-4 py-3 text-right font-semibold text-emerald-700 uppercase">PU Client Billet Ar</th>
-                <th className="px-4 py-3 text-right font-semibold text-emerald-700 uppercase">PU Client Svc Ar</th>
-                <th className="px-4 py-3 text-right font-semibold text-emerald-700 uppercase">PU Client Pén. Ar</th>
+                <th className="px-4 py-3 text-right font-semibold text-slate-700 uppercase">PU Billet Compagnie Devise</th>
+                <th className="px-4 py-3 text-right font-semibold text-slate-700 uppercase">PU Service Compagnie Devise</th>
+                <th className="px-4 py-3 text-right font-semibold text-slate-700 uppercase">PU Pén. Compagnie Devise</th>
+                <th className="px-4 py-3 text-right font-semibold text-emerald-700 uppercase">PU Billet Compagnie Ar</th>
+                <th className="px-4 py-3 text-right font-semibold text-emerald-700 uppercase">PU Service Compagnie Ar</th>
+                <th className="px-4 py-3 text-right font-semibold text-emerald-700 uppercase">PU Pén. Compagnie Ar</th>
+                {/* Header Prix Client */}
+                <th className="px-4 py-3 text-right font-semibold text-emerald-700 uppercase">PU Billet Client Ar</th>
+                <th className="px-4 py-3 text-right font-semibold text-emerald-700 uppercase">PU Service Client Ar</th>
+                <th className="px-4 py-3 text-right font-semibold text-emerald-700 uppercase">PU Pén. Client Ar</th>
+                <th className="px-4 py-3 text-right font-semibold text-emerald-700 uppercase">PU Billet Client Ar</th>
+                <th className="px-4 py-3 text-right font-semibold text-emerald-700 uppercase">PU Service Client Ar</th>
+                <th className="px-4 py-3 text-right font-semibold text-emerald-700 uppercase">PU Pén. Client Ar</th>
+                {/* Headers Prix Montant Compagnie */}
+                <th className="px-4 py-3 text-right font-semibold text-slate-700 uppercase">PU Montant Billet Devise</th>
+                <th className="px-4 py-3 text-right font-semibold text-slate-700 uppercase">PU Montant Svc Devise</th>
+                <th className="px-4 py-3 text-right font-semibold text-slate-700 uppercase">PU Montant Pén. Devise</th>
+                <th className="px-4 py-3 text-right font-semibold text-emerald-700 uppercase">PU Montant Billet Ar</th>
+                <th className="px-4 py-3 text-right font-semibold text-emerald-700 uppercase">PU Montant Svc Ar</th>
+                <th className="px-4 py-3 text-right font-semibold text-emerald-700 uppercase">PU Montant Pén. Ar</th>
+                {/* Headers Prix Montant Client */}
+                <th className="px-4 py-3 text-right font-semibold text-slate-700 uppercase">PU Montant Client Billet Devise </th>
+                <th className="px-4 py-3 text-right font-semibold text-slate-700 uppercase">PU Montant Client Svc Devise</th>
+                <th className="px-4 py-3 text-right font-semibold text-slate-700 uppercase">PU Montant Client Pén. Devise</th>
+                <th className="px-4 py-3 text-right font-semibold text-emerald-700 uppercase">PU Montant Client Billet Ar</th>
+                <th className="px-4 py-3 text-right font-semibold text-emerald-700 uppercase">PU Montant Client Svc Ar</th>
+                <th className="px-4 py-3 text-right font-semibold text-emerald-700 uppercase">PU Montant Client Pén. Ar</th>
 
-                {/* Headers Prix Réservés */}
-                <th className="px-4 py-3 text-right font-semibold text-indigo-700 uppercase">PU Billet Resa</th>
-                <th className="px-4 py-3 text-right font-semibold text-indigo-700 uppercase">PU Svc Resa</th>
-                <th className="px-4 py-3 text-right font-semibold text-indigo-700 uppercase">PU Pén. Resa</th>
+                {/* Headers Prix Montant Réservés */}
+                <th className="px-4 py-3 text-right font-semibold text-indigo-700 uppercase">PU Montant Billet Resa</th>
+                <th className="px-4 py-3 text-right font-semibold text-indigo-700 uppercase">PU Montant Svc Resa</th>
+                <th className="px-4 py-3 text-right font-semibold text-indigo-700 uppercase">PU Montant Pén. Resa</th>
                 {/* Headers Prix Commission */}
                 <th className="px-4 py-3 text-right font-semibold text-indigo-700 uppercase">Commission En Devise</th>
                 <th className="px-4 py-3 text-right font-semibold text-indigo-700 uppercase">Commission En Ariary</th>
@@ -196,6 +210,22 @@ const BilletTable: React.FC<BilletTableProps> = ({
 
                       {/* Taux de change */}
                       <td className="px-4 py-3 text-center font-medium">{ligne.resaTauxEchange || '—'}</td>
+
+                      {/* PU Montant Compagnie */}
+                      <PriceCell value={ligne.puResaBilletCompagnieDevise} isCurrency />
+                      <PriceCell value={ligne.puResaServiceCompagnieDevise} isCurrency />
+                      <PriceCell value={ligne.puResaPenaliteCompagnieDevise} isCurrency />
+                      <PriceCell value={ligne.puResaBilletCompagnieAriary} isCurrency />
+                      <PriceCell value={ligne.puResaServiceCompagnieAriary} isCurrency />
+                      <PriceCell value={ligne.puResaPenaliteCompagnieAriary} isCurrency />
+
+                      {/* PU Montant Client */}
+                      <PriceCell value={ligne.puResaBilletClientDevise} isCurrency />
+                      <PriceCell value={ligne.puResaServiceClientDevise} isCurrency />
+                      <PriceCell value={ligne.puResaPenaliteClientDevise} isCurrency />
+                      <PriceCell value={ligne.puResaBilletClientAriary} isCurrency />
+                      <PriceCell value={ligne.puResaServiceClientAriary} isCurrency />
+                      <PriceCell value={ligne.puResaPenaliteClientAriary} isCurrency />
 
                       {/* Prix Compagnie Devise */}
                       <PriceCell value={ligne.puResaMontantBilletCompagnieDevise} isCurrency />

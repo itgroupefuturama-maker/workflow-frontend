@@ -13,6 +13,7 @@ import SuiviTabContent from './SuiviTabContent';
 import { AttestationHeader } from './components.attestation/AttestationHeader';
 import ViewDevisModal from '../../../../../components/modals/Attestation/ViewDevisModal';
 import PassagerDropdown from './components.attestation/PassagerDropdown';
+import { API_URL } from '../../../../../service/env';
 
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
@@ -98,6 +99,12 @@ const DetailAttestation = () => {
 
 
   const handleBack = () => navigate(-1);
+
+  const handleOpenPdfItineraire = (ligneId: string) => {
+      const pdfUrl = `${API_URL}/attestation/pdf-itineraire/${selectedEntete?.id}/${ligneId}`;
+      // Option 1 : Ouvrir dans un nouvel onglet (recommandé pour PDF)
+      window.open(pdfUrl, '_blank', 'noopener,noreferrer');
+    };
 
   if (!selectedId || !selectedEntete) {
     return (
@@ -347,13 +354,25 @@ const DetailAttestation = () => {
                               {selectedDetail.devisModules?.reference || 'SANS DEVIS'}
                             </td>
 
-                            <td className="px-6 py-4 text-center text-sm relative h-16">
+                            <td className="flex space-x-2 px-6 py-4 text-center text-sm relative h-16">
                               <PassagerDropdown
                                 passagers={ligne.attestationPassager || []}
                                 selectedEnteteId={selectedId!}
                                 dispatch={dispatch}
                                 setDevisModalOpen={setDevisModalOpen}
                               />
+                              <button
+                              onClick={() => handleOpenPdfItineraire(ligne.id)}
+                              className={`
+                                px-4 py-2 rounded-lg text-white font-medium transition
+                                ${!selectedEntete?.id || !selectedEntete?.id
+                                  ? 'bg-gray-400 cursor-not-allowed'
+                                  : 'bg-red-600 hover:bg-red-700'
+                                }
+                              `}
+                            >
+                              PDF
+                            </button>
                             </td>
                           </tr>
                         ))}
@@ -398,6 +417,7 @@ const DetailAttestation = () => {
         }}
         // On passe directement les données du store
         devisData={selectedDevisDetail}
+        attestationEnteteId={selectedId!}
         loading={loadingEntete}
       />
     </div>

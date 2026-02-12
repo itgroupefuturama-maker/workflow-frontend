@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchDossiersCommuns } from '../../app/front_office/dossierCommunSlice';
 import type { RootState, AppDispatch } from '../../app/store';
 // Ajout de FiLock pour le cadenas
-import { FiFolder, FiCheckCircle, FiTag, FiFileText, FiLock } from 'react-icons/fi';
+import { FiFolder, FiCheckCircle, FiTag, FiFileText, FiLock, FiSettings, FiHome } from 'react-icons/fi';
 import { fetchTodos } from '../../app/front_office/todosSlice';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
@@ -85,8 +85,8 @@ function HomePage() {
             <div onClick={() => navigate('/dossiers-communs/id-module')} className="group relative bg-white rounded-xl p-6 cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 border border-gray-100 hover:border-amber-200 overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"></div>
               <div className="relative z-10">
-                <div className="w-12 h-12 bg-amber-500/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-amber-500 transition-colors duration-300">
-                  <FiTag className="text-amber-600 group-hover:text-white transition-colors duration-300" size={24} />
+                <div className="w-12 h-12 bg-amber-500/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-amber-400 transition-colors duration-300">
+                  <FiTag className="text-amber-400 group-hover:text-white transition-colors duration-300" size={24} />
                 </div>
                 <h3 className="text-lg font-semibold text-slate-900 mb-1">Vol</h3>
                 <p className="text-sm text-slate-500">Suivez vos demandes et tickets</p>
@@ -102,6 +102,29 @@ function HomePage() {
                 </div>
                 <h3 className="text-lg font-semibold text-slate-900 mb-1">Attestation Voyage</h3>
                 <p className="text-sm text-slate-500">Générez vos attestations</p>
+              </div>
+            </div>
+
+            {/* Gestion Commentaire Fournisseur */}
+            <div onClick={() => navigate('/dossiers-communs/parametre')} className="group relative bg-white rounded-xl p-6 cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 border border-gray-100 hover:border-violet-200 overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"></div>
+              <div className="relative z-10">
+                <div className="w-12 h-12 bg-violet-500/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-violet-500 transition-colors duration-300">
+                  <FiSettings className="text-violet-600 group-hover:text-white transition-colors duration-300" size={24} />
+                </div>
+                <h3 className="text-lg font-semibold text-slate-900 mb-1">Paramétre</h3>
+                <p className="text-sm text-slate-500">Générez vos paramétre et section commentaire</p>
+              </div>
+            </div>
+
+            <div onClick={() => navigate('/dossiers-communs/hotel')} className="group relative bg-white rounded-xl p-6 cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 border border-gray-100 hover:border-orange-200 overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"></div>
+              <div className="relative z-10">
+                <div className="w-12 h-12 bg-orange-500/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-orange-500 transition-colors duration-300">
+                  <FiHome className="text-orange-600 group-hover:text-white transition-colors duration-300" size={24} />
+                </div>
+                <h3 className="text-lg font-semibold text-slate-900 mb-1">Hotel</h3>
+                <p className="text-sm text-slate-500">Générez vos devis et reservation hotel</p>
               </div>
             </div>
 

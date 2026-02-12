@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';           // ← AJOUT
 import type { AppDispatch, RootState } from '../../../../../app/store';
 import { createAttestationEntete, fetchAttestationEntetes, setSelectedEntete } from '../../../../../app/front_office/parametre_attestation/attestationEnteteSlice';
 import { AttestationHeader } from './components.attestation/AttestationHeader';
+import axios from '../../../../../service/Axios';
 
 const PageViewAttestation = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -11,7 +12,7 @@ const PageViewAttestation = () => {
 
    const { data: fournisseurs } = useSelector((state: RootState) => state.fournisseurs);
 
-  const { items, loading, error, selectedId } = useSelector(
+  const { items, loading, error } = useSelector(
     (state: RootState) => state.attestationEntete
   );
 
@@ -25,8 +26,17 @@ const PageViewAttestation = () => {
     ?.find(colab => colab.module?.nom?.toLowerCase() === "attestation")
     ?.prestation?.[0]?.id || '';
 
-  // État local pour le formulaire
+  // ─── États pour le commentaire fournisseur ────────────────────────────────
   const [selectedFournisseurId, setSelectedFournisseurId] = useState<string>('');
+  const [lastComment, setLastComment] = useState<{
+    commentaire: string;
+    alerte: string;
+    dateEnregistrement: string;
+  } | null>(null);
+
+  const [, setCommentLoading] = useState(false);
+  const [, setCommentError] = useState<string | null>(null);
+
   const [formError, setFormError] = useState<string | null>(null);
 
   const canCreate = !!prestationId && fournisseurs.length > 0;
@@ -37,6 +47,74 @@ const PageViewAttestation = () => {
       dispatch(fetchAttestationEntetes());
     }
   }, [dispatch, items.length]);
+
+  useEffect(() => {
+    if (!selectedFournisseurId) {
+      setLastComment(null);
+      setCommentError(null);
+      return;
+    }
+
+    const fetchLastComment = async () => {
+      setCommentLoading(true);
+      setCommentError(null);
+      setLastComment(null);
+
+      try {
+        const response = await axios.get(
+          `/commentaires-fournisseur/fournisseur/${selectedFournisseurId}/last`
+        );
+
+        if (!response.data?.success) {
+          throw new Error(response.data?.message || 'Réponse invalide');
+        }
+
+        const data = response.data.data;
+
+        if (data) {
+          setLastComment({
+            commentaire: data.commentaire || '—',
+            alerte: data.alerte || 'INCONNU',
+            dateEnregistrement: data.dateEnregistrement
+              ? new Date(data.dateEnregistrement).toLocaleString('fr-FR')
+              : '—',
+          });
+        } else {
+          setLastComment(null);
+        }
+      } catch (err: any) {
+        // console.error('Erreur chargement commentaire fournisseur:', err);
+        setCommentError(
+          err.response?.data?.message ||
+          err.message ||
+          'Impossible de charger le dernier commentaire'
+        );
+        setLastComment(null);
+      } finally {
+        setCommentLoading(false);
+      }
+    };
+    fetchLastComment();
+  }, [selectedFournisseurId]); // ← Déclenche à chaque changement de fournisseur
+
+  // ─── Style selon alerte ───────────────────────────────────────────────
+  const getAlertStyle = (alerte: string) => {
+    const upper = alerte.toUpperCase();
+    if (upper === 'ELEVE' || upper === 'TRES_ELEVE') {
+      return 'bg-red-50 border-red-400 text-red-900';
+    }
+    if (upper === 'NORMAL') {
+      return 'bg-orange-50 border-orange-400 text-orange-900';
+    }
+    return 'bg-green-50 border-green-400 text-green-900'; // FAIBLE ou autre
+  };
+
+  const getIcon = (alerte: string) => {
+    const upper = alerte.toUpperCase();
+    if (upper === 'ELEVE' || upper === 'TRES_ELEVE') return '🔴';
+    if (upper === 'NORMAL') return '🟠';
+    return '🟢';
+  };
 
   const handleCreate = async () => {
     if (!prestationId) {
@@ -57,10 +135,6 @@ const PageViewAttestation = () => {
           fournisseurId: selectedFournisseurId,
         })
       ).unwrap();  // unwrap pour catcher l'erreur redux
-
-      // Option A : la liste est déjà mise à jour via extraReducers
-      // Option B : recharger complètement
-      // dispatch(fetchAttestationEntetes());
 
       setSelectedFournisseurId(''); // reset
     } catch (err: any) {
@@ -118,6 +192,32 @@ const PageViewAttestation = () => {
             >
               {loading ? 'Création...' : 'Créer entête'}
             </button>
+            {/* Notification alerte commentaire (fixe en haut à droite) */}
+            {selectedFournisseurId && lastComment && lastComment.alerte && (
+              <div className="fixed top-4 right-4 z-50 max-w-sm animate-slide-in pointer-events-none">
+                <div
+                  className={`
+                    flex items-start gap-3 p-4 rounded-xl shadow-lg border
+                    ${getAlertStyle(lastComment.alerte)}
+                  `}
+                >
+                  <div className="shrink-0 mt-0.5 text-xl">
+                    {getIcon(lastComment.alerte)}
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-semibold text-base mb-1">
+                      Alerte fournisseur : {lastComment.alerte}
+                    </div>
+                    <p className="text-sm leading-tight">
+                      {lastComment.commentaire}
+                    </p>
+                    <p className="text-xs mt-2 opacity-80">
+                      {lastComment.dateEnregistrement}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

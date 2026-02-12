@@ -54,9 +54,9 @@ const PassagerDropdown: React.FC<PassagerDropdownProps> = ({
     <div className="relative inline-block z-999" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="text-blue-600 hover:text-blue-800 hover:underline text-xs font-medium rounded border border-blue-200 hover:bg-blue-50 transition"
+        className="px-4 py-2 text-blue-600 hover:text-blue-800 hover:underline text-xs font-medium rounded border border-blue-200 hover:bg-blue-50 transition"
       >
-        Devis:({passagers.length})
+        PDF/Packs({passagers.length})
       </button>
 
       {isOpen && (

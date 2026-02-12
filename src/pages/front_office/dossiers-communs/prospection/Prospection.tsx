@@ -536,7 +536,7 @@ export default function ProspectionDetail() {
                           </td>
                         )}
                         <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{ligne.numeroDosRef || '—'}</td>
-                        <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-700 font-medium">{ligne.status || '—'}</td>
+                        <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-700 font-medium uppercase">{ligne.status =='CREER' ? 'crée' : ligne.status == 'MODIFIER' ? 'modifiée' : ligne.status }</td>
                         <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-700">{ligne.nombre || '—'}</td>
                         <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-700 font-medium">{ligne.numeroVol || '—'}</td>
                         <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">{ligne.avion || '—'}</td>

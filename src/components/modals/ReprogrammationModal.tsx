@@ -54,8 +54,28 @@ export default function ReprogrammationModal({
   const [currentBeneficiaireId, setCurrentBeneficiaireId] = useState('');
   const [currentInfoId, setCurrentInfoId] = useState('');
 
+  // Ajouter ces états (juste après les autres useState)
+  const [puBilletDevise, setPuBilletDevise] = useState<number>(
+    ligne?.puResaBilletCompagnieDevise || 0
+  );
+  const [puServiceDevise, setPuServiceDevise] = useState<number>(
+    ligne?.puResaServiceCompagnieDevise || 0
+  );
+  const [puPenaliteDevise, setPuPenaliteDevise] = useState<number>(
+    ligne?.puResaPenaliteCompagnieDevise || 0   // ou garder penalitePu si tu préfères
+  );
+  const [puMontantPenalite, setPuMontantPenalite] = useState<number>(
+    ligne?.puResaMontantPenaliteCompagnieDevise || 0   // ou garder penaliteMontant
+  );
+  const [puMontantBilletAriary, setPuMontantBilletAriary] = useState<number>(
+    ligne?.puResaMontantBilletCompagnieDevise || 0
+  );
+  const [puMontantServiceAriary, setPuMontantServiceAriary] = useState<number>(
+    ligne?.puResaMontantServiceCompagnieDevise || 0
+  );
+
   // ─── Autres états du formulaire ───────────────────────────
-  const [typeModif, setTypeModif] = useState<ModifType>('SIMPLE');
+  const [typeModif, setTypeModif] = useState<ModifType>('COM_PEN');
   const [conditionModif, setConditionModif] = useState('');
   const [tauxChange, setTauxChange] = useState<number | ''>(
     ligne?.prospectionLigne?.tauxEchange || 4500
@@ -87,6 +107,8 @@ export default function ReprogrammationModal({
       valeur: s.valeur,
     })) || []
   );
+
+  const [sectionActive, setSectionActive] = useState<'date' | 'passager' | 'type'>('date');
 
   // ─── Pré-sélection des passagers déjà liés à la ligne ─────
   useEffect(() => {
@@ -249,339 +271,510 @@ export default function ReprogrammationModal({
   const nombrePassagers = selectedPassagers.length;
 
   return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="px-6 py-4 border-b flex justify-between items-center bg-gray-50">
+        <div className="bg-white border-gray-100 border-b-2 px-6 py-4 flex justify-between items-center">
           <div className="flex items-center gap-3">
-            <FiAlertTriangle className="text-amber-600 text-2xl" />
+            <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+              <FiAlertTriangle className="text-gray-600" size={20} />
+            </div>
             <div>
-              <h2 className="text-xl font-bold">Reprogrammation de la ligne</h2>
-              <p className="text-sm text-gray-600">
-                Ligne {ligne.id?.slice(-8) || '—'} • {ligne.prospectionLigne?.itineraire || '—'}
+              <h2 className="text-xl font-bold text-gray-900">Modification de la ligne</h2>
+              <p className="text-sm text-gray-500 mt-0.5">
+                {ligne.prospectionLigne?.itineraire || '—'}
               </p>
             </div>
           </div>
-          <button onClick={onClose}>
-            <FiX size={28} />
+          <button 
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            <FiX size={22} />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Type de modification */}
-          <div>
-            <label className="block font-medium mb-1">Type de modification</label>
-            <select
-              value={typeModif}
-              onChange={(e) => setTypeModif(e.target.value as ModifType)}
-              className="w-full border rounded-lg p-3 focus:ring-2 focus:ring-amber-500"
-            >
-              <option value="SIMPLE">SIMPLE (sans frais)</option>
-              <option value="COM">COMMISSION</option>
-              <option value="PEN">PÉNALITÉ</option>
-              <option value="COM_PEN">COMMISSION + PÉNALITÉ</option>
-            </select>
-          </div>
-
-          {/* Passagers – multi-sélection avec pré-remplissage */}
-          <div>
-            <label className="block font-medium mb-2">
-              Passagers associés <span className="text-red-600">*</span> ({nombrePassagers})
-            </label>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Colonne ajout */}
-              <div className="space-y-4">
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
+          <div className="max-w-5xl mx-auto space-y-5">
+            {/* Informations de base */}
+            <div className="bg-white border border-gray-100 rounded-lg p-5">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Raison */}
                 <div>
-                  <label className="block text-sm font-medium mb-1">Bénéficiaire</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Raison de modification <span className="text-red-600">*</span>
+                  </label>
+                  {raisonsLoading ? (
+                    <div className="flex items-center gap-2 text-gray-500 text-sm py-2">
+                      <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                      Chargement...
+                    </div>
+                  ) : raisons.length === 0 ? (
+                    <div className="text-sm text-gray-500 py-2">Aucune raison disponible</div>
+                  ) : (
+                    <select
+                      value={rasionAnnulationId}
+                      onChange={(e) => setRasionAnnulationId(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+                    >
+                      <option value="">-- Sélectionner --</option>
+                      {raisons
+                        .filter((r) => r.statut === 'ACTIF')
+                        .map((r) => (
+                          <option key={r.id} value={r.id}>
+                            {r.libelle}
+                          </option>
+                        ))}
+                    </select>
+                  )}
+                </div>
+
+                {/* Type */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Type de modification <span className="text-red-600">*</span>
+                  </label>
                   <select
-                    value={currentBeneficiaireId}
-                    onChange={(e) => {
-                      setCurrentBeneficiaireId(e.target.value);
-                      setCurrentInfoId('');
-                    }}
-                    className="w-full border rounded-lg p-2.5 focus:ring-amber-500"
+                    value={typeModif}
+                    onChange={(e) => setTypeModif(e.target.value as ModifType)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
                   >
-                    <option value="">— Choisir un bénéficiaire —</option>
-                    {beneficiaires.map((b) => (
-                      <option key={b.clientBeneficiaireId} value={b.clientBeneficiaireId}>
-                        {b.clientBeneficiaire.libelle} • {b.clientBeneficiaire.code}
-                      </option>
-                    ))}
+                    <option value="COM_PEN">Commission + Pénalité</option>
+                    <option value="SIMPLE">Simple (sans frais)</option>
+                    <option value="COM">Commission</option>
+                    <option value="PEN">Pénalité</option>
                   </select>
                 </div>
 
-                {currentBeneficiaireId && (
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Document</label>
-                    {infosLoading ? (
-                      <div className="text-gray-500 italic">Chargement...</div>
-                    ) : infosList.length === 0 ? (
-                      <div className="text-amber-700 bg-amber-50 p-3 rounded">
-                        Aucun document trouvé
-                      </div>
-                    ) : (
+                {/* Taux */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Taux de change (Ar) <span className="text-red-600">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={tauxChange}
+                    onChange={(e) => setTauxChange(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+                    placeholder="4500"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Type de reprogrammation */}
+            <div className="bg-white border border-gray-100 rounded-lg p-5">
+              <label className="block text-sm font-bold text-gray-900 mb-3">
+                Type de reprogrammation
+              </label>
+              <div className="grid grid-cols-3 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSectionActive('date')}
+                  className={`py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
+                    sectionActive === 'date'
+                      ? 'bg-gray-900 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Date / Vol
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={() => setSectionActive('passager')}
+                  className={`py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
+                    sectionActive === 'passager'
+                      ? 'bg-gray-900 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Passager
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={() => setSectionActive('type')}
+                  className={`py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
+                    sectionActive === 'type'
+                      ? 'bg-gray-900 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  Type / Classe
+                </button>
+              </div>
+            </div>
+
+            {/* Section Passagers */}
+            {sectionActive === 'passager' && (
+              <div className="bg-white border border-gray-100 rounded-lg p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <label className="text-sm font-bold text-gray-900">
+                    Passagers associés <span className="text-red-600">*</span>
+                  </label>
+                  <span className="text-xs font-semibold text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                    {nombrePassagers} sélectionné{nombrePassagers > 1 ? 's' : ''}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                  {/* Ajout */}
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                        Bénéficiaire
+                      </label>
                       <select
-                        value={currentInfoId}
-                        onChange={(e) => setCurrentInfoId(e.target.value)}
-                        className="w-full border rounded-lg p-2.5 focus:ring-amber-500"
+                        value={currentBeneficiaireId}
+                        onChange={(e) => {
+                          setCurrentBeneficiaireId(e.target.value);
+                          setCurrentInfoId('');
+                        }}
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
                       >
-                        <option value="">— Choisir un document —</option>
-                        {infosList.map((info) => (
-                          <option key={info.id} value={info.id}>
-                            {info.prenom} {info.nom} • {info.typeDoc} {info.referenceDoc}
+                        <option value="">— Choisir —</option>
+                        {beneficiaires.map((b) => (
+                          <option key={b.clientBeneficiaireId} value={b.clientBeneficiaireId}>
+                            {b.clientBeneficiaire.libelle} • {b.clientBeneficiaire.code}
                           </option>
                         ))}
                       </select>
+                    </div>
+
+                    {currentBeneficiaireId && (
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                          Document
+                        </label>
+                        {infosLoading ? (
+                          <div className="flex items-center gap-2 text-gray-500 text-sm py-2">
+                            <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
+                            Chargement...
+                          </div>
+                        ) : infosList.length === 0 ? (
+                          <div className="text-sm text-gray-500 py-2">Aucun document trouvé</div>
+                        ) : (
+                          <select
+                            value={currentInfoId}
+                            onChange={(e) => setCurrentInfoId(e.target.value)}
+                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+                          >
+                            <option value="">— Choisir —</option>
+                            {infosList.map((info) => (
+                              <option key={info.id} value={info.id}>
+                                {info.prenom} {info.nom} • {info.typeDoc} {info.referenceDoc}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={addPassager}
+                      disabled={!currentBeneficiaireId || !currentInfoId}
+                      className="w-full px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-800 transition-colors"
+                    >
+                      + Ajouter
+                    </button>
+                  </div>
+
+                  {/* Liste */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-2">
+                      Sélectionnés
+                    </label>
+                    {selectedPassagers.length === 0 ? (
+                      <div className="border border-dashed border-gray-300 rounded-lg p-6 text-center text-sm text-gray-400">
+                        Aucun passager
+                      </div>
+                    ) : (
+                      <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                        {selectedPassagers.map((p, idx) => (
+                          <div
+                            key={p.infoId}
+                            className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg p-3 hover:bg-gray-100 transition-colors"
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <span className="flex-shrink-0 w-6 h-6 bg-gray-900 text-white text-xs rounded flex items-center justify-center font-semibold">
+                                {idx + 1}
+                              </span>
+                              <div className="min-w-0">
+                                <p className="text-sm font-semibold text-gray-900 truncate">{p.nomComplet}</p>
+                                <p className="text-xs text-gray-500 truncate">
+                                  {p.typeDoc} {p.referenceDoc ? `(${p.referenceDoc})` : ''}
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => removePassager(p.infoId)}
+                              className="flex-shrink-0 text-gray-400 hover:text-red-600 p-1 hover:bg-red-50 rounded transition-colors"
+                            >
+                              <FiTrash2 size={16} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
-                )}
-
-                <button
-                  type="button"
-                  onClick={addPassager}
-                  disabled={!currentBeneficiaireId || !currentInfoId}
-                  className="mt-2 px-5 py-2 bg-green-600 text-white rounded disabled:opacity-50 hover:bg-green-700 transition"
-                >
-                  + Ajouter ce passager
-                </button>
+                </div>
               </div>
-
-              {/* Colonne liste */}
-              <div>
-                {selectedPassagers.length === 0 ? (
-                  <div className="border border-dashed border-gray-300 rounded p-6 text-center text-gray-500 text-sm">
-                    Aucun passager sélectionné
-                  </div>
-                ) : (
-                  <div className="space-y-3 max-h-80 overflow-y-auto pr-2">
-                    {selectedPassagers.map((p, idx) => (
-                      <div
-                        key={p.infoId}
-                        className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg p-3 hover:bg-gray-100 group"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center font-medium">
-                            {idx + 1}
-                          </div>
-                          <div>
-                            <p className="font-medium">{p.nomComplet}</p>
-                            <p className="text-xs text-gray-600">
-                              {p.typeDoc} {p.referenceDoc ? `(${p.referenceDoc})` : ''}
-                            </p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => removePassager(p.infoId)}
-                          className="text-red-600 hover:text-red-800 opacity-70 hover:opacity-100 transition"
-                        >
-                          <FiTrash2 size={18} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Taux de change */}
-          <div>
-            <label className="block font-medium mb-1">
-              Taux de change <span className="text-red-600">*</span>
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              value={tauxChange}
-              onChange={(e) => setTauxChange(e.target.value === '' ? '' : Number(e.target.value))}
-              className="w-full border rounded-lg p-3 focus:ring-2 focus:ring-amber-500"
-              required
-            />
-          </div>
-
-          {/* Classe */}
-          <div>
-            <label className="block font-medium mb-1">
-              Classe <span className="text-red-600">*</span>
-            </label>
-            <select
-              value={classe}
-              onChange={(e) => setClasse(e.target.value)}
-              className="w-full border rounded-lg p-3 focus:ring-2 focus:ring-amber-500"
-              required
-            >
-              <option value="">-- Choisir la classe --</option>
-              <option value="ECONOMIE">Économie</option>
-              <option value="PREMIUM">Premium</option>
-              <option value="BUSINESS">Business</option>
-              <option value="FIRST">First</option>
-            </select>
-          </div>
-
-          {/* Raison d'annulation */}
-          <div>
-            <label className="block font-medium mb-1">Raison d'annulation (optionnel)</label>
-            {raisonsLoading ? (
-              <div className="text-sm text-gray-500">Chargement...</div>
-            ) : raisons.length === 0 ? (
-              <div className="text-sm text-amber-600">Aucune raison disponible</div>
-            ) : (
-              <select
-                value={rasionAnnulationId}
-                onChange={(e) => setRasionAnnulationId(e.target.value)}
-                className="w-full border rounded-lg p-3 focus:ring-2 focus:ring-amber-500"
-              >
-                <option value="">-- Aucune raison --</option>
-                {raisons
-                  .filter((r) => r.statut === 'ACTIF')
-                  .map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.libelle}
-                    </option>
-                  ))}
-              </select>
             )}
-          </div>
 
-          {/* Vol & Dates */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block font-medium mb-1">N° Vol <span className="text-red-600">*</span></label>
-              <input
-                type="text"
-                value={numeroVol}
-                onChange={(e) => setNumeroVol(e.target.value)}
-                className="w-full border rounded-lg p-3 focus:ring-2 focus:ring-amber-500"
-                required
-              />
-            </div>
-            <div>
-              <label className="block font-medium mb-1">Départ <span className="text-red-600">*</span></label>
-              <input
-                type="datetime-local"
-                value={dateHeureDepartRaw}
-                onChange={(e) => setDateHeureDepartRaw(e.target.value)}
-                className="w-full border rounded-lg p-3 focus:ring-2 focus:ring-amber-500"
-                required
-              />
-            </div>
-            <div>
-              <label className="block font-medium mb-1">Arrivée <span className="text-red-600">*</span></label>
-              <input
-                type="datetime-local"
-                value={dateHeureArriveRaw}
-                onChange={(e) => setDateHeureArriveRaw(e.target.value)}
-                className="w-full border rounded-lg p-3 focus:ring-2 focus:ring-amber-500"
-                required
-              />
-            </div>
-          </div>
-
-          {/* Condition */}
-          {typeModif !== 'PEN' && (
-            <div>
-              <label className="block font-medium mb-1">Condition de modification</label>
-              <textarea
-                value={conditionModif}
-                onChange={(e) => setConditionModif(e.target.value)}
-                className="w-full border rounded-lg p-3 min-h-[80px] focus:ring-2 focus:ring-amber-500"
-                placeholder="Ex: Changement horaire à la demande du client"
-              />
-            </div>
-          )}
-
-          {/* Commission */}
-          {(typeModif === 'COM' || typeModif === 'COM_PEN') && (
-            <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl">
-              <h3 className="font-semibold text-amber-800 mb-3">Commission</h3>
-              <div className="grid grid-cols-2 gap-4">
+            {/* Section Type/Classe */}
+            {sectionActive === 'type' && (
+              <div className="bg-white border border-gray-100 rounded-lg p-5 space-y-4">
                 <div>
-                  <label className="block text-sm mb-1">Devise</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={resaCommDevise}
-                    onChange={(e) => setResaCommDevise(Number(e.target.value))}
-                    className="w-full border rounded p-2"
-                  />
+                  <label className="block text-sm font-bold text-gray-900 mb-2">
+                    Classe <span className="text-red-600">*</span>
+                  </label>
+                  <select
+                    value={classe}
+                    onChange={(e) => setClasse(e.target.value)}
+                    className="w-full md:w-1/2 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+                    required
+                  >
+                    <option value="">-- Choisir --</option>
+                    <option value="ECONOMIE">Économie</option>
+                    <option value="PREMIUM">Premium</option>
+                    <option value="BUSINESS">Business</option>
+                    <option value="FIRST">First</option>
+                  </select>
                 </div>
-                <div>
-                  <label className="block text-sm mb-1">Ariary</label>
-                  <input
-                    type="number"
-                    value={resaCommAriary}
-                    onChange={(e) => setResaCommAriary(Number(e.target.value))}
-                    className="w-full border rounded p-2"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
 
-          {/* Pénalité */}
-          {(typeModif === 'PEN' || typeModif === 'COM_PEN') && (
-            <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
-              <h3 className="font-semibold text-red-800 mb-3">Pénalité</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm mb-1">PU Pénalité (Devise)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={penalitePu}
-                    onChange={(e) => setPenalitePu(Number(e.target.value))}
-                    className="w-full border rounded p-2"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm mb-1">PU Pénalité (Ariary)</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={penaliteMontant}
-                    onChange={(e) => setPenaliteMontant(Number(e.target.value))}
-                    className="w-full border rounded p-2"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Services */}
-          <div className="mt-6 border-t pt-4">
-            <label className="block font-medium mb-2">Services spécifiques</label>
-            {services.length > 0 ? (
-              <div className="space-y-3">
-                {services.map((svc, index) => {
-                  const lib = serviceById.get(svc.serviceSpecifiqueId)?.libelle || 'Service inconnu';
-                  return (
-                    <div key={index} className="flex items-center gap-4 bg-gray-50 p-3 rounded-lg">
-                      <div className="flex-1 font-medium">{lib}</div>
-                      <input
-                        type="text"
-                        value={svc.valeur}
-                        onChange={(e) => {
-                          const newServices = [...services];
-                          newServices[index].valeur = e.target.value;
-                          setServices(newServices);
-                        }}
-                        className="w-32 border rounded p-2 text-sm"
-                        placeholder="Valeur (Oui/Non/23kg...)"
-                      />
+                {/* Services */}
+                <div className="pt-4 border-t border-gray-100">
+                  <label className="block text-sm font-bold text-gray-900 mb-3">
+                    Services spécifiques
+                  </label>
+                  {services.length > 0 ? (
+                    <div className="space-y-2">
+                      {services.map((svc, index) => {
+                        const lib = serviceById.get(svc.serviceSpecifiqueId)?.libelle || 'Service inconnu';
+                        return (
+                          <div key={index} className="flex items-center gap-3 bg-gray-50 border border-gray-200 p-3 rounded-lg">
+                            <div className="flex-1 text-sm font-medium text-gray-700">{lib}</div>
+                            <input
+                              type="text"
+                              value={svc.valeur}
+                              onChange={(e) => {
+                                const newServices = [...services];
+                                newServices[index].valeur = e.target.value;
+                                setServices(newServices);
+                              }}
+                              className="w-32 border border-gray-300 rounded px-3 py-1.5 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+                              placeholder="Valeur"
+                            />
+                          </div>
+                        );
+                      })}
                     </div>
-                  );
-                })}
+                  ) : (
+                    <div className="text-sm text-gray-400 text-center py-4">Aucun service</div>
+                  )}
+                </div>
               </div>
-            ) : (
-              <div className="text-sm text-slate-500 italic">Aucun service associé</div>
+            )}
+
+            {/* Section Date */}
+            {sectionActive === 'date' && (
+              <div className="bg-white border border-gray-100 rounded-lg p-5">
+                <label className="block text-sm font-bold text-gray-900 mb-3">
+                  Vol & Dates <span className="text-red-600">*</span>
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                      Date et heure de départ
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={dateHeureDepartRaw}
+                      onChange={(e) => setDateHeureDepartRaw(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                      Date et heure d'arrivée
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={dateHeureArriveRaw}
+                      onChange={(e) => setDateHeureArriveRaw(e.target.value)}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Prix unitaires */}
+            <div className="bg-white border border-gray-100 rounded-lg p-5">
+              <h3 className="text-sm font-bold text-gray-900 mb-4">Prix unitaires (Compagnie)</h3>
+              
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                    PU Billet (Devise)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={puBilletDevise}
+                    onChange={(e) => setPuBilletDevise(Number(e.target.value) || 0)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+                    placeholder="0.00"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                    PU Billet (Ariary)
+                  </label>
+                  <input
+                    type="number"
+                    step="1"
+                    value={puMontantBilletAriary}
+                    onChange={(e) => setPuMontantBilletAriary(Number(e.target.value) || 0)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+                    placeholder="0"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                    PU Service (Devise)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={puServiceDevise}
+                    onChange={(e) => setPuServiceDevise(Number(e.target.value) || 0)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+                    placeholder="0.00"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                    PU Service (Ariary)
+                  </label>
+                  <input
+                    type="number"
+                    step="1"
+                    value={puMontantServiceAriary}
+                    onChange={(e) => setPuMontantServiceAriary(Number(e.target.value) || 0)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+                    placeholder="0"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                    PU Pénalité (Devise)
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={puPenaliteDevise}
+                    onChange={(e) => setPuPenaliteDevise(Number(e.target.value) || 0)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+                    placeholder="0.00"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+                    PU Pénalité (Ariary)
+                  </label>
+                  <input
+                    type="number"
+                    step="1"
+                    value={puMontantPenalite}
+                    onChange={(e) => setPuMontantPenalite(Number(e.target.value) || 0)}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Commission */}
+            {(typeModif === 'COM' || typeModif === 'COM_PEN') && (
+              <div className="bg-white border border-gray-100 rounded-lg p-5">
+                <h3 className="text-sm font-bold text-gray-900 mb-3">Commission</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">Devise</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={resaCommDevise}
+                      onChange={(e) => setResaCommDevise(Number(e.target.value))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">Ariary</label>
+                    <input
+                      type="number"
+                      value={resaCommAriary}
+                      onChange={(e) => setResaCommAriary(Number(e.target.value))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Pénalité */}
+            {(typeModif === 'PEN' || typeModif === 'COM_PEN') && (
+              <div className="bg-white border border-gray-100 rounded-lg p-5">
+                <h3 className="text-sm font-bold text-gray-900 mb-3">Pénalité</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">PU Pénalité (Devise)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={penalitePu}
+                      onChange={(e) => setPenalitePu(Number(e.target.value))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">PU Pénalité (Ariary)</label>
+                    <input
+                      type="number"
+                      step="0.01"
+                      value={penaliteMontant}
+                      onChange={(e) => setPenaliteMontant(Number(e.target.value))}
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
+              </div>
             )}
           </div>
+        </div>
 
-          {/* Bouton preview */}
+        {/* Footer */}
+        <div className="border-t bg-white border-gray-100 px-6 py-4">
           <button
             onClick={() => setShowPreview(true)}
-            className="w-full py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 disabled:opacity-50 flex items-center justify-center gap-2 mt-6"
+            className="w-full py-3 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
             disabled={
               selectedPassagers.length === 0 ||
               tauxChange === '' ||
@@ -591,38 +784,54 @@ export default function ReprogrammationModal({
               !dateHeureArriveRaw.trim()
             }
           >
-            <FiCheckCircle /> Vérifier avant envoi
+            <FiCheckCircle size={18} />
+            Vérifier avant envoi
           </button>
         </div>
 
-        {/* Preview JSON */}
+        {/* Preview Modal */}
         {showPreview && (
-          <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[60]">
-            <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-              <div className="p-6 border-b">
-                <h3 className="text-xl font-bold">Prévisualisation du payload</h3>
-                <p className="text-sm text-gray-600 mt-1">
-                  Ce JSON sera envoyé à l'API PATCH /billet/{ligne.id}/reprogrammer
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+            <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+              {/* Header */}
+              <div className="bg-white border-b px-6 py-4">
+                <h3 className="text-lg font-bold text-gray-900">Prévisualisation du payload</h3>
+                <p className="text-xs text-gray-500 mt-1">
+                  Ce JSON sera envoyé à l'API <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono">PATCH /billet/{ligne.id}/reprogrammer</code>
                 </p>
               </div>
-              <div className="flex-1 p-6 bg-gray-900 text-green-300 font-mono text-sm overflow-auto">
-                <pre className="whitespace-pre-wrap">
+
+              {/* JSON */}
+              <div className="flex-1 p-6 bg-gray-900 overflow-auto">
+                <pre className="text-green-400 font-mono text-xs whitespace-pre-wrap">
                   {JSON.stringify(buildPayload(), null, 2)}
                 </pre>
               </div>
-              <div className="p-6 flex gap-4 border-t">
+
+              {/* Footer */}
+              <div className="border-t bg-white px-6 py-4 flex gap-3">
                 <button
                   onClick={() => setShowPreview(false)}
-                  className="flex-1 py-3 border rounded-xl font-medium hover:bg-gray-100"
+                  className="flex-1 py-2.5 border border-gray-300 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors"
                 >
                   Modifier
                 </button>
                 <button
                   onClick={handleSubmit}
                   disabled={loading}
-                  className="flex-1 py-3 bg-green-600 text-white rounded-xl font-medium disabled:opacity-50 hover:bg-green-700"
+                  className="flex-1 py-2.5 bg-gray-900 text-white rounded-lg text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
                 >
-                  {loading ? 'En cours...' : 'Confirmer et reprogrammer'}
+                  {loading ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      En cours...
+                    </>
+                  ) : (
+                    <>
+                      <FiCheckCircle size={16} />
+                      Confirmer
+                    </>
+                  )}
                 </button>
               </div>
             </div>

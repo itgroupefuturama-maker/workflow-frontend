@@ -154,7 +154,7 @@ export default function AnnulationBilletModal({
                 <h2 className="text-lg font-semibold text-gray-900">
                   Paramétrage & Annulation
                 </h2>
-                <p className="text-sm text-gray-500 mt-0.5">Billet {enteteId}</p>
+                <p className="text-sm text-gray-500 mt-0.5">Billet</p>
               </div>
             </div>
             <button 
@@ -168,6 +168,23 @@ export default function AnnulationBilletModal({
 
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50">
+
+          {/* Type d'annulation */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Type d'annulation <span className="text-red-600">*</span>
+            </label>
+            <select
+              value={typeAnnul}
+              onChange={(e) => setTypeAnnul(e.target.value as AnnulType)}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white"
+            >
+              <option value="SIMPLE">Simple (condition seulement)</option>
+              <option value="COM">Commission uniquement</option>
+              <option value="PEN">Pénalité uniquement</option>
+              <option value="COM_PEN">Commission + Pénalité</option>
+            </select>
+          </div>
 
           {/* Raison d'annulation → NOUVELLE VERSION */}
           <div>
@@ -223,23 +240,6 @@ export default function AnnulationBilletModal({
                     ))}
                 </>
               )}
-            </select>
-          </div>
-
-          {/* Type d'annulation */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Type d'annulation <span className="text-red-600">*</span>
-            </label>
-            <select
-              value={typeAnnul}
-              onChange={(e) => setTypeAnnul(e.target.value as AnnulType)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white"
-            >
-              <option value="SIMPLE">Simple (condition seulement)</option>
-              <option value="COM">Commission uniquement</option>
-              <option value="PEN">Pénalité uniquement</option>
-              <option value="COM_PEN">Commission + Pénalité</option>
             </select>
           </div>
 

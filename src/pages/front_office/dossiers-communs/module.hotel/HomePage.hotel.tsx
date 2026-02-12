@@ -1,19 +1,14 @@
 import React from 'react';
-import { FiArrowLeft } from 'react-icons/fi';
-import { Outlet, useNavigate } from 'react-router-dom';
 import Sidebar from '../../../../layouts/SideBar';
+import { Outlet, useNavigate } from 'react-router-dom';
+import { FiArrowLeft } from 'react-icons/fi';
 
-const Attestation = () => {
+const HomePageHotel = () => {
   const navigate = useNavigate();
-  
-  const contextValue = {
-    prestationId: '',
-  };
-
   return (
     <div className="flex h-screen bg-[#F8FAFC] overflow-hidden">
       {/* La Sidebar prendra automatiquement 100% de la hauteur grâce à h-screen */}
-      <Sidebar module="attestation"/>
+      <Sidebar module="hotel"/>
 
       {/* Le contenu principal */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
@@ -34,8 +29,7 @@ const Attestation = () => {
         {/* Zone de contenu scrollable indépendamment de la sidebar */}
         <div className="flex-1 overflow-y-auto p-8">
           <div className="">
-            <Outlet context={contextValue} />
-
+            <Outlet />
           </div>
         </div>
       </div>
@@ -43,4 +37,4 @@ const Attestation = () => {
   );
 };
 
-export default Attestation;
+export default HomePageHotel;

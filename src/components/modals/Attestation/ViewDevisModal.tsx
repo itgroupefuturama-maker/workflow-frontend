@@ -15,11 +15,12 @@ const ViewDevisModal: React.FC<ViewDevisModalProps> = ({
   isOpen,
   onClose,
   devisData,
+  attestationEnteteId,
   loading,
 }) => {
   if (!isOpen) return null;
 
-  const handleOpenPdf = () => {
+  const handleOpenPdfPerson = () => {
     const pdfUrl = `${API_URL}/attestation/pdf/${devisData.clientBeneficiaire.id}/${devisData.attestationEntete.id}`;
     // Option 1 : Ouvrir dans un nouvel onglet (recommandé pour PDF)
     window.open(pdfUrl, '_blank', 'noopener,noreferrer');
@@ -36,7 +37,7 @@ const ViewDevisModal: React.FC<ViewDevisModalProps> = ({
           <div className="flex items-center gap-3">
             {/* BOUTON PDF ICI */}
             <button
-              onClick={handleOpenPdf}
+              onClick={handleOpenPdfPerson}
               disabled={loading || !devisData.clientBeneficiaire.id || !devisData.attestationEntete.id}
               className={`
                 px-4 py-2 rounded-lg text-white font-medium transition
@@ -46,7 +47,7 @@ const ViewDevisModal: React.FC<ViewDevisModalProps> = ({
                 }
               `}
             >
-              {loading ? 'Chargement...' : 'Voir / Télécharger PDF'}
+              {loading ? 'Chargement...' : 'Voir PDF Par personne'}
             </button>
 
             <button
@@ -140,6 +141,7 @@ const ViewDevisModal: React.FC<ViewDevisModalProps> = ({
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Itinéraire</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Classe</th>
                           <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">PU Ar</th>
+                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">

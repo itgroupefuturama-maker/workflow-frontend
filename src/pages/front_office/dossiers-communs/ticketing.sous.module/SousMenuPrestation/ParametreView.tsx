@@ -13,7 +13,7 @@ import PaysModal from '../../../../../components/modals/PaysModal';
 import DestinationModal from '../../../../../components/modals/DestinationModal';
 import AssociationModal from '../../../../../components/modals/AssociationModal';
 import TabContainer from '../../../../../layouts/TabContainer';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 import { fetchRaisonsAnnulation } from '../../../../../app/front_office/parametre_ticketing/raisonAnnulationSlice';
 import RaisonAnnulationListe from './RaisonAnnulationListe';
 import RaisonAnnulationModal from '../../../../../components/modals/RaisonAnnulationModal';
@@ -23,14 +23,24 @@ const useAppDispatch = () => useDispatch<AppDispatch>();
 export default function ParametreView() {
   const location = useLocation();
   const dispatch = useAppDispatch();
+  const { module } = useParams<{ module: string}>();
 
-  const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'listeService');
+  // console.log(module);
+  
+
+  const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'listeRaisonAnnulation');
   const raisonState = useSelector((state: RootState) => state.raisonAnnulation);
 
-  const tabs = [
+  const tabsTicketing = [
+    { id: 'listeRaisonAnnulation', label: 'Raison Annulation' },
     { id: 'listeService', label: 'Services & Spécifiques' },
     { id: 'listeExigence', label: 'Exigences de Voyage' },
+  ];
+
+  const tabsAttestation = [
     { id: 'listeRaisonAnnulation', label: 'Raison Annulation' },
+    { id: 'listeExigence', label: 'Exigences de Voyage' },
+    { id: 'gestionPrix', label: 'Gestion de prix' },
   ];
 
   useEffect(() => {
@@ -175,12 +185,9 @@ export default function ParametreView() {
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]  font-sans text-slate-900">
-      
+      <TabContainer tabs={module == 'ticketing' ? tabsTicketing : tabsAttestation} activeTab={activeTab} setActiveTab={setActiveTab}>
 
-      <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab}>
-        
-
-      <h1 className="text-3xl font-bold mb-6">Paramétrage Ticketing</h1>
+      <h1 className="text-3xl font-bold mb-6">Paramétrage {module}</h1>
         <div className="mt-6">
           {activeTab === 'listeService' ? (
             
@@ -217,7 +224,13 @@ export default function ParametreView() {
               </button>
               <RaisonAnnulationListe />
             </div>
-          ) : (
+          ): activeTab === 'gestionPrix' ? (
+            <div>
+              <div className='bg-red-500 w-3xl h-2.5'>
+
+              </div>
+            </div>
+          ) :  activeTab === 'listeExigence' ? (
             /* --- SECTION EXIGENCES --- */
             <div className="space-y-6">
               <header className="flex justify-between items-center mb-8">
@@ -330,6 +343,8 @@ export default function ParametreView() {
                 </div>
               )}
             </div>
+          ) : (
+            <div>vide</div>
           )}
         </div>
       </TabContainer>
