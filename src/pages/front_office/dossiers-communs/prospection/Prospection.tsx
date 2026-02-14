@@ -524,7 +524,7 @@ export default function ProspectionDetail() {
                 <tbody className="divide-y divide-slate-100 bg-white">
                   {Array.isArray(lignes) && lignes.length > 0 ? (
                     lignes.map((ligne) => (
-                      <tr key={ligne.origineLine} className="hover:bg-blue-50/30 transition-colors">
+                      <tr key={ligne.id} className="hover:bg-blue-50/30 transition-colors">
                         {selectionMode && (
                           <td className="px-4 py-4 text-center">
                             <input

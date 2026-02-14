@@ -152,12 +152,13 @@ const PageViewAttestation = () => {
 
   return (
     <div className="">
-      <div className="flex justify-between items-center mb-6">
-
+      <div className="mb-6">
         <AttestationHeader
           numeroAttestation={dossierActif?.numero}
-          navigate={navigate} 
+          navigate={navigate}
         />
+      </div>
+      <div className="flex justify-between items-center mb-6">
         {/* Bouton + formulaire création */}
         {canCreate && (
           <div className="flex items-end gap-3">

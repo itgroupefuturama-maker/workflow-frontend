@@ -85,7 +85,7 @@ export default function PageView() {
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4 text-sm">
             {/* Bouton retour */}
               <button
-                onClick={() => navigate(-1)}
+                // onClick={() => navigate(-1)}
                 className="
                   flex items-center gap-2
                   px-4 py-2
@@ -93,9 +93,8 @@ export default function PageView() {
                 bg-amber-400/90
                   border
                 border-amber-400/90
-                text-slate-900
-                hover:bg-amber-300/90
-                hover:text-slate-900
+                text-white
+                hover:bg-amber-400
                   transition-all
                   font-bold
                 "
@@ -237,9 +236,8 @@ export default function PageView() {
                 bg-amber-400/90
                   border
                 border-amber-400/90
-                text-slate-900
-                hover:bg-amber-300/90
-                hover:text-slate-900
+                text-white
+                hover:bg-amber-400
                   transition-all
                   font-bold
                 "

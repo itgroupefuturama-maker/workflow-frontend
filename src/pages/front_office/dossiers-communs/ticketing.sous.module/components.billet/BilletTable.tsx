@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { BilletLigne, ServiceProspectionLigne, ServiceSpecifique } from '../../../../../app/front_office/billetSlice';
-import { FiX } from 'react-icons/fi';
+import { FiFilter, FiX } from 'react-icons/fi';
 
 // --- Sous-composant pour les cellules de prix (évite la répétition et les erreurs de rendu) ---
 const PriceCell = ({ value, isCurrency = false, className = "" }: { value: number, isCurrency?: boolean, className?: string }) => (
@@ -74,6 +74,22 @@ const BilletTable: React.FC<BilletTableProps> = ({
   handleRemove,
   serviceById,
 }) => {
+  const [sortOriginAsc, setSortOriginAsc] = useState(true);
+
+  // On trie les lignes (copie pour ne pas muter la prop)
+  const sortedLignes = [...lignes].sort((a, b) => {
+    const valA = (a.referenceLine || '').toString().trim().toLowerCase();
+    const valB = (b.referenceLine || '').toString().trim().toLowerCase();
+    
+    if (valA < valB) return sortOriginAsc ? -1 : 1;
+    if (valA > valB) return sortOriginAsc ? 1 : -1;
+    return 0;
+  });
+
+  const toggleSortOrigin = () => {
+    setSortOriginAsc(prev => !prev);
+  };
+
   if (lignes.length === 0) {
     return (
       <div className="p-12 text-center text-slate-500">
@@ -85,14 +101,25 @@ const BilletTable: React.FC<BilletTableProps> = ({
   return (
     <div className="overflow-x-auto">
       <div className="bg-white overflow-hidden border border-slate-200">
-        <div className="p-5 border-b border-slate-200">
-          <h2 className="text-xl font-semibold text-slate-800">Lignes du billet</h2>
+        {/* Titre + icône filtre */}
+        <div className="border-b pl-5 pr-5 pb-1.5 pt-1.5 border-slate-200 flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-2">
+            Lignes du billet
+          </h2>
+          <button
+              onClick={toggleSortOrigin}
+              className="bg-slate-100 p-4 rounded-2xl text-slate-500 hover:text-slate-700 transition-colors"
+              title="Trier par Origin Ligne (cliquer pour inverser)"
+            >
+              <FiFilter size={18} />
+            </button>
         </div>
 
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200">
             <thead className="bg-slate-50 sticky top-0 z-10 text-xs">
               <tr>
+                <th className="px-4 py-3 text-center font-semibold text-slate-700 uppercase w-12">N°</th>
                 <th className="px-4 py-3 text-left font-semibold text-slate-700 uppercase">Origin Ligne</th>
                 <th className="px-4 py-3 text-left font-semibold text-slate-700 uppercase">Fournisseur</th>
                 <th className="px-4 py-3 text-left font-semibold text-slate-700 uppercase">N° Réservation</th>
@@ -157,7 +184,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
 
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {lignes.map((ligne) => {
+              {sortedLignes.map((ligne, index) => {
                 const p = ligne.prospectionLigne;
                 const fournisseurLibelle = billet?.prospectionEntete?.fournisseur?.libelle || '—';
 
@@ -173,6 +200,9 @@ const BilletTable: React.FC<BilletTableProps> = ({
 
                 return (
                     <tr key={ligne.id} className="hover:bg-slate-50/70 transition-colors text-xs">
+                      <td className="px-4 py-3 text-center text-slate-500 font-medium">
+                        {index + 1}
+                      </td>
                       <td className="px-4 py-3 text-center text-xs text-slate-600">
                         {ligne.referenceLine}
                       </td>

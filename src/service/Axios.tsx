@@ -99,10 +99,9 @@ axiosInstance.interceptors.response.use(
           throw new Error('Refresh failed');
         }
       } catch (refreshError) {
-        // Si refresh échoue, logout l'utilisateur
+        console.error("ALERTE : Le refresh a échoué, tentative de déconnexion !", refreshError);
         processQueue(refreshError);
-        store.dispatch(logout());
-        // Optionnel : Redirige vers login, mais comme c'est global, tu peux le gérer dans tes components
+        store.dispatch(logout()); // Commentez temporairement cette ligne pour tester
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;

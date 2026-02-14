@@ -172,516 +172,524 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5 flex justify-between items-center">
-          <div className="text-white">
-            <h2 className="text-2xl font-bold">Nouvelle Réservation</h2>
-            <p className="text-blue-100 mt-1 flex items-center gap-2">
-              <span className="bg-white/20 px-2 py-0.5 rounded text-xs font-medium">
-                Vol {ligne.prospectionLigne?.numeroVol || '—'}
-              </span>
-              <span>•</span>
-              <span>{ligne.prospectionLigne?.itineraire || '—'}</span>
-            </p>
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col">
+        {/* Header - Fixed */}
+        <div className="bg-gray-50 border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Nouvelle Réservation</h2>
+            <div className="flex items-center gap-2 mt-1 text-sm text-gray-600">
+              {ligne.prospectionLigne?.numeroVol && (
+                <span className="bg-gray-200 px-2 py-0.5 rounded text-xs font-medium">
+                  Vol {ligne.prospectionLigne.numeroVol}
+                </span>
+              )}
+              {ligne.prospectionLigne?.itineraire && (
+                <>
+                  <span>•</span>
+                  <span>{ligne.prospectionLigne.itineraire}</span>
+                </>
+              )}
+            </div>
           </div>
           <button 
             onClick={onClose} 
-            className="text-white/80 hover:text-white hover:bg-white/10 p-2 rounded-lg transition-colors"
+            className="text-gray-400 hover:text-gray-600 transition-colors p-1 hover:bg-gray-100 rounded"
           >
-            <FiX size={24} />
+            <FiX size={20} />
           </button>
         </div>
 
-        {/* Body */}
+        {/* Body - Scrollable */}
         <div className="flex-1 overflow-y-auto">
-          <div className="p-6 space-y-8">
+          <div className="p-6 space-y-6">
+            
             {/* 1. Passagers */}
-            <section className="bg-white border-2 border-gray-200 rounded-xl p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-xl flex items-center justify-center font-bold text-lg shadow-lg">
-                  1
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold text-gray-800">Passagers</h3>
-                  <p className="text-sm text-red-600 font-medium mt-0.5">
-                    * Obligatoire – plusieurs possibles
-                  </p>
+            <section className="border border-gray-200 rounded-lg overflow-hidden">
+              <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-7 h-7 bg-gray-900 text-white rounded flex items-center justify-center text-sm font-semibold">
+                    1
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-sm font-semibold text-gray-900">Passagers</h3>
+                    <p className="text-xs text-gray-600 mt-0.5">
+                      Sélection obligatoire • Plusieurs passagers possibles
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Sélection */}
-                <div className="space-y-5 lg:border-r lg:pr-8">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Bénéficiaire <span className="text-red-600">*</span>
-                    </label>
-                    <select
-                      value={currentBeneficiaireId}
-                      onChange={(e) => {
-                        setCurrentBeneficiaireId(e.target.value);
-                        setCurrentInfoId('');
-                      }}
-                      className="w-full border-2 border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                    >
-                      <option value="">— Choisir un bénéficiaire —</option>
-                      {beneficiaires.map((b) => (
-                        <option key={b.clientBeneficiaireId} value={b.clientBeneficiaireId}>
-                          {b.clientBeneficiaire.libelle} • {b.clientBeneficiaire.code}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  {currentBeneficiaireId && (
+              <div className="p-5">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  
+                  {/* Sélection */}
+                  <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Document / Info passager <span className="text-red-600">*</span>
+                      <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                        Bénéficiaire <span className="text-red-600">*</span>
                       </label>
-                      {infosLoading ? (
-                        <div className="text-gray-500 italic flex items-center gap-2 py-3">
-                          <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-                          Chargement...
-                        </div>
-                      ) : infosList.length === 0 ? (
-                        <div className="text-amber-700 bg-amber-50 border border-amber-200 p-4 rounded-lg flex items-center gap-2">
-                          <span className="text-lg">⚠️</span>
-                          Aucun document trouvé pour ce bénéficiaire
-                        </div>
-                      ) : (
-                        <select
-                          value={currentInfoId}
-                          onChange={(e) => setCurrentInfoId(e.target.value)}
-                          className="w-full border-2 border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                        >
-                          <option value="">— Choisir un document —</option>
-                          {infosList.map((info) => (
-                            <option key={info.id} value={info.id}>
-                              {info.prenom} {info.nom} • {info.typeDoc} {info.referenceDoc}
-                            </option>
-                          ))}
-                        </select>
-                      )}
+                      <select
+                        value={currentBeneficiaireId}
+                        onChange={(e) => {
+                          setCurrentBeneficiaireId(e.target.value);
+                          setCurrentInfoId('');
+                        }}
+                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                      >
+                        <option value="">Sélectionner un bénéficiaire</option>
+                        {beneficiaires.map((b) => (
+                          <option key={b.clientBeneficiaireId} value={b.clientBeneficiaireId}>
+                            {b.clientBeneficiaire.libelle} • {b.clientBeneficiaire.code}
+                          </option>
+                        ))}
+                      </select>
                     </div>
-                  )}
 
-                  {/* Affichage des détails du document sélectionné */}
-                  {selectedInfoDetails && (
-                    <div className="mt-4 p-5 bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-xl shadow-sm">
-                      <h4 className="text-xs uppercase tracking-wider font-bold text-blue-700 mb-4 flex items-center gap-2">
-                        <FiCheck size={16} className="text-blue-600" /> 
-                        Détails du document sélectionné
-                      </h4>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="col-span-2">
-                          <p className="text-[10px] text-blue-600 uppercase font-bold mb-1">Passager</p>
-                          <p className="text-base font-bold text-gray-900">
-                            {selectedInfoDetails.prenom} {selectedInfoDetails.nom}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-blue-600 uppercase font-bold mb-1">Type Client</p>
-                          <span className="inline-block px-2.5 py-1 bg-white border-2 border-blue-200 rounded-lg text-xs font-bold text-gray-700">
-                            {selectedInfoDetails.clientType}
-                          </span>
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-blue-600 uppercase font-bold mb-1">Nationalité</p>
-                          <p className="text-sm font-semibold text-gray-800">{selectedInfoDetails.nationalite}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-blue-600 uppercase font-bold mb-1">Type Document</p>
-                          <span className="inline-block px-2.5 py-1 bg-white border-2 border-blue-200 rounded-lg text-xs font-bold text-gray-700">
-                            {selectedInfoDetails.typeDoc}
-                          </span>
-                          <p className="text-xs text-gray-600 mt-1 font-mono">{selectedInfoDetails.referenceDoc}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-blue-600 uppercase font-bold mb-1">Dates Document</p>
-                          <p className="text-xs text-gray-700">
-                            <span className="font-semibold">Del:</span> {selectedInfoDetails.dateDelivranceDoc}
-                          </p>
-                          <p className="text-xs text-gray-700">
-                            <span className="font-semibold">Val:</span> {selectedInfoDetails.dateValiditeDoc}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-blue-600 uppercase font-bold mb-1">CIN</p>
-                          <span className="inline-block px-2.5 py-1 bg-white border-2 border-blue-200 rounded-lg text-xs font-bold text-gray-700">
-                            {selectedInfoDetails.cin}
-                          </span>
-                          <p className="text-xs text-gray-600 mt-1 font-mono">{selectedInfoDetails.referenceCin}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-blue-600 uppercase font-bold mb-1">Dates CIN</p>
-                          <p className="text-xs text-gray-700">
-                            <span className="font-semibold">Del:</span> {selectedInfoDetails.dateDelivranceCin}
-                          </p>
-                          <p className="text-xs text-gray-700">
-                            <span className="font-semibold">Val:</span> {selectedInfoDetails.dateValiditeCin}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-blue-600 uppercase font-bold mb-1">WhatsApp</p>
-                          <p className="text-sm font-mono font-bold text-green-600">
-                            {selectedInfoDetails.whatsapp}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-blue-600 uppercase font-bold mb-1">Téléphone</p>
-                          <p className="text-sm font-mono font-bold text-blue-700">
-                            {selectedInfoDetails.tel}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] text-blue-600 uppercase font-bold mb-1">Validité Document</p>
-                          <p className={`text-sm font-bold ${new Date(selectedInfoDetails.dateValiditeDoc) < new Date() ? 'text-red-600' : 'text-green-600'}`}>
-                            {new Date(selectedInfoDetails.dateValiditeDoc).toLocaleDateString('fr-FR')}
-                          </p>
-                        </div>
+                    {currentBeneficiaireId && (
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                          Document / Info passager <span className="text-red-600">*</span>
+                        </label>
+                        {infosLoading ? (
+                          <div className="text-sm text-gray-500 italic flex items-center gap-2 py-2">
+                            <div className="w-4 h-4 border-2 border-gray-900 border-t-transparent rounded-full animate-spin"></div>
+                            Chargement...
+                          </div>
+                        ) : infosList.length === 0 ? (
+                          <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 p-3 rounded">
+                            Aucun document trouvé pour ce bénéficiaire
+                          </div>
+                        ) : (
+                          <select
+                            value={currentInfoId}
+                            onChange={(e) => setCurrentInfoId(e.target.value)}
+                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                          >
+                            <option value="">Sélectionner un document</option>
+                            {infosList
+                              .filter((info) => info.clientType === ligne.prospectionLigne?.typePassager)
+                              .map((info) => (
+                                <option key={info.id} value={info.id}>
+                                  {info.prenom} {info.nom} • {info.typeDoc} {info.referenceDoc} ({info.clientType})
+                                </option>
+                              ))
+                            }
+                          </select>
+                        )}
                       </div>
-                    </div>
-                  )}
+                    )}
 
-                  <button
-                    type="button"
-                    onClick={addPassager}
-                    disabled={!currentBeneficiaireId || !currentInfoId}
-                    className="w-full mt-4 px-5 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all font-semibold shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
-                  >
-                    <span className="text-xl">+</span>
-                    Ajouter ce passager
-                  </button>
-                </div>
-
-                {/* Liste sélectionnés */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                    Passagers sélectionnés 
-                    <span className="bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full text-xs font-bold">
-                      {selectedPassagers.length}
-                    </span>
-                  </label>
-
-                  {selectedPassagers.length === 0 ? (
-                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center">
-                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <FiCheck className="text-gray-400" size={32} />
-                      </div>
-                      <p className="text-gray-500 font-medium">Aucun passager ajouté</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3 max-h-[450px] overflow-y-auto pr-2 custom-scrollbar">
-                      {selectedPassagers.map((p, idx) => (
-                        <div
-                          key={p.infoId}
-                          className="flex items-center justify-between bg-gradient-to-r from-gray-50 to-gray-100 border-2 border-gray-200 rounded-xl p-4 hover:shadow-md transition-all group"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-lg flex items-center justify-center font-bold shadow-md">
-                              {idx + 1}
-                            </div>
-                            <div>
-                              <p className="font-bold text-gray-900">{p.nomComplet}</p>
-                              <p className="text-xs text-gray-500 font-mono">
-                                ID: {p.infoId.slice(0, 8)}...
-                              </p>
+                    {/* Détails du document sélectionné */}
+                    {selectedInfoDetails && (
+                      <div className="p-4 bg-gray-50 border border-gray-200 rounded">
+                        <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">
+                          Document sélectionné
+                        </h4>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                          <div className="col-span-2">
+                            <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Passager</div>
+                            <div className="text-sm font-semibold text-gray-900">
+                              {selectedInfoDetails.prenom} {selectedInfoDetails.nom}
                             </div>
                           </div>
-                          <button
-                            onClick={() => removePassager(p.infoId)}
-                            className="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-lg transition-all"
-                          >
-                            <FiTrash2 size={20} />
-                          </button>
+                          <div>
+                            <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Type</div>
+                            <div className="text-xs font-medium text-gray-700 bg-gray-200 rounded px-2 py-0.5 inline-block">
+                              {selectedInfoDetails.clientType}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Nationalité</div>
+                            <div className="text-sm text-gray-900">{selectedInfoDetails.nationalite}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Document</div>
+                            <div className="text-xs font-medium text-gray-700 bg-gray-200 rounded px-2 py-0.5 inline-block">
+                              {selectedInfoDetails.typeDoc}
+                            </div>
+                            <div className="text-xs text-gray-500 font-mono mt-0.5">{selectedInfoDetails.referenceDoc}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Validité</div>
+                            <div className={`text-xs font-medium ${
+                              new Date(selectedInfoDetails.dateValiditeDoc) < new Date() 
+                                ? 'text-red-600' 
+                                : 'text-gray-900'
+                            }`}>
+                              {new Date(selectedInfoDetails.dateValiditeDoc).toLocaleDateString('fr-FR')}
+                            </div>
+                            <div className="text-xs text-gray-500">Del: {selectedInfoDetails.dateDelivranceDoc}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">CIN</div>
+                            <div className="text-xs font-medium text-gray-700 bg-gray-200 rounded px-2 py-0.5 inline-block">
+                              {selectedInfoDetails.cin}
+                            </div>
+                            <div className="text-xs text-gray-500 font-mono mt-0.5">{selectedInfoDetails.referenceCin}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Validité CIN</div>
+                            <div className="text-xs text-gray-900">{selectedInfoDetails.dateValiditeCin}</div>
+                            <div className="text-xs text-gray-500">Del: {selectedInfoDetails.dateDelivranceCin}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">WhatsApp</div>
+                            <div className="text-xs font-mono text-gray-900">{selectedInfoDetails.whatsapp}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Téléphone</div>
+                            <div className="text-xs font-mono text-gray-900">{selectedInfoDetails.tel}</div>
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                  )}
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={addPassager}
+                      disabled={!currentBeneficiaireId || !currentInfoId}
+                      className={`w-full px-4 py-2 rounded text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                        currentBeneficiaireId && currentInfoId
+                          ? 'bg-gray-900 text-white hover:bg-gray-800'
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
+                    >
+                      <span className="text-lg">+</span>
+                      Ajouter ce passager
+                    </button>
+                  </div>
+
+                  {/* Liste sélectionnés */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-2 flex items-center gap-2">
+                      Passagers sélectionnés 
+                      <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded text-xs font-semibold">
+                        {selectedPassagers.length}
+                      </span>
+                    </label>
+
+                    {selectedPassagers.length === 0 ? (
+                      <div className="border-2 border-dashed border-gray-200 rounded p-8 text-center">
+                        <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                          <FiCheck className="text-gray-400" size={24} />
+                        </div>
+                        <p className="text-sm text-gray-500">Aucun passager ajouté</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 max-h-[400px] overflow-y-auto">
+                        {selectedPassagers.map((p, idx) => (
+                          <div
+                            key={p.infoId}
+                            className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded p-3 hover:border-gray-300 transition-all group"
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 bg-gray-900 text-white rounded flex items-center justify-center text-sm font-semibold">
+                                {idx + 1}
+                              </div>
+                              <div>
+                                <p className="text-sm font-semibold text-gray-900">{p.nomComplet}</p>
+                                <p className="text-xs text-gray-500 font-mono">
+                                  ID: {p.infoId.slice(0, 8)}...
+                                </p>
+                              </div>
+                            </div>
+                            <button
+                              onClick={() => removePassager(p.infoId)}
+                              className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded transition-all"
+                            >
+                              <FiTrash2 size={18} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </section>
 
             {/* 2. Réservation + Taux */}
-            <section className="bg-white border-2 border-gray-200 rounded-xl p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-xl flex items-center justify-center font-bold text-lg shadow-lg">
-                  2
+            <section className="border border-gray-200 rounded-lg overflow-hidden">
+              <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-7 h-7 bg-gray-900 text-white rounded flex items-center justify-center text-sm font-semibold">
+                    2
+                  </div>
+                  <h3 className="text-sm font-semibold text-gray-900">Réservation & Taux</h3>
                 </div>
-                <h3 className="text-xl font-bold text-gray-800">Réservation & Taux</h3>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    N° Réservation <span className="text-red-600">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    name="reservation"
-                    value={formData.reservation}
-                    onChange={handleChange}
-                    placeholder="RES-2026-002"
-                    className="w-full border-2 border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Devise</label>
-                  <input
-                    type="text"
-                    value={formData.devise}
-                    readOnly
-                    className="w-full bg-gradient-to-r from-gray-100 to-gray-200 border-2 border-gray-300 rounded-lg py-3 px-4 text-gray-700 font-bold"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Taux de change <span className="text-red-600">*</span>
-                  </label>
-                  <div className="relative">
+              <div className="p-5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                      N° Réservation <span className="text-red-600">*</span>
+                    </label>
                     <input
-                      type="number"
-                      name="resaTauxEchange"
-                      value={formData.resaTauxEchange}
+                      type="text"
+                      name="reservation"
+                      value={formData.reservation}
                       onChange={handleChange}
-                      step="0.01"
-                      className="w-full border-2 border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium"
-                      placeholder="4500"
+                      placeholder="RES-2026-002"
+                      className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
                     />
-                    <span className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 font-medium">
-                      Ar
-                    </span>
                   </div>
-                </div>
 
-                <div className="flex items-end">
-                  <div className="bg-blue-50 border-2 border-blue-200 rounded-lg px-4 py-3 w-full">
-                    <p className="text-xs text-blue-600 font-bold uppercase mb-1">Passagers</p>
-                    <p className="text-2xl font-bold text-blue-700">
-                      {nombrePassagers}
-                    </p>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">Devise</label>
+                    <input
+                      type="text"
+                      value={formData.devise}
+                      readOnly
+                      className="w-full bg-gray-100 border border-gray-300 rounded px-3 py-2 text-sm text-gray-700 font-semibold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                      Taux de change <span className="text-red-600">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        name="resaTauxEchange"
+                        value={formData.resaTauxEchange}
+                        onChange={handleChange}
+                        step="0.01"
+                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                        placeholder="4500"
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                        Ar
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-end">
+                    <div className="bg-gray-50 border border-gray-200 rounded px-4 py-2 w-full">
+                      <p className="text-xs text-gray-500 font-medium uppercase mb-0.5">Passagers</p>
+                      <p className="text-xl font-semibold text-gray-900">
+                        {nombrePassagers}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
             </section>
 
             {/* 3. Tarifs Compagnie */}
-            <section className="bg-white border-2 border-gray-200 rounded-xl p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-xl flex items-center justify-center font-bold text-lg shadow-lg">
-                  3
-                </div>
-                <h3 className="text-xl font-bold text-gray-800">
-                  Tarifs compagnie <span className="text-blue-600">({formData.devise})</span>
-                </h3>
-              </div>
-
-              {/* Prix unitaires */}
-              <div className="mb-6">
-                <h4 className="text-sm font-bold text-gray-600 uppercase tracking-wide mb-4 flex items-center gap-2">
-                  <div className="w-1 h-5 bg-blue-600 rounded-full"></div>
-                  Prix unitaires
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      PU Billet <span className="text-red-600">*</span>
-                    </label>
-                    <input
-                      type="number"
-                      name="puResaBilletCompagnieDevise"
-                      value={formData.puResaBilletCompagnieDevise}
-                      onChange={handleChange}
-                      step="0.01"
-                      className="w-full border-2 border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium"
-                      placeholder="0.00"
-                    />
-                    {nombrePassagers > 0 && (
-                      <p className="text-xs text-green-600 font-semibold mt-2 flex items-center gap-1">
-                        <span>→ Total:</span>
-                        <span className="font-bold">{totalBillet.toLocaleString('fr-FR')} {formData.devise}</span>
-                      </p>
-                    )}
+            <section className="border border-gray-200 rounded-lg overflow-hidden">
+              <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-7 h-7 bg-gray-900 text-white rounded flex items-center justify-center text-sm font-semibold">
+                    3
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">PU Service</label>
-                    <input
-                      type="number"
-                      name="puResaServiceCompagnieDevise"
-                      value={formData.puResaServiceCompagnieDevise}
-                      onChange={handleChange}
-                      step="0.01"
-                      className="w-full border-2 border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium"
-                      placeholder="0.00"
-                    />
-                    {nombrePassagers > 0 && (
-                      <p className="text-xs text-green-600 font-semibold mt-2 flex items-center gap-1">
-                        <span>→ Total:</span>
-                        <span className="font-bold">{totalService.toLocaleString('fr-FR')} {formData.devise}</span>
-                      </p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">PU Pénalité</label>
-                    <input
-                      type="number"
-                      name="puResaPenaliteCompagnieDevise"
-                      value={formData.puResaPenaliteCompagnieDevise}
-                      onChange={handleChange}
-                      step="0.01"
-                      className="w-full border-2 border-gray-300 rounded-lg py-3 px-4 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all font-medium"
-                      placeholder="0.00"
-                    />
-                    {nombrePassagers > 0 && (
-                      <p className="text-xs text-green-600 font-semibold mt-2 flex items-center gap-1">
-                        <span>→ Total:</span>
-                        <span className="font-bold">{totalPenalite.toLocaleString('fr-FR')} {formData.devise}</span>
-                      </p>
-                    )}
-                  </div>
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    Tarifs compagnie <span className="text-gray-600">({formData.devise})</span>
+                  </h3>
                 </div>
               </div>
 
-              {/* Montants totaux */}
-              <div className="pt-6 border-t-2">
-                <h4 className="text-sm font-bold text-gray-600 uppercase tracking-wide mb-4 flex items-center gap-2">
-                  <div className="w-1 h-5 bg-green-600 rounded-full"></div>
-                  Montants totaux
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Total Billet</label>
-                    <input
-                      type="number"
-                      name="puResaMontantBilletCompagnieDevise"
-                      value={formData.puResaMontantBilletCompagnieDevise}
-                      onChange={handleChange}
-                      step="0.01"
-                      className="w-full border-2 border-green-200 bg-green-50 rounded-lg py-3 px-4 font-bold text-gray-900"
-                    />
+              <div className="p-5 space-y-5">
+                {/* Prix unitaires */}
+                <div>
+                  <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3">
+                    Prix unitaires
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                        PU Billet <span className="text-red-600">*</span>
+                      </label>
+                      <input
+                        type="number"
+                        name="puResaBilletCompagnieDevise"
+                        value={formData.puResaBilletCompagnieDevise}
+                        onChange={handleChange}
+                        step="0.01"
+                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                        placeholder="0.00"
+                      />
+                      {nombrePassagers > 0 && (
+                        <p className="text-xs text-gray-600 mt-1.5">
+                          → Total: <span className="font-semibold">{totalBillet.toLocaleString('fr-FR')} {formData.devise}</span>
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1.5">PU Service</label>
+                      <input
+                        type="number"
+                        name="puResaServiceCompagnieDevise"
+                        value={formData.puResaServiceCompagnieDevise}
+                        onChange={handleChange}
+                        step="0.01"
+                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                        placeholder="0.00"
+                      />
+                      {nombrePassagers > 0 && (
+                        <p className="text-xs text-gray-600 mt-1.5">
+                          → Total: <span className="font-semibold">{totalService.toLocaleString('fr-FR')} {formData.devise}</span>
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1.5">PU Pénalité</label>
+                      <input
+                        type="number"
+                        name="puResaPenaliteCompagnieDevise"
+                        value={formData.puResaPenaliteCompagnieDevise}
+                        onChange={handleChange}
+                        step="0.01"
+                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                        placeholder="0.00"
+                      />
+                      {nombrePassagers > 0 && (
+                        <p className="text-xs text-gray-600 mt-1.5">
+                          → Total: <span className="font-semibold">{totalPenalite.toLocaleString('fr-FR')} {formData.devise}</span>
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Total Service</label>
-                    <input
-                      type="number"
-                      name="puResaMontantServiceCompagnieDevise"
-                      value={formData.puResaMontantServiceCompagnieDevise}
-                      onChange={handleChange}
-                      step="0.01"
-                      className="w-full border-2 border-green-200 bg-green-50 rounded-lg py-3 px-4 font-bold text-gray-900"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Total Pénalité</label>
-                    <input
-                      type="number"
-                      name="puResaMontantPenaliteCompagnieDevise"
-                      value={formData.puResaMontantPenaliteCompagnieDevise}
-                      onChange={handleChange}
-                      step="0.01"
-                      className="w-full border-2 border-green-200 bg-green-50 rounded-lg py-3 px-4 font-bold text-gray-900"
-                    />
+                </div>
+
+                {/* Montants totaux */}
+                <div className="pt-4 border-t border-gray-200">
+                  <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3">
+                    Montants totaux
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1.5">Total Billet</label>
+                      <input
+                        type="number"
+                        name="puResaMontantBilletCompagnieDevise"
+                        value={formData.puResaMontantBilletCompagnieDevise}
+                        onChange={handleChange}
+                        step="0.01"
+                        className="w-full border border-gray-300 bg-gray-50 rounded px-3 py-2 text-sm font-semibold text-gray-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1.5">Total Service</label>
+                      <input
+                        type="number"
+                        name="puResaMontantServiceCompagnieDevise"
+                        value={formData.puResaMontantServiceCompagnieDevise}
+                        onChange={handleChange}
+                        step="0.01"
+                        className="w-full border border-gray-300 bg-gray-50 rounded px-3 py-2 text-sm font-semibold text-gray-900"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-1.5">Total Pénalité</label>
+                      <input
+                        type="number"
+                        name="puResaMontantPenaliteCompagnieDevise"
+                        value={formData.puResaMontantPenaliteCompagnieDevise}
+                        onChange={handleChange}
+                        step="0.01"
+                        className="w-full border border-gray-300 bg-gray-50 rounded px-3 py-2 text-sm font-semibold text-gray-900"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
             </section>
 
             {/* 4. Tarifs Client */}
-            <section className="bg-gradient-to-br from-purple-50 to-purple-100 border-2 border-purple-200 rounded-xl p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-gradient-to-br from-purple-600 to-purple-700 text-white rounded-xl flex items-center justify-center font-bold text-lg shadow-lg">
-                  4
+            <section className="border border-gray-200 rounded-lg overflow-hidden">
+              <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                <div className="flex items-center gap-3">
+                  <div className="w-7 h-7 bg-gray-900 text-white rounded flex items-center justify-center text-sm font-semibold">
+                    4
+                  </div>
+                  <h3 className="text-sm font-semibold text-gray-900">
+                    Tarifs Client <span className="text-gray-600">(Devise & Ariary)</span>
+                  </h3>
                 </div>
-                <h3 className="text-xl font-bold text-gray-800">
-                  Tarifs Client <span className="text-purple-600">(Devise & Ariary)</span>
-                </h3>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Tarifs en Devise */}
-                <div className="bg-white rounded-lg p-5 border-2 border-purple-200 shadow-sm">
-                  <h4 className="font-bold text-purple-700 mb-4 text-sm uppercase tracking-wide flex items-center gap-2">
-                    <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
-                    Montants en Devise
-                  </h4>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center py-2 border-b border-purple-100">
-                      <span className="text-sm text-gray-600 font-medium">Billet Client</span>
-                      <span className="font-bold text-gray-900">
-                        {ligne?.prospectionLigne?.montantBilletClientDevise || '—'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center py-2 border-b border-purple-100">
-                      <span className="text-sm text-gray-600 font-medium">Service Client</span>
-                      <span className="font-bold text-gray-900">
-                        {ligne?.prospectionLigne?.montantServiceClientDevise || '—'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center py-2">
-                      <span className="text-sm text-gray-600 font-medium">Pénalité Client</span>
-                      <span className="font-bold text-red-600">
-                        {ligne?.prospectionLigne?.montantPenaliteClientDevise || '—'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Tarifs en Ariary */}
-                <div className="bg-white rounded-lg p-5 border-2 border-purple-200 shadow-sm">
-                  <h4 className="font-bold text-purple-700 mb-4 text-sm uppercase tracking-wide flex items-center gap-2">
-                    <span className="w-2 h-2 bg-purple-500 rounded-full"></span>
-                    Montants en Ariary
-                  </h4>
-                  <div className="space-y-3">
-                    <div className="flex justify-between items-center py-2 border-b border-purple-100">
-                      <span className="text-sm text-gray-600 font-medium">Billet Client</span>
-                      <span className="font-bold text-gray-900">
-                        {ligne?.prospectionLigne?.montantBilletClientAriary || '—'} Ar
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center py-2 border-b border-purple-100">
-                      <span className="text-sm text-gray-600 font-medium">Service Client</span>
-                      <span className="font-bold text-gray-900">
-                        {ligne?.prospectionLigne?.montantServiceClientAriary || '—'} Ar
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center py-2">
-                      <span className="text-sm text-gray-600 font-medium">Pénalité Client</span>
-                      <span className="font-bold text-red-600">
-                        {ligne?.prospectionLigne?.montantPenaliteClientAriary || '—'} Ar
-                      </span>
+              <div className="p-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {/* Tarifs en Devise */}
+                  <div className="bg-gray-50 rounded border border-gray-200 p-4">
+                    <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">
+                      Montants en Devise
+                    </h4>
+                    <div className="space-y-2.5">
+                      <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                        <span className="text-xs text-gray-600">Billet Client</span>
+                        <span className="text-sm font-semibold text-gray-900">
+                          {ligne?.prospectionLigne?.montantBilletClientDevise || '—'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                        <span className="text-xs text-gray-600">Service Client</span>
+                        <span className="text-sm font-semibold text-gray-900">
+                          {ligne?.prospectionLigne?.montantServiceClientDevise || '—'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-xs text-gray-600">Pénalité Client</span>
+                        <span className="text-sm font-semibold text-red-600">
+                          {ligne?.prospectionLigne?.montantPenaliteClientDevise || '—'}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Commissions */}
-                <div className="bg-white rounded-lg p-5 border-2 border-purple-200 shadow-sm">
-                  <h4 className="font-bold text-purple-700 mb-4 text-sm uppercase tracking-wide flex items-center gap-2">
-                    <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                    Commission en Devise
-                  </h4>
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <p className="text-2xl font-bold text-green-700">
-                      {ligne?.prospectionLigne?.commissionEnDevise || '—'}
-                    </p>
+                  {/* Tarifs en Ariary */}
+                  <div className="bg-gray-50 rounded border border-gray-200 p-4">
+                    <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">
+                      Montants en Ariary
+                    </h4>
+                    <div className="space-y-2.5">
+                      <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                        <span className="text-xs text-gray-600">Billet Client</span>
+                        <span className="text-sm font-semibold text-gray-900">
+                          {ligne?.prospectionLigne?.montantBilletClientAriary || '—'} Ar
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-2 border-b border-gray-200">
+                        <span className="text-xs text-gray-600">Service Client</span>
+                        <span className="text-sm font-semibold text-gray-900">
+                          {ligne?.prospectionLigne?.montantServiceClientAriary || '—'} Ar
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-xs text-gray-600">Pénalité Client</span>
+                        <span className="text-sm font-semibold text-red-600">
+                          {ligne?.prospectionLigne?.montantPenaliteClientAriary || '—'} Ar
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                </div>
 
-                <div className="bg-white rounded-lg p-5 border-2 border-purple-200 shadow-sm">
-                  <h4 className="font-bold text-purple-700 mb-4 text-sm uppercase tracking-wide flex items-center gap-2">
-                    <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                    Commission en Ariary
-                  </h4>
-                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <p className="text-2xl font-bold text-green-700">
-                      {ligne?.prospectionLigne?.commissionEnAriary || '—'} Ar
-                    </p>
+                  {/* Commissions */}
+                  <div className="bg-gray-50 rounded border border-gray-200 p-4">
+                    <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">
+                      Commission en Devise
+                    </h4>
+                    <div className="bg-white border border-gray-300 rounded px-4 py-3">
+                      <p className="text-xl font-semibold text-gray-900">
+                        {ligne?.prospectionLigne?.commissionEnDevise || '—'}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50 rounded border border-gray-200 p-4">
+                    <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">
+                      Commission en Ariary
+                    </h4>
+                    <div className="bg-white border border-gray-300 rounded px-4 py-3">
+                      <p className="text-xl font-semibold text-gray-900">
+                        {ligne?.prospectionLigne?.commissionEnAriary || '—'} Ar
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -689,65 +697,63 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
 
             {/* Récapitulatif */}
             {selectedPassagers.length > 0 && (
-              <div className="bg-gradient-to-br from-green-50 to-green-100 border-2 border-green-300 rounded-xl p-6 shadow-lg">
-                <h3 className="text-lg font-bold mb-5 flex items-center gap-2 text-gray-800">
-                  <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center">
-                    <FiCheck className="text-white" size={18} />
-                  </div>
+              <div className="bg-gray-50 border border-gray-300 rounded-lg p-5">
+                <h3 className="text-sm font-semibold mb-4 flex items-center gap-2 text-gray-900">
+                  <FiCheck className="text-gray-900" size={18} />
                   Récapitulatif avant envoi
                 </h3>
 
-                <div className="bg-white rounded-lg p-5 space-y-5">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+                <div className="bg-white rounded border border-gray-200 p-4 space-y-4">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                     <div>
-                      <p className="text-xs text-gray-500 uppercase font-bold mb-1">Numéro réservation</p>
-                      <p className="font-bold text-gray-900">{formData.reservation || '—'}</p>
+                      <p className="text-xs text-gray-500 uppercase mb-1">Numéro réservation</p>
+                      <p className="text-sm font-semibold text-gray-900">{formData.reservation || '—'}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 uppercase font-bold mb-1">Passagers</p>
-                      <p className="font-bold text-blue-600 text-xl">{nombrePassagers}</p>
+                      <p className="text-xs text-gray-500 uppercase mb-1">Passagers</p>
+                      <p className="text-lg font-semibold text-gray-900">{nombrePassagers}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 uppercase font-bold mb-1">Devise</p>
-                      <p className="font-bold text-gray-900">{formData.devise}</p>
+                      <p className="text-xs text-gray-500 uppercase mb-1">Devise</p>
+                      <p className="text-sm font-semibold text-gray-900">{formData.devise}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 uppercase font-bold mb-1">Taux</p>
-                      <p className="font-bold text-gray-900">{formData.resaTauxEchange.toLocaleString('fr-FR')} Ar</p>
+                      <p className="text-xs text-gray-500 uppercase mb-1">Taux</p>
+                      <p className="text-sm font-semibold text-gray-900">{formData.resaTauxEchange.toLocaleString('fr-FR')} Ar</p>
                     </div>
                   </div>
 
-                  <div className="border-t-2 pt-4">
-                    <p className="text-xs text-gray-500 uppercase font-bold mb-3">Liste des passagers</p>
+                  <div className="border-t border-gray-200 pt-3">
+                    <p className="text-xs text-gray-500 uppercase mb-2">Liste des passagers</p>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                       {selectedPassagers.map((p) => (
-                        <div key={p.infoId} className="flex items-center gap-2 bg-gray-50 rounded px-3 py-2">
-                          <span className="text-blue-600">✓</span>
-                          <span className="text-sm font-medium">{p.nomComplet}</span>
+                        <div key={p.infoId} className="flex items-center gap-2 bg-gray-50 rounded px-3 py-1.5">
+                          <span className="text-gray-900">✓</span>
+                          <span className="text-xs font-medium">{p.nomComplet}</span>
                           <span className="text-xs text-gray-400 font-mono">({p.infoId.slice(0, 8)})</span>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  <div className="pt-4 border-t-2">
-                    <p className="text-xs font-bold text-gray-600 uppercase mb-3">Montants totaux compagnie</p>
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
-                        <p className="text-xs text-blue-600 font-bold mb-1">BILLET</p>
-                        <p className="text-lg font-bold text-gray-900">
+                  <div className="pt-3 border-t border-gray-200">
+                    <p className="text-xs font-semibold text-gray-600 uppercase mb-3">Montants totaux compagnie</p>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="bg-gray-50 border border-gray-200 rounded p-3 text-center">
+                        <p className="text-xs text-gray-600 font-medium mb-1">BILLET</p>
+                        <p className="text-base font-semibold text-gray-900">
                           {totalBillet.toLocaleString('fr-FR')} {formData.devise}
                         </p>
                       </div>
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
-                        <p className="text-xs text-blue-600 font-bold mb-1">SERVICE</p>
-                        <p className="text-lg font-bold text-gray-900">
+                      <div className="bg-gray-50 border border-gray-200 rounded p-3 text-center">
+                        <p className="text-xs text-gray-600 font-medium mb-1">SERVICE</p>
+                        <p className="text-base font-semibold text-gray-900">
                           {totalService.toLocaleString('fr-FR')} {formData.devise}
                         </p>
                       </div>
-                      <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-center">
-                        <p className="text-xs text-red-600 font-bold mb-1">PÉNALITÉ</p>
-                        <p className="text-lg font-bold text-gray-900">
+                      <div className="bg-gray-50 border border-gray-200 rounded p-3 text-center">
+                        <p className="text-xs text-gray-600 font-medium mb-1">PÉNALITÉ</p>
+                        <p className="text-base font-semibold text-gray-900">
                           {totalPenalite.toLocaleString('fr-FR')} {formData.devise}
                         </p>
                       </div>
@@ -759,17 +765,16 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="border-t-2 bg-gradient-to-r from-gray-50 to-gray-100 px-6 py-5 flex justify-between items-center">
-          <p className="text-sm text-gray-600 flex items-center gap-2">
-            <span className="text-red-600 font-bold text-lg">*</span>
-            <span className="font-medium">Champs obligatoires</span>
+        {/* Footer - Fixed */}
+        <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-between items-center">
+          <p className="text-xs text-gray-600">
+            <span className="text-red-600 font-semibold">*</span> Champs obligatoires
           </p>
 
           <div className="flex gap-3">
             <button
               onClick={onClose}
-              className="px-6 py-3 border-2 border-gray-300 rounded-lg hover:bg-white hover:border-gray-400 font-medium transition-all"
+              className="px-5 py-2 border border-gray-300 rounded text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
             >
               Annuler
             </button>
@@ -777,13 +782,13 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
             <button
               onClick={handleShowConfirmation}
               disabled={!isFormValid}
-              className={`px-6 py-3 rounded-lg font-semibold transition-all shadow-lg hover:shadow-xl flex items-center gap-2 ${
+              className={`px-5 py-2 rounded text-sm font-medium transition-colors flex items-center gap-2 ${
                 isFormValid 
-                  ? 'bg-gradient-to-r from-green-600 to-green-700 text-white hover:from-green-700 hover:to-green-800' 
+                  ? 'bg-gray-900 text-white hover:bg-gray-800' 
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
             >
-              <FiCheck size={20} />
+              <FiCheck size={16} />
               Vérifier & Confirmer
             </button>
           </div>
@@ -791,33 +796,31 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
 
         {/* Confirmation overlay */}
         {showConfirmation && (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
               {/* Header modal confirmation */}
-              <div className="bg-gradient-to-r from-green-600 to-green-700 px-6 py-5">
-                <h3 className="text-2xl font-bold text-white flex items-center gap-3">
-                  <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
-                    <FiCheck size={24} />
-                  </div>
+              <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
+                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                  <FiCheck size={20} />
                   Confirmation de réservation
                 </h3>
-                <p className="text-green-100 mt-1 text-sm">Vérifiez attentivement avant d'envoyer</p>
+                <p className="text-sm text-gray-600 mt-1">Vérifiez attentivement avant d'envoyer</p>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+              <div className="flex-1 overflow-y-auto p-6 space-y-5">
                 {/* Infos rapides */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4">
-                    <p className="text-xs text-blue-600 font-bold uppercase mb-1">Réservation</p>
-                    <p className="font-bold text-lg text-gray-900">{formData.reservation || '—'}</p>
+                  <div className="bg-gray-50 border border-gray-200 rounded p-4">
+                    <p className="text-xs text-gray-500 uppercase mb-1">Réservation</p>
+                    <p className="text-base font-semibold text-gray-900">{formData.reservation || '—'}</p>
                   </div>
-                  <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-4">
-                    <p className="text-xs text-purple-600 font-bold uppercase mb-1">Passagers</p>
-                    <p className="font-bold text-lg text-gray-900">{nombrePassagers}</p>
+                  <div className="bg-gray-50 border border-gray-200 rounded p-4">
+                    <p className="text-xs text-gray-500 uppercase mb-1">Passagers</p>
+                    <p className="text-base font-semibold text-gray-900">{nombrePassagers}</p>
                   </div>
-                  <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
-                    <p className="text-xs text-green-600 font-bold uppercase mb-1">Total Billet</p>
-                    <p className="font-bold text-lg text-gray-900">
+                  <div className="bg-gray-50 border border-gray-200 rounded p-4">
+                    <p className="text-xs text-gray-500 uppercase mb-1">Total Billet</p>
+                    <p className="text-base font-semibold text-gray-900">
                       {totalBillet.toLocaleString('fr-FR')} {formData.devise}
                     </p>
                   </div>
@@ -825,53 +828,50 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
 
                 {/* JSON payload */}
                 <div>
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="w-1 h-6 bg-blue-600 rounded-full"></div>
-                    <p className="text-sm font-bold text-gray-700 uppercase tracking-wide">
-                      Payload JSON à envoyer
-                    </p>
-                  </div>
-                  <pre className="bg-gray-900 text-green-400 p-5 rounded-xl text-xs overflow-x-auto font-mono border-2 border-gray-700 shadow-inner whitespace-pre-wrap">
-  {JSON.stringify(
-    {
-      passagerIds: selectedPassagers.map((p) => p.infoId),
-      reservation: formData.reservation,
-      puResaBilletCompagnieDevise: formData.puResaBilletCompagnieDevise,
-      puResaServiceCompagnieDevise: formData.puResaServiceCompagnieDevise,
-      puResaPenaliteCompagnieDevise: formData.puResaPenaliteCompagnieDevise,
-      devise: formData.devise,
-      resaTauxEchange: formData.resaTauxEchange,
-      puResaMontantBilletCompagnieDevise: formData.puResaMontantBilletCompagnieDevise,
-      puResaMontantServiceCompagnieDevise: formData.puResaMontantServiceCompagnieDevise,
-      puResaMontantPenaliteCompagnieDevise: formData.puResaMontantPenaliteCompagnieDevise,
-    },
-    null,
-    2
-  )}
+                  <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">
+                    Payload JSON à envoyer
+                  </p>
+                  <pre className="bg-gray-900 text-green-400 p-4 rounded text-xs overflow-x-auto font-mono whitespace-pre-wrap">
+                    {JSON.stringify(
+                      {
+                        passagerIds: selectedPassagers.map((p) => p.infoId),
+                        reservation: formData.reservation,
+                        puResaBilletCompagnieDevise: formData.puResaBilletCompagnieDevise,
+                        puResaServiceCompagnieDevise: formData.puResaServiceCompagnieDevise,
+                        puResaPenaliteCompagnieDevise: formData.puResaPenaliteCompagnieDevise,
+                        devise: formData.devise,
+                        resaTauxEchange: formData.resaTauxEchange,
+                        puResaMontantBilletCompagnieDevise: formData.puResaMontantBilletCompagnieDevise,
+                        puResaMontantServiceCompagnieDevise: formData.puResaMontantServiceCompagnieDevise,
+                        puResaMontantPenaliteCompagnieDevise: formData.puResaMontantPenaliteCompagnieDevise,
+                      },
+                      null,
+                      2
+                    )}
                   </pre>
                 </div>
 
-                <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-4 flex items-start gap-3">
-                  <span className="text-2xl">⚠️</span>
-                  <p className="text-sm text-amber-800 font-medium">
-                    Vérifiez attentivement toutes les valeurs ci-dessus. Cette action sera <strong>irréversible</strong> une fois confirmée.
+                <div className="bg-amber-50 border border-amber-200 rounded p-4 flex items-start gap-3">
+                  <span className="text-xl">⚠️</span>
+                  <p className="text-sm text-amber-800">
+                    Vérifiez attentivement toutes les valeurs. Cette action sera <strong>irréversible</strong> une fois confirmée.
                   </p>
                 </div>
               </div>
 
               {/* Footer modal */}
-              <div className="border-t-2 bg-gray-50 px-6 py-5 flex justify-end gap-3">
+              <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
                 <button
                   onClick={() => setShowConfirmation(false)}
-                  className="px-6 py-3 border-2 border-gray-300 rounded-lg hover:bg-white hover:border-gray-400 font-semibold transition-all"
+                  className="px-5 py-2 border border-gray-300 rounded text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                   ← Modifier / Retour
                 </button>
                 <button
                   onClick={handleConfirmAndSubmit}
-                  className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 text-white rounded-lg hover:from-green-700 hover:to-green-800 font-semibold transition-all shadow-lg hover:shadow-xl flex items-center gap-2"
+                  className="px-5 py-2 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 transition-colors flex items-center gap-2"
                 >
-                  <FiCheck size={20} />
+                  <FiCheck size={16} />
                   Confirmer et envoyer →
                 </button>
               </div>
@@ -879,23 +879,6 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
           </div>
         )}
       </div>
-
-      <style jsx>{`
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 8px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: #f1f5f9;
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #cbd5e1;
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #94a3b8;
-        }
-      `}</style>
     </div>
   );
 };

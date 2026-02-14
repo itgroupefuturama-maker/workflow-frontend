@@ -443,7 +443,6 @@ const attestationEnteteSlice = createSlice({
     setSelectedEntete: (state, action: PayloadAction<string | null>) => {
       state.selectedId = action.payload;
     },
-    
     // optionnel : clear quand on quitte la page par ex.
     clearSelectedEntete: (state) => {
       state.selectedId = null;

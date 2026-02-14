@@ -141,9 +141,9 @@ export default function AccueilView() {
           {/* HEADER SECTION */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900 mb-1">
+              {/* <h2 className="text-2xl font-bold text-slate-900 mb-1">
                 Tableau de bord
-              </h2>
+              </h2> */}
               <p className="text-slate-600">Analyse comparative des performances par destination</p>
             </div>
             <div className="flex items-center gap-2">

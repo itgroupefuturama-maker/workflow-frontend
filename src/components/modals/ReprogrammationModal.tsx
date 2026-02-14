@@ -109,6 +109,7 @@ export default function ReprogrammationModal({
   );
 
   const [sectionActive, setSectionActive] = useState<'date' | 'passager' | 'type'>('date');
+  const selectedInfoDetails = infosList.find(info => info.id === currentInfoId);
 
   // ─── Pré-sélection des passagers déjà liés à la ligne ─────
   useEffect(() => {
@@ -382,7 +383,6 @@ export default function ReprogrammationModal({
                 >
                   Date / Vol
                 </button>
-                
                 <button
                   type="button"
                   onClick={() => setSectionActive('passager')}
@@ -394,7 +394,6 @@ export default function ReprogrammationModal({
                 >
                   Passager
                 </button>
-                
                 <button
                   type="button"
                   onClick={() => setSectionActive('type')}
@@ -464,13 +463,95 @@ export default function ReprogrammationModal({
                             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
                           >
                             <option value="">— Choisir —</option>
-                            {infosList.map((info) => (
-                              <option key={info.id} value={info.id}>
-                                {info.prenom} {info.nom} • {info.typeDoc} {info.referenceDoc}
-                              </option>
-                            ))}
+                            {infosList
+                              // 1. On filtre pour ne garder que les clients dont le type correspond à la ligne
+                              .filter((info) => info.clientType === ligne.prospectionLigne?.typePassager)
+                              // 2. On affiche uniquement les résultats filtrés
+                              .map((info) => (
+                                <option key={info.id} value={info.id}>
+                                  {info.prenom} {info.nom} • {info.typeDoc} {info.referenceDoc} ({info.clientType})
+                                </option>
+                              ))
+                            }
                           </select>
                         )}
+                      </div>
+                    )}
+                    {/* Affichage des détails du document sélectionné */}
+                    {selectedInfoDetails && (
+                      <div className="mt-4 p-5 bg-linear-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-xl shadow-sm">
+                        <h4 className="text-xs uppercase tracking-wider font-bold text-blue-700 mb-4 flex items-center gap-2">
+                          <FiCheck size={16} className="text-blue-600" /> 
+                          Détails du document sélectionné
+                        </h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="col-span-2">
+                            <p className="text-[10px] text-blue-600 uppercase font-bold mb-1">Passager</p>
+                            <p className="text-base font-bold text-gray-900">
+                              {selectedInfoDetails.prenom} {selectedInfoDetails.nom}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-blue-600 uppercase font-bold mb-1">Type Client</p>
+                            <span className="inline-block px-2.5 py-1 bg-white border-2 border-blue-200 rounded-lg text-xs font-bold text-gray-700">
+                              {selectedInfoDetails.clientType}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-blue-600 uppercase font-bold mb-1">Nationalité</p>
+                            <p className="text-sm font-semibold text-gray-800">{selectedInfoDetails.nationalite}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-blue-600 uppercase font-bold mb-1">Type Document</p>
+                            <span className="inline-block px-2.5 py-1 bg-white border-2 border-blue-200 rounded-lg text-xs font-bold text-gray-700">
+                              {selectedInfoDetails.typeDoc}
+                            </span>
+                            <p className="text-xs text-gray-600 mt-1 font-mono">{selectedInfoDetails.referenceDoc}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-blue-600 uppercase font-bold mb-1">Dates Document</p>
+                            <p className="text-xs text-gray-700">
+                              <span className="font-semibold">Del:</span> {selectedInfoDetails.dateDelivranceDoc}
+                            </p>
+                            <p className="text-xs text-gray-700">
+                              <span className="font-semibold">Val:</span> {selectedInfoDetails.dateValiditeDoc}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-blue-600 uppercase font-bold mb-1">CIN</p>
+                            <span className="inline-block px-2.5 py-1 bg-white border-2 border-blue-200 rounded-lg text-xs font-bold text-gray-700">
+                              {selectedInfoDetails.cin}
+                            </span>
+                            <p className="text-xs text-gray-600 mt-1 font-mono">{selectedInfoDetails.referenceCin}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-blue-600 uppercase font-bold mb-1">Dates CIN</p>
+                            <p className="text-xs text-gray-700">
+                              <span className="font-semibold">Del:</span> {selectedInfoDetails.dateDelivranceCin}
+                            </p>
+                            <p className="text-xs text-gray-700">
+                              <span className="font-semibold">Val:</span> {selectedInfoDetails.dateValiditeCin}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-blue-600 uppercase font-bold mb-1">WhatsApp</p>
+                            <p className="text-sm font-mono font-bold text-green-600">
+                              {selectedInfoDetails.whatsapp}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-blue-600 uppercase font-bold mb-1">Téléphone</p>
+                            <p className="text-sm font-mono font-bold text-blue-700">
+                              {selectedInfoDetails.tel}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-blue-600 uppercase font-bold mb-1">Validité Document</p>
+                            <p className={`text-sm font-bold ${new Date(selectedInfoDetails.dateValiditeDoc) < new Date() ? 'text-red-600' : 'text-green-600'}`}>
+                              {new Date(selectedInfoDetails.dateValiditeDoc).toLocaleDateString('fr-FR')}
+                            </p>
+                          </div>
+                        </div>
                       </div>
                     )}
 
@@ -501,7 +582,7 @@ export default function ReprogrammationModal({
                             className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg p-3 hover:bg-gray-100 transition-colors"
                           >
                             <div className="flex items-center gap-2.5">
-                              <span className="flex-shrink-0 w-6 h-6 bg-gray-900 text-white text-xs rounded flex items-center justify-center font-semibold">
+                              <span className="shrink-0 w-6 h-6 bg-gray-900 text-white text-xs rounded flex items-center justify-center font-semibold">
                                 {idx + 1}
                               </span>
                               <div className="min-w-0">
@@ -513,7 +594,7 @@ export default function ReprogrammationModal({
                             </div>
                             <button
                               onClick={() => removePassager(p.infoId)}
-                              className="flex-shrink-0 text-gray-400 hover:text-red-600 p-1 hover:bg-red-50 rounded transition-colors"
+                              className="shrink-0 text-gray-400 hover:text-red-600 p-1 hover:bg-red-50 rounded transition-colors"
                             >
                               <FiTrash2 size={16} />
                             </button>
@@ -814,7 +895,7 @@ export default function ReprogrammationModal({
                   onClick={() => setShowPreview(false)}
                   className="flex-1 py-2.5 border border-gray-300 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors"
                 >
-                  Modifier
+                  Retour
                 </button>
                 <button
                   onClick={handleSubmit}

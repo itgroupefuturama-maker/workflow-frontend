@@ -112,9 +112,9 @@ export default function ParametreLayout() {
     loadGlobalData();
 
     // Optionnel : refresh toutes les X minutes
-    const interval = setInterval(loadGlobalData, 5 * 60 * 1000); // 5 min
+    // const interval = setInterval(loadGlobalData, 5 * 60 * 1000); // 5 min
 
-    return () => clearInterval(interval);
+    // return () => clearInterval(interval);
   }, [dispatch, token, navigate]);
   return (
     <div className="flex flex-col h-screen bg-gray-100">

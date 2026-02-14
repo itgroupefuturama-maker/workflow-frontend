@@ -23,12 +23,15 @@ import HomePageHotel from "../pages/front_office/dossiers-communs/module.hotel/H
 import PageViewHotel from "../pages/front_office/dossiers-communs/module.hotel/sous.section/PageViewHotel";
 import ParametreViewHotel from "../pages/front_office/dossiers-communs/module.hotel/sous.section/ParametreViewHotel";
 import AccueilViewHotel from "../pages/front_office/dossiers-communs/module.hotel/sous.section/AccueilViewHotel";
+import ListeDossierByModule from "../pages/front_office/dossiers-communs/ListeDossierByModule";
+import BenchmarkingDetailPage from "../pages/front_office/dossiers-communs/module.hotel/sous.section/sous.section.page/BenchmarkingDetailPage";
 
 export function frontOfficeRoutes() {
   return (
     <>
       <Route index element={<HomePage />} />
       <Route path="dossiers-communs" element={<DossierCommun />} />
+      <Route path="dossiers-communs/liste-by-module/:module" element={<ListeDossierByModule />} />
       <Route path="dossiers-communs/todolist" element={<ToDoList />} />
       <Route path="dossiers-communs/ticketing/list" element={<TicketingPage />} />
       <Route path="dossiers-communs/nouveau" element={<DossierCommunForm />} />
@@ -64,6 +67,7 @@ export function frontOfficeRoutes() {
         <Route path="accueil" element={<AccueilViewHotel />} />
         <Route path="parametres" element={<ParametreViewHotel />} />
         <Route path="pages" element={<PageViewHotel />} />
+        <Route path="details" element={<BenchmarkingDetailPage />} />
       </Route>
     </>
   );

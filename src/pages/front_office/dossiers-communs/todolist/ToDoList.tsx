@@ -43,9 +43,8 @@ export default function ToDoList() {
     <div className="h-screen flex flex-col bg-slate-50 font-sans text-slate-900 overflow-hidden">
       
       {/* HEADER ÉPURÉ */}
-      <header className="bg-white border-b border-slate-200 px-8 py-4 z-10">
+      <header className="fixed top-5 left-0 right-0 bg-white border-b border-slate-200 px-8 pt-20 pb-2 z-30 ">
         <div className="max-w-[1600px] mx-auto flex items-center justify-between gap-8">
-          
           {/* Navigation gauche */}
           <div className="flex items-center gap-6">
             <button
@@ -83,7 +82,7 @@ export default function ToDoList() {
       </header>
 
       {/* MAIN CONTENT */}
-      <main className="flex-1 overflow-hidden flex flex-col p-8">
+      <main className="flex-1 overflow-hidden flex flex-col p-8 mt-15">
         <div className="max-w-[1600px] w-full mx-auto flex-1 overflow-y-auto pr-2 custom-scrollbar">
           
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 pb-20">

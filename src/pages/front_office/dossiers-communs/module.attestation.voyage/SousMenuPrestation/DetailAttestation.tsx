@@ -123,10 +123,10 @@ const DetailAttestation = () => {
     <div className="">
       {/* Header */}
       <div className="mb-6">
-        <AttestationHeader 
+        <AttestationHeader
           numeroAttestation={selectedEntete?.numeroEntete}
-          navigate={navigate} 
-          isDetail={true} 
+          navigate={navigate}
+          isDetail={true}
         />
       </div>
 
@@ -207,7 +207,7 @@ const DetailAttestation = () => {
       {selectedDetail && (
         <div className=" overflow-hidden">
           {/* Tabs header */}
-          <div className="border-b border-gray-200">
+          <div className="">
             <nav className="flex" aria-label="Tabs">
               <button
                 onClick={() => setActiveTab('lignes')}
@@ -231,13 +231,13 @@ const DetailAttestation = () => {
           </div>
 
           {/* Contenu onglets */}
-          <div className="bg-white">
+          <div className="bg-white border border-slate-100">
             {activeTab === 'lignes' && (
               <>
-                <h2 className="text-xl font-bold text-gray-800 pl-5 pt-3 mb-6">
+                {/* <h2 className="text-xl font-bold text-gray-800 pl-5 pt-3 mb-6">
                   <span className="w-1 h-8 bg-blue-600 rounded-full"></span>
                   Lignes d'attestation
-                </h2>
+                </h2> */}
                 {selectedDetail.attestationLigne.length === 0 ? (
                   <p className="text-gray-600 italic">Aucune ligne pour le moment</p>
                 ) : (
@@ -268,11 +268,11 @@ const DetailAttestation = () => {
                         {selectedDetail.attestationLigne.map((ligne) => (
                           <tr key={ligne.id} className="hover:bg-gray-50 transition-colors">
                             {/* 1. Statut */}
-                            <td className="px-6 py-4 whitespace-nowrap">
+                            <td className="px-6 py-4 whitespace-nowrap uppercase">
                               <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                                 ligne.status === 'ACTIF' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
                               }`}>
-                                {ligne.status}
+                                {ligne.status == 'CREER' ? 'crée' : ligne.status}
                               </span>
                             </td>
 

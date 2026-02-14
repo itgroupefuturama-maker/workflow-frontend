@@ -75,9 +75,9 @@ export default function Sidebar({ module }: SidebarProps) {
         ] 
         : module === 'hotel' ? [
           // Menus spécifiques pour TICKETING
-          { label: 'Plateform', path: 'parametres', icon: <FiLayers size={16} />, tab: 'listePlateform' },
-          { label: 'Type chambre', path: 'parametres', icon: <FiMap size={16} />, tab: 'listeTypeChambre' },
-          { label: 'Service', path: 'parametres', icon: <FiMap size={16} />, tab: 'listeService' },
+          { label: 'Plateform', path: 'parametres', icon: <FiLayers size={16} />, tab: 'plateformes' },
+          { label: 'Type chambre', path: 'parametres', icon: <FiMap size={16} />, tab: 'typeChambre' },
+          { label: 'Service', path: 'parametres', icon: <FiMap size={16} />, tab: 'service' },
         ] : [
           // Menus spécifiques pour TICKETING
           { label: 'Service & spécifique', path: 'parametres', icon: <FiLayers size={16} />, tab: 'listeService' },
@@ -253,7 +253,7 @@ export default function Sidebar({ module }: SidebarProps) {
         <div className="p-3">
           <div className="inline-flex items-center mb-5">
             <button
-              onClick={() => navigate(module == 'ticketing' ? '/dossiers-communs/ticketing/list' : '/dossiers-communs/attestation/list')}
+              onClick={() => navigate(`/dossiers-communs/liste-by-module/${module}`)}
               className="flex items-center gap-2 pb-1 group border-b border-transparent hover:border-slate-800 transition-all duration-300"
             >
               <FiArrowLeft 
@@ -297,13 +297,13 @@ export default function Sidebar({ module }: SidebarProps) {
                       onClick={() => handleDossierSelect(dossier)}
                       className={`w-full flex items-start gap-3 px-3 py-2.5 rounded-lg transition-all ${
                         isFolderActive
-                          ? 'bg-gray-900 text-white shadow-md'
+                          ? `${colors.iconBg} text-white shadow-md`
                           : 'bg-white border border-gray-200 text-gray-700 hover:border-gray-300 hover:shadow-sm'
                       }`}
                     >
                       <FiFolder 
                         size={18} 
-                        className={`shrink-0 mt-0.5 ${isFolderActive ? 'text-gray-300' : 'text-gray-400'}`}
+                        className={`shrink-0 mt-0.5 ${isFolderActive ? 'text-white' : 'text-gray-400'}`}
                       />
                       <div className="flex-1 min-w-0 text-left">
                         <p className={`text-sm font-semibold truncate ${
@@ -312,7 +312,7 @@ export default function Sidebar({ module }: SidebarProps) {
                           {dossier.numero}
                         </p>
                         <p className={`text-xs truncate mt-0.5 ${
-                          isFolderActive ? 'text-gray-300' : 'text-gray-500'
+                          isFolderActive ? 'text-white' : 'text-gray-500'
                         }`}>
                           {dossier.clientfacture?.libelle || 'Client...'}
                         </p>
