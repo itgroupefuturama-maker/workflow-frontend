@@ -3,6 +3,13 @@ import type { PayloadAction } from '@reduxjs/toolkit';
 import axios from '../../../service/Axios';  // ton instance axios
 import type { RootState } from '../../store';
 
+export type GeneratePdfDirectionPayload = {
+  benchmarkingId: string;
+  montantTotalClient: number;
+  tauxCommission: number;
+  montantTotalCommission: number;
+};
+
 export type SendDevisPayload = {
   benchmarkingId: string;
   dataBooking: {
@@ -102,6 +109,7 @@ export type BenchmarkingEntete = {
     plateforme: { id: string; code: string; nom: string; status: string };
     typeChambre: { id: string; type: string; capacite: number };
     nuiteDevise: number;
+    nombreChambre: number;
     devise: string;
     tauxChange: number;
     nuiteAriary: number;
@@ -148,6 +156,7 @@ export type BenchmarkingDetail = {
     plateforme: { id: string; code: string; nom: string; status: string };
     typeChambre: { id: string; type: string; capacite: number };
     nuiteDevise: number;
+    nombreChambre: number;
     devise: string;
     tauxChange: number;
     nuiteAriary: number;
@@ -316,6 +325,105 @@ export const sendBenchmarkingDevis = createAsyncThunk(
   }
 );
 
+// Générer le devis
+export const genererDevis = createAsyncThunk(
+  'benchmarking/genererDevis',
+  async (benchmarkingId: string, { rejectWithValue }) => {
+    try {
+      const response = await axios.put(`/hotel/benchmarking/${benchmarkingId}/pdf-client`);
+      
+      if (!response.data.success) {
+        throw new Error(response.data.message || 'Échec de la génération du devis');
+      }
+      
+      return response.data.data;
+    } catch (err: any) {
+      return rejectWithValue(
+        err.response?.data?.message || 'Erreur lors de la génération du devis'
+      );
+    }
+  }
+);
+
+// Envoyer le devis
+export const envoyerDevis = createAsyncThunk(
+  'benchmarking/envoyerDevis',
+  async (benchmarkingId: string, { rejectWithValue }) => {
+    try {
+      const response = await axios.put(`/hotel/benchmarking/${benchmarkingId}/envoyer-devis`);
+      
+      if (!response.data.success) {
+        throw new Error(response.data.message || 'Échec de l\'envoi du devis');
+      }
+      
+      return response.data.data;
+    } catch (err: any) {
+      return rejectWithValue(
+        err.response?.data?.message || 'Erreur lors de l\'envoi du devis'
+      );
+    }
+  }
+);
+
+// Approuver le devis
+export const approuverDevis = createAsyncThunk(
+  'benchmarking/approuverDevis',
+  async (benchmarkingId: string, { rejectWithValue }) => {
+    try {
+      const response = await axios.put(`/hotel/benchmarking/${benchmarkingId}/approuver-devis`);
+      
+      if (!response.data.success) {
+        throw new Error(response.data.message || 'Échec de l\'approbation du devis');
+      }
+      
+      return response.data.data;
+    } catch (err: any) {
+      return rejectWithValue(
+        err.response?.data?.message || 'Erreur lors de l\'approbation du devis'
+      );
+    }
+  }
+);
+
+// Générer PDF Direction
+export const generatePdfDirection = createAsyncThunk(
+  'benchmarking/generatePdfDirection',
+  async (payload: GeneratePdfDirectionPayload, { rejectWithValue }) => {
+    try {
+      const { benchmarkingId, ...data } = payload;
+      const response = await axios.put(`/hotel/benchmarking/${benchmarkingId}/pdf-direction`, data);
+      
+      if (!response.data.success) {
+        throw new Error(response.data.message || 'Échec de la génération du PDF direction');
+      }
+      
+      return response.data.data; // Retourne le chemin du PDF
+    } catch (err: any) {
+      return rejectWithValue(
+        err.response?.data?.message || 'Erreur lors de la génération du PDF direction'
+      );
+    }
+  }
+);
+
+export const createHotelEnteteFromBenchmarking = createAsyncThunk(
+  'hotelReservation/createFromBenchmarking',
+  async (
+    payload: {
+      hotelProspectionEnteteId: string;
+      benchmarkingLigneIds: string[];
+    },
+    { rejectWithValue }
+  ) => {
+    try {
+      const res = await axios.post(`/hotel/entete`, payload);
+      return res.data.data;
+    } catch (err: any) {
+      return rejectWithValue(err.response?.data?.message || 'Erreur création hôtel depuis benchmarking');
+    }
+  }
+);
+
 const hotelProspectionSlice = createSlice({
   name: 'hotelProspectionEntete',
   initialState,
@@ -418,6 +526,61 @@ const hotelProspectionSlice = createSlice({
     .addCase(sendBenchmarkingDevis.rejected, (state, action) => {
       state.loadingDetail = false;
       state.errorDetail = action.payload as string;
+    })
+    .addCase(genererDevis.pending, (state) => {
+      state.loadingDetail = true;
+      state.errorDetail = null;
+    })
+    .addCase(genererDevis.fulfilled, (state) => {
+      state.loadingDetail = false;
+    })
+    .addCase(genererDevis.rejected, (state, action) => {
+      state.loadingDetail = false;
+      state.errorDetail = action.payload as string;
+    })
+    .addCase(envoyerDevis.pending, (state) => {
+      state.loadingDetail = true;
+      state.errorDetail = null;
+    })
+    .addCase(envoyerDevis.fulfilled, (state) => {
+      state.loadingDetail = false;
+    })
+    .addCase(envoyerDevis.rejected, (state, action) => {
+      state.loadingDetail = false;
+      state.errorDetail = action.payload as string;
+    })
+    .addCase(approuverDevis.pending, (state) => {
+      state.loadingDetail = true;
+      state.errorDetail = null;
+    })
+    .addCase(approuverDevis.fulfilled, (state) => {
+      state.loadingDetail = false;
+    })
+    .addCase(approuverDevis.rejected, (state, action) => {
+      state.loadingDetail = false;
+      state.errorDetail = action.payload as string;
+    })
+    .addCase(generatePdfDirection.pending, (state) => {
+      state.loadingDetail = true;
+      state.errorDetail = null;
+    })
+    .addCase(generatePdfDirection.fulfilled, (state) => {
+      state.loadingDetail = false;
+    })
+    .addCase(generatePdfDirection.rejected, (state, action) => {
+      state.loadingDetail = false;
+      state.errorDetail = action.payload as string;
+    })
+    .addCase(createHotelEnteteFromBenchmarking.pending, (state) => {
+      state.loading = true;
+      state.error = null;
+    })
+    .addCase(createHotelEnteteFromBenchmarking.fulfilled, (state) => {
+      state.loading = false;
+    })
+    .addCase(createHotelEnteteFromBenchmarking.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.payload as string;
     });
   },
 });

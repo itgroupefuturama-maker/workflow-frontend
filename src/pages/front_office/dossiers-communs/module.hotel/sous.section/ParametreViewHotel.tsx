@@ -3,11 +3,13 @@ import { useDispatch, useSelector } from 'react-redux';
 import TableParametre from '../components/TableParametre';
 import { createPlateforme, fetchPlateformes } from '../../../../../app/front_office/parametre_hotel/plateformeSlice';
 import TabContainer from '../../../../../layouts/TabContainer';
-import type { AppDispatch } from '../../../../../app/store';
+import type { AppDispatch, RootState } from '../../../../../app/store';
 import { useLocation } from 'react-router-dom';
 import { createTypeChambre, fetchTypesChambre } from '../../../../../app/front_office/parametre_hotel/typeChambreSlice';
 import { createServiceHotel, fetchServicesHotel } from '../../../../../app/front_office/parametre_hotel/serviceHotelSlice';
 import ModalFormParametre from '../components/ModalFormParametre';
+import RaisonAnnulationListe from '../../module.ticketing/ticketing.sous.module/SousMenuPrestation/RaisonAnnulationListe';
+import { fetchRaisonsAnnulation } from '../../../../../app/front_office/parametre_ticketing/raisonAnnulationSlice';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -34,12 +36,15 @@ const ParametreViewHotel = () => {
     error: errorServices,
   } = useSelector((state: any) => state.serviceHotel);
 
+  const raisonState = useSelector((state: RootState) => state.raisonAnnulation);
+
   const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'plateformes');
 
   const tabs = [
     { id: 'plateformes', label: 'Plateformes' },
     { id: 'typeChambre', label: 'Types de chambre' },
     { id: 'service', label: 'Services' },
+    { id: 'listeRaisonAnnulation', label: 'Raison Annulation' },
   ];
 
   const [showAddPlateforme, setShowAddPlateforme] = useState(false);
@@ -50,6 +55,9 @@ const ParametreViewHotel = () => {
     dispatch(fetchPlateformes());
     dispatch(fetchTypesChambre());
     dispatch(fetchServicesHotel());
+    if (activeTab === 'listeRaisonAnnulation' && raisonState.items.length === 0) {
+        dispatch(fetchRaisonsAnnulation());
+        }
   }, [dispatch]);
 
   useEffect(() => {
@@ -148,6 +156,12 @@ const ParametreViewHotel = () => {
                   { key: 'capacite', label: 'Capacité (personnes)' },
                 ]}
               />
+            </>
+          )}
+
+          {activeTab === 'listeRaisonAnnulation' && (
+            <>
+              <RaisonAnnulationListe />
             </>
           )}
 

@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';           // ← AJOUT
+import { useLocation, useNavigate } from 'react-router-dom';           // ← AJOUT
 import type { AppDispatch, RootState } from '../../../../../app/store';
 import { createAttestationEntete, fetchAttestationEntetes, setSelectedEntete } from '../../../../../app/front_office/parametre_attestation/attestationEnteteSlice';
 import { AttestationHeader } from './components.attestation/AttestationHeader';
 import axios from '../../../../../service/Axios';
+import TabContainer from '../../../../../layouts/TabContainer';
 
 const PageViewAttestation = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
+  const location = useLocation();
 
    const { data: fournisseurs } = useSelector((state: RootState) => state.fournisseurs);
 
@@ -41,12 +43,20 @@ const PageViewAttestation = () => {
 
   const canCreate = !!prestationId && fournisseurs.length > 0;
 
+  const tabs = [
+    { id: 'attestation', label: 'Listes des entête attestation' }
+  ];
+  
+  const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'attestation');
+  
+
   useEffect(() => {
-    console.log(`prestationId et entete : ${prestationId}`);
-    if (items.length === 0) {
-      dispatch(fetchAttestationEntetes());
-    }
-  }, [dispatch, items.length]);
+    // On attend que prestationId soit disponible avant de fetcher
+    if (!prestationId) return;
+
+    dispatch(fetchAttestationEntetes(prestationId));
+
+  }, [dispatch, prestationId]); // ← prestationId en dépendance
 
   useEffect(() => {
     if (!selectedFournisseurId) {
@@ -151,152 +161,154 @@ const PageViewAttestation = () => {
   };
 
   return (
-    <div className="">
-      <div className="mb-6">
-        <AttestationHeader
-          numeroAttestation={dossierActif?.numero}
-          navigate={navigate}
-        />
-      </div>
-      <div className="flex justify-between items-center mb-6">
-        {/* Bouton + formulaire création */}
-        {canCreate && (
-          <div className="flex items-end gap-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">
-                Fournisseur
-              </label>
-              <select
-                value={selectedFournisseurId}
-                onChange={(e) => setSelectedFournisseurId(e.target.value)}
-                className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              >
-                <option value="">— Choisir —</option>
-                {fournisseurs.map((f) => (
-                  <option key={f.id} value={f.id}>
-                    {f.code} - {f.libelle}
-                  </option>
-                ))}
-              </select>
-            </div>
+    <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab}>
+      <div className="">
+        <div className="flex justify-between items-center mb-6">
+          <AttestationHeader
+            numeroAttestation={dossierActif?.numero}
+            navigate={navigate}
+          />
+          <div className="flex justify-between items-center mb-6">
+            {/* Bouton + formulaire création */}
+            {canCreate && (
+              <div className="flex items-end gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">
+                    Fournisseur
+                  </label>
+                  <select
+                    value={selectedFournisseurId}
+                    onChange={(e) => setSelectedFournisseurId(e.target.value)}
+                    className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    <option value="">— Choisir —</option>
+                    {fournisseurs.map((f) => (
+                      <option key={f.id} value={f.id}>
+                        {f.code} - {f.libelle}
+                      </option>
+                    ))}
+                  </select>
+                </div>
 
-            <button
-              onClick={handleCreate}
-              disabled={loading || !selectedFournisseurId}
-              className={`
-                px-5 py-2 rounded-lg font-medium text-white
-                ${loading || !selectedFournisseurId
-                  ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-indigo-600 hover:bg-indigo-700'
-                }
-              `}
-            >
-              {loading ? 'Création...' : 'Créer entête'}
-            </button>
-            {/* Notification alerte commentaire (fixe en haut à droite) */}
-            {selectedFournisseurId && lastComment && lastComment.alerte && (
-              <div className="fixed top-4 right-4 z-50 max-w-sm animate-slide-in pointer-events-none">
-                <div
+                <button
+                  onClick={handleCreate}
+                  disabled={loading || !selectedFournisseurId}
                   className={`
-                    flex items-start gap-3 p-4 rounded-xl shadow-lg border
-                    ${getAlertStyle(lastComment.alerte)}
+                    px-5 py-2 rounded-lg font-medium text-white
+                    ${loading || !selectedFournisseurId
+                      ? 'bg-gray-400 cursor-not-allowed'
+                      : 'bg-indigo-600 hover:bg-indigo-700'
+                    }
                   `}
                 >
-                  <div className="shrink-0 mt-0.5 text-xl">
-                    {getIcon(lastComment.alerte)}
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-semibold text-base mb-1">
-                      Alerte fournisseur : {lastComment.alerte}
+                  {loading ? 'Création...' : 'Créer entête'}
+                </button>
+                {/* Notification alerte commentaire (fixe en haut à droite) */}
+                {selectedFournisseurId && lastComment && lastComment.alerte && (
+                  <div className="fixed top-4 right-4 z-50 max-w-sm animate-slide-in pointer-events-none">
+                    <div
+                      className={`
+                        flex items-start gap-3 p-4 rounded-xl shadow-lg border
+                        ${getAlertStyle(lastComment.alerte)}
+                      `}
+                    >
+                      <div className="shrink-0 mt-0.5 text-xl">
+                        {getIcon(lastComment.alerte)}
+                      </div>
+                      <div className="flex-1">
+                        <div className="font-semibold text-base mb-1">
+                          Alerte fournisseur : {lastComment.alerte}
+                        </div>
+                        <p className="text-sm leading-tight">
+                          {lastComment.commentaire}
+                        </p>
+                        <p className="text-xs mt-2 opacity-80">
+                          {lastComment.dateEnregistrement}
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-sm leading-tight">
-                      {lastComment.commentaire}
-                    </p>
-                    <p className="text-xs mt-2 opacity-80">
-                      {lastComment.dateEnregistrement}
-                    </p>
                   </div>
-                </div>
+                )}
               </div>
             )}
           </div>
+        </div>
+
+        {formError && (
+          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
+            {formError}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="bg-white rounded-lg p-10 text-center shadow">
+            <div className="animate-pulse text-gray-500">Chargement des entêtes...</div>
+          </div>
+        ) : error ? (
+        //   <div className="bg-red-50 border border-red-200 text-red-700 p-6 rounded-lg">
+        //     Erreur : {error}
+        //   </div>
+        // ) : items.length === 0 ? (
+          <div className="bg-white rounded-lg p-10 text-center shadow text-gray-500 italic">
+            Aucune entête d'attestation trouvée
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl shadow overflow-hidden border border-gray-200">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      N° Entête
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      N° Dossier
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Fournisseur
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Total Commission
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Créé le
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {items.map((item) => (
+                    <tr
+                      key={item.id}
+                      onClick={() => handleRowClick(item.id)}           // ← AJOUT PRINCIPAL
+                      className="hover:bg-gray-50 transition-colors cursor-pointer"
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+                        {item.numeroEntete} 
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                        {item.prestation?.numeroDos || '—'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-gray-600">
+                        {item.fournisseur?.libelle || '—'} ({item.fournisseur?.code})
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right font-medium text-gray-900">
+                        {item.totalCommission.toLocaleString('fr-FR')} Ar
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {new Date(item.createdAt).toLocaleString('fr-FR', {
+                          dateStyle: 'medium',
+                          timeStyle: 'short',
+                        })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
         )}
       </div>
-
-      {formError && (
-        <div className="mb-6 bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
-          {formError}
-        </div>
-      )}
-
-      {loading ? (
-        <div className="bg-white rounded-lg p-10 text-center shadow">
-          <div className="animate-pulse text-gray-500">Chargement des entêtes...</div>
-        </div>
-      ) : error ? (
-        <div className="bg-red-50 border border-red-200 text-red-700 p-6 rounded-lg">
-          Erreur : {error}
-        </div>
-      ) : items.length === 0 ? (
-        <div className="bg-white rounded-lg p-10 text-center shadow text-gray-500 italic">
-          Aucune entête d'attestation trouvée
-        </div>
-      ) : (
-        <div className="bg-white rounded-xl shadow overflow-hidden border border-gray-200">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    N° Entête
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    N° Dossier
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Fournisseur
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Total Commission
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Créé le
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {items.map((item) => (
-                  <tr
-                    key={item.id}
-                    onClick={() => handleRowClick(item.id)}           // ← AJOUT PRINCIPAL
-                    className="hover:bg-gray-50 transition-colors cursor-pointer"
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
-                      {item.numeroEntete} 
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-gray-600">
-                      {item.prestation?.numeroDos || '—'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-gray-600">
-                      {item.fournisseur?.libelle || '—'} ({item.fournisseur?.code})
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right font-medium text-gray-900">
-                      {item.totalCommission.toLocaleString('fr-FR')} Ar
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(item.createdAt).toLocaleString('fr-FR', {
-                        dateStyle: 'medium',
-                        timeStyle: 'short',
-                      })}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-    </div>
+    </TabContainer>
   );
 };
 

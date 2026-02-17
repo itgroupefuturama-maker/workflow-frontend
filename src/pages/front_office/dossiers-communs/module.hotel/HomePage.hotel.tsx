@@ -1,4 +1,3 @@
-import React from 'react';
 import Sidebar from '../../../../layouts/SideBar';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { FiArrowLeft } from 'react-icons/fi';
@@ -9,10 +8,8 @@ const HomePageHotel = () => {
     <div className="flex h-screen bg-[#F8FAFC] overflow-hidden">
       {/* La Sidebar prendra automatiquement 100% de la hauteur grâce à h-screen */}
       <Sidebar module="hotel"/>
-
       {/* Le contenu principal */}
       <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-        
         {/* Header fixe en haut du contenu */}
         <div className="p-5 border-b border-slate-100 bg-white shrink-0">
           <header className="flex items-center justify-between">

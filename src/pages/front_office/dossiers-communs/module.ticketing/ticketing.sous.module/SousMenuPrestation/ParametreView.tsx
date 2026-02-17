@@ -1,20 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import type { AppDispatch, RootState } from '../../../../../app/store';
-import { fetchServiceSpecifiques } from '../../../../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
-import { fetchExigences } from '../../../../../app/front_office/parametre_ticketing/exigenceSlice';
-import { fetchDestinations } from '../../../../../app/front_office/parametre_ticketing/destinationSlice';
-import { fetchPays, fetchPaysDetails, clearSelectedPays } from '../../../../../app/front_office/parametre_ticketing/paysSlice';
-import ServiceSpecifiqueModal from '../../../../../components/modals/ServiceSpecifiqueModal';
-import ExigenceModal from '../../../../../components/modals/ExigenceModal';
-import PaysModal from '../../../../../components/modals/PaysModal';
-import DestinationModal from '../../../../../components/modals/DestinationModal';
-import AssociationModal from '../../../../../components/modals/AssociationModal';
-import TabContainer from '../../../../../layouts/TabContainer';
+import type { AppDispatch, RootState } from '../../../../../../app/store';
+import { fetchServiceSpecifiques } from '../../../../../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
+import { fetchExigences } from '../../../../../../app/front_office/parametre_ticketing/exigenceSlice';
+import { fetchDestinations } from '../../../../../../app/front_office/parametre_ticketing/destinationSlice';
+import { fetchPays, fetchPaysDetails, clearSelectedPays } from '../../../../../../app/front_office/parametre_ticketing/paysSlice';
+import ServiceSpecifiqueModal from '../../../../../../components/modals/ServiceSpecifiqueModal';
+import ExigenceModal from '../../../../../../components/modals/ExigenceModal';
+import PaysModal from '../../../../../../components/modals/PaysModal';
+import DestinationModal from '../../../../../../components/modals/DestinationModal';
+import AssociationModal from '../../../../../../components/modals/AssociationModal';
+import TabContainer from '../../../../../../layouts/TabContainer';
 import { useLocation, useParams } from 'react-router-dom';
-import { fetchRaisonsAnnulation } from '../../../../../app/front_office/parametre_ticketing/raisonAnnulationSlice';
+import { fetchRaisonsAnnulation } from '../../../../../../app/front_office/parametre_ticketing/raisonAnnulationSlice';
 import RaisonAnnulationListe from './RaisonAnnulationListe';
-import RaisonAnnulationModal from '../../../../../components/modals/RaisonAnnulationModal';
+import RaisonAnnulationModal from '../../../../../../components/modals/RaisonAnnulationModal';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 

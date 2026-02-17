@@ -1,27 +1,20 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchTodos, createTodo, markAsDone, updateTodo, deactivateTodo,deleteTodo } from '../../../app/front_office/todosSlice';
+import { fetchTodos, createTodo, markAsDone, updateTodo, deactivateTodo,deleteTodo } from '../../../../app/front_office/todosSlice';
 import { Outlet, useNavigate, useParams } from 'react-router-dom';
-import type {AppDispatch, RootState } from '../../../app/store';
-import { fetchProspectionEntetes, updateProspectionEntete, createProspectionEntete } from '../../../app/front_office/prospectionsEntetesSlice';
-import type { ProspectionEntete } from '../../../app/front_office/prospectionsEntetesSlice';
-import { fetchFournisseurs } from '../../../app/back_office/fournisseursSlice';
-import RappelsPostIt from '../../../components/buttonFloating/RappelsPostIt';
-import ProspectionModals from '../../../components/modals/ProspectionModals';
-import Sidebar from '../../../layouts/SideBar';
+import type {AppDispatch, RootState } from '../../../../app/store';
+import { fetchProspectionEntetes, updateProspectionEntete, createProspectionEntete } from '../../../../app/front_office/prospectionsEntetesSlice';
+import type { ProspectionEntete } from '../../../../app/front_office/prospectionsEntetesSlice';
+import { fetchFournisseurs } from '../../../../app/back_office/fournisseursSlice';
+import RappelsPostIt from '../../../../components/buttonFloating/RappelsPostIt';
+import ProspectionModals from '../../../../components/modals/ProspectionModals';
+import Sidebar from '../../../../layouts/SideBar';
 import { FiArrowLeft } from 'react-icons/fi';
-
-interface PrestationDetailProps {
-  prestationId?: string;
-}
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
-export default function PrestationDetail({ prestationId: propPrestationId }: PrestationDetailProps) {
-  const { prestationId: paramPrestationId } = useParams<{
-    // id: string;           // ID du dossier-commun
-    prestationId: string; // ID de la prestation
-  }>();
+export default function PrestationDetail() {
+
 
   const navigate = useNavigate();
   const { data: fournisseurs, loading: fournisseursLoading } = useSelector(
@@ -61,11 +54,10 @@ export default function PrestationDetail({ prestationId: propPrestationId }: Pre
 
   // Ajoute dans le useEffect existant :
   useEffect(() => {
-    if (prestationId) {
-      dispatch(fetchFournisseurs());
-      dispatch(fetchTodos());
-      dispatch(fetchProspectionEntetes(prestationId));
-    }
+    if (!prestationId) return; // ← on attend que prestationId soit défini
+    dispatch(fetchFournisseurs());
+    dispatch(fetchTodos());
+    dispatch(fetchProspectionEntetes(prestationId));
   }, [prestationId, dispatch]);
 
   const {
@@ -135,6 +127,8 @@ export default function PrestationDetail({ prestationId: propPrestationId }: Pre
 
   const openCreateModal = () => {
     setShowCreateModal(true);
+    console.log("click 1");
+    
     // reset formulaire
     setNewEntete({
       fournisseurId: '',
@@ -149,6 +143,10 @@ export default function PrestationDetail({ prestationId: propPrestationId }: Pre
   };
 
   const handleCreateEntete = async () => {
+    console.log("click 2");
+    console.log("prestationId", prestationId);
+    console.log("newEntete", newEntete);
+    
     if (!prestationId) return;
     if (!newEntete.fournisseurId) {
       alert("Veuillez sélectionner un fournisseur");
@@ -196,6 +194,20 @@ export default function PrestationDetail({ prestationId: propPrestationId }: Pre
       </div>
     );
   }
+
+  if (!prestationId) {
+  return (
+    <div className="flex h-screen">
+      <Sidebar module="ticketing" />
+      <div className="flex-1 flex items-center justify-center">
+        <div className="text-center text-slate-400">
+          <div className="animate-spin w-8 h-8 border-2 border-slate-300 border-t-slate-600 rounded-full mx-auto mb-3" />
+          <p className="text-sm">Chargement du dossier...</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
   if (isLoading) {
     return <div className="p-20 text-center animate-pulse text-slate-400">Chargement...</div>;

@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { FiPlus, FiClock, FiActivity } from 'react-icons/fi';
 import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
-import TabContainer from '../../../../../layouts/TabContainer';
-import type { RootState } from '../../../../../app/store';
+import TabContainer from '../../../../../../layouts/TabContainer';
+import type { RootState } from '../../../../../../app/store';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchBilletsByDossierCommun, type BilletEntete } from '../../../../../app/front_office/billetSlice';
-import { fetchServiceSpecifiques } from '../../../../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
+import { fetchBilletsByDossierCommun, type BilletEntete } from '../../../../../../app/front_office/billetSlice';
+import { fetchServiceSpecifiques } from '../../../../../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
 
 // On définit le type du contexte pour Typescript
 interface PrestationContext {

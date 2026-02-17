@@ -162,9 +162,9 @@ const initialState: AttestationEnteteState = {
 
 export const fetchAttestationEntetes = createAsyncThunk(
   'attestationEntete/fetchAll',
-  async (_, { rejectWithValue }) => {
+  async (prestationId: string, { rejectWithValue }) => {
     try {
-      const response = await axios.get(`/attestation/entete`);
+      const response = await axios.get(`/attestation/entete/prestation/${prestationId}`);
       if (!response.data.success) {
         throw new Error('Réponse serveur invalide');
       }

@@ -41,7 +41,6 @@ export default function ToDoList() {
 
   return (
     <div className="h-screen flex flex-col bg-slate-50 font-sans text-slate-900 overflow-hidden">
-      
       {/* HEADER ÉPURÉ */}
       <header className="fixed top-5 left-0 right-0 bg-white border-b border-slate-200 px-8 pt-20 pb-2 z-30 ">
         <div className="max-w-[1600px] mx-auto flex items-center justify-between gap-8">
@@ -84,7 +83,6 @@ export default function ToDoList() {
       {/* MAIN CONTENT */}
       <main className="flex-1 overflow-hidden flex flex-col p-8 mt-15">
         <div className="max-w-[1600px] w-full mx-auto flex-1 overflow-y-auto pr-2 custom-scrollbar">
-          
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 pb-20">
             {activeTodos.map((todo) => {
               const isEditing = editingId === todo.rappel?.id;
@@ -100,7 +98,6 @@ export default function ToDoList() {
                   {!isFinished && <div className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-indigo-500 rounded-b-full shadow-sm shadow-indigo-200" />}
 
                   <div className="p-6 flex flex-col flex-1">
-                    
                     {/* Date & Badge Temps */}
                     <div className="flex justify-between items-start mb-6">
                       <div className="flex flex-col">
@@ -156,7 +153,7 @@ export default function ToDoList() {
                           <div className="flex items-center gap-1">
                             {!isFinished && (
                               <button 
-                                onClick={() => dispatch(markAsDone(todo.rappel.id))} 
+                                onClick={() => dispatch(markAsDone(todo.rappel.id))}
                                 className="p-2 text-slate-400 hover:text-emerald-600 transition-colors" 
                                 title="Terminer"
                               >
@@ -164,32 +161,32 @@ export default function ToDoList() {
                               </button>
                             )}
                             
-                            <button 
+                            {/* <button 
                               onClick={() => startEdit(todo)} 
                               className="p-2 text-slate-400 hover:text-indigo-600 transition-colors"
                               title="Modifier"
                             >
                               <FiEdit3 size={16} />
-                            </button>
+                            </button> */}
 
                             {/* BOUTON DÉSACTIVER (Ajouté ici) */}
-                            {todo.status === 'ACTIF' && (
+                            {/* {todo.status === 'ACTIF' && (
                               <button 
-                                onClick={() => { if(window.confirm('Désactiver ce rappel ?')) dispatch(deactivateTodo(todo.rappel.id)) }} 
-                                className="p-2 text-slate-400 hover:text-orange-500 transition-colors" 
+                                onClick={() => { if(window.confirm('Désactiver ce rappel ?')) dispatch(deactivateTodo(todo.rappel.id)) }}
+                                className="p-2 text-slate-400 hover:text-orange-500 transition-colors"
                                 title="Désactiver"
                               >
                                 <FiSlash size={16} />
                               </button>
-                            )}
+                            )} */}
 
-                            <button 
-                              onClick={() => { if(window.confirm('Supprimer définitivement ?')) dispatch(deleteTodo(todo.rappel.id)) }} 
+                            {/* <button
+                              onClick={() => { if(window.confirm('Supprimer définitivement ?')) dispatch(deleteTodo(todo.rappel.id)) }}
                               className="p-2 text-slate-400 hover:text-red-500 transition-colors"
                               title="Supprimer"
                             >
                               <FiTrash2 size={16} />
-                            </button>
+                            </button> */}
                           </div>
 
                           <button 
@@ -210,10 +207,10 @@ export default function ToDoList() {
       </main>
 
       {/* FAB - NOUVEAU RAPPEL */}
-      <button className="fixed bottom-8 right-8 group flex items-center gap-3 bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl hover:bg-slate-800 hover:scale-105 transition-all active:scale-95 z-50">
+      {/* <button className="fixed bottom-8 right-8 group flex items-center gap-3 bg-slate-900 text-white px-6 py-4 rounded-2xl shadow-2xl hover:bg-slate-800 hover:scale-105 transition-all active:scale-95 z-50">
         <FiPlus size={20} strokeWidth={3} />
         <span className="text-sm font-bold tracking-wide">NOUVEAU RAPPEL</span>
-      </button>
+      </button> */}
     </div>
   );
 }

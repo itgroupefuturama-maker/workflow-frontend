@@ -87,7 +87,7 @@ export default function DossierCommunForm() {
         });
 
         const timer = setTimeout(() => {
-          navigate(`/dossiers-communs/${nouveauDossier.numero}`);
+          navigate(`/dossiers-communs`);
           dispatch(resetCreateStatus());
         }, 2500);
 

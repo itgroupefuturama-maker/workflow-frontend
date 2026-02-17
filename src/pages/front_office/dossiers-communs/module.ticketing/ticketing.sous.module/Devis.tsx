@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react';
-import { FiCheck, FiCheckCircle, FiEye, FiFileText, FiList, FiRefreshCw, FiX } from 'react-icons/fi';
+import { FiCheck, FiCheckCircle, FiEye, FiList, FiRefreshCw, FiX } from 'react-icons/fi';
 import { useNavigate, useParams } from 'react-router-dom';
-import type { AppDispatch, RootState } from '../../../../app/store';
+import type { AppDispatch, RootState } from '../../../../../app/store';
 import { useDispatch, useSelector } from 'react-redux';
-import { approuverDirectionDevis, fetchDevisByEntete, updateApprouverDevisStatut, updateValidateDevisStatut, type Ligne } from '../../../../app/front_office/devisSlice';
-import { annulerDevis } from '../../../../app/front_office/devisSlice';
-import axios from '../../../../service/Axios';
-import TabContainer from '../../../../layouts/TabContainer';
-import { TicketingHeader } from '../../../../components/TicketingBreadcrumb';
-import AnnulationDevisModal from '../../../../components/modals/AnnulationDevisModal';
+import { approuverDirectionDevis, fetchDevisByEntete, updateApprouverDevisStatut, updateValidateDevisStatut, type Ligne } from '../../../../../app/front_office/devisSlice';
+import { annulerDevis } from '../../../../../app/front_office/devisSlice';
+import axios from '../../../../../service/Axios';
+import TabContainer from '../../../../../layouts/TabContainer';
+import { TicketingHeader } from '../../../../../components/TicketingBreadcrumb';
+import AnnulationDevisModal from '../../../../../components/modals/AnnulationDevisModal';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 

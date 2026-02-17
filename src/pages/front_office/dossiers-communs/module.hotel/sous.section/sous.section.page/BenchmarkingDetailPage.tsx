@@ -1,14 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import type { RootState, AppDispatch } from '../../../../../../app/store';
-import { createBenchmarkingLigne, fetchBenchmarkingDetail, sendBenchmarkingDevis, setBenchmarkOfficial } from '../../../../../../app/front_office/parametre_hotel/hotelProspectionEnteteSlice';
+import { approuverDevis, createBenchmarkingLigne, envoyerDevis, fetchBenchmarkingDetail, generatePdfDirection, genererDevis, sendBenchmarkingDevis, setBenchmarkOfficial } from '../../../../../../app/front_office/parametre_hotel/hotelProspectionEnteteSlice';
 import ModalBenchmarkingLigneForm from '../../components/ModalBenchmarkingLigneForm';
 import { HotelHeader } from '../../components/HotelHeader';
+import ModalConfirmDevis from '../../components/ModalConfirmDevis';
+import { API_URL } from '../../../../../../service/env';
+import TabContainer from '../../../../../../layouts/TabContainer';
+import LoadingButton from '../../components/LoadingButton';
 
 const BenchmarkingDetailPage = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const selectedId = useSelector((state: RootState) => state.hotelProspectionEntete.selectedId);
   const { detail, loadingDetail, errorDetail } = useSelector(
@@ -19,9 +24,20 @@ const BenchmarkingDetailPage = () => {
   const [settingBenchmark, setSettingBenchmark] = useState(false);
   const [sendingDevis, setSendingDevis] = useState(false);
 
+  const [generatingDevis, setGeneratingDevis] = useState(false);
+  const [sendingDevisEmail, setSendingDevisEmail] = useState(false);
+  const [approvingDevis, setApprovingDevis] = useState(false);
+
   // Récupère les listes depuis Redux
   const { items: plateformes } = useSelector((state: RootState) => state.plateforme);
   const { items: typesChambre } = useSelector((state: RootState) => state.typeChambre);
+
+  const tabs = [
+    { id: 'benchmarking', label: 'Listes des entête benchmarking' },
+    { id: 'hotel', label: 'Listes des reservation hotel' }
+  ];
+
+  const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'benchmarking');
 
   // États pour les données éditables de Booking et Client
   const [bookingData, setBookingData] = useState({
@@ -40,10 +56,36 @@ const BenchmarkingDetailPage = () => {
     montantAriary: 0,
   });
 
+  // État pour la commission
+  const [commissionData, setCommissionData] = useState({
+    tauxPrixUnitaire: 0,       // % sur Prix Unit. (en pourcentage)
+    forfaitaireUnitaire: 0,    // Forfaitaire Unit.
+    forfaitaireGlobal: 0,      // Forfaitaire Global
+    montantCommission: 0,       // Montant Commission
+  });
+
+  // État pour le nombre de chambres client (éditable)
+  const [nbChambreClient, setNbChambreClient] = useState(1);
+
+  const [showConfirmDevisModal, setShowConfirmDevisModal] = useState(false);
+
+  const [generatingPdfDirection, setGeneratingPdfDirection] = useState(false);
+
   // Trouver la ligne de benchmark et les plateformes
-  const benchmarkLine = detail?.benchmarkingLigne.find(ligne => ligne.isBenchMark);
-  const bookingPlateforme = plateformes.find(p => p.nom?.toLowerCase() === 'booking');
-  const clientPlateforme = plateformes.find(p => p.nom?.toLowerCase() === 'client');
+  const benchmarkLine = useMemo(
+    () => detail?.benchmarkingLigne.find(ligne => ligne.isBenchMark),
+    [detail?.benchmarkingLigne]  // ne recalcule que si la liste change
+  );
+
+  const bookingPlateforme = useMemo(
+    () => plateformes.find(p => p.nom?.toLowerCase() === 'booking'),
+    [plateformes]
+  );
+
+  const clientPlateforme = useMemo(
+    () => plateformes.find(p => p.nom?.toLowerCase() === 'client'),
+    [plateformes]
+  );
 
   useEffect(() => {
     if (selectedId) {
@@ -51,29 +93,123 @@ const BenchmarkingDetailPage = () => {
     }
   }, [dispatch, selectedId]);
 
-  // Initialiser les données Booking et Client avec les valeurs du benchmark
-  useEffect(() => {
-    if (benchmarkLine && detail) {
-      const initialBookingData = {
-        nuiteDevise: benchmarkLine.nuiteDevise || 0,
-        tauxChange: benchmarkLine.tauxChange || 0,
-        nuiteAriary: benchmarkLine.nuiteAriary || 0,
-        montantDevise: (benchmarkLine.nuiteDevise || 0) * detail.nuite,
-        montantAriary: (benchmarkLine.nuiteAriary || 0) * detail.nuite,
-      };
-
-      const initialClientData = {
-        nuiteDevise: benchmarkLine.nuiteDevise || 0,
-        tauxChange: benchmarkLine.tauxChange || 0,
-        nuiteAriary: benchmarkLine.nuiteAriary || 0,
-        montantDevise: (benchmarkLine.nuiteDevise || 0) * detail.nuite,
-        montantAriary: (benchmarkLine.nuiteAriary || 0) * detail.nuite,
-      };
-
-      setBookingData(initialBookingData);
-      setClientData(initialClientData);
+  // FONCTION DE NAVIGATION INTERCEPTÉE
+  const handleTabChange = (id: string) => {
+    if (id === 'hotel') {
+      // On remonte au parent (PageView) en passant le state pour l'onglet
+      navigate(`/dossiers-communs/hotel/pages`, { 
+        state: { targetTab: 'hotel' }
+      });
+    } else {
+      setActiveTab(id);
     }
-  }, [benchmarkLine, detail]);
+  };
+
+  // ✅ APRÈS — on dépend de l'ID stable au lieu de l'objet entier
+  const benchmarkLineId = benchmarkLine?.id;
+
+  useEffect(() => {
+    if (!benchmarkLine || !detail) return;
+
+    const nuiteDevise = benchmarkLine.nuiteDevise || 0;
+    const tauxChange  = benchmarkLine.tauxChange  || 0;
+    const nuiteAriary = benchmarkLine.nuiteAriary  || 0;
+    const nuite       = detail.nuite || 1;
+
+    setBookingData({
+      nuiteDevise,
+      tauxChange,
+      nuiteAriary,
+      montantDevise: nuiteDevise * nuite,
+      montantAriary: nuiteAriary * nuite,
+    });
+
+    setClientData({
+      nuiteDevise,
+      tauxChange,
+      nuiteAriary,
+      montantDevise: nuiteDevise * nuite,
+      montantAriary: nuiteAriary * nuite,
+    });
+
+    setNbChambreClient(1);
+
+    setCommissionData({
+      tauxPrixUnitaire:    0,
+      forfaitaireUnitaire: 0,
+      forfaitaireGlobal:   0,
+      montantCommission:   0,
+    });
+
+  }, [benchmarkLineId, detail?.id]);
+
+  // Handler pour les changements de commission
+  const handleCommissionChange = (field: string, value: number) => {
+    const updated = { ...commissionData };
+    const prixBenchmark = benchmarkLine?.nuiteDevise || 0;
+
+    if (field === 'tauxPrixUnitaire') {
+      // % sur Prix Unit. changé (value est en pourcentage, ex: 5 pour 5%)
+      updated.tauxPrixUnitaire = value;
+      updated.forfaitaireUnitaire = prixBenchmark * (value / 100); // Convertir % en décimal
+      updated.forfaitaireGlobal = updated.forfaitaireUnitaire * nbChambreClient;
+      updated.montantCommission = updated.forfaitaireGlobal;
+    } else if (field === 'forfaitaireUnitaire') {
+      // Forfaitaire Unit. changé
+      updated.forfaitaireUnitaire = value;
+      updated.forfaitaireGlobal = value * nbChambreClient;
+      updated.tauxPrixUnitaire = prixBenchmark > 0 ? (value / prixBenchmark) * 100 : 0; // Convertir en %
+      updated.montantCommission = updated.forfaitaireGlobal;
+    } else if (field === 'forfaitaireGlobal') {
+      // Forfaitaire Global changé
+      updated.forfaitaireGlobal = value;
+      updated.forfaitaireUnitaire = nbChambreClient > 0 ? value / nbChambreClient : 0;
+      updated.tauxPrixUnitaire = prixBenchmark > 0 ? (updated.forfaitaireUnitaire / prixBenchmark) * 100 : 0; // Convertir en %
+      updated.montantCommission = value;
+    }
+
+    setCommissionData(updated);
+
+    // Mettre à jour automatiquement le prix Client
+    updateClientPriceFromCommission(updated.forfaitaireUnitaire);
+  };
+
+  // Handler pour le changement du nombre de chambres client
+  const handleNbChambreClientChange = (value: number) => {
+    const newNbChambre = value > 0 ? value : 1;
+    setNbChambreClient(newNbChambre);
+
+    // Recalculer la commission avec le nouveau nombre de chambres
+    const updated = { ...commissionData };
+    updated.forfaitaireGlobal = updated.forfaitaireUnitaire * newNbChambre;
+    updated.montantCommission = updated.forfaitaireGlobal;
+    setCommissionData(updated);
+
+    // Recalculer le montant Client
+    const newMontantAriary = clientData.nuiteAriary * newNbChambre;
+    setClientData(prev => ({
+      ...prev,
+      montantAriary: newMontantAriary,
+    }));
+  };
+
+  // Mettre à jour le prix Client basé sur la commission
+  const updateClientPriceFromCommission = (forfaitaireUnitaire: number) => {
+    if (!benchmarkLine || !detail) return;
+
+    const prixBenchmark = benchmarkLine.nuiteDevise || 0;
+    const newNuiteDevise = prixBenchmark + forfaitaireUnitaire;
+    const newNuiteAriary = newNuiteDevise * clientData.tauxChange;
+    const newMontantAriary = newNuiteAriary * nbChambreClient;
+
+    setClientData(prev => ({
+      ...prev,
+      nuiteDevise: newNuiteDevise,
+      nuiteAriary: newNuiteAriary,
+      montantDevise: newNuiteDevise * (detail?.nuite || 1),
+      montantAriary: newMontantAriary,
+    }));
+  };
 
   // Handlers pour les changements de valeurs
   const handleBookingChange = (field: string, value: number) => {
@@ -95,31 +231,35 @@ const BenchmarkingDetailPage = () => {
   };
 
   const handleClientChange = (field: string, value: number) => {
-    const updated = { ...clientData, [field]: value };
+    if (field === 'tauxChange') {
+      const updated = { ...clientData };
+      const prixBenchmark = benchmarkLine?.nuiteDevise || 0;
+      const nuiteDevise = prixBenchmark + commissionData.forfaitaireUnitaire;
+      
+      updated.tauxChange = value;
+      updated.nuiteDevise = nuiteDevise;
+      updated.nuiteAriary = nuiteDevise * value;
+      updated.montantDevise = nuiteDevise * (detail?.nuite || 1);
+      updated.montantAriary = updated.nuiteAriary * nbChambreClient;
 
-    // Recalculer automatiquement les montants
-    if (field === 'nuiteDevise' || field === 'tauxChange') {
-      if (field === 'nuiteDevise') {
-        updated.nuiteAriary = value * clientData.tauxChange;
-        updated.montantDevise = value * (detail?.nuite || 1);
-        updated.montantAriary = updated.nuiteAriary * (detail?.nuite || 1);
-      } else if (field === 'tauxChange') {
-        updated.nuiteAriary = clientData.nuiteDevise * value;
-        updated.montantAriary = updated.nuiteAriary * (detail?.nuite || 1);
-      }
+      setClientData(updated);
     }
-
-    setClientData(updated);
   };
 
   // Handler pour envoyer le devis
-  const handleSendDevis = async () => {
+  const handleSendDevis = () => {
     if (!detail || !benchmarkLine || !bookingPlateforme || !clientPlateforme) {
       alert('Données manquantes pour envoyer le devis');
       return;
     }
 
-    if (!window.confirm('Confirmez-vous l\'envoi du devis ?')) {
+    // Ouvrir la modal de confirmation
+    setShowConfirmDevisModal(true);
+  };
+
+  // Ajoutez la nouvelle fonction pour l'envoi réel
+  const handleConfirmSendDevis = async () => {
+    if (!detail || !benchmarkLine || !bookingPlateforme || !clientPlateforme) {
       return;
     }
 
@@ -153,14 +293,15 @@ const BenchmarkingDetailPage = () => {
           montantAriary: clientData.montantAriary,
         },
         dataCommission: {
-          tauxPrixUnitaire: bookingData.tauxChange,
-          forfaitaireUnitaire: clientData.nuiteAriary,
-          forfaitaireGlobal: clientData.montantAriary,
-          montantAriary: clientData.montantAriary,
+          tauxPrixUnitaire: commissionData.tauxPrixUnitaire,
+          forfaitaireUnitaire: commissionData.forfaitaireUnitaire,
+          forfaitaireGlobal: commissionData.forfaitaireGlobal,
+          montantAriary: commissionData.montantCommission,
         },
       };
 
       await dispatch(sendBenchmarkingDevis(payload)).unwrap();
+      setShowConfirmDevisModal(false);
       alert('Devis envoyé avec succès !');
     } catch (err: any) {
       alert(err.message || 'Erreur lors de l\'envoi du devis');
@@ -194,15 +335,134 @@ const BenchmarkingDetailPage = () => {
 
     try {
       const resultAction = await dispatch(setBenchmarkOfficial(detail.id)).unwrap();
-      // Si succès → on peut recharger ou mettre à jour localement
-      // (unwrap() lance une erreur si rejected)
       alert("Benchmark défini avec succès !");
-      // Optionnel : re-fetch complet
       dispatch(fetchBenchmarkingDetail(detail.id));
     } catch (err: any) {
       alert(err.message || "Erreur lors de la définition du benchmark");
     } finally {
       setSettingBenchmark(false);
+    }
+  };
+
+  const handleGenererDevis = async () => {
+    if (!selectedId) {
+      alert('Aucun benchmarking sélectionné');
+      return;
+    }
+
+    if (!window.confirm('Voulez-vous générer le devis pour ce benchmarking ?')) {
+      return;
+    }
+
+    setGeneratingDevis(true);
+
+    try {
+      const result = await dispatch(genererDevis(selectedId)).unwrap();
+      
+      // Si le résultat contient un chemin de PDF, l'ouvrir dans un nouvel onglet
+      if (result && typeof result === 'string') {
+        const pdfUrl = `${API_URL}/${result}`;
+        window.open(pdfUrl, '_blank');
+        alert('Devis généré avec succès !');
+      } else {
+        alert('Devis généré avec succès !');
+      }
+      
+      // Recharger les détails
+      dispatch(fetchBenchmarkingDetail(selectedId));
+    } catch (err: any) {
+      alert(err.message || 'Erreur lors de la génération du devis');
+    } finally {
+      setGeneratingDevis(false);
+    }
+  };
+
+  // Handler pour générer le PDF Direction
+  const handleGeneratePdfDirection = async () => {
+    if (!selectedId || !detail || !clientData || !commissionData) {
+      alert('Données manquantes pour générer le PDF direction');
+      return;
+    }
+
+    if (!window.confirm('Voulez-vous générer le PDF pour la direction ?')) {
+      return;
+    }
+
+    setGeneratingPdfDirection(true);
+
+    try {
+      const payload = {
+        benchmarkingId: selectedId,
+        montantTotalClient: clientData.montantAriary,
+        tauxCommission: commissionData.tauxPrixUnitaire,
+        montantTotalCommission: commissionData.montantCommission,
+      };
+
+      const result = await dispatch(generatePdfDirection(payload)).unwrap();
+      
+      // Ouvrir le PDF dans un nouvel onglet
+      if (result && typeof result === 'string') {
+        const pdfUrl = `${API_URL}/${result}`;
+        window.open(pdfUrl, '_blank');
+        alert('PDF direction généré avec succès !');
+      } else {
+        alert('PDF direction généré avec succès !');
+      }
+      
+      // Recharger les détails
+      dispatch(fetchBenchmarkingDetail(selectedId));
+    } catch (err: any) {
+      alert(err.message || 'Erreur lors de la génération du PDF direction');
+    } finally {
+      setGeneratingPdfDirection(false);
+    }
+  };
+
+  const handleEnvoyerDevis = async () => {
+    if (!selectedId) {
+      alert('Aucun benchmarking sélectionné');
+      return;
+    }
+
+    if (!window.confirm('Voulez-vous envoyer le devis par email ?')) {
+      return;
+    }
+
+    setSendingDevisEmail(true);
+
+    try {
+      await dispatch(envoyerDevis(selectedId)).unwrap();
+      alert('Devis envoyé par email avec succès !');
+      // Recharger les détails
+      dispatch(fetchBenchmarkingDetail(selectedId));
+    } catch (err: any) {
+      alert(err.message || 'Erreur lors de l\'envoi du devis');
+    } finally {
+      setSendingDevisEmail(false);
+    }
+  };
+
+  const handleApprouverDevis = async () => {
+    if (!selectedId) {
+      alert('Aucun benchmarking sélectionné');
+      return;
+    }
+
+    if (!window.confirm('Voulez-vous approuver définitivement ce devis ?')) {
+      return;
+    }
+
+    setApprovingDevis(true);
+
+    try {
+      await dispatch(approuverDevis(selectedId)).unwrap();
+      alert('Devis approuvé avec succès !');
+      // Recharger les détails
+      dispatch(fetchBenchmarkingDetail(selectedId));
+    } catch (err: any) {
+      alert(err.message || 'Erreur lors de l\'approbation du devis');
+    } finally {
+      setApprovingDevis(false);
     }
   };
 
@@ -260,444 +520,590 @@ const BenchmarkingDetailPage = () => {
     });
 
   return (
-    <div className="min-h-screen bg-neutral-50">
-      <div className="mb-8">
-        <HotelHeader numerohotel={detail.numero} navigate={navigate} isDetail={true}/>
-      </div>
-        {/* En-tête avec navigation + bouton SET BENCHMARK */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-neutral-900">
-              Benchmarking <span className="font-mono text-neutral-600">#{detail?.numero}</span>
-            </h1>
-          </div>
-
-          {/* ← LE BOUTON ICI */}
-          <button
-            onClick={handleSetBenchmark}
-            disabled={settingBenchmark || loadingDetail}
-            className={`
-              px-5 py-2.5 rounded-lg font-medium text-white flex items-center gap-2 transition-colors
-              ${settingBenchmark || loadingDetail
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-emerald-600 hover:bg-emerald-700'
-              }
-            `}
-          >
-            {settingBenchmark ? (
-              <>
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                En cours...
-              </>
-            ) : (
-              <>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-                Définir comme benchmark officiel
-              </>
-            )}
-          </button>
+    <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange}>
+      <div className="min-h-screen bg-neutral-50">
+        <div className="mb-8">
+          <HotelHeader numerohotel={detail.numero} navigate={navigate} isDetail={true} isBenchmarking={true}/>
         </div>
-
-        {/* Informations générales du benchmarking */}
-        <div className="bg-white border border-neutral-200 rounded-lg p-6 mb-6">
-          <h2 className="text-sm font-semibold text-neutral-700 uppercase tracking-wide mb-5 pb-3 border-b border-neutral-200">
-            Informations générales
-          </h2>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
+        {/* En-tête avec navigation + boutons d'actions */}
+        <div className="flex flex-col gap-4 mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">
-                Période
-              </div>
-              <div className="text-sm text-neutral-900">
-                {formatDate(detail.du)} → {formatDate(detail.au)}
-              </div>
+              <h1 className="text-2xl md:text-3xl font-bold text-neutral-900">
+                Benchmarking <span className="font-mono text-neutral-600">#{detail?.numero}</span>
+              </h1>
             </div>
-            <div>
-              <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">
-                Nuits
-              </div>
-              <div className="text-sm font-medium text-neutral-900">{detail.nuite}</div>
-            </div>
-            <div>
-              <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">
-                Lieu
-              </div>
-              <div className="text-sm text-neutral-900">
-                {detail.ville}, {detail.pays}
-              </div>
-            </div>
-            <div>
-              <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">
-                Entête associée
-              </div>
-              <div className="text-sm font-mono text-neutral-900">
-                {detail.hotelProspectionEntete?.numeroEntete || '—'}
-              </div>
-            </div>
-          </div>
-
-          {/* Tarifs */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="bg-neutral-50 rounded-md p-4">
-              <div className="text-xs text-neutral-500 mb-1">Taux unitaire</div>
-              <div className="font-mono text-lg font-semibold text-neutral-900">
-                {detail.tauxPrixUnitaire.toLocaleString('fr-FR')}
-              </div>
-            </div>
-            <div className="bg-neutral-50 rounded-md p-4">
-              <div className="text-xs text-neutral-500 mb-1">Forfait unitaire</div>
-              <div className="font-mono text-lg font-semibold text-neutral-900">
-                {detail.forfaitaireUnitaire.toLocaleString('fr-FR')}
-              </div>
-            </div>
-            <div className="bg-neutral-50 rounded-md p-4">
-              <div className="text-xs text-neutral-500 mb-1">Forfait global</div>
-              <div className="font-mono text-lg font-semibold text-neutral-900">
-                {detail.forfaitaireGlobal.toLocaleString('fr-FR')}
-              </div>
-            </div>
-            <div className="bg-neutral-900 rounded-md p-4">
-              <div className="text-xs text-neutral-300 mb-1">Commission</div>
-              <div className="font-mono text-lg font-semibold text-white">
-                {detail.montantCommission.toLocaleString('fr-FR')} Ar
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Services inclus (maintenant en haut car communs) */}
-        {detail.benchService?.length > 0 && (
-          <div className="bg-white border border-neutral-200 rounded-lg p-6 mb-6">
-            <h2 className="text-sm font-semibold text-neutral-700 uppercase tracking-wide mb-4">
-              Services inclus ({detail.benchService.length})
-            </h2>
+            {/* Nouveaux boutons d'actions */}
             <div className="flex flex-wrap gap-2">
-              {detail.benchService.map((bs) => (
-                <span
-                  key={bs.id}
-                  className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-700 border border-neutral-200"
-                >
-                  {bs.serviceHotel?.service || 'Service inconnu'}
-                </span>
-              ))}
+
+              {/* Générer devis client */}
+              <LoadingButton
+                label="Générer devis client"
+                loadingLabel="Génération..."
+                isLoading={generatingDevis}
+                disabled={generatingDevis || loadingDetail}
+                onClick={handleGenererDevis}
+                variant="purple"
+                icon={
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
+                }
+              />
+
+              {/* PDF Direction */}
+              <LoadingButton
+                label="PDF Direction"
+                loadingLabel="Génération..."
+                isLoading={generatingPdfDirection}
+                disabled={false}
+                onClick={handleGeneratePdfDirection}
+                variant="primary"
+                title={
+                  !clientData.montantAriary || !commissionData.tauxPrixUnitaire
+                    ? "Veuillez d'abord remplir les données client et commission"
+                    : ''
+                }
+                icon={
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                }
+              />
+
+              {/* Envoyer le devis */}
+              <LoadingButton
+                label="Envoyer le devis"
+                loadingLabel="Envoi..."
+                isLoading={sendingDevisEmail}
+                disabled={sendingDevisEmail || loadingDetail}
+                onClick={handleEnvoyerDevis}
+                variant="warning"
+                icon={
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                }
+              />
+
+              {/* Approuver le devis */}
+              <LoadingButton
+                label="Approuver le devis"
+                loadingLabel="Approbation..."
+                isLoading={approvingDevis}
+                disabled={approvingDevis || loadingDetail}
+                onClick={handleApprouverDevis}
+                variant="success"
+                icon={
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                }
+              />
+
             </div>
           </div>
-        )}
+        </div>
 
-        {/* Liste des lignes de benchmarking (maintenant en bas) */}
-        <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden">
-          <div className="px-6 py-5 border-b border-neutral-200 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h2 className="text-sm font-semibold text-neutral-700 uppercase tracking-wide">
-                Lignes de benchmarking
+          {/* Informations générales du benchmarking */}
+          <div className="bg-white border border-neutral-200 rounded-lg p-6 mb-6">
+            <h2 className="text-sm font-semibold text-neutral-700 uppercase tracking-wide mb-5 pb-3 border-b border-neutral-200">
+              Informations générales
+            </h2>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
+              <div>
+                <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">
+                  Période
+                </div>
+                <div className="text-sm text-neutral-900">
+                  {formatDate(detail.du)} → {formatDate(detail.au)}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">
+                  Nuits
+                </div>
+                <div className="text-sm font-medium text-neutral-900">{detail.nuite}</div>
+              </div>
+              <div>
+                <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">
+                  Lieu
+                </div>
+                <div className="text-sm text-neutral-900">
+                  {detail.ville}, {detail.pays}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">
+                  Entête associée
+                </div>
+                <div className="text-sm font-mono text-neutral-900">
+                  {detail.hotelProspectionEntete?.numeroEntete || '—'}
+                </div>
+              </div>
+            </div>
+
+            {/* Tarifs */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-neutral-50 rounded-md p-4">
+                <div className="text-xs text-neutral-500 mb-1">Taux unitaire</div>
+                <div className="font-mono text-lg font-semibold text-neutral-900">
+                  {detail.tauxPrixUnitaire.toLocaleString('fr-FR')}
+                </div>
+              </div>
+              <div className="bg-neutral-50 rounded-md p-4">
+                <div className="text-xs text-neutral-500 mb-1">Forfait unitaire</div>
+                <div className="font-mono text-lg font-semibold text-neutral-900">
+                  {detail.forfaitaireUnitaire.toLocaleString('fr-FR')}
+                </div>
+              </div>
+              <div className="bg-neutral-50 rounded-md p-4">
+                <div className="text-xs text-neutral-500 mb-1">Forfait global</div>
+                <div className="font-mono text-lg font-semibold text-neutral-900">
+                  {detail.forfaitaireGlobal.toLocaleString('fr-FR')}
+                </div>
+              </div>
+              <div className="bg-neutral-900 rounded-md p-4">
+                <div className="text-xs text-neutral-300 mb-1">Commission</div>
+                <div className="font-mono text-lg font-semibold text-white">
+                  {detail.montantCommission.toLocaleString('fr-FR')} Ar
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Services inclus */}
+          {detail.benchService?.length > 0 && (
+            <div className="bg-white border border-neutral-200 rounded-lg p-6 mb-6">
+              <h2 className="text-sm font-semibold text-neutral-700 uppercase tracking-wide mb-4">
+                Services inclus ({detail.benchService.length})
               </h2>
-              <p className="text-xs text-neutral-500 mt-1">
-                {detail.benchmarkingLigne.length} ligne{detail.benchmarkingLigne.length > 1 ? 's' : ''} enregistrée{detail.benchmarkingLigne.length > 1 ? 's' : ''}
-              </p>
-            </div>
-            <button
-              onClick={() => setShowLigneModal(true)}
-              className="px-4 py-2 bg-neutral-900 text-white rounded-md text-sm font-medium hover:bg-neutral-800 transition-colors flex items-center gap-2 whitespace-nowrap"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Ajouter une ligne
-            </button>
-          </div>
-
-          {detail.benchmarkingLigne.length === 0 ? (
-            <div className="px-6 py-12 text-center">
-              <svg className="w-12 h-12 mx-auto mb-3 text-neutral-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-              <p className="text-sm text-neutral-500">Aucune ligne de benchmarking</p>
-              <p className="text-xs text-neutral-400 mt-1">Commencez par ajouter une première ligne</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              {/* table lignes de benchmarking */}
-              <table className="min-w-full">
-                <thead>
-                  <tr className="border-b border-neutral-200 bg-neutral-50">
-                    <th className="px-6 py-3.5 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wide">
-                      Plateforme
-                    </th>
-                    <th className="px-6 py-3.5 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wide">
-                      Hôtel
-                    </th>
-                    <th className="px-6 py-3.5 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wide">
-                      Type chambre
-                    </th>
-                    <th className="px-6 py-3.5 text-right text-xs font-semibold text-neutral-700 uppercase tracking-wide">
-                      Prix/nuit
-                    </th>
-                    <th className="px-6 py-3.5 text-center text-xs font-semibold text-neutral-700 uppercase tracking-wide">
-                      Devise
-                    </th>
-                    <th className="px-6 py-3.5 text-right text-xs font-semibold text-neutral-700 uppercase tracking-wide">
-                      Taux
-                    </th>
-                    <th className="px-6 py-3.5 text-right text-xs font-semibold text-neutral-700 uppercase tracking-wide">
-                      Prix Ariary
-                    </th>
-                    <th className="px-6 py-3.5 text-center text-xs font-semibold text-neutral-700 uppercase tracking-wide">
-                      Benchmark
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {detail.benchmarkingLigne.map((ligne, index) => (
-                    <tr 
-                      key={ligne.id} 
-                      className={`border-b border-neutral-100 hover:bg-neutral-50 transition-colors ${
-                        index === detail.benchmarkingLigne.length - 1 ? 'border-b-0' : ''
-                      }`}
-                    >
-                      <td className="px-6 py-4 text-sm text-neutral-700">
-                        <div>{ligne.plateforme?.nom}</div>
-                        <div className="text-xs text-neutral-500">{ligne.plateforme?.code}</div>
-                      </td>
-                      <td className="px-6 py-4 font-medium text-sm text-neutral-900">
-                        {ligne.hotel}
-                      </td>
-                      <td className="px-6 py-4 text-sm text-neutral-700">
-                        <div>{ligne.typeChambre?.type}</div>
-                        <div className="text-xs text-neutral-500">
-                          {ligne.typeChambre?.capacite} pers.
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-right text-sm font-mono text-neutral-900">
-                        {ligne.nuiteDevise?.toLocaleString('fr-FR')}
-                      </td>
-                      <td className="px-6 py-4 text-center text-xs font-medium text-neutral-600">
-                        {ligne.devise}
-                      </td>
-                      <td className="px-6 py-4 text-right text-sm font-mono text-neutral-600">
-                        {ligne.tauxChange?.toLocaleString('fr-FR')}
-                      </td>
-                      <td className="px-6 py-4 text-right text-sm font-mono font-medium text-neutral-900">
-                        {ligne.nuiteAriary?.toLocaleString('fr-FR')} <span className="text-neutral-500">Ar</span>
-                      </td>
-                      <td className="px-6 py-4 text-center">
-                        {ligne.isBenchMark ? (
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-neutral-900 text-white">
-                            Oui
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-neutral-100 text-neutral-600">
-                            Non
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {/* Tableau de Synthèse Financière */}
-              <div className="pt-6 bg-neutral-50 border-t border-neutral-200">
-                <div className="px-6 mb-4 flex justify-between items-center">
-                  <h3 className="text-sm font-semibold text-neutral-700 uppercase">Synthèse Financière</h3>
-                  <button
-                    onClick={handleSendDevis}
-                    disabled={sendingDevis || !benchmarkLine || !bookingPlateforme || !clientPlateforme}
-                    className={`
-                      px-5 py-2.5 rounded-lg font-medium text-white flex items-center gap-2 transition-colors
-                      ${sendingDevis || !benchmarkLine || !bookingPlateforme || !clientPlateforme
-                        ? 'bg-gray-400 cursor-not-allowed'
-                        : 'bg-blue-600 hover:bg-blue-700'
-                      }
-                    `}
+              <div className="flex flex-wrap gap-2">
+                {detail.benchService.map((bs) => (
+                  <span
+                    key={bs.id}
+                    className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-700 border border-neutral-200"
                   >
-                    {sendingDevis ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        Envoi en cours...
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        Envoyer le devis
-                      </>
-                    )}
-                  </button>
-                </div>
-
-                <div className="flex flex-col lg:flex-row gap-8">
-                  {/* Tableau principal */}
-                  <div className="flex-1 overflow-x-auto">
-                    <table className="w-full border-collapse bg-white border border-neutral-200 shadow-sm rounded-lg overflow-hidden">
-                      <thead>
-                        <tr className="bg-neutral-800 text-white">
-                          <th className="px-3 py-2 text-[10px] uppercase border border-neutral-700">Plateforme</th>
-                          <th className="px-3 py-2 text-[10px] uppercase border border-neutral-700">Pays</th>
-                          <th className="px-3 py-2 text-[10px] uppercase border border-neutral-700">Ville</th>
-                          <th className="px-3 py-2 text-[10px] uppercase border border-neutral-700">Hôtel</th>
-                          <th className="px-3 py-2 text-[10px] uppercase border border-neutral-700">Type Chambre</th>
-                          <th className="px-3 py-2 text-[10px] uppercase border border-neutral-700">Nuitée (Devise)</th>
-                          <th className="px-3 py-2 text-[10px] uppercase border border-neutral-700">Devise</th>
-                          <th className="px-3 py-2 text-[10px] uppercase border border-neutral-700">Taux Change</th>
-                          <th className="px-3 py-2 text-[10px] uppercase border border-neutral-700">Nuitée (Ar)</th>
-                          <th className="px-3 py-2 text-[10px] uppercase border border-neutral-700">Montant (Ar)</th>
-                        </tr>
-                      </thead>
-                      <tbody className="text-sm text-neutral-800">
-                        {/* Ligne 1 : Plateforme (Benchmark - non éditable) */}
-                        {benchmarkLine && (
-                          <tr>
-                            <td className="px-3 py-2 border border-neutral-200 bg-blue-50 font-bold">
-                              {benchmarkLine.plateforme?.nom || 'Plateforme'}
-                            </td>
-                            <td className="px-3 py-2 border border-neutral-200 text-center">{detail?.pays}</td>
-                            <td className="px-3 py-2 border border-neutral-200 text-center">{detail?.ville}</td>
-                            <td className="px-3 py-2 border border-neutral-200">{benchmarkLine.hotel}</td>
-                            <td className="px-3 py-2 border border-neutral-200">{benchmarkLine.typeChambre?.type || 'Standard'}</td>
-                            <td className="px-3 py-2 border border-neutral-200 text-right font-mono">
-                              {benchmarkLine.nuiteDevise?.toLocaleString('fr-FR')}
-                            </td>
-                            <td className="px-3 py-2 border border-neutral-200 text-center">{benchmarkLine.devise}</td>
-                            <td className="px-3 py-2 border border-neutral-200 text-right font-mono">
-                              {benchmarkLine.tauxChange?.toLocaleString('fr-FR')}
-                            </td>
-                            <td className="px-3 py-2 border border-neutral-200 text-right font-mono">
-                              {benchmarkLine.nuiteAriary?.toLocaleString('fr-FR')}
-                            </td>
-                            <td className="px-3 py-2 border border-neutral-200 text-right font-mono font-bold">
-                              {((benchmarkLine.nuiteAriary || 0) * (detail?.nuite || 0))?.toLocaleString('fr-FR')}
-                            </td>
-                          </tr>
-                        )}
-                        
-                        {/* Ligne 2 : Booking (Éditable) */}
-                        {bookingPlateforme && benchmarkLine && (
-                          <tr>
-                            <td className="px-3 py-2 border border-neutral-200 bg-neutral-50 font-bold">
-                              {bookingPlateforme.nom}
-                            </td>
-                            <td className="px-3 py-2 border border-neutral-200 text-center">{detail?.pays}</td>
-                            <td className="px-3 py-2 border border-neutral-200 text-center">{detail?.ville}</td>
-                            <td className="px-3 py-2 border border-neutral-200">{benchmarkLine.hotel}</td>
-                            <td className="px-3 py-2 border border-neutral-200">{benchmarkLine.typeChambre?.type}</td>
-                            <td className="px-3 py-2 border border-neutral-200">
-                              <input
-                                type="number"
-                                value={bookingData.nuiteDevise}
-                                onChange={(e) => handleBookingChange('nuiteDevise', parseFloat(e.target.value) || 0)}
-                                className="w-full px-2 py-1 text-right font-mono border border-neutral-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              />
-                            </td>
-                            <td className="px-3 py-2 border border-neutral-200 text-center">{benchmarkLine.devise}</td>
-                            <td className="px-3 py-2 border border-neutral-200">
-                              <input
-                                type="number"
-                                value={bookingData.tauxChange}
-                                onChange={(e) => handleBookingChange('tauxChange', parseFloat(e.target.value) || 0)}
-                                className="w-full px-2 py-1 text-right font-mono border border-neutral-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              />
-                            </td>
-                            <td className="px-3 py-2 border border-neutral-200 text-right font-mono bg-neutral-100">
-                              {bookingData.nuiteAriary?.toLocaleString('fr-FR')}
-                            </td>
-                            <td className="px-3 py-2 border border-neutral-200 text-right font-mono font-bold bg-neutral-100">
-                              {bookingData.montantAriary?.toLocaleString('fr-FR')}
-                            </td>
-                          </tr>
-                        )}
-
-                        {/* Ligne 3 : Client (Éditable) */}
-                        {clientPlateforme && benchmarkLine && (
-                          <tr>
-                            <td className="px-3 py-2 border border-neutral-200 bg-neutral-100 font-bold italic">
-                              {clientPlateforme.nom}
-                            </td>
-                            <td className="px-3 py-2 border border-neutral-200 text-center">{detail?.pays}</td>
-                            <td className="px-3 py-2 border border-neutral-200 text-center">{detail?.ville}</td>
-                            <td className="px-3 py-2 border border-neutral-200">{benchmarkLine.hotel}</td>
-                            <td className="px-3 py-2 border border-neutral-200">{benchmarkLine.typeChambre?.type}</td>
-                            <td className="px-3 py-2 border border-neutral-200">
-                              <input
-                                type="number"
-                                value={clientData.nuiteDevise}
-                                onChange={(e) => handleClientChange('nuiteDevise', parseFloat(e.target.value) || 0)}
-                                className="w-full px-2 py-1 text-right font-mono border border-neutral-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              />
-                            </td>
-                            <td className="px-3 py-2 border border-neutral-200 text-center">{benchmarkLine.devise}</td>
-                            <td className="px-3 py-2 border border-neutral-200">
-                              <input
-                                type="number"
-                                value={clientData.tauxChange}
-                                onChange={(e) => handleClientChange('tauxChange', parseFloat(e.target.value) || 0)}
-                                className="w-full px-2 py-1 text-right font-mono border border-neutral-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                              />
-                            </td>
-                            <td className="px-3 py-2 border border-neutral-200 text-right font-mono bg-neutral-100">
-                              {clientData.nuiteAriary?.toLocaleString('fr-FR')}
-                            </td>
-                            <td className="px-3 py-2 border border-neutral-200 text-right font-mono font-bold bg-neutral-100">
-                              {clientData.montantAriary?.toLocaleString('fr-FR')}
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  {/* Section Commission */}
-                  <div className="w-full lg:w-80 space-y-4">
-                    <div className="border border-neutral-200 rounded-lg overflow-hidden shadow-sm bg-white">
-                      <div className="bg-neutral-800 text-white px-4 py-2 text-center text-xs font-bold uppercase tracking-wider">
-                        Calcul Commission
-                      </div>
-                      <div className="grid grid-cols-3 text-[10px] font-bold text-neutral-600 uppercase bg-neutral-100 border-b border-neutral-200">
-                        <div className="px-2 py-2 text-center border-r border-neutral-200">% sur Prix Unit.</div>
-                        <div className="px-2 py-2 text-center border-r border-neutral-200">Forfaitaire Unit.</div>
-                        <div className="px-2 py-2 text-center">Forfaitaire Global</div>
-                      </div>
-                      <div className="grid grid-cols-3 text-sm font-mono text-neutral-900">
-                        <div className="px-2 py-3 text-center border-r border-neutral-200">
-                          {bookingData.tauxChange?.toLocaleString('fr-FR')}
-                        </div>
-                        <div className="px-2 py-3 text-center border-r border-neutral-200">
-                          {clientData.nuiteAriary?.toLocaleString('fr-FR')}
-                        </div>
-                        <div className="px-2 py-3 text-center">
-                          {clientData.montantAriary?.toLocaleString('fr-FR')}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="border border-neutral-200 rounded-lg overflow-hidden shadow-sm bg-white">
-                      <div className="bg-neutral-800 text-white px-4 py-2 text-center text-xs font-bold uppercase tracking-wider">
-                        Montant Commission
-                      </div>
-                      <div className="px-4 py-4 text-center text-xl font-bold font-mono text-blue-700 bg-blue-50">
-                        {clientData.montantAriary?.toLocaleString('fr-FR')} <span className="text-sm font-sans text-neutral-500 uppercase">Ar</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                    {bs.serviceHotel?.service || 'Service inconnu'}
+                  </span>
+                ))}
               </div>
             </div>
           )}
-        </div>
 
-      {/* Modal création ligne */}
-      <ModalBenchmarkingLigneForm
-        isOpen={showLigneModal}
-        onClose={() => setShowLigneModal(false)}
-        onSubmit={handleCreateLigne}
-        plateformes={plateformes}
-        typesChambre={typesChambre}
-        benchmarkingEnteteId={detail.id}
-        loading={false}
-      />
-    </div>
+          {/* Liste des lignes de benchmarking */}
+          <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden">
+            <div className="px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              {/* Titre + compteur */}
+              <div>
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Benchmarking</p>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <h2 className="text-base font-semibold text-gray-800">Lignes de benchmarking</h2>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
+                    {detail.benchmarkingLigne.length}
+                  </span>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-2">
+
+                {/* Définir comme benchmark officiel */}
+                <LoadingButton
+                  label="Définir le minimum"
+                  loadingLabel="En cours..."
+                  isLoading={settingBenchmark}
+                  disabled={settingBenchmark || loadingDetail}
+                  onClick={handleSetBenchmark}
+                  variant="success"
+                  icon={
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                    </svg>
+                  }
+                />
+
+                {/* Ajouter une ligne */}
+                <button
+                  onClick={() => setShowLigneModal(true)}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium rounded-lg border border-gray-800 text-gray-800 bg-white hover:bg-gray-50 transition-colors whitespace-nowrap"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Ajouter une ligne
+                </button>
+
+              </div>
+            </div>
+
+            {detail.benchmarkingLigne.length === 0 ? (
+              <div className="px-6 py-12 text-center">
+                <svg className="w-12 h-12 mx-auto mb-3 text-neutral-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                <p className="text-sm text-neutral-500">Aucune ligne de benchmarking</p>
+                <p className="text-xs text-neutral-400 mt-1">Commencez par ajouter une première ligne</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                {/* table lignes de benchmarking */}
+                <table className="min-w-full">
+                  <thead>
+                    <tr className="border-b border-neutral-200 bg-neutral-50">
+                      <th className="px-6 py-3.5 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wide">
+                        Plateforme
+                      </th>
+                      <th className="px-6 py-3.5 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wide">
+                        Hôtel
+                      </th>
+                      <th className="px-6 py-3.5 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wide">
+                        Type chambre
+                      </th>
+                      <th className="px-6 py-3.5 text-right text-xs font-semibold text-neutral-700 uppercase tracking-wide">
+                        Prix/nuit
+                      </th>
+                      <th className="px-6 py-3.5 text-center text-xs font-semibold text-neutral-700 uppercase tracking-wide">
+                        Nb chambre
+                      </th>
+                      <th className="px-6 py-3.5 text-center text-xs font-semibold text-neutral-700 uppercase tracking-wide">
+                        Devise
+                      </th>
+                      <th className="px-6 py-3.5 text-right text-xs font-semibold text-neutral-700 uppercase tracking-wide">
+                        Taux
+                      </th>
+                      <th className="px-6 py-3.5 text-right text-xs font-semibold text-neutral-700 uppercase tracking-wide">
+                        Prix Ariary
+                      </th>
+                      <th className="px-6 py-3.5 text-center text-xs font-semibold text-neutral-700 uppercase tracking-wide">
+                        Benchmark
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {detail.benchmarkingLigne.map((ligne, index) => (
+                      <tr 
+                        key={ligne.id} 
+                        className={`border-b border-neutral-100 hover:bg-neutral-50 transition-colors ${
+                          index === detail.benchmarkingLigne.length - 1 ? 'border-b-0' : ''
+                        }`}
+                      >
+                        <td className="px-6 py-4 text-sm text-neutral-700">
+                          <div>{ligne.plateforme?.nom}</div>
+                          <div className="text-xs text-neutral-500">{ligne.plateforme?.code}</div>
+                        </td>
+                        <td className="px-6 py-4 font-medium text-sm text-neutral-900">
+                          {ligne.hotel}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-neutral-700">
+                          <div>{ligne.typeChambre?.type}</div>
+                          <div className="text-xs text-neutral-500">
+                            {ligne.typeChambre?.capacite} pers.
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-right text-sm font-mono text-neutral-900">
+                          {ligne.nuiteDevise?.toLocaleString('fr-FR')}
+                        </td>
+                        <td className="px-6 py-4 text-center text-xs font-medium text-neutral-600">
+                          {ligne.nombreChambre || 1}
+                        </td>
+                        <td className="px-6 py-4 text-center text-xs font-medium text-neutral-600">
+                          {ligne.devise}
+                        </td>
+                        <td className="px-6 py-4 text-right text-sm font-mono text-neutral-600">
+                          {ligne.tauxChange?.toLocaleString('fr-FR')}
+                        </td>
+                        <td className="px-6 py-4 text-right text-sm font-mono font-medium text-neutral-900">
+                          {ligne.nuiteAriary?.toLocaleString('fr-FR')} <span className="text-neutral-500">Ar</span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          {ligne.isBenchMark ? (
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-neutral-900 text-white">
+                              Oui
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-neutral-100 text-neutral-600">
+                              Non
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {/* Tableau de Synthèse Financière */}
+                <div className="pt-6 bg-neutral-50 border-t border-neutral-200">
+                  <div className="px-6 mb-4 flex justify-between items-center">
+                    <h3 className="text-sm font-semibold text-neutral-700 uppercase">Synthèse Financière</h3>
+                    <button
+                      onClick={handleSendDevis}
+                      disabled={sendingDevis || !benchmarkLine || !bookingPlateforme || !clientPlateforme}
+                      className={`
+                        px-5 py-2.5 rounded-lg font-medium text-white flex items-center gap-2 transition-colors
+                        ${sendingDevis || !benchmarkLine || !bookingPlateforme || !clientPlateforme
+                          ? 'bg-gray-400 cursor-not-allowed'
+                          : 'bg-blue-600 hover:bg-blue-700'
+                        }
+                      `}
+                    >
+                      {sendingDevis ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Envoi en cours...
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          Envoyer le devis
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  <div className="flex flex-col lg:flex-row gap-8">
+                    {/* Tableau principal */}
+                    <div className="flex-1 overflow-x-auto">
+                      <table className="w-full border-collapse bg-white border border-neutral-200 rounded-lg overflow-hidden">
+                        <thead>
+                          <tr className="bg-neutral-800 text-white">
+                            <th className="px-3 py-2 text-[10px] uppercase border border-neutral-700">Plateforme</th>
+                            <th className="px-3 py-2 text-[10px] uppercase border border-neutral-700">Pays</th>
+                            <th className="px-3 py-2 text-[10px] uppercase border border-neutral-700">Ville</th>
+                            <th className="px-3 py-2 text-[10px] uppercase border border-neutral-700">Hôtel</th>
+                            <th className="px-3 py-2 text-[10px] uppercase border border-neutral-700">Type Chambre</th>
+                            <th className="px-3 py-2 text-[10px] uppercase border border-neutral-700">Nuitée (Devise)</th>
+                            <th className="px-3 py-2 text-[10px] uppercase border border-neutral-700">Devise</th>
+                            <th className="px-3 py-2 text-[10px] uppercase border border-neutral-700">Taux Change</th>
+                            <th className="px-3 py-2 text-[10px] uppercase border border-neutral-700">Nuitée (Ar)</th>
+                            <th className="px-3 py-2 text-[10px] uppercase border border-neutral-700">Nb chambre</th>
+                            <th className="px-3 py-2 text-[10px] uppercase border border-neutral-700">Montant (Ar)</th>
+                          </tr>
+                        </thead>
+                        <tbody className="text-sm text-neutral-800">
+                          {/* Ligne 1 : Plateforme (Benchmark - non éditable) */}
+                          {benchmarkLine && (
+                            <tr>
+                              <td className="px-3 py-2 border border-neutral-200 bg-blue-50 font-bold">
+                                {benchmarkLine.plateforme?.nom || 'Plateforme'}
+                              </td>
+                              <td className="px-3 py-2 border border-neutral-200 text-center">{detail?.pays}</td>
+                              <td className="px-3 py-2 border border-neutral-200 text-center">{detail?.ville}</td>
+                              <td className="px-3 py-2 border border-neutral-200">{benchmarkLine.hotel}</td>
+                              <td className="px-3 py-2 border border-neutral-200">{benchmarkLine.typeChambre?.type || 'Standard'}</td>
+                              <td className="px-3 py-2 border border-neutral-200 text-right font-mono">
+                                {benchmarkLine.nuiteDevise?.toLocaleString('fr-FR')}
+                              </td>
+                              <td className="px-3 py-2 border border-neutral-200 text-center">{benchmarkLine.devise}</td>
+                              <td className="px-3 py-2 border border-neutral-200 text-right font-mono">
+                                {benchmarkLine.tauxChange?.toLocaleString('fr-FR')}
+                              </td>
+                              <td className="px-3 py-2 border border-neutral-200 text-right font-mono">
+                                {benchmarkLine.nuiteAriary?.toLocaleString('fr-FR')}
+                              </td>
+                              <td className="px-3 py-2 border border-neutral-200 text-right font-mono">
+                                {benchmarkLine.nombreChambre }
+                              </td>
+                              <td className="px-3 py-2 border border-neutral-200 text-right font-mono font-bold">
+                                {((benchmarkLine.nuiteAriary || 0) * (detail?.nuite || 0))?.toLocaleString('fr-FR')}
+                              </td>
+                            </tr>
+                          )}
+                          
+                          {/* Ligne 2 : Booking (Éditable) */}
+                          {bookingPlateforme && benchmarkLine && (
+                            <tr>
+                              <td className="px-3 py-2 border border-neutral-200 bg-neutral-50 font-bold">
+                                {bookingPlateforme.nom}
+                              </td>
+                              <td className="px-3 py-2 border border-neutral-200 text-center">{detail?.pays}</td>
+                              <td className="px-3 py-2 border border-neutral-200 text-center">{detail?.ville}</td>
+                              <td className="px-3 py-2 border border-neutral-200">{benchmarkLine.hotel}</td>
+                              <td className="px-3 py-2 border border-neutral-200">{benchmarkLine.typeChambre?.type}</td>
+                              <td className="px-3 py-2 border border-neutral-200">
+                                <input
+                                  type="number"
+                                  value={bookingData.nuiteDevise}
+                                  onChange={(e) => handleBookingChange('nuiteDevise', parseFloat(e.target.value) || 0)}
+                                  className="w-full px-2 py-1 text-right font-mono border border-neutral-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                              </td>
+                              <td className="px-3 py-2 border border-neutral-200 text-center">{benchmarkLine.devise}</td>
+                              <td className="px-3 py-2 border border-neutral-200">
+                                <input
+                                  type="number"
+                                  value={bookingData.tauxChange}
+                                  onChange={(e) => handleBookingChange('tauxChange', parseFloat(e.target.value) || 0)}
+                                  className="w-full px-2 py-1 text-right font-mono border border-neutral-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                              </td>
+                              <td className="px-3 py-2 border border-neutral-200 text-right font-mono bg-neutral-100">
+                                {bookingData.nuiteAriary?.toLocaleString('fr-FR')}
+                              </td>
+                              <td className="px-3 py-2 border border-neutral-200 text-right font-mono">
+                                {benchmarkLine.nombreChambre}
+                              </td>
+                              <td className="px-3 py-2 border border-neutral-200 text-right font-mono font-bold bg-neutral-100">
+                                {bookingData.montantAriary?.toLocaleString('fr-FR')}
+                              </td>
+                            </tr>
+                          )}
+
+                          {/* Ligne 3 : Client (Éditable - taux de change et nb chambres) */}
+                          {clientPlateforme && benchmarkLine && (
+                            <tr>
+                              <td className="px-3 py-2 border border-neutral-200 bg-neutral-100 font-bold italic">
+                                {clientPlateforme.nom}
+                              </td>
+                              <td className="px-3 py-2 border border-neutral-200 text-center">{detail?.pays}</td>
+                              <td className="px-3 py-2 border border-neutral-200 text-center">{detail?.ville}</td>
+                              <td className="px-3 py-2 border border-neutral-200">{benchmarkLine.hotel}</td>
+                              <td className="px-3 py-2 border border-neutral-200">{benchmarkLine.typeChambre?.type}</td>
+                              <td className="px-3 py-2 border border-neutral-200 text-right font-mono bg-blue-50">
+                                {clientData.nuiteDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                <div className="text-[8px] text-neutral-500 mt-0.5">
+                                  ({benchmarkLine.nuiteDevise?.toLocaleString('fr-FR')} + {commissionData.forfaitaireUnitaire?.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                                </div>
+                              </td>
+                              <td className="px-3 py-2 border border-neutral-200 text-center">{benchmarkLine.devise}</td>
+                              <td className="px-3 py-2 border border-neutral-200">
+                                <input
+                                  type="number"
+                                  value={clientData.tauxChange}
+                                  onChange={(e) => handleClientChange('tauxChange', parseFloat(e.target.value) || 0)}
+                                  className="w-full px-2 py-1 text-right font-mono border border-neutral-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                              </td>
+                              <td className="px-3 py-2 border border-neutral-200 text-right font-mono bg-neutral-100">
+                                {clientData.nuiteAriary?.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </td>
+                              <td className="px-3 py-2 border border-neutral-200">
+                                <input
+                                  type="number"
+                                  min={benchmarkLine.nombreChambre}
+                                  value={nbChambreClient}
+                                  onChange={(e) => handleNbChambreClientChange(parseInt(e.target.value) || benchmarkLine.nombreChambre)}
+                                  className="w-full px-2 py-1 text-right font-mono border border-neutral-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                              </td>
+                              <td className="px-3 py-2 border border-neutral-200 text-right font-mono font-bold bg-neutral-100">
+                                {clientData.montantAriary?.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Section Commission (Éditable) */}
+                    <div className="w-full lg:w-80 space-y-4">
+                      <div className="border border-neutral-200 rounded-lg overflow-hidden bg-white">
+                        <div className="bg-neutral-800 text-white px-4 py-2 text-center text-xs font-bold uppercase tracking-wider">
+                          Calcul Commission
+                        </div>
+                        
+                        {/* % sur Prix Unit. */}
+                        <div className="border-b border-neutral-200 bg-neutral-50">
+                          <div className="px-3 py-2 text-[10px] font-bold text-neutral-600 uppercase text-center">
+                            % sur Prix Unit.
+                          </div>
+                          <div className="px-3 pb-3">
+                            <div className="relative">
+                              <input
+                                type="number"
+                                step="0.01"
+                                value={commissionData.tauxPrixUnitaire}
+                                onChange={(e) => handleCommissionChange('tauxPrixUnitaire', parseFloat(e.target.value) || 0)}
+                                className="w-full px-3 py-2 pr-8 text-center font-mono text-sm border border-neutral-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="0"
+                              />
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 text-sm">%</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Forfaitaire Unit. */}
+                        <div className="border-b border-neutral-200 bg-white">
+                          <div className="px-3 py-2 text-[10px] font-bold text-neutral-600 uppercase text-center">
+                            Forfaitaire Unit.
+                          </div>
+                          <div className="px-3 pb-3">
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={commissionData.forfaitaireUnitaire}
+                              onChange={(e) => handleCommissionChange('forfaitaireUnitaire', parseFloat(e.target.value) || 0)}
+                              className="w-full px-3 py-2 text-center font-mono text-sm border border-neutral-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="0"
+                            />
+                          </div>
+                        </div>
+
+                        {/* Forfaitaire Global */}
+                        <div className="bg-neutral-50">
+                          <div className="px-3 py-2 text-[10px] font-bold text-neutral-600 uppercase text-center">
+                            Forfaitaire Global
+                          </div>
+                          <div className="px-3 pb-3">
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={commissionData.forfaitaireGlobal}
+                              onChange={(e) => handleCommissionChange('forfaitaireGlobal', parseFloat(e.target.value) || 0)}
+                              className="w-full px-3 py-2 text-center font-mono text-sm border border-neutral-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="0"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Montant Commission (calculé automatiquement) */}
+                      <div className="border border-neutral-200 rounded-lg overflow-hidden shadow-sm bg-white">
+                        <div className="bg-neutral-800 text-white px-4 py-2 text-center text-xs font-bold uppercase tracking-wider">
+                          Montant Commission
+                        </div>
+                        <div className="px-4 py-4 text-center text-xl font-bold font-mono text-blue-700 bg-blue-50">
+                          {commissionData.montantCommission?.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-sm font-sans text-neutral-500 uppercase">Ar</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <ModalConfirmDevis
+            isOpen={showConfirmDevisModal}
+            onClose={() => setShowConfirmDevisModal(false)}
+            onConfirm={handleConfirmSendDevis}
+            data={{
+              detail,
+              benchmarkLine,
+              bookingData,
+              clientData,
+              commissionData,
+              bookingPlateforme,
+              clientPlateforme,
+              nbChambreClient,
+            }}
+            loading={sendingDevis}
+          />
+          {/* Modal création ligne */}
+          <ModalBenchmarkingLigneForm
+            isOpen={showLigneModal}
+            onClose={() => setShowLigneModal(false)}
+            onSubmit={handleCreateLigne}
+            plateformes={plateformes}
+            typesChambre={typesChambre}
+            benchmarkingEnteteId={detail.id}
+            loading={false}
+          />
+      </div>
+    </TabContainer>
   );
 };
 

@@ -25,7 +25,6 @@ function HomePage() {
 
   // Liste des modules en cours de développement
   const lockedModules = [
-    { name: 'Hôtel', desc: 'Gestion des réservations' },
     { name: 'Assurance', desc: 'Contrats et garanties' },
     { name: 'Visa', desc: 'Suivi des demandes' },
     { name: 'Location', desc: 'Véhicules et matériel' },
@@ -123,8 +122,8 @@ function HomePage() {
                 <div className="w-12 h-12 bg-orange-500/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-orange-500 transition-colors duration-300">
                   <FiHome className="text-orange-600 group-hover:text-white transition-colors duration-300" size={24} />
                 </div>
-                <h3 className="text-lg font-semibold text-slate-900 mb-1">Hotel</h3>
-                <p className="text-sm text-slate-500">Générez vos devis et reservation hotel</p>
+                <h3 className="text-lg font-semibold text-slate-900 mb-1">Hôtel</h3>
+                <p className="text-sm text-slate-500">Gestion des réservations</p>
               </div>
             </div>
 

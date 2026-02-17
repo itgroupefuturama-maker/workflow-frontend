@@ -14,7 +14,7 @@ export const AttestationHeader = ({ numeroAttestation, navigate,  isDetail = fal
                >
                  <span className="font-semibold tracking-wide">Liste des Attestations</span>
                </button>
-               <FiArrowRight className="text-slate-400" size={16} />
+               <FiArrowRight className="text-slate-400 ml-2 mr-2" size={16} />
                <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-400/90 text-white font-semibold shadow-sm">
                  Attestation n° {numeroAttestation}
                </div>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import TabContainer from '../../../../../layouts/TabContainer';
+import TabContainer from '../../../../../../layouts/TabContainer';
 import { 
   FiTrendingUp, 
   FiFileText, 
@@ -10,17 +10,16 @@ import {
   FiArrowDown,
   FiPercent,
 } from 'react-icons/fi';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import React from 'react';
-import type { RootState } from '../../../../../app/store';
+import type { RootState } from '../../../../../../app/store';
 import { useSelector } from 'react-redux';
-import { fetchFournisseurs } from '../../../../../app/back_office/fournisseursSlice';
+import { fetchFournisseurs } from '../../../../../../app/back_office/fournisseursSlice';
 import { useDispatch } from 'react-redux';
-import type { AppDispatch } from '../../../../../app/store';
-import { fetchEtatVente } from '../../../../../app/front_office/etatVenteSlice';
-import { fetchEtatAnnulation } from '../../../../../app/front_office/etatAnnulationSlice';
-import { fetchEtatMensuelDestination } from '../../../../../app/front_office/etatMensuelDestinationSlice';
-import { fetchPays } from '../../../../../app/front_office/parametre_ticketing/paysSlice';
+import type { AppDispatch } from '../../../../../../app/store';
+import { fetchEtatVente } from '../../../../../../app/front_office/etatVenteSlice';
+import { fetchEtatAnnulation } from '../../../../../../app/front_office/etatAnnulationSlice';
+import { fetchEtatMensuelDestination } from '../../../../../../app/front_office/etatMensuelDestinationSlice';
+import { fetchPays } from '../../../../../../app/front_office/parametre_ticketing/paysSlice';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 

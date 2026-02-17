@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import type { RootState, AppDispatch } from '../../../../app/store';
+import type { RootState, AppDispatch } from '../../../../../app/store';
 import {
   fetchBilletById,
   addReservationToLigne,
@@ -15,25 +15,25 @@ import {
   type AnnulationBilletPayload,
   reprogrammerLigne,
   type ServiceSpecifique,
-} from '../../../../app/front_office/billetSlice';
-import AnnulationBilletModal from '../../../../components/modals/AnnulationBilletModal';
-import ReservationModal from '../../../../components/modals/ReservationModal';
-import EmissionModal from '../../../../components/modals/EmissionModal';
-import { fetchClientFactureById } from '../../../../app/back_office/clientFacturesSlice';
-import BeneficiaireInfosModal from '../../../../components/modals/BeneficiaireInfosModal';
-import TabContainer from '../../../../layouts/TabContainer';
-import { fetchSuivis } from '../../../../app/front_office/suiviSlice';
-import EmissionBilletModal from '../../../../components/modals/EmissionBilletModal';
-import FactureClientModal from '../../../../components/modals/FactureClientModal';
-import { fetchCommentairesByPrestation, createCommentaire, type Commentaire, updateCommentaire, deleteCommentaire } from '../../../../app/front_office/commentaireSlice';
-import { deleteTodo,markAsDone } from '../../../../app/front_office/todosSlice';
+} from '../../../../../app/front_office/billetSlice';
+import AnnulationBilletModal from '../../../../../components/modals/AnnulationBilletModal';
+import ReservationModal from '../../../../../components/modals/ReservationModal';
+import EmissionModal from '../../../../../components/modals/EmissionModal';
+import { fetchClientFactureById } from '../../../../../app/back_office/clientFacturesSlice';
+import BeneficiaireInfosModal from '../../../../../components/modals/BeneficiaireInfosModal';
+import TabContainer from '../../../../../layouts/TabContainer';
+import { fetchSuivis } from '../../../../../app/front_office/suiviSlice';
+import EmissionBilletModal from '../../../../../components/modals/EmissionBilletModal';
+import FactureClientModal from '../../../../../components/modals/FactureClientModal';
+import { fetchCommentairesByPrestation, createCommentaire, type Commentaire, updateCommentaire, deleteCommentaire } from '../../../../../app/front_office/commentaireSlice';
+import { deleteTodo,markAsDone } from '../../../../../app/front_office/todosSlice';
 import { BilletHeader } from './components.billet/BilletHeader';
 import { BilletActions } from './components.billet/BilletActions';
 import BilletInfoCards from './components.billet/BilletInfoCards';
 import BilletTable from './components.billet/BilletTable';
 import ServiceTable from './components.billet/ServiceTable';
 import SuiviTab from './components.billet/SuiviTable';
-import ReprogrammationModal from '../../../../components/modals/ReprogrammationModal';
+import ReprogrammationModal from '../../../../../components/modals/ReprogrammationModal';
 
 const Billet = () => {
   const navigate = useNavigate();

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import type { BilletLigne, ServiceProspectionLigne, ServiceSpecifique } from '../../../../../app/front_office/billetSlice';
+import type { BilletLigne, ServiceProspectionLigne, ServiceSpecifique } from '../../../../../../app/front_office/billetSlice';
 import { FiFilter, FiX } from 'react-icons/fi';
 
 // --- Sous-composant pour les cellules de prix (évite la répétition et les erreurs de rendu) ---

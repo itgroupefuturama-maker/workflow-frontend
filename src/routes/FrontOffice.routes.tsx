@@ -3,15 +3,15 @@ import HomePage from "../pages/front_office/HomePage";
 import DossierCommunForm from "../pages/front_office/dossiers-communs/DossierCommunForm";
 import DossierCommunDetail from "../pages/front_office/dossiers-communs/DossierCommunDetail";
 import DossierCommunManage from "../pages/front_office/dossiers-communs/DossierCommunManage";
-import PrestationDetail from "../pages/front_office/dossiers-communs/PrestationDetail";
+import PrestationDetail from "../pages/front_office/dossiers-communs/module.ticketing/PrestationDetail";
 import ToDoList from "../pages/front_office/dossiers-communs/todolist/ToDoList";
 import Prospection from "../pages/front_office/dossiers-communs/prospection/Prospection";
-import ParametreTicketing from "../pages/front_office/dossiers-communs/ticketing.sous.module/ParamétreTicketing";
-import Devis from "../pages/front_office/dossiers-communs/ticketing.sous.module/Devis";
-import Billet from "../pages/front_office/dossiers-communs/ticketing.sous.module/Billet";
-import AccueilView from "../pages/front_office/dossiers-communs/ticketing.sous.module/SousMenuPrestation/AccueilView";
-import ParametreView from "../pages/front_office/dossiers-communs/ticketing.sous.module/SousMenuPrestation/ParametreView";
-import PageView from "../pages/front_office/dossiers-communs/ticketing.sous.module/SousMenuPrestation/PageView";
+import ParametreTicketing from "../pages/front_office/dossiers-communs/module.ticketing/ticketing.sous.module/ParamétreTicketing";
+import Devis from "../pages/front_office/dossiers-communs/module.ticketing/ticketing.sous.module/Devis";
+import Billet from "../pages/front_office/dossiers-communs/module.ticketing/ticketing.sous.module/Billet";
+import AccueilView from "../pages/front_office/dossiers-communs/module.ticketing/ticketing.sous.module/SousMenuPrestation/AccueilView";
+import ParametreView from "../pages/front_office/dossiers-communs/module.ticketing/ticketing.sous.module/SousMenuPrestation/ParametreView";
+import PageView from "../pages/front_office/dossiers-communs/module.ticketing/ticketing.sous.module/SousMenuPrestation/PageView";
 import DossierCommun from "../pages/front_office/dossiers-communs/module.dossier.commun/DossierCommun";
 import TicketingPage from "../pages/front_office/dossiers-communs/module.ticketing/ticketing";
 import Attestation from "../pages/front_office/dossiers-communs/module.attestation.voyage/Attestation";
@@ -25,6 +25,7 @@ import ParametreViewHotel from "../pages/front_office/dossiers-communs/module.ho
 import AccueilViewHotel from "../pages/front_office/dossiers-communs/module.hotel/sous.section/AccueilViewHotel";
 import ListeDossierByModule from "../pages/front_office/dossiers-communs/ListeDossierByModule";
 import BenchmarkingDetailPage from "../pages/front_office/dossiers-communs/module.hotel/sous.section/sous.section.page/BenchmarkingDetailPage";
+import HotelReservationDetail from "../pages/front_office/dossiers-communs/module.hotel/sous.section/sous.section.page/HotelReservationDetail";
 
 export function frontOfficeRoutes() {
   return (
@@ -68,6 +69,7 @@ export function frontOfficeRoutes() {
         <Route path="parametres" element={<ParametreViewHotel />} />
         <Route path="pages" element={<PageViewHotel />} />
         <Route path="details" element={<BenchmarkingDetailPage />} />
+        <Route path="detailsHotel/:enteteId" element={<HotelReservationDetail />} />
       </Route>
     </>
   );

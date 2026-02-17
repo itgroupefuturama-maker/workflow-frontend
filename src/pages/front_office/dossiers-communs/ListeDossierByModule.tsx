@@ -93,7 +93,7 @@ function ListeDossierByModule() {
     
             {/* 1. Onglets (Tabs) - Alignés à gauche */}
             <div className="flex gap-8 overflow-x-auto scrollbar-hide">
-              <button className="pb-4 text-sm font-bold text-purple-600 border-b-2 border-purple-600 whitespace-nowrap transition-all">
+              <button className={`pb-4 text-sm font-bold  border-b-2  whitespace-nowrap transition-all ${module === 'attestation' ? 'text-red-600 border-b-2 border-red-600' : module === 'ticketing' ? 'text-yellow-500 border-b-2 border-yellow-400' : module === 'hotel' ? 'text-orange-600 border-b-2 border-orange-600' : 'border-b-2 border-transparent'}`}>
                 Tous les dossiers
               </button>
             </div>
@@ -217,7 +217,7 @@ function ListeDossierByModule() {
                           {/* Numéro Dossier */}
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center gap-3">
-                              <div className="flex items-center justify-center w-10 h-10 bg-linear-to-br from-indigo-500 to-indigo-600 rounded-lg shadow-lg shadow-indigo-500/30">
+                              <div className={`flex items-center justify-center w-10 h-10 bg-linear-to-br rounded-lg shadow-lg shadow-indigo-500/30 ${module === 'attestation' ? 'from-red-500 to-red-600' : module === 'ticketing' ? 'from-yellow-500 to-yellow-600' : module === 'hotel' ? 'from-orange-500 to-orange-600' : 'from-indigo-500 to-indigo-600'}`}>
                                 <FiFolder size={18} className="text-white" />
                               </div>
                               <div>

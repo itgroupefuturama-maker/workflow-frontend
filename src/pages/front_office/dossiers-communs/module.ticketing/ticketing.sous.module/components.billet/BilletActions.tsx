@@ -1,4 +1,4 @@
-import { FiCheck, FiCheckCircle, FiFileText, FiSend, FiX } from "react-icons/fi";
+import { FiCheck, FiCheckCircle, FiFileText, FiSend } from "react-icons/fi";
 
 interface BilletActionsProps {
   billet: any;

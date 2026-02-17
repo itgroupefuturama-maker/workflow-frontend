@@ -1,18 +1,14 @@
 import { FiX } from 'react-icons/fi';
 import type { ProspectionEntete } from '../../app/front_office/prospectionsEntetesSlice';
-import { useEffect, useState } from 'react';
-import axios from '../../service/Axios';
+import { useLastComment } from '../../hooks/useLastComment'; // adapte le chemin
 
 interface ProspectionModalsProps {
-  // Props pour le Modal d'Édition
   selectedEntete: ProspectionEntete | null;
   modalCommission: number;
   setModalCommission: (val: number) => void;
   isSaving: boolean;
   onCloseEdit: () => void;
   onSaveEdit: () => void;
-
-  // Props pour le Modal de Création
   showCreateModal: boolean;
   newEntete: { fournisseurId: string; credit: string; typeVol: string };
   setNewEntete: (val: any) => void;
@@ -23,6 +19,42 @@ interface ProspectionModalsProps {
   onConfirmCreate: () => void;
 }
 
+// ─── Sous-composant isolé pour l'alerte ───────────────────────────────────────
+// IMPORTANT : en le séparant, ses re-renders n'affectent PAS le modal parent
+function FournisseurAlert({ fournisseurId }: { fournisseurId: string }) {
+  const { lastComment } = useLastComment(fournisseurId);
+
+  if (!fournisseurId || !lastComment?.alerte) return null;
+
+  const upper = lastComment.alerte.toUpperCase();
+  const isHigh = upper === 'ELEVE' || upper === 'TRES_ELEVE';
+  const isNormal = upper === 'NORMAL';
+
+  const style = isHigh
+    ? 'bg-red-50 border-red-400 text-red-900'
+    : isNormal
+    ? 'bg-orange-50 border-orange-400 text-orange-900'
+    : 'bg-green-50 border-green-400 text-green-900';
+
+  const icon = isHigh ? '🔴' : isNormal ? '🟠' : '🟢';
+
+  return (
+    <div className="fixed top-4 right-4 z-[9999] max-w-sm pointer-events-none">
+      <div className={`flex items-start gap-3 p-4 rounded-xl shadow-lg border ${style}`}>
+        <div className="shrink-0 mt-0.5 text-xl">{icon}</div>
+        <div className="flex-1">
+          <div className="font-semibold text-base mb-1">
+            Alerte fournisseur : {lastComment.alerte}
+          </div>
+          <p className="text-sm leading-tight">{lastComment.commentaire}</p>
+          <p className="text-xs mt-2 opacity-80">{lastComment.dateEnregistrement}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Composant principal ──────────────────────────────────────────────────────
 export default function ProspectionModals({
   selectedEntete,
   modalCommission,
@@ -39,91 +71,21 @@ export default function ProspectionModals({
   onCloseCreate,
   onConfirmCreate,
 }: ProspectionModalsProps) {
-
-  // ─── NOUVEAU : état pour le dernier commentaire ─────────────────
-  const [lastComment, setLastComment] = useState<{
-    commentaire: string;
-    alerte: 'FAIBLE' | 'MOYEN' | 'ELEVÉ' | string;
-    dateEnregistrement: string;
-  } | null>(null);
-
-  const [, setCommentLoading] = useState(false);
-  const [, setCommentError] = useState<string | null>(null);
-
-  // ─── Charger le commentaire quand le fournisseur change ────────
-  useEffect(() => {
-    const fournisseurId = newEntete.fournisseurId;
-    
-    if (!fournisseurId) {
-      setLastComment(null);
-      setCommentError(null);
-      return;
-    }
-
-    const fetchLastComment = async () => {
-      setCommentLoading(true);
-      setCommentError(null);
-      setLastComment(null);
-
-      try {
-        const response = await axios.get(
-          `/commentaires-fournisseur/fournisseur/${fournisseurId}/last`
-        );
-
-        // Même vérification que dans tes thunks
-        if (!response.data?.success) {
-          throw new Error(response.data?.message || 'Réponse invalide');
-        }
-
-        const data = response.data.data;
-
-        if (data) {
-          setLastComment({
-            commentaire: data.commentaire || '—',
-            alerte: data.alerte || 'INCONNU',
-            dateEnregistrement: data.dateEnregistrement
-              ? new Date(data.dateEnregistrement).toLocaleString('fr-FR')
-              : '—',
-          });
-        } else {
-          setLastComment(null);
-        }
-      } catch (err: any) {
-        console.error('Erreur chargement commentaire fournisseur:', err);
-        setCommentError(
-          err.response?.data?.message ||
-          err.message ||
-          'Impossible de charger le dernier commentaire'
-        );
-        setLastComment(null);
-      } finally {
-        setCommentLoading(false);
-      }
-    };
-
-    fetchLastComment();
-  }, [newEntete.fournisseurId]);
-  
   return (
     <>
-      {/* --- MODAL ÉDITION --- */}
+      {/* ── MODAL ÉDITION ── */}
       {selectedEntete && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            {/* Header modal */}
             <div className="p-6 border-b border-slate-200 flex justify-between items-center">
               <h3 className="text-xl font-bold text-slate-800">
                 Modifier l'entête de prospection
               </h3>
-              <button
-                onClick={onCloseEdit} // Adapté : au lieu de closeModal
-                className="text-slate-500 hover:text-slate-800"
-              >
+              <button onClick={onCloseEdit} className="text-slate-500 hover:text-slate-800">
                 <FiX size={24} />
               </button>
             </div>
 
-            {/* Contenu */}
             <div className="p-6 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -146,10 +108,10 @@ export default function ProspectionModals({
                   <label className="block text-sm font-medium text-slate-700 mb-1">Commission proposée</label>
                   <p className="text-slate-900">{selectedEntete.commissionPropose} %</p>
                 </div>
-
-                {/* Champ modifiable */}
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Commission appliquée *</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Commission appliquée *
+                  </label>
                   <input
                     type="number"
                     step="0.01"
@@ -162,22 +124,24 @@ export default function ProspectionModals({
                 </div>
               </div>
 
-              {/* Pied modal */}
               <div className="flex justify-end gap-4 pt-6 border-t border-slate-200">
                 <button
-                  onClick={onCloseEdit} // Adapté
+                  onClick={onCloseEdit}
                   disabled={isSaving}
                   className="px-6 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 disabled:opacity-50"
                 >
                   Annuler
                 </button>
                 <button
-                  onClick={onSaveEdit} // Adapté : au lieu de handleSaveModal
+                  onClick={onSaveEdit}
                   disabled={isSaving}
                   className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
                 >
                   {isSaving ? (
-                    <><span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span> Sauvegarde...</>
+                    <>
+                      <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                      Sauvegarde...
+                    </>
                   ) : 'Enregistrer'}
                 </button>
               </div>
@@ -186,23 +150,17 @@ export default function ProspectionModals({
         </div>
       )}
 
-      {/* --- MODAL CRÉATION --- */}
+      {/* ── MODAL CRÉATION ── */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full">
-            {/* Header */}
             <div className="p-6 border-b border-slate-200 flex justify-between items-center">
               <h3 className="text-xl font-bold text-slate-800">Nouvel entête de prospection</h3>
-              <button
-                onClick={onCloseCreate}
-                disabled={isCreating}
-                className="text-slate-500 hover:text-slate-800"
-              >
+              <button onClick={onCloseCreate} disabled={isCreating} className="text-slate-500 hover:text-slate-800">
                 <FiX size={24} />
               </button>
             </div>
 
-            {/* Contenu principal — UN SEUL conteneur space-y-6 */}
             <div className="p-6 space-y-6">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -235,41 +193,8 @@ export default function ProspectionModals({
                 )}
               </div>
 
-              {/* Section commentaire */}
-              {newEntete.fournisseurId && lastComment && lastComment.alerte && (
-                <div className="fixed top-4 right-4 z-50 max-w-sm animate-slide-in">
-                  <div className={`
-                    flex items-start gap-3 p-4 rounded-xl shadow-lg border
-                    ${lastComment.alerte.toUpperCase() === 'ELEVE' || lastComment.alerte.toUpperCase() === 'TRES_ELEVE'
-                      ? 'bg-red-50 border-red-400 text-red-900'
-                      : lastComment.alerte.toUpperCase() === 'NORMAL'
-                        ? 'bg-orange-50 border-orange-400 text-orange-900'
-                        : 'bg-green-50 border-green-400 text-green-900'}  // ← FAIBLE ou autre
-                  `}>
-                    <div className="shrink-0 mt-0.5">
-                      {lastComment.alerte.toUpperCase() === 'ELEVE' || lastComment.alerte.toUpperCase() === 'TRES_ELEVE'? (
-                        <span className="text-xl">🔴</span>
-                      ) : lastComment.alerte.toUpperCase() === 'NORMAL' ? (
-                        <span className="text-xl">🟠</span>
-                      ) : (
-                        <span className="text-xl">🟢</span>   // ← pour FAIBLE
-                      )}
-                    </div>
-                    
-                    <div className="flex-1">
-                      <div className="font-semibold text-base mb-1">
-                        Alerte fournisseur : {lastComment.alerte}
-                      </div>
-                      <p className="text-sm leading-tight">
-                        {lastComment.commentaire}
-                      </p>
-                      <p className="text-xs mt-2 opacity-80">
-                        {lastComment.dateEnregistrement}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
+              {/* Alerte fournisseur — isolée dans son propre composant */}
+              <FournisseurAlert fournisseurId={newEntete.fournisseurId} />
 
               {/* Crédit */}
               <div>
@@ -303,7 +228,7 @@ export default function ProspectionModals({
                 </select>
               </div>
 
-              {/* Pied du modal */}
+              {/* Pied */}
               <div className="flex justify-end gap-4 pt-4">
                 <button
                   onClick={onCloseCreate}
@@ -315,16 +240,14 @@ export default function ProspectionModals({
                 <button
                   onClick={onConfirmCreate}
                   disabled={isCreating || !newEntete.fournisseurId}
-                  className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl flex items-center gap-2"
+                  className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isCreating ? (
                     <>
-                      <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+                      <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
                       Création...
                     </>
-                  ) : (
-                    'Créer'
-                  )}
+                  ) : 'Créer'}
                 </button>
               </div>
             </div>
