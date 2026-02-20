@@ -271,7 +271,7 @@ export default function ProspectionDetail() {
     };
 
     if (!enteteId) {
-      return <div className="p-8 text-center text-red-600">ID entête manquant</div>;
+      return <div className="p-8 text-center text-red-600">ID en-tête manquant</div>;
     }
 
     if (loading) {
@@ -296,7 +296,7 @@ export default function ProspectionDetail() {
     if (!entete) {
       return (
         <div className="p-8 text-center text-amber-700 bg-amber-50 rounded-xl">
-          Entête non trouvé dans le store. Veuillez recharger la liste des entêtes.
+          En-tête non trouvé dans le store. Veuillez recharger la liste des en-têtes.
         </div>
       );
     }

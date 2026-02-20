@@ -438,7 +438,7 @@ const BenchmarkingDetailPage = () => {
               </div>
               <div>
                 <div className="text-xs font-semibold text-neutral-500 uppercase tracking-wide mb-1">
-                  Entête associée
+                  En-tête associée
                 </div>
                 <div className="text-sm font-mono text-neutral-900">
                   {detail.hotelProspectionEntete?.numeroEntete || '—'}

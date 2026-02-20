@@ -57,7 +57,7 @@ const HotelReservationsList = ({ prestationId, dossierNumero }: Props) => {
       <div className="mb-6">
         <h2 className="text-xl font-bold text-neutral-800">Réservations Hôtel</h2>
         <p className="text-sm text-neutral-500 mt-1">
-          Liste des entêtes de réservation hôtel associées
+          Liste des en-têtes de réservation hôtel associées
         </p>
       </div>
 

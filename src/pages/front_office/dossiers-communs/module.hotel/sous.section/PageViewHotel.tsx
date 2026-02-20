@@ -232,7 +232,7 @@ const PageViewHotel = () => {
                       : 'bg-neutral-900 text-white hover:bg-neutral-800 active:scale-95'
                   }`}
                 >
-                  {creating ? 'Création en cours...' : 'Créer une entête'}
+                  {creating ? 'Création en cours...' : 'Créer une en-tête'}
                 </button>
               </div>
             )}
@@ -305,7 +305,7 @@ const PageViewHotel = () => {
                   <tr className="border-b border-neutral-200 bg-neutral-50">
                     <th className=""></th>
                     <th className="px-6 py-3.5 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wide">
-                      N° Entête
+                      N° En-tête
                     </th>
                     <th className="px-6 py-3.5 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wide">
                       N° Dossier

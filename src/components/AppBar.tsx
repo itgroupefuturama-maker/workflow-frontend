@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { FiHelpCircle, FiBell, FiUser, FiChevronDown, FiLogOut, FiX ,FiTrash2, FiHome } from "react-icons/fi";
+import { FiHelpCircle, FiBell, FiUser, FiChevronDown, FiLogOut, FiX, FiTrash2, FiHome, FiCheck } from "react-icons/fi";
 import { useState, useRef, useEffect } from "react";
 import { logout } from '../app/authSlice';
 import { useDispatch, useSelector } from 'react-redux';
@@ -9,7 +9,6 @@ import axiosInstance from '../service/Axios';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
-// Fonction pour formater la date en "il y a X minutes/heures/jours"
 const formatRelativeTime = (dateString: string) => {
   const now = new Date();
   const date = new Date(dateString);
@@ -19,11 +18,24 @@ const formatRelativeTime = (dateString: string) => {
   const diffInDays = Math.floor(diffInHours / 24);
 
   if (diffInMinutes < 1) return "À l'instant";
-  if (diffInMinutes < 60) return `Il y a ${diffInMinutes} minute${diffInMinutes > 1 ? 's' : ''}`;
-  if (diffInHours < 24) return `Il y a ${diffInHours} heure${diffInHours > 1 ? 's' : ''}`;
-  if (diffInDays < 7) return `Il y a ${diffInDays} jour${diffInDays > 1 ? 's' : ''}`;
+  if (diffInMinutes < 60) return `Il y a ${diffInMinutes} min`;
+  if (diffInHours < 24) return `Il y a ${diffInHours}h`;
+  if (diffInDays < 7) return `Il y a ${diffInDays}j`;
   return new Date(dateString).toLocaleDateString('fr-FR');
 };
+
+// ── Hook : ferme un menu quand on clique en dehors ────────────────────────────
+function useClickOutside(ref: React.RefObject<HTMLElement | null>, onClose: () => void) {
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [ref, onClose]);
+}
 
 export default function AppBar() {
   const dispatch = useAppDispatch();
@@ -31,360 +43,324 @@ export default function AppBar() {
   const { pathname } = useLocation();
   const paths = pathname.split("/").filter(Boolean);
 
-  const [openUserMenu, setOpenUserMenu] = useState(false);
+  const [openUserMenu, setOpenUserMenu]         = useState(false);
   const [openProfileModal, setOpenProfileModal] = useState(false);
-  const [openNotifications, setOpenNotifications] = useState(false); // Nouveau : menu notifs
-  const [notifications, setNotifications] = useState<any[]>([]);
-  const [loadingNotifs, setLoadingNotifs] = useState(false);
+  const [openNotifications, setOpenNotifications] = useState(false);
+  const [notifications, setNotifications]       = useState<any[]>([]);
+  const [loadingNotifs, setLoadingNotifs]       = useState(false);
 
-  const userMenuRef = useRef<HTMLDivElement>(null);
-  const modalRef = useRef<HTMLDivElement>(null);
-  const notifRef = useRef<HTMLDivElement>(null);
+  const userMenuRef  = useRef<HTMLDivElement>(null);
+  const notifRef     = useRef<HTMLDivElement>(null);
+  const modalRef     = useRef<HTMLDivElement>(null);
 
   const user = useSelector((state: RootState) => state.auth.user);
 
-  const segmentLabels: Record<string, string> = {
-    "dossiers-communs": "Dossiers",
-    "dossier-detail": "Détails Dossier", // <--- Pour ta route fixe
-    "prestations": "Prestations",
-    "parametres": "Paramètres",
-    "accueil": "Accueil",
-    "pages": "Pages",
-    "client-facture": "Clients Facturés",
-    "client-beneficiaire": "Bénéficiaires",
-    "profil": "Profils",
-    "utilisateur": "Utilisateurs",
-    "nouveau": "Création",
-    "gerer": "Gestion",
-    "prospection": "Prospection",
-    "ticketing": "Billetterie",
-    "devis": "Devis",
-    "billet": "Billet"
-  };
+  // ── Fermeture au clic extérieur ──────────────────────────────────────────────
+  useClickOutside(notifRef,    () => setOpenNotifications(false));
+  useClickOutside(userMenuRef, () => setOpenUserMenu(false));
 
-  // === SOCKET.IO ) ===
+  // Fermeture modal profil au clic extérieur
   useEffect(() => {
-    if (openNotifications) {
-      fetchNotifications();
-    }
-  }, [openNotifications, user?.id]);
+    if (!openProfileModal) return;
+    const handler = (e: MouseEvent) => {
+      if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
+        setOpenProfileModal(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [openProfileModal]);
 
-  // Chargement des notifications
+  // ── Notifications ────────────────────────────────────────────────────────────
   const fetchNotifications = async () => {
     if (!user?.id) return;
     setLoadingNotifs(true);
     try {
-      const response = await axiosInstance.get(`/notifications/user/${user.id}`);
-      if (response.data.success) {
-        setNotifications(response.data.data);
-      }
-    } catch (error) {
-      console.error("Erreur lors du chargement des notifications:", error);
+      const res = await axiosInstance.get(`/notifications/user/${user.id}`);
+      if (res.data.success) setNotifications(res.data.data);
+    } catch (e) {
+      console.error(e);
     } finally {
       setLoadingNotifs(false);
     }
   };
 
-  // Charger au montage + à chaque ouverture du menu
-  useEffect(() => {
-    fetchNotifications();
-  }, [user?.id]);
+  useEffect(() => { fetchNotifications(); }, [user?.id]);
 
-  const handleOpenNotifications = () => {
-    setOpenNotifications(!openNotifications);
-    if (!openNotifications) {
-      fetchNotifications(); // Rafraîchir à l’ouverture
-    }
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
+
+  const markAsRead = async (id: string) => {
+    try {
+      await axiosInstance.patch(`/notifications/${id}/read`);
+      setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true } : n));
+    } catch (e) { console.error(e); }
   };
 
-  const unreadCount = notifications.filter(n => !n.isRead).length;
-
-  const handleLogout = () => {
-    dispatch(logout());
-    navigate('/login');
+  const deleteNotification = async (id: string) => {
+    try {
+      await axiosInstance.delete(`/notifications/${id}`);
+      setNotifications((prev) => prev.filter((n) => n.id !== id));
+    } catch (e) { console.error(e); }
   };
 
-  // Marquer une notification comme lue
-const markAsRead = async (notificationId: string) => {
-  try {
-    await axiosInstance.patch(`/notifications/${notificationId}/read`);
-    setNotifications(prev =>
-      prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n)
-    );
-  } catch (error) {
-    console.error("Erreur marquage comme lu:", error);
-  }
-};
+  const markAllAsRead = async () => {
+    if (!user?.id) return;
+    try {
+      await axiosInstance.patch(`/notifications/user/${user.id}/read-all`);
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    } catch (e) { console.error(e); }
+  };
 
-// Supprimer une notification
-const deleteNotification = async (notificationId: string) => {
-  if (!window.confirm("Supprimer cette notification ?")) return;
+  const handleLogout = () => { dispatch(logout()); navigate('/login'); };
 
-  try {
-    await axiosInstance.delete(`/notifications/${notificationId}`);
-    // Au lieu de filtrer par id, on garde seulement les ACTIF
-    // (plus sûr si le backend ne supprime pas vraiment)
-    setNotifications(prev => prev.filter(n => n.status === 'ACTIF'));
-  } catch (error) {
-    console.error("Erreur suppression notification:", error);
-  }
-};
-
-// Marquer toutes comme lues
-const markAllAsRead = async () => {
-  if (!user?.id) return;
-
-  try {
-    await axiosInstance.patch(`/notifications/user/${user.id}/read-all`);
-    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-  } catch (error) {
-    console.error("Erreur marquage tout comme lu:", error);
-  }
-};
-
-  // Calcul des profils actifs et modules accessibles
-  const profilsActifs = user?.profiles
-    ?.filter(p => p.status === 'ACTIF')
-    ?.map(p => p.profile.profil) || [];
-
-  const modulesAccessibles = user?.profiles
-    ?.filter(p => p.status === 'ACTIF')
-    ?.flatMap(p => p.profile.modules.map(m => m.module.nom)) || [];
+  const profilsActifs = user?.profiles?.filter((p) => p.status === 'ACTIF')?.map((p) => p.profile.profil) || [];
+  const modulesAccessibles = user?.profiles?.filter((p) => p.status === 'ACTIF')?.flatMap((p) => p.profile.modules.map((m) => m.module.nom)) || [];
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-slate-200 backdrop-blur-md px-5 py-2">
-      <div className="h-16 flex items-center justify-between">
-        <div className="flex items-center gap-8">
-          <Link to="/" className="flex items-center gap-2 group">
-            <div className="h-12 w-12 bg-white rounded-full flex items-center justify-center group-hover:rotate-6 transition-transform overflow-hidden">
-              <img src={logo} alt="Logo" className="h-full w-full object-cover rounded-md" />
-            </div>
-            <span className="font-bold text-gray-700 tracking-tight hidden sm:block">
-              AL BOURAQ Travel
-            </span>
-          </Link>
+    <>
+      <header className="stick p-1 top-0 z-50 bg-white border-b border-gray-100 px-4 sm:px-10">
+        <div className="h-14 flex items-center justify-between gap-4">
 
-          {/* On n'affiche le bouton que si "paths" n'est pas vide (donc pas sur "/") */}
-          {paths.length > 0 && (
-            <nav className="hidden md:flex items-center text-sm font-medium">
-              <div className="h-4 w-px bg-gray-200 mx-2" />
-              <button
-                onClick={() => navigate("/")}
-                className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-gray-700 py-2 px-5 ml-4 rounded-2xl transition-colors cursor-pointer"
-              >
-                <FiHome size={20} />
-                <span className="text-sm font-semibold">Accueil</span>
-              </button>
-            </nav>
-          )}
-        </div>
+          {/* ── Gauche : Logo + Accueil ── */}
+          <div className="flex items-center gap-4">
+            <Link to="/" className="flex items-center gap-2.5 group shrink-0">
+              <div className="h-8 w-8 rounded-lg overflow-hidden border border-gray-100 shadow-sm">
+                <img src={logo} alt="Logo" className="h-full w-full object-cover" />
+              </div>
+              <span className="font-bold text-gray-800 text-sm tracking-tight hidden sm:block">
+                AL BOURAQ
+              </span>
+            </Link>
 
-        {/* RIGHT : Icons & User */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 bg-gray-50 p-1 rounded-xl border border-gray-100">
-            <button className="p-2 text-gray-500 hover:bg-white hover:text-indigo-600 hover:shadow-sm rounded-lg transition-all">
-              <FiHelpCircle size={18} />
+            {paths.length > 0 && (
+              <nav className="ml-17 hidden md:flex items-center text-sm font-medium">
+                <div className="h-4 w-px bg-gray-200 mx-2" />
+                <button
+                  onClick={() => navigate("/")}
+                  className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-gray-700 py-2 px-5 ml-4 rounded-2xl transition-colors cursor-pointer"
+                >
+                  <FiHome size={20} />
+                  <span className="text-sm font-semibold">Accueil</span>
+                </button>
+              </nav>
+            )}
+          </div>
+
+          {/* ── Droite : Actions ── */}
+          <div className="flex items-center gap-1.5">
+
+            {/* Aide */}
+            <button className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all">
+              <FiHelpCircle size={17} />
             </button>
 
-            {/* === NOTIFICATIONS EN TEMPS RÉEL === */}
+            {/* ── Notifications ── */}
             <div className="relative" ref={notifRef}>
               <button
-                onClick={handleOpenNotifications}
-                className="relative p-2 text-gray-500 hover:bg-white hover:text-indigo-600 hover:shadow-sm rounded-lg transition-all"
+                onClick={() => {
+                  setOpenNotifications((prev) => !prev);
+                  fetchNotifications();
+                }}
+                className="relative p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all"
               >
-                <FiBell size={18} />
+                <FiBell size={17} />
                 {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 h-5 w-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center shadow-sm animate-pulse">
-                    {unreadCount > 99 ? '99+' : unreadCount}
+                  <span className="absolute top-1 right-1 h-4 w-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
               </button>
 
-              {/* Menu déroulant des notifications */}
               {openNotifications && (
-                <div className="absolute right-0 mt-3 w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-300">
-                  <div className="px-5 py-4 border-b border-gray-100 flex justify-between items-center">
-                    <h3 className="font-bold text-gray-800">Notifications</h3>
-                    <div className="flex items-center gap-3">
+                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50">
+
+                  {/* Header notifs */}
+                  <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
                       {unreadCount > 0 && (
-                        <button
-                          onClick={markAllAsRead}
-                          className="text-xs font-medium text-indigo-600 hover:text-indigo-700 underline"
-                        >
-                          Tout marquer comme lu
-                        </button>
+                        <span className="text-xs font-semibold text-white bg-red-500 px-1.5 py-0.5 rounded-full">
+                          {unreadCount}
+                        </span>
                       )}
-                      <span className="text-xs font-bold text-indigo-600">
-                        {unreadCount} non lue{unreadCount > 1 ? 's' : ''}
-                      </span>
                     </div>
+                    {unreadCount > 0 && (
+                      <button
+                        onClick={markAllAsRead}
+                        className="flex items-center gap-1 text-xs font-medium text-gray-500 hover:text-gray-800 transition-colors"
+                      >
+                        <FiCheck size={12} />
+                        Tout lire
+                      </button>
+                    )}
                   </div>
 
-                  <div className="max-h-96 overflow-y-auto">
+                  {/* Liste */}
+                  <div className="max-h-80 overflow-y-auto">
                     {loadingNotifs ? (
-                      <div className="p-8 text-center text-gray-400">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
-                        <p className="mt-3 text-sm">Chargement...</p>
+                      <div className="flex items-center justify-center py-10 gap-2">
+                        <div className="w-5 h-5 border-2 border-gray-200 border-t-gray-700 rounded-full animate-spin" />
+                        <span className="text-sm text-gray-400">Chargement...</span>
                       </div>
-                    ) : notifications.length === 0 ? (
-                      <div className="p-12 text-center text-gray-400">
-                        <FiBell size={40} className="mx-auto mb-4 opacity-50" />
-                        <p className="font-medium">Aucune notification</p>
+                    ) : notifications.filter((n) => n.status === 'ACTIF').length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-12">
+                        <FiBell size={28} className="text-gray-200 mb-2" />
+                        <p className="text-sm text-gray-400">Aucune notification</p>
                       </div>
                     ) : (
-                      <div className="divide-y divide-gray-100">
+                      <div className="divide-y divide-gray-50">
                         {notifications
-                        .filter(notif => notif.status === 'ACTIF') // On garde seulement les ACTIF
-                        .map((notif) => (
-                          <div
-                            key={notif.id}
-                            className={`p-4 hover:bg-indigo-50 transition-all group ${
-                              !notif.isRead ? 'bg-indigo-50/50' : ''
-                            }`}
-                          >
-                            <div className="flex items-start gap-3">
-                              <div className={`h-2 w-2 rounded-full mt-2 shrink-0 ${
-                                !notif.isRead ? 'bg-indigo-600 animate-ping' : 'bg-gray-300'
-                              }`} />
-                              <div className="flex-1">
-                                <p
-                                  onClick={() => markAsRead(notif.id)}
-                                  className="text-sm text-gray-800 font-medium cursor-pointer hover:text-indigo-700"
-                                >
+                          .filter((n) => n.status === 'ACTIF')
+                          .map((notif) => (
+                            <div
+                              key={notif.id}
+                              className={`flex items-start gap-3 px-4 py-3 group hover:bg-gray-50 transition-colors ${
+                                !notif.isRead ? 'bg-blue-50/40' : ''
+                              }`}
+                            >
+                              {/* Indicateur lu/non lu */}
+                              <div className="shrink-0 mt-1.5">
+                                <span className={`block w-2 h-2 rounded-full ${!notif.isRead ? 'bg-blue-500' : 'bg-gray-200'}`} />
+                              </div>
+
+                              {/* Contenu */}
+                              <div
+                                className="flex-1 min-w-0 cursor-pointer"
+                                onClick={() => !notif.isRead && markAsRead(notif.id)}
+                              >
+                                <p className={`text-sm leading-snug ${!notif.isRead ? 'font-medium text-gray-800' : 'text-gray-500'}`}>
                                   {notif.description}
-                                  {!notif.isRead && (
-                                    <span className="ml-2 text-xs bg-indigo-600 text-white px-2 py-0.5 rounded-full">
-                                      Nouveau
-                                    </span>
-                                  )}
                                 </p>
-                                <p className="text-xs text-gray-500 mt-1">
+                                <p className="text-xs text-gray-400 mt-0.5">
                                   {formatRelativeTime(notif.createdAt)}
                                 </p>
                               </div>
 
+                              {/* Supprimer */}
                               <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  deleteNotification(notif.id);
-                                }}
-                                className="opacity-0 group-hover:opacity-100 p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                                title="Supprimer"
+                                onClick={(e) => { e.stopPropagation(); deleteNotification(notif.id); }}
+                                className="shrink-0 p-1 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-md transition-all opacity-0 group-hover:opacity-100"
                               >
-                                <FiTrash2 size={16} />
+                                <FiTrash2 size={13} />
                               </button>
                             </div>
-                          </div>
-                        ))}
+                          ))}
                       </div>
                     )}
                   </div>
 
-                  <div className="px-5 py-3 bg-gray-50 border-t border-gray-100 text-center">
-                    <button className="text-sm font-medium text-indigo-600 hover:text-indigo-700">
+                  {/* Footer notifs */}
+                  <div className="px-4 py-2.5 border-t border-gray-100">
+                    <button className="w-full text-center text-xs font-medium text-gray-500 hover:text-gray-800 transition-colors py-1">
                       Voir toutes les notifications
                     </button>
                   </div>
                 </div>
               )}
             </div>
-          </div>
 
-          <div className="h-8 w-px bg-gray-100 mx-1" />
+            <div className="w-px h-5 bg-gray-200 mx-1" />
 
-          {/* User Menu */}
-          <div className="relative" ref={userMenuRef}>
-            <button
-              onClick={() => setOpenUserMenu(!openUserMenu)}
-              className="flex items-center gap-3 p-1 pr-3 hover:bg-gray-50 rounded-xl transition-all border border-transparent hover:border-gray-100"
-            >
-              <div className="h-9 w-9 bg-linear-to-tr from-indigo-500 to-purple-500 rounded-lg flex items-center justify-center text-white font-bold shadow-sm">
-                {/* {user ? user.prenom[0].toUpperCase() : 'A'} */}
-                A
-              </div>
-              <div className="hidden lg:flex flex-col items-start leading-none text-left">
-                <span className="text-sm font-bold text-gray-800 italic">
-                  {user ? `${user.prenom} ${user.nom}` : 'Administrateur'}
-                </span>
-                <span className="text-[10px] text-gray-400 uppercase font-semibold tracking-wider">Online</span>
-              </div>
-              <FiChevronDown size={14} className={`text-gray-400 transition-transform duration-200 ${openUserMenu ? 'rotate-180' : ''}`} />
-            </button>
-
-            {openUserMenu && (
-              <div className="absolute right-0 mt-3 w-64 bg-white rounded-2xl shadow-2xl border border-gray-100 py-3 animate-in fade-in slide-in-from-top-2 duration-300">
-                <div className="px-5 py-3 border-b border-gray-50">
-                  <p className="text-xs text-gray-400 font-medium uppercase tracking-widest">Mon Compte</p>
+            {/* ── Menu utilisateur ── */}
+            <div className="relative" ref={userMenuRef}>
+              <button
+                onClick={() => setOpenUserMenu((prev) => !prev)}
+                className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-100 rounded-lg transition-all"
+              >
+                {/* Avatar */}
+                <div className="h-7 w-7 bg-gray-900 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0">
+                  {user?.prenom?.[0]?.toUpperCase() ?? 'A'}
                 </div>
+                <div className="hidden lg:flex flex-col items-start leading-none">
+                  <span className="text-xs font-semibold text-gray-800">
+                    {user ? `${user.prenom} ${user.nom}` : 'Administrateur'}
+                  </span>
+                  <span className="text-[10px] text-gray-400 mt-0.5 font-medium">En ligne</span>
+                </div>
+                <FiChevronDown
+                  size={13}
+                  className={`text-gray-400 transition-transform duration-200 ${openUserMenu ? 'rotate-180' : ''}`}
+                />
+              </button>
 
-                {/* Bouton Profil → ouvre le modal */}
-                <button
-                  onClick={() => {
-                    setOpenProfileModal(true);
-                    setOpenUserMenu(false);
-                  }}
-                  className="w-full flex items-center gap-3 px-5 py-3 text-sm text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 transition-colors font-medium"
-                >
-                  <FiUser className="text-lg" /> Mon Profil
-                </button>
-                <div className="h-px bg-gray-50 mx-4 my-1" />
+              {openUserMenu && (
+                <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-xl border border-gray-100 py-1.5 z-50">
+                  <div className="px-4 py-2.5 border-b border-gray-50 mb-1">
+                    <p className="text-xs font-semibold text-gray-800 truncate">
+                      {user ? `${user.prenom} ${user.nom}` : 'Administrateur'}
+                    </p>
+                    <p className="text-xs text-gray-400 truncate mt-0.5">{user?.email}</p>
+                  </div>
 
-                <button
-                  onClick={handleLogout}
-                  className="w-full flex items-center gap-3 px-5 py-3 text-sm text-red-600 hover:bg-red-50 transition-colors font-medium"
-                >
-                  <FiLogOut className="text-lg" /> Déconnexion
-                </button>
-              </div>
-            )}
+                  <button
+                    onClick={() => { setOpenProfileModal(true); setOpenUserMenu(false); }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                  >
+                    <FiUser size={14} />
+                    Mon profil
+                  </button>
+
+                  <div className="h-px bg-gray-50 mx-3 my-1" />
+
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors"
+                  >
+                    <FiLogOut size={14} />
+                    Déconnexion
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* === MODAL PROFIL === */}
+      {/* ── Modal Profil ── */}
       {openProfileModal && user && (
-        <div className="fixed top-100 inset-0 z-999 flex items-center justify-center bg-black/500 backdrop-blur-sm animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div
             ref={modalRef}
-            className="bg-white rounded-3xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden animate-in zoom-in-95 duration-300"
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
           >
-            {/* Header du modal */}
-            <div className="bg-linear-to-r from-indigo-500 to-purple-600 text-white p-6 relative">
+            {/* Header modal */}
+            <div className="bg-gray-950 px-6 py-5 relative">
               <button
                 onClick={() => setOpenProfileModal(false)}
-                className="absolute top-4 right-4 p-2 bg-white/20 hover:bg-white/30 rounded-lg transition-all"
+                className="absolute top-4 right-4 p-1.5 text-gray-500 hover:text-white hover:bg-white/10 rounded-lg transition-all"
               >
-                <FiX size={18} />
+                <FiX size={16} />
               </button>
               <div className="flex items-center gap-4">
-                <div className="h-20 w-20 bg-white rounded-full flex items-center justify-center text-3xl font-black text-indigo-600 shadow-lg">
+                <div className="h-14 w-14 bg-white rounded-xl flex items-center justify-center text-2xl font-black text-gray-900 shrink-0">
                   {user.prenom[0].toUpperCase()}
                 </div>
                 <div>
-                  <h2 className="text-2xl font-black">{user.prenom} {user.nom}</h2>
-                  <p className="text-sm opacity-90">{user.email}</p>
+                  <h2 className="text-white font-bold text-lg">{user.prenom} {user.nom}</h2>
+                  <p className="text-gray-400 text-xs mt-0.5">{user.email}</p>
                 </div>
               </div>
             </div>
 
             {/* Contenu */}
             <div className="p-6 space-y-5">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-gray-400 uppercase text-xs tracking-wider">Pseudo</p>
-                  <p className="font-bold text-gray-800">{user.pseudo}</p>
-                </div>
-                <div>
-                  <p className="text-gray-400 uppercase text-xs tracking-wider">Département</p>
-                  <p className="font-bold text-gray-800">{user.departement}</p>
-                </div>
+              <div className="grid grid-cols-2 gap-4">
+                {[
+                  { label: 'Pseudo',       value: user.pseudo },
+                  { label: 'Département',  value: user.departement },
+                ].map(({ label, value }) => (
+                  <div key={label}>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">{label}</p>
+                    <p className="text-sm font-semibold text-gray-800">{value || '—'}</p>
+                  </div>
+                ))}
+
                 <div className="col-span-2">
-                  <p className="text-gray-400 uppercase text-xs tracking-wider">Statut du compte</p>
-                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold mt-1 ${
-                    user.status === 'ACTIF'
-                      ? 'bg-emerald-100 text-emerald-700'
-                      : 'bg-red-100 text-red-700'
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Statut</p>
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
+                    user.status === 'ACTIF' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
                   }`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${user.status === 'ACTIF' ? 'bg-emerald-500' : 'bg-red-500'}`} />
                     {user.status}
                   </span>
                 </div>
@@ -392,10 +368,10 @@ const markAllAsRead = async () => {
 
               {profilsActifs.length > 0 && (
                 <div>
-                  <p className="text-gray-400 uppercase text-xs tracking-wider mb-2">Profils actifs</p>
-                  <div className="flex flex-wrap gap-2">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Profils actifs</p>
+                  <div className="flex flex-wrap gap-1.5">
                     {profilsActifs.map((profil, i) => (
-                      <span key={i} className="px-3 py-1.5 bg-indigo-100 text-indigo-700 rounded-full text-sm font-semibold">
+                      <span key={i} className="px-2.5 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-semibold">
                         {profil}
                       </span>
                     ))}
@@ -405,10 +381,10 @@ const markAllAsRead = async () => {
 
               {modulesAccessibles.length > 0 && (
                 <div>
-                  <p className="text-gray-400 uppercase text-xs tracking-wider mb-2">Modules accessibles</p>
-                  <div className="flex flex-wrap gap-2">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Modules accessibles</p>
+                  <div className="flex flex-wrap gap-1.5">
                     {[...new Set(modulesAccessibles)].map((module, i) => (
-                      <span key={i} className="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-full text-sm font-medium">
+                      <span key={i} className="px-2.5 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium">
                         {module}
                       </span>
                     ))}
@@ -417,10 +393,11 @@ const markAllAsRead = async () => {
               )}
             </div>
 
-            <div className="bg-gray-50 px-6 py-4 flex justify-end">
+            {/* Footer */}
+            <div className="bg-gray-50 border-t border-gray-100 px-6 py-3.5 flex justify-end">
               <button
                 onClick={() => setOpenProfileModal(false)}
-                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition-all"
+                className="px-5 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg hover:bg-gray-800 transition-colors"
               >
                 Fermer
               </button>
@@ -428,6 +405,6 @@ const markAllAsRead = async () => {
           </div>
         </div>
       )}
-    </header>
+    </>
   );
 }

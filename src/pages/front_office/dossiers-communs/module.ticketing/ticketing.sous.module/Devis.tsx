@@ -195,7 +195,7 @@ export default function Devis () {
   if (!enteteId) {
     return (
       <div className="min-h-screen bg-[#F8FAFC] p-8 text-center text-red-600">
-        ID de l'entête manquant dans l'URL
+        ID de l'en-tête manquant dans l'URL
       </div>
     );
   }
@@ -221,7 +221,7 @@ export default function Devis () {
         {/* Header */}
         <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 gap-4">
           <h1 className="text-2xl md:text-3xl font-bold text-slate-800">
-            Devis liés à l'entête
+            Devis liés à l'en-tête
           </h1>
         </header>
 
@@ -243,7 +243,7 @@ export default function Devis () {
             {devisList.length === 0 ? (
               <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
                 <p className="text-slate-600 text-lg font-medium">
-                  Aucun devis généré pour cet entête.
+                  Aucun devis généré pour cet en-tête.
                 </p>
               </div>
             ) : (

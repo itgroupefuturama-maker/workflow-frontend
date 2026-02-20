@@ -599,7 +599,7 @@ const HotelReservationDetail = () => {
               <div className="bg-gray-50 border-b border-gray-200 px-6 py-4 flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">BC à approuver</h3>
-                  <p className="text-sm text-gray-500 mt-0.5">Entête : {entete.HotelProspectionEntete.numeroEntete}</p>
+                  <p className="text-sm text-gray-500 mt-0.5">En-tête : {entete.HotelProspectionEntete.numeroEntete}</p>
                 </div>
                 <button onClick={() => setShowApprouverModal(false)} className="text-gray-400 hover:text-gray-600 p-1 hover:bg-gray-100 rounded">✕</button>
               </div>
@@ -767,7 +767,7 @@ const HotelReservationDetail = () => {
                 </div>
                 <div className="bg-gray-50 border border-gray-200 rounded p-3 space-y-1">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-500">Entête</span>
+                    <span className="text-gray-500">En-tête</span>
                     <span className="font-semibold">{entete.HotelProspectionEntete.numeroEntete}</span>
                   </div>
                   <div className="flex justify-between text-sm">

@@ -121,7 +121,7 @@ export default function PageView() {
               className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-medium shadow-sm transition-all active:scale-[0.98]"
             >
               <FiPlus size={18} />
-              Ajouter un entête
+              Ajouter un en-tête
             </button>
           </div>
 
@@ -162,7 +162,7 @@ export default function PageView() {
           {/* États de chargement et erreurs */}
           {loadingEntetes ? (
             <div className="text-center py-12 text-slate-400 animate-pulse bg-white rounded-2xl border border-slate-100">
-              Chargement des entêtes...
+              Chargement des en-têtes...
             </div>
           ) : errorEntetes ? (
             <div className="text-center py-8 text-red-600 bg-red-50 rounded-xl border border-red-100">
@@ -171,7 +171,7 @@ export default function PageView() {
           ) : entetes.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-slate-400 bg-white rounded-2xl border-2 border-dashed border-slate-200">
               <FiClock size={48} className="mb-4 opacity-30" />
-              <p className="text-lg font-medium">Aucun entête de prospection</p>
+              <p className="text-lg font-medium">Aucun en-tête de prospection</p>
               <p className="text-sm mt-2">Cliquez sur le bouton ci-dessus pour commencer.</p>
             </div>
           ) : (
@@ -182,7 +182,7 @@ export default function PageView() {
                       <thead className="bg-slate-50">
                         <tr>
                           <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                            N° Entête
+                            N° En-tête
                           </th>
                           <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                             Type Vol
@@ -243,7 +243,7 @@ export default function PageView() {
                                 <button
                                   onClick={() => openEditModal(entete)}
                                   className="p-2 text-indigo-600 hover:text-indigo-900 hover:bg-indigo-50 rounded-md transition-colors"
-                                  title="Modifier cet entête"
+                                  title="Modifier cet en-tête"
                                 >
                                   Modifier
                                 </button>
@@ -323,7 +323,7 @@ export default function PageView() {
                         N° Devis
                       </th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
-                        N° Entête
+                        N° En-tête
                       </th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
                         Statut

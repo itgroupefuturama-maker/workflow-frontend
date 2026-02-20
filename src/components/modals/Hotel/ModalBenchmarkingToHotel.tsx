@@ -274,7 +274,7 @@ const ModalBenchmarkingToHotel: React.FC<Props> = ({
                 {/* Récap */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
-                    <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Entête</p>
+                    <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">En-tête</p>
                     <p className="text-sm font-semibold text-gray-900">{entete.numeroEntete}</p>
                   </div>
                   <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">

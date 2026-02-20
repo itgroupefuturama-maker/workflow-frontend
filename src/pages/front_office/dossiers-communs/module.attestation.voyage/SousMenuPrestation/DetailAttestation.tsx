@@ -147,7 +147,7 @@ const DetailAttestation = () => {
               <h2 className="text-lg font-semibold text-gray-700 mb-4">Informations principales</h2>
               <dl className="space-y-4">
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">N° Entête</dt>
+                  <dt className="text-sm font-medium text-gray-500">N° En-tête</dt>
                   <dd className="mt-1 text-gray-900 font-medium text-lg">
                     {selectedEntete.numeroEntete}
                   </dd>

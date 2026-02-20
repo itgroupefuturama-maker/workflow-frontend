@@ -62,7 +62,7 @@ export default function ProspectionModals({
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-slate-200 flex justify-between items-center">
               <h3 className="text-xl font-bold text-slate-800">
-                Modifier l'entête de prospection
+                Modifier l'en-tête de prospection
               </h3>
               <button onClick={onCloseEdit} className="text-slate-500 hover:text-slate-800">
                 <FiX size={24} />
@@ -72,7 +72,7 @@ export default function ProspectionModals({
             <div className="p-6 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">N° Entête</label>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">N° En-tête</label>
                   <p className="text-slate-900 font-medium">{selectedEntete.numeroEntete}</p>
                 </div>
                 <div>
@@ -138,7 +138,7 @@ export default function ProspectionModals({
         <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full">
             <div className="p-6 border-b border-slate-200 flex justify-between items-center">
-              <h3 className="text-xl font-bold text-slate-800">Nouvel entête de prospection</h3>
+              <h3 className="text-xl font-bold text-slate-800">Nouvel en-tête de prospection</h3>
               <button onClick={onCloseCreate} disabled={isCreating} className="text-slate-500 hover:text-slate-800">
                 <FiX size={24} />
               </button>
@@ -147,7 +147,7 @@ export default function ProspectionModals({
             <div className="p-6 space-y-6">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Ajouter une nouvelle entête pour un autre prospection
+                  Ajouter une nouvelle en-tête pour un autre prospection
                 </label>
               </div>
 
@@ -210,7 +210,7 @@ export default function ProspectionModals({
                 >
                   <option value="NATIONAL">Nationale</option>
                   <option value="LONG_COURRIER">Long courrier</option>
-                  <option value="REGIONAL">Regionale</option>
+                  <option value="REGIONAL">Régionale</option>
                 </select>
               </div>
 

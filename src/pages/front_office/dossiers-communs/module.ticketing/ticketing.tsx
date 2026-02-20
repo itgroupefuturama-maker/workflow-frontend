@@ -141,7 +141,7 @@ const HomePageTicketing = () => {
         })
       ).unwrap();
 
-      alert("Entête créé avec succès !");
+      alert("En-tête créé avec succès !");
       closeCreateModal();
       // La liste est déjà mise à jour via le slice (push optimiste)
     } catch (err: any) {
