@@ -19,30 +19,30 @@ import { fetchArticles } from '../app/back_office/articlesSlice';
 import { fetchFournisseurs } from '../app/back_office/fournisseursSlice';
 import { PARAMETRES } from '../constants/parametres';
 import type { RootState, AppDispatch } from '../app/store';
-import { FiRefreshCw, FiArrowRight } from 'react-icons/fi';
+import { FiRefreshCw, FiChevronRight, FiActivity } from 'react-icons/fi';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
 function ListeParametre() {
   const dispatch = useAppDispatch();
 
-  const { loading: privilegesLoading } = useSelector((state: RootState) => state.privileges);
-  const { loading: profilesLoading } = useSelector((state: RootState) => state.profiles);
-  const { loading: autorisationsLoading } = useSelector((state: RootState) => state.autorisations);
-  const { loading: usersLoading } = useSelector((state: RootState) => state.users);
-  const { loading: transactionTypesLoading } = useSelector((state: RootState) => state.transactionTypes);
-  const { loading: transactionsLoading } = useSelector((state: RootState) => state.transactions);
-  const { loading: modulesLoading } = useSelector((state: RootState) => state.modules);
-  const { loading: modelesLoading } = useSelector((state: RootState) => state.modeles);
-  const { loading: commissionLoading } = useSelector((state: RootState) => state.commissions);
-  const { loading: numerotationLoading } = useSelector((state: RootState) => state.numerotation);
-  const { loading: milesLoading } = useSelector((state: RootState) => state.miles);
-  const { loading: piecesLoading } = useSelector((state: RootState) => state.pieces);
+  const { loading: privilegesLoading }          = useSelector((state: RootState) => state.privileges);
+  const { loading: profilesLoading }            = useSelector((state: RootState) => state.profiles);
+  const { loading: autorisationsLoading }       = useSelector((state: RootState) => state.autorisations);
+  const { loading: usersLoading }               = useSelector((state: RootState) => state.users);
+  const { loading: transactionTypesLoading }    = useSelector((state: RootState) => state.transactionTypes);
+  const { loading: transactionsLoading }        = useSelector((state: RootState) => state.transactions);
+  const { loading: modulesLoading }             = useSelector((state: RootState) => state.modules);
+  const { loading: modelesLoading }             = useSelector((state: RootState) => state.modeles);
+  const { loading: commissionLoading }          = useSelector((state: RootState) => state.commissions);
+  const { loading: numerotationLoading }        = useSelector((state: RootState) => state.numerotation);
+  const { loading: milesLoading }               = useSelector((state: RootState) => state.miles);
+  const { loading: piecesLoading }              = useSelector((state: RootState) => state.pieces);
   const { loading: clientBeneficiairesLoading } = useSelector((state: RootState) => state.clientBeneficiaires);
-  const { loading: devisTransactionsLoading } = useSelector((state: RootState) => state.devisTransactions);
-  const { loading: clientFacturesLoading } = useSelector((state: RootState) => state.clientFactures);
-  const { loading: articlesLoading } = useSelector((state: RootState) => state.articles);
-  const { loading: fournisseursLoading } = useSelector((state: RootState) => state.fournisseurs);
+  const { loading: devisTransactionsLoading }   = useSelector((state: RootState) => state.devisTransactions);
+  const { loading: clientFacturesLoading }      = useSelector((state: RootState) => state.clientFactures);
+  const { loading: articlesLoading }            = useSelector((state: RootState) => state.articles);
+  const { loading: fournisseursLoading }        = useSelector((state: RootState) => state.fournisseurs);
 
   const anyLoading =
     privilegesLoading || profilesLoading || autorisationsLoading || usersLoading ||
@@ -72,77 +72,67 @@ function ListeParametre() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-[1400px] mx-auto px-6 py-10">
+    <div className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-[1600px] mx-auto animate-in fade-in duration-500">
 
-        {/* ── Header ── */}
-        <div className="mb-10">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-1.5">
-                Back Office
-              </p>
-              <h1 className="text-2xl font-bold text-gray-900">
-                Console d'administration
-              </h1>
-              <p className="text-sm text-gray-500 mt-1">
-                Configurez et gérez les paramètres fondamentaux de la plateforme Al Bouraq.
-              </p>
-            </div>
+      {/* ── Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 mb-8 sm:mb-10">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
+            <FiActivity className="text-indigo-600 shrink-0" />
+            Console d'Administration
+          </h1>
+          <p className="text-gray-500 mt-1 font-medium text-sm sm:text-base">
+            Configurez les fondations techniques de votre plateforme.
+          </p>
+        </div>
+        <button
+          onClick={handleRefreshAll}
+          disabled={anyLoading}
+          className="flex items-center gap-2 bg-white border border-gray-200 text-gray-600 px-5 py-2.5 rounded-xl font-bold shadow-sm hover:bg-gray-50 hover:text-indigo-600 transition-all active:scale-95 disabled:opacity-50 self-start sm:self-auto shrink-0"
+        >
+          <FiRefreshCw className={anyLoading ? 'animate-spin' : ''} />
+          {anyLoading ? 'Mise à jour...' : 'Actualiser les données'}
+        </button>
+      </div>
 
-            <button
-              onClick={handleRefreshAll}
-              disabled={anyLoading}
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-white border border-gray-200 text-gray-600 text-sm font-medium rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+      {/* ── Grille ── */}
+      <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
+        {PARAMETRES.map((item) => {
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.path}
+              to={`/parametre/${item.path}`}
+              className="group relative bg-white border border-gray-100 p-4 sm:p-5 lg:p-6 rounded-2xl shadow-sm hover:shadow-xl hover:shadow-indigo-500/10 hover:-translate-y-1 transition-all duration-300 overflow-hidden"
             >
-              <FiRefreshCw size={14} className={anyLoading ? 'animate-spin' : ''} />
-              {anyLoading ? 'Actualisation...' : 'Tout actualiser'}
-            </button>
-          </div>
-
-          {/* Ligne séparatrice */}
-          <div className="mt-6 h-px bg-gray-200" />
-        </div>
-
-        {/* ── Compteur ── */}
-        <p className="text-xs text-gray-400 font-medium mb-5 uppercase tracking-widest">
-          {PARAMETRES.length} modules disponibles
-        </p>
-
-        {/* ── Grille de cartes ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {PARAMETRES.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.path}
-                to={`/parametre/${item.path}`}
-                className="group bg-white border border-gray-200 rounded-xl p-5 hover:border-blue-300 hover:shadow-md transition-all duration-200 flex flex-col justify-between min-h-[140px]"
-              >
-                {/* Icône */}
-                <div className="flex items-start justify-between">
-                  <div className="p-2 rounded-lg bg-gray-100 text-blue-500 group-hover:bg-gray-900 group-hover:text-white transition-all duration-200">
-                    <Icon size={18} />
-                  </div>
-                  <FiArrowRight
-                    size={14}
-                    className="text-gray-300 group-hover:text-gray-900 group-hover:translate-x-0.5 -translate-y-0.5 transition-all duration-200"
-                  />
+              {/* Icône */}
+              <div className="flex items-start justify-between mb-3 sm:mb-4">
+                <div className="p-2 sm:p-3 rounded-xl bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors duration-300">
+                  <Icon size={20} className="sm:hidden" />
+                  <Icon size={28} className="hidden sm:block" />
                 </div>
+              </div>
 
-                {/* Label */}
-                <div className="mt-4">
-                  <h3 className="text-sm font-semibold text-gray-800 group-hover:text-gray-900 leading-snug">
-                    {item.label}
-                  </h3>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    Gérer les configurations
-                  </p>
+              {/* Label */}
+              <div className="mt-3 sm:mt-6">
+                <h3 className="text-sm sm:text-lg font-bold text-gray-800 group-hover:text-indigo-700 leading-snug">
+                  {item.label}
+                </h3>
+                <div className="hidden sm:flex items-center gap-1 text-sm text-gray-400 mt-1 font-medium">
+                  Gérer les configurations
+                  <FiChevronRight className="group-hover:translate-x-1 transition-transform" />
                 </div>
-              </Link>
-            );
-          })}
-        </div>
+                {/* Version mobile courte */}
+                <p className="flex sm:hidden items-center gap-0.5 text-xs text-gray-400 mt-0.5 font-medium">
+                  Gérer <FiChevronRight size={11} className="group-hover:translate-x-0.5 transition-transform" />
+                </p>
+              </div>
+
+              {/* Barre décorative */}
+              <div className="absolute bottom-0 left-0 h-1 bg-indigo-600 rounded-b-2xl transition-all duration-500 w-0 group-hover:w-full opacity-50" />
+            </Link>
+          );
+        })}
       </div>
     </div>
   );
