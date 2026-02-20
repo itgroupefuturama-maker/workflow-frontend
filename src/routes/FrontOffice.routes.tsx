@@ -1,11 +1,11 @@
 import { Navigate, Route } from "react-router-dom";
 import HomePage from "../pages/front_office/HomePage";
-import DossierCommunForm from "../pages/front_office/dossiers-communs/DossierCommunForm";
-import DossierCommunDetail from "../pages/front_office/dossiers-communs/DossierCommunDetail";
-import DossierCommunManage from "../pages/front_office/dossiers-communs/DossierCommunManage";
-import PrestationDetail from "../pages/front_office/dossiers-communs/module.ticketing/PrestationDetail";
+import DossierCommunForm from "../pages/front_office/dossiers-communs/module.dossier.commun/DossierCommunForm";
+import DossierCommunDetail from "../pages/front_office/dossiers-communs/module.dossier.commun/DossierCommunDetail";
+import DossierCommunManage from "../pages/front_office/dossiers-communs/module.dossier.commun/DossierCommunManage";
+
 import ToDoList from "../pages/front_office/dossiers-communs/todolist/ToDoList";
-import Prospection from "../pages/front_office/dossiers-communs/prospection/Prospection";
+import Prospection from "../pages/front_office/dossiers-communs/module.ticketing/prospection/Prospection";
 import ParametreTicketing from "../pages/front_office/dossiers-communs/module.ticketing/ticketing.sous.module/ParamétreTicketing";
 import Devis from "../pages/front_office/dossiers-communs/module.ticketing/ticketing.sous.module/Devis";
 import Billet from "../pages/front_office/dossiers-communs/module.ticketing/ticketing.sous.module/Billet";
@@ -13,9 +13,7 @@ import AccueilView from "../pages/front_office/dossiers-communs/module.ticketing
 import ParametreView from "../pages/front_office/dossiers-communs/module.ticketing/ticketing.sous.module/SousMenuPrestation/ParametreView";
 import PageView from "../pages/front_office/dossiers-communs/module.ticketing/ticketing.sous.module/SousMenuPrestation/PageView";
 import DossierCommun from "../pages/front_office/dossiers-communs/module.dossier.commun/DossierCommun";
-import TicketingPage from "../pages/front_office/dossiers-communs/module.ticketing/ticketing";
 import Attestation from "../pages/front_office/dossiers-communs/module.attestation.voyage/Attestation";
-import AttestationListPage from "../pages/front_office/dossiers-communs/module.attestation.voyage/PageAttestationList";
 import PageViewAttestation from "../pages/front_office/dossiers-communs/module.attestation.voyage/SousMenuPrestation/PageView";
 import DetailAttestation from "../pages/front_office/dossiers-communs/module.attestation.voyage/SousMenuPrestation/DetailAttestation";
 import Parametre from "../pages/front_office/dossiers-communs/module.parametre/Parametre";
@@ -26,6 +24,8 @@ import AccueilViewHotel from "../pages/front_office/dossiers-communs/module.hote
 import ListeDossierByModule from "../pages/front_office/dossiers-communs/ListeDossierByModule";
 import BenchmarkingDetailPage from "../pages/front_office/dossiers-communs/module.hotel/sous.section/sous.section.page/BenchmarkingDetailPage";
 import HotelReservationDetail from "../pages/front_office/dossiers-communs/module.hotel/sous.section/sous.section.page/HotelReservationDetail";
+import PageHotelDevis from "../pages/front_office/dossiers-communs/module.hotel/sous.section/sous.section.page/PageHotelDevis";
+import HomePageTicketing from "../pages/front_office/dossiers-communs/module.ticketing/ticketing";
 
 export function frontOfficeRoutes() {
   return (
@@ -34,12 +34,15 @@ export function frontOfficeRoutes() {
       <Route path="dossiers-communs" element={<DossierCommun />} />
       <Route path="dossiers-communs/liste-by-module/:module" element={<ListeDossierByModule />} />
       <Route path="dossiers-communs/todolist" element={<ToDoList />} />
-      <Route path="dossiers-communs/ticketing/list" element={<TicketingPage />} />
+
+      {/* <Route path="dossiers-communs/ticketing/list" element={<TicketingPage />} /> */}
       <Route path="dossiers-communs/nouveau" element={<DossierCommunForm />} />
       {/* Plus de route imbriquée pour prestation */}
       <Route path="dossiers-communs/dossier-detail" element={<DossierCommunDetail />} />
       <Route path="dossiers-communs/:id/gerer" element={<DossierCommunManage />} />
-      <Route path="dossiers-communs/:prestationId" element={<PrestationDetail />}>
+
+
+      <Route path="dossiers-communs/ticketing" element={<HomePageTicketing />}>
         {/* Les routes enfants s'affichent à l'endroit où tu mettrais <Outlet /> dans PrestationDetail */}
         <Route index element={<Navigate to="accueil" replace />} />
         <Route path="accueil" element={<AccueilView />} />
@@ -52,6 +55,7 @@ export function frontOfficeRoutes() {
           <Route path="billet/:enteteId" element={<Billet />} />
         </Route>
       </Route>
+
       {/* <Route path="dossiers-communs/:prestationId/prospection/:enteteId" element={<Prospection />} /> */}
       <Route path="dossiers-communs/ticketing/parametres" element={<ParametreTicketing />} />
       <Route path="dossiers-communs/attestation" element={<Attestation />} >
@@ -61,8 +65,9 @@ export function frontOfficeRoutes() {
         <Route path="pages" element={<PageViewAttestation />} />
         <Route path="details" element={<DetailAttestation />} />
       </Route>
-      <Route path="dossiers-communs/attestation/list" element={<AttestationListPage />} />
+
       <Route path="dossiers-communs/parametre" element={<Parametre />} />
+      
       <Route path="dossiers-communs/hotel" element={<HomePageHotel />}>
         <Route index element={<Navigate to="accueil" replace />} />
         <Route path="accueil" element={<AccueilViewHotel />} />
@@ -70,6 +75,7 @@ export function frontOfficeRoutes() {
         <Route path="pages" element={<PageViewHotel />} />
         <Route path="details" element={<BenchmarkingDetailPage />} />
         <Route path="detailsHotel/:enteteId" element={<HotelReservationDetail />} />
+        <Route path="devishotel/:enteteId" element={<PageHotelDevis />} />
       </Route>
     </>
   );

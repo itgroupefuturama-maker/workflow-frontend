@@ -2,13 +2,13 @@ import { useParams, useNavigate } from "react-router-dom";
 import { FiArrowLeft, FiUsers, FiCheck, FiTrash2, FiX, FiPackage, FiUser, FiFileText } from "react-icons/fi";
 import { useSelector, useDispatch } from "react-redux";
 import { useState, useEffect } from "react";
-import type { RootState, AppDispatch } from "../../../app/store";
+import type { RootState, AppDispatch } from "../../../../app/store";
 import {
   fetchClientBeneficiaireInfos,
   type ClientBeneficiaireInfo,
-} from "../../../app/portail_client/clientBeneficiaireInfosSlice";
-import axiosInstance from "../../../service/Axios";
-import { fetchDossiersCommuns } from "../../../app/front_office/dossierCommunSlice";
+} from "../../../../app/portail_client/clientBeneficiaireInfosSlice";
+import axiosInstance from "../../../../service/Axios";
+import { fetchDossiersCommuns } from "../../../../app/front_office/dossierCommunSlice";
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 

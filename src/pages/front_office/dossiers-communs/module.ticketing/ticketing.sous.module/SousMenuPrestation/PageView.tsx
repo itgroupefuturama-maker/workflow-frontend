@@ -17,6 +17,16 @@ interface PrestationContext {
   openEditModal: (entete: any) => void;
 }
 
+const Field = ({ label, value }: { label: string; value?: string | null }) => {
+  if (!value) return null;
+  return (
+    <div>
+      <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">{label}</p>
+      <p className="text-sm text-gray-700 mt-0.5 font-medium">{value}</p>
+    </div>
+  );
+};
+
 export default function PageView() {
   const dispatch = useDispatch();
   const location = useLocation();
@@ -25,6 +35,8 @@ export default function PageView() {
   const dossierId = useSelector(
     (state: RootState) => state.dossierCommun.currentClientFactureId?.id
   );
+
+  const dossierActif = useSelector((state: RootState) => state.dossierCommun.currentClientFactureId);
 
   const { 
     prestationId,
@@ -37,10 +49,10 @@ export default function PageView() {
 
   // console.log(prestationId);
 
-  const { 
-    list: billets, 
-    loadingList: loadingBillets, 
-    errorList: errorBillets 
+  const {
+    list: billets,
+    loadingList: loadingBillets,
+    errorList: errorBillets
   } = useSelector((state: RootState) => state.billet);
 
   // Dans le composant Billet
@@ -111,6 +123,40 @@ export default function PageView() {
               <FiPlus size={18} />
               Ajouter un entête
             </button>
+          </div>
+
+          <div className="bg-white border border-gray-200 rounded-lg p-6 mb-5">
+            {/* Grille d'informations */}
+            <div className="grid grid-cols-4 gap-x-8 gap-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">N° dossier Commun</p>
+                  <p className="text-xl font-semibold text-gray-800 ">{dossierActif?.numero}</p>
+                </div>
+
+                {dossierActif?.raisonAnnulation && (
+                  <div className="flex items-center gap-2 bg-red-50 border border-red-100 text-red-600 text-xs font-medium px-3 py-1.5 rounded-full">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" />
+                    Annulé
+                  </div>
+                )}
+              </div>
+
+              {dossierActif?.raisonAnnulation && (
+                <Field label="Raison d'annulation" value={dossierActif.raisonAnnulation} />
+              )}
+
+              {dossierActif?.dateAnnulation && (
+                <Field label="Date d'annulation" value={dossierActif.dateAnnulation} />
+              )}
+
+              <Field label="Contact principal"   value={dossierActif?.contactPrincipal} />
+              <Field label="WhatsApp"            value={dossierActif?.whatsapp} />
+              <Field label="Réf. Travel Planner" value={dossierActif?.referenceTravelPlaner} />
+              <Field label="Client facturé"      value={dossierActif?.clientfacture?.libelle} />
+              <Field label="Code client"         value={dossierActif?.clientfacture?.code} />
+
+            </div>
           </div>
 
           {/* États de chargement et erreurs */}
@@ -203,7 +249,7 @@ export default function PageView() {
                                 </button>
 
                                 <button
-                                  onClick={() => navigate(`/dossiers-communs/${prestationId}/pages/prospection/${entete.id}`)}
+                                  onClick={() => navigate(`/dossiers-communs/ticketing/pages/prospection/${entete.id}`)}
                                   className="p-2 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded-md transition-colors"
                                   title="Voir les lignes de prospection"
                                 >

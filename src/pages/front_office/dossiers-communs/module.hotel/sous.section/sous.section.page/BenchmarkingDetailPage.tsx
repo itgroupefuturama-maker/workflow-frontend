@@ -2,11 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { RootState, AppDispatch } from '../../../../../../app/store';
-import { approuverDevis, createBenchmarkingLigne, envoyerDevis, fetchBenchmarkingDetail, generatePdfDirection, genererDevis, sendBenchmarkingDevis, setBenchmarkOfficial } from '../../../../../../app/front_office/parametre_hotel/hotelProspectionEnteteSlice';
+import { createBenchmarkingLigne, fetchBenchmarkingDetail, sendBenchmarkingDevis, setBenchmarkOfficial } from '../../../../../../app/front_office/parametre_hotel/hotelProspectionEnteteSlice';
 import ModalBenchmarkingLigneForm from '../../components/ModalBenchmarkingLigneForm';
 import { HotelHeader } from '../../components/HotelHeader';
 import ModalConfirmDevis from '../../components/ModalConfirmDevis';
-import { API_URL } from '../../../../../../service/env';
+// import { API_URL } from '../../../../../../service/env';
 import TabContainer from '../../../../../../layouts/TabContainer';
 import LoadingButton from '../../components/LoadingButton';
 
@@ -23,10 +23,6 @@ const BenchmarkingDetailPage = () => {
   const [showLigneModal, setShowLigneModal] = useState(false);
   const [settingBenchmark, setSettingBenchmark] = useState(false);
   const [sendingDevis, setSendingDevis] = useState(false);
-
-  const [generatingDevis, setGeneratingDevis] = useState(false);
-  const [sendingDevisEmail, setSendingDevisEmail] = useState(false);
-  const [approvingDevis, setApprovingDevis] = useState(false);
 
   // Récupère les listes depuis Redux
   const { items: plateformes } = useSelector((state: RootState) => state.plateforme);
@@ -64,18 +60,21 @@ const BenchmarkingDetailPage = () => {
     montantCommission: 0,       // Montant Commission
   });
 
-  // État pour le nombre de chambres client (éditable)
-  const [nbChambreClient, setNbChambreClient] = useState(1);
-
   const [showConfirmDevisModal, setShowConfirmDevisModal] = useState(false);
 
-  const [generatingPdfDirection, setGeneratingPdfDirection] = useState(false);
+  // const [generatingPdfDirection, setGeneratingPdfDirection] = useState(false);
 
   // Trouver la ligne de benchmark et les plateformes
   const benchmarkLine = useMemo(
     () => detail?.benchmarkingLigne.find(ligne => ligne.isBenchMark),
     [detail?.benchmarkingLigne]  // ne recalcule que si la liste change
   );
+
+  const hasLigneClient = detail?.benchmarkingLigne.some(
+    (ligne) => ligne.plateforme?.nom?.toLowerCase() === 'client'
+  );
+
+  const [nbChambreClient, setNbChambreClient] = useState(benchmarkLine?.nombreChambre);
 
   const bookingPlateforme = useMemo(
     () => plateformes.find(p => p.nom?.toLowerCase() === 'booking'),
@@ -85,6 +84,10 @@ const BenchmarkingDetailPage = () => {
   const clientPlateforme = useMemo(
     () => plateformes.find(p => p.nom?.toLowerCase() === 'client'),
     [plateformes]
+  );
+
+  const hasBenchmarkLine = detail?.benchmarkingLigne.some(
+    (ligne) => ligne.isBenchMark === true
   );
 
   useEffect(() => {
@@ -114,25 +117,26 @@ const BenchmarkingDetailPage = () => {
     const nuiteDevise = benchmarkLine.nuiteDevise || 0;
     const tauxChange  = benchmarkLine.tauxChange  || 0;
     const nuiteAriary = benchmarkLine.nuiteAriary  || 0;
-    const nuite       = detail.nuite || 1;
+    const nbChambre = benchmarkLine.nombreChambre || 0;
+    // const nuite       = detail.nuite || 1;
 
     setBookingData({
       nuiteDevise,
       tauxChange,
       nuiteAriary,
-      montantDevise: nuiteDevise * nuite,
-      montantAriary: nuiteAriary * nuite,
+      montantDevise: nuiteDevise * nbChambre,
+      montantAriary: nuiteAriary * nbChambre,
     });
 
     setClientData({
       nuiteDevise,
       tauxChange,
       nuiteAriary,
-      montantDevise: nuiteDevise * nuite,
-      montantAriary: nuiteAriary * nuite,
+      montantDevise: nuiteDevise * nbChambre,
+      montantAriary: nuiteAriary * nbChambre,
     });
 
-    setNbChambreClient(1);
+    setNbChambreClient(benchmarkLine?.nombreChambre);
 
     setCommissionData({
       tauxPrixUnitaire:    0,
@@ -152,18 +156,18 @@ const BenchmarkingDetailPage = () => {
       // % sur Prix Unit. changé (value est en pourcentage, ex: 5 pour 5%)
       updated.tauxPrixUnitaire = value;
       updated.forfaitaireUnitaire = prixBenchmark * (value / 100); // Convertir % en décimal
-      updated.forfaitaireGlobal = updated.forfaitaireUnitaire * nbChambreClient;
+      updated.forfaitaireGlobal = updated.forfaitaireUnitaire * (nbChambreClient || 1);
       updated.montantCommission = updated.forfaitaireGlobal;
     } else if (field === 'forfaitaireUnitaire') {
       // Forfaitaire Unit. changé
       updated.forfaitaireUnitaire = value;
-      updated.forfaitaireGlobal = value * nbChambreClient;
+      updated.forfaitaireGlobal = value * (nbChambreClient || 1);
       updated.tauxPrixUnitaire = prixBenchmark > 0 ? (value / prixBenchmark) * 100 : 0; // Convertir en %
       updated.montantCommission = updated.forfaitaireGlobal;
     } else if (field === 'forfaitaireGlobal') {
       // Forfaitaire Global changé
       updated.forfaitaireGlobal = value;
-      updated.forfaitaireUnitaire = nbChambreClient > 0 ? value / nbChambreClient : 0;
+      updated.forfaitaireUnitaire = (nbChambreClient || 1) > 0 ? value / (nbChambreClient || 1) : 0;
       updated.tauxPrixUnitaire = prixBenchmark > 0 ? (updated.forfaitaireUnitaire / prixBenchmark) * 100 : 0; // Convertir en %
       updated.montantCommission = value;
     }
@@ -174,25 +178,6 @@ const BenchmarkingDetailPage = () => {
     updateClientPriceFromCommission(updated.forfaitaireUnitaire);
   };
 
-  // Handler pour le changement du nombre de chambres client
-  const handleNbChambreClientChange = (value: number) => {
-    const newNbChambre = value > 0 ? value : 1;
-    setNbChambreClient(newNbChambre);
-
-    // Recalculer la commission avec le nouveau nombre de chambres
-    const updated = { ...commissionData };
-    updated.forfaitaireGlobal = updated.forfaitaireUnitaire * newNbChambre;
-    updated.montantCommission = updated.forfaitaireGlobal;
-    setCommissionData(updated);
-
-    // Recalculer le montant Client
-    const newMontantAriary = clientData.nuiteAriary * newNbChambre;
-    setClientData(prev => ({
-      ...prev,
-      montantAriary: newMontantAriary,
-    }));
-  };
-
   // Mettre à jour le prix Client basé sur la commission
   const updateClientPriceFromCommission = (forfaitaireUnitaire: number) => {
     if (!benchmarkLine || !detail) return;
@@ -200,7 +185,7 @@ const BenchmarkingDetailPage = () => {
     const prixBenchmark = benchmarkLine.nuiteDevise || 0;
     const newNuiteDevise = prixBenchmark + forfaitaireUnitaire;
     const newNuiteAriary = newNuiteDevise * clientData.tauxChange;
-    const newMontantAriary = newNuiteAriary * nbChambreClient;
+    const newMontantAriary = newNuiteAriary * (nbChambreClient || 1);
 
     setClientData(prev => ({
       ...prev,
@@ -240,7 +225,7 @@ const BenchmarkingDetailPage = () => {
       updated.nuiteDevise = nuiteDevise;
       updated.nuiteAriary = nuiteDevise * value;
       updated.montantDevise = nuiteDevise * (detail?.nuite || 1);
-      updated.montantAriary = updated.nuiteAriary * nbChambreClient;
+      updated.montantAriary = updated.nuiteAriary * (nbChambreClient || 1);
 
       setClientData(updated);
     }
@@ -296,11 +281,12 @@ const BenchmarkingDetailPage = () => {
           tauxPrixUnitaire: commissionData.tauxPrixUnitaire,
           forfaitaireUnitaire: commissionData.forfaitaireUnitaire,
           forfaitaireGlobal: commissionData.forfaitaireGlobal,
-          montantAriary: commissionData.montantCommission,
+          montantCommission: commissionData.montantCommission,
         },
       };
 
       await dispatch(sendBenchmarkingDevis(payload)).unwrap();
+      dispatch(fetchBenchmarkingDetail(selectedId!));
       setShowConfirmDevisModal(false);
       alert('Devis envoyé avec succès !');
     } catch (err: any) {
@@ -330,139 +316,22 @@ const BenchmarkingDetailPage = () => {
     if (!window.confirm("Confirmez-vous de définir ce benchmarking comme référence officielle ?")) {
       return;
     }
-
     setSettingBenchmark(true);
 
+    console.log(`detail sssss : ${detail.id}`);
+    
+
     try {
-      const resultAction = await dispatch(setBenchmarkOfficial(detail.id)).unwrap();
+      await dispatch(setBenchmarkOfficial(detail.id)).unwrap();
       alert("Benchmark défini avec succès !");
       dispatch(fetchBenchmarkingDetail(detail.id));
+      
+      console.log("tonga eto");
     } catch (err: any) {
+      console.log("tsy tonga");
       alert(err.message || "Erreur lors de la définition du benchmark");
     } finally {
       setSettingBenchmark(false);
-    }
-  };
-
-  const handleGenererDevis = async () => {
-    if (!selectedId) {
-      alert('Aucun benchmarking sélectionné');
-      return;
-    }
-
-    if (!window.confirm('Voulez-vous générer le devis pour ce benchmarking ?')) {
-      return;
-    }
-
-    setGeneratingDevis(true);
-
-    try {
-      const result = await dispatch(genererDevis(selectedId)).unwrap();
-      
-      // Si le résultat contient un chemin de PDF, l'ouvrir dans un nouvel onglet
-      if (result && typeof result === 'string') {
-        const pdfUrl = `${API_URL}/${result}`;
-        window.open(pdfUrl, '_blank');
-        alert('Devis généré avec succès !');
-      } else {
-        alert('Devis généré avec succès !');
-      }
-      
-      // Recharger les détails
-      dispatch(fetchBenchmarkingDetail(selectedId));
-    } catch (err: any) {
-      alert(err.message || 'Erreur lors de la génération du devis');
-    } finally {
-      setGeneratingDevis(false);
-    }
-  };
-
-  // Handler pour générer le PDF Direction
-  const handleGeneratePdfDirection = async () => {
-    if (!selectedId || !detail || !clientData || !commissionData) {
-      alert('Données manquantes pour générer le PDF direction');
-      return;
-    }
-
-    if (!window.confirm('Voulez-vous générer le PDF pour la direction ?')) {
-      return;
-    }
-
-    setGeneratingPdfDirection(true);
-
-    try {
-      const payload = {
-        benchmarkingId: selectedId,
-        montantTotalClient: clientData.montantAriary,
-        tauxCommission: commissionData.tauxPrixUnitaire,
-        montantTotalCommission: commissionData.montantCommission,
-      };
-
-      const result = await dispatch(generatePdfDirection(payload)).unwrap();
-      
-      // Ouvrir le PDF dans un nouvel onglet
-      if (result && typeof result === 'string') {
-        const pdfUrl = `${API_URL}/${result}`;
-        window.open(pdfUrl, '_blank');
-        alert('PDF direction généré avec succès !');
-      } else {
-        alert('PDF direction généré avec succès !');
-      }
-      
-      // Recharger les détails
-      dispatch(fetchBenchmarkingDetail(selectedId));
-    } catch (err: any) {
-      alert(err.message || 'Erreur lors de la génération du PDF direction');
-    } finally {
-      setGeneratingPdfDirection(false);
-    }
-  };
-
-  const handleEnvoyerDevis = async () => {
-    if (!selectedId) {
-      alert('Aucun benchmarking sélectionné');
-      return;
-    }
-
-    if (!window.confirm('Voulez-vous envoyer le devis par email ?')) {
-      return;
-    }
-
-    setSendingDevisEmail(true);
-
-    try {
-      await dispatch(envoyerDevis(selectedId)).unwrap();
-      alert('Devis envoyé par email avec succès !');
-      // Recharger les détails
-      dispatch(fetchBenchmarkingDetail(selectedId));
-    } catch (err: any) {
-      alert(err.message || 'Erreur lors de l\'envoi du devis');
-    } finally {
-      setSendingDevisEmail(false);
-    }
-  };
-
-  const handleApprouverDevis = async () => {
-    if (!selectedId) {
-      alert('Aucun benchmarking sélectionné');
-      return;
-    }
-
-    if (!window.confirm('Voulez-vous approuver définitivement ce devis ?')) {
-      return;
-    }
-
-    setApprovingDevis(true);
-
-    try {
-      await dispatch(approuverDevis(selectedId)).unwrap();
-      alert('Devis approuvé avec succès !');
-      // Recharger les détails
-      dispatch(fetchBenchmarkingDetail(selectedId));
-    } catch (err: any) {
-      alert(err.message || 'Erreur lors de l\'approbation du devis');
-    } finally {
-      setApprovingDevis(false);
     }
   };
 
@@ -534,74 +403,7 @@ const BenchmarkingDetailPage = () => {
               </h1>
             </div>
             {/* Nouveaux boutons d'actions */}
-            <div className="flex flex-wrap gap-2">
-
-              {/* Générer devis client */}
-              <LoadingButton
-                label="Générer devis client"
-                loadingLabel="Génération..."
-                isLoading={generatingDevis}
-                disabled={generatingDevis || loadingDetail}
-                onClick={handleGenererDevis}
-                variant="purple"
-                icon={
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                  </svg>
-                }
-              />
-
-              {/* PDF Direction */}
-              <LoadingButton
-                label="PDF Direction"
-                loadingLabel="Génération..."
-                isLoading={generatingPdfDirection}
-                disabled={false}
-                onClick={handleGeneratePdfDirection}
-                variant="primary"
-                title={
-                  !clientData.montantAriary || !commissionData.tauxPrixUnitaire
-                    ? "Veuillez d'abord remplir les données client et commission"
-                    : ''
-                }
-                icon={
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                  </svg>
-                }
-              />
-
-              {/* Envoyer le devis */}
-              <LoadingButton
-                label="Envoyer le devis"
-                loadingLabel="Envoi..."
-                isLoading={sendingDevisEmail}
-                disabled={sendingDevisEmail || loadingDetail}
-                onClick={handleEnvoyerDevis}
-                variant="warning"
-                icon={
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                  </svg>
-                }
-              />
-
-              {/* Approuver le devis */}
-              <LoadingButton
-                label="Approuver le devis"
-                loadingLabel="Approbation..."
-                isLoading={approvingDevis}
-                disabled={approvingDevis || loadingDetail}
-                onClick={handleApprouverDevis}
-                variant="success"
-                icon={
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                }
-              />
-
-            </div>
+            
           </div>
         </div>
 
@@ -714,7 +516,7 @@ const BenchmarkingDetailPage = () => {
                   label="Définir le minimum"
                   loadingLabel="En cours..."
                   isLoading={settingBenchmark}
-                  disabled={settingBenchmark || loadingDetail}
+                  disabled={settingBenchmark || loadingDetail || hasLigneClient || hasBenchmarkLine || false }
                   onClick={handleSetBenchmark}
                   variant="success"
                   icon={
@@ -727,14 +529,19 @@ const BenchmarkingDetailPage = () => {
                 {/* Ajouter une ligne */}
                 <button
                   onClick={() => setShowLigneModal(true)}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium rounded-lg border border-gray-800 text-gray-800 bg-white hover:bg-gray-50 transition-colors whitespace-nowrap"
+                  disabled={hasBenchmarkLine}
+                  className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-medium rounded-lg border transition-colors whitespace-nowrap ${
+                    hasBenchmarkLine
+                      ? 'border-gray-200 text-gray-400 bg-gray-50 cursor-not-allowed'
+                      : 'border-gray-800 text-gray-800 bg-white hover:bg-gray-50'
+                  }`}
+                  title={hasBenchmarkLine ? 'Un benchmark officiel est déjà défini' : undefined}
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
                   </svg>
-                  Ajouter une ligne
+                  {hasBenchmarkLine ? 'Ligne verrouillée' : 'Ajouter une ligne'}
                 </button>
-
               </div>
             </div>
 
@@ -839,10 +646,10 @@ const BenchmarkingDetailPage = () => {
                     <h3 className="text-sm font-semibold text-neutral-700 uppercase">Synthèse Financière</h3>
                     <button
                       onClick={handleSendDevis}
-                      disabled={sendingDevis || !benchmarkLine || !bookingPlateforme || !clientPlateforme}
+                      disabled={sendingDevis || !benchmarkLine || !bookingPlateforme || !clientPlateforme || hasLigneClient}
                       className={`
                         px-5 py-2.5 rounded-lg font-medium text-white flex items-center gap-2 transition-colors
-                        ${sendingDevis || !benchmarkLine || !bookingPlateforme || !clientPlateforme
+                        ${sendingDevis || !benchmarkLine || !bookingPlateforme || !clientPlateforme || hasLigneClient
                           ? 'bg-gray-400 cursor-not-allowed'
                           : 'bg-blue-600 hover:bg-blue-700'
                         }
@@ -858,7 +665,7 @@ const BenchmarkingDetailPage = () => {
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                           </svg>
-                          Envoyer le devis
+                          {hasLigneClient ? 'Commission déjà validée' : 'Valider Commission'}
                         </>
                       )}
                     </button>
@@ -980,7 +787,10 @@ const BenchmarkingDetailPage = () => {
                               <td className="px-3 py-2 border border-neutral-200 text-right font-mono bg-neutral-100">
                                 {clientData.nuiteAriary?.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </td>
-                              <td className="px-3 py-2 border border-neutral-200">
+                              <td className="px-3 py-2 border border-neutral-200 text-right font-mono">
+                                {benchmarkLine.nombreChambre }
+                              </td>
+                              {/* <td className="px-3 py-2 border border-neutral-200">
                                 <input
                                   type="number"
                                   min={benchmarkLine.nombreChambre}
@@ -988,7 +798,7 @@ const BenchmarkingDetailPage = () => {
                                   onChange={(e) => handleNbChambreClientChange(parseInt(e.target.value) || benchmarkLine.nombreChambre)}
                                   className="w-full px-2 py-1 text-right font-mono border border-neutral-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 />
-                              </td>
+                              </td> */}
                               <td className="px-3 py-2 border border-neutral-200 text-right font-mono font-bold bg-neutral-100">
                                 {clientData.montantAriary?.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </td>
@@ -1004,7 +814,6 @@ const BenchmarkingDetailPage = () => {
                         <div className="bg-neutral-800 text-white px-4 py-2 text-center text-xs font-bold uppercase tracking-wider">
                           Calcul Commission
                         </div>
-                        
                         {/* % sur Prix Unit. */}
                         <div className="border-b border-neutral-200 bg-neutral-50">
                           <div className="px-3 py-2 text-[10px] font-bold text-neutral-600 uppercase text-center">
@@ -1065,8 +874,11 @@ const BenchmarkingDetailPage = () => {
                         <div className="bg-neutral-800 text-white px-4 py-2 text-center text-xs font-bold uppercase tracking-wider">
                           Montant Commission
                         </div>
-                        <div className="px-4 py-4 text-center text-xl font-bold font-mono text-blue-700 bg-blue-50">
-                          {commissionData.montantCommission?.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-sm font-sans text-neutral-500 uppercase">Ar</span>
+                        <div className="px-4 py-4 text-center text-xl font-bold font-mono text-blue-700">
+                          {commissionData.montantCommission?.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span className="text-sm font-sans text-neutral-500 uppercase">{benchmarkLine?.devise}</span>
+                        </div>
+                        <div className="px-4 py-2 text-center text-sm font-mono text-neutral-600 bg-neutral-50">
+                          {(commissionData.montantCommission * clientData.tauxChange).toFixed(2)} Ar
                         </div>
                       </div>
                     </div>

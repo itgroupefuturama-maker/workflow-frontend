@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
-   FiCheckCircle, FiClock, FiCalendar, FiTrash2, FiArrowLeft, FiEdit3, FiSearch, FiGrid, FiList, FiPlus, FiArrowRight, FiSlash, FiX
+   FiCheckCircle, FiCalendar, FiArrowLeft, FiSearch, FiGrid, FiList, FiArrowRight, FiX
 } from 'react-icons/fi';
-import { fetchTodos, markAsDone, updateTodo, deactivateTodo, deleteTodo } from '../../../../app/front_office/todosSlice';
+import { fetchTodos, markAsDone, updateTodo } from '../../../../app/front_office/todosSlice';
 import { useNavigate } from 'react-router-dom';
 import type { AppDispatch, RootState } from '../../../../app/store';
 
@@ -23,13 +23,13 @@ export default function ToDoList() {
 
   const activeTodos = todos.filter(todo => todo.rappel?.status !== 'SUPPRIMER');
 
-  const startEdit = (todo: any) => {
-    setEditingId(todo.rappel?.id || null);
-    setEditForm({
-      objet: todo.rappel?.objet || '',
-      moment: todo.rappel?.moment ? new Date(todo.rappel.moment).toISOString().slice(0, 16) : '',
-    });
-  };
+  // const startEdit = (todo: any) => {
+  //   setEditingId(todo.rappel?.id || null);
+  //   setEditForm({
+  //     objet: todo.rappel?.objet || '',
+  //     moment: todo.rappel?.moment ? new Date(todo.rappel.moment).toISOString().slice(0, 16) : '',
+  //   });
+  // };
 
   const handleSaveEdit = (rappelId: string) => {
     if (!editForm.objet || !editForm.moment) return;

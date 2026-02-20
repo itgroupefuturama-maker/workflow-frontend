@@ -1,6 +1,9 @@
 import { FiX } from 'react-icons/fi';
 import type { ProspectionEntete } from '../../app/front_office/prospectionsEntetesSlice';
-import { useLastComment } from '../../hooks/useLastComment'; // adapte le chemin
+import type { AppDispatch, RootState } from '../../app/store';
+import { useDispatch, useSelector } from 'react-redux';
+import { clearCommentaireFournisseur, fetchLastCommentaireFournisseur } from '../../app/front_office/fournisseurCommentaire/fournisseurCommentaireSlice';
+import FournisseurAlerteBadge from '../fournisseurAlerteBadget/FournisseurAlerteBadge';
 
 interface ProspectionModalsProps {
   selectedEntete: ProspectionEntete | null;
@@ -19,40 +22,7 @@ interface ProspectionModalsProps {
   onConfirmCreate: () => void;
 }
 
-// ─── Sous-composant isolé pour l'alerte ───────────────────────────────────────
-// IMPORTANT : en le séparant, ses re-renders n'affectent PAS le modal parent
-function FournisseurAlert({ fournisseurId }: { fournisseurId: string }) {
-  const { lastComment } = useLastComment(fournisseurId);
 
-  if (!fournisseurId || !lastComment?.alerte) return null;
-
-  const upper = lastComment.alerte.toUpperCase();
-  const isHigh = upper === 'ELEVE' || upper === 'TRES_ELEVE';
-  const isNormal = upper === 'NORMAL';
-
-  const style = isHigh
-    ? 'bg-red-50 border-red-400 text-red-900'
-    : isNormal
-    ? 'bg-orange-50 border-orange-400 text-orange-900'
-    : 'bg-green-50 border-green-400 text-green-900';
-
-  const icon = isHigh ? '🔴' : isNormal ? '🟠' : '🟢';
-
-  return (
-    <div className="fixed top-4 right-4 z-[9999] max-w-sm pointer-events-none">
-      <div className={`flex items-start gap-3 p-4 rounded-xl shadow-lg border ${style}`}>
-        <div className="shrink-0 mt-0.5 text-xl">{icon}</div>
-        <div className="flex-1">
-          <div className="font-semibold text-base mb-1">
-            Alerte fournisseur : {lastComment.alerte}
-          </div>
-          <p className="text-sm leading-tight">{lastComment.commentaire}</p>
-          <p className="text-xs mt-2 opacity-80">{lastComment.dateEnregistrement}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ─── Composant principal ──────────────────────────────────────────────────────
 export default function ProspectionModals({
@@ -71,6 +41,19 @@ export default function ProspectionModals({
   onCloseCreate,
   onConfirmCreate,
 }: ProspectionModalsProps) {
+  const dispatch = useDispatch<AppDispatch>();
+
+  const { lastComment, confirmed } = useSelector(
+  (state: RootState) => state.fournisseurCommentaire
+);
+
+  // Calculer si le bouton doit être bloqué
+  const upper = lastComment?.alerte?.toUpperCase() ?? '';
+
+  const isBlocked =
+    upper === 'TRES_ELEVE' ||          // bloqué même après fermeture du badge
+    (upper === 'ELEVE' && !confirmed); // bloqué tant que pas confirmé
+
   return (
     <>
       {/* ── MODAL ÉDITION ── */}
@@ -178,10 +161,16 @@ export default function ProspectionModals({
                 ) : (
                   <select
                     value={newEntete.fournisseurId}
-                    onChange={(e) => setNewEntete({ ...newEntete, fournisseurId: e.target.value })}
+                    // onChange={(e) => setNewEntete({ ...newEntete, fournisseurId: e.target.value })}
+                    onChange={(e) => {
+                      const id = e.target.value;
+                      setNewEntete({ ...newEntete, fournisseurId: id });
+                      if (id) dispatch(fetchLastCommentaireFournisseur(id));
+                      else    dispatch(clearCommentaireFournisseur());
+                    }}
                     className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-indigo-500"
                     required
-                    disabled={isCreating}
+                    disabled={isCreating} 
                   >
                     <option value="">— Choisir un fournisseur —</option>
                     {fournisseurs.map((f) => (
@@ -192,9 +181,6 @@ export default function ProspectionModals({
                   </select>
                 )}
               </div>
-
-              {/* Alerte fournisseur — isolée dans son propre composant */}
-              <FournisseurAlert fournisseurId={newEntete.fournisseurId} />
 
               {/* Crédit */}
               <div>
@@ -239,12 +225,16 @@ export default function ProspectionModals({
                 </button>
                 <button
                   onClick={onConfirmCreate}
-                  disabled={isCreating || !newEntete.fournisseurId}
-                  className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={isCreating || !newEntete.fournisseurId || isBlocked}
+                  className={
+                    isCreating || !newEntete.fournisseurId || isBlocked
+                      ? "px-6 py-2.5 bg-indigo-600 text-white rounded-xl flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      : "px-6 py-2.5 bg-indigo-600 text-white rounded-xl flex items-center gap-2"
+                  }
                 >
                   {isCreating ? (
                     <>
-                      <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                      <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full " />
                       Création...
                     </>
                   ) : 'Créer'}
@@ -254,6 +244,7 @@ export default function ProspectionModals({
           </div>
         </div>
       )}
+      <FournisseurAlerteBadge /> 
     </>
   );
 }

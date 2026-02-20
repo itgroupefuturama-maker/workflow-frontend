@@ -1,6 +1,6 @@
 import { FiArrowRight } from "react-icons/fi";
 
-export const HotelHeader = ({ numerohotel, navigate,  isDetail = false , isBenchmarking = false}) => (
+export const HotelHeader = ({ numerohotel, navigate,  isDetail = false , isBenchmarking = false, isDevis = false}) => (
   <header className="flex items-center justify-between">
     <div className="flex items-center gap-4">
       {isDetail ? (
@@ -16,7 +16,7 @@ export const HotelHeader = ({ numerohotel, navigate,  isDetail = false , isBench
                </button>
                <FiArrowRight className="text-slate-400 ml-2 mr-2" size={16} />
                <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-400/90 text-white font-semibold shadow-sm">
-                 {isBenchmarking ? 'Bench' : 'hotel'} n° {numerohotel}
+                 {isBenchmarking && isDevis== false  ? 'Bench' : isDevis ? 'Devis' : 'hotel'} n° {numerohotel}
                </div>
              </div>
            </header>

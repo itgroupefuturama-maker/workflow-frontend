@@ -15,6 +15,7 @@ import { useLocation, useParams } from 'react-router-dom';
 import { fetchRaisonsAnnulation } from '../../../../../../app/front_office/parametre_ticketing/raisonAnnulationSlice';
 import RaisonAnnulationListe from './RaisonAnnulationListe';
 import RaisonAnnulationModal from '../../../../../../components/modals/RaisonAnnulationModal';
+import GestionPrixListe from '../../../module.attestation.voyage/SousMenuPrestation/GestionPrixListe';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -224,9 +225,8 @@ export default function ParametreView() {
             </div>
           ): activeTab === 'gestionPrix' ? (
             <div>
-              <div className='bg-red-500 w-3xl h-2.5'>
-
-              </div>
+              <div className="text-lg font-semibold text-slate-800 mb-4">Listes des prix</div>
+              <GestionPrixListe />
             </div>
           ) :  activeTab === 'listeExigence' ? (
             /* --- SECTION EXIGENCES --- */
@@ -317,7 +317,7 @@ export default function ParametreView() {
                               <tr><th className="px-4 py-3 text-left text-xs font-semibold uppercase">Code</th><th className="px-4 py-3 text-left text-xs font-semibold uppercase">Ville</th></tr>
                             </thead>
                             <tbody className="divide-y">
-                              {paysDetails.DestinationVoyage?.map((dest: any) => (
+                              {paysDetails.DestinationVoyage?.map((dest: { id: number; code: string; ville: string }) => (
                                 <tr key={dest.id}><td className="px-4 py-3 text-sm font-mono text-indigo-600">{dest.code}</td><td className="px-4 py-3 text-sm">{dest.ville}</td></tr>
                               ))}
                             </tbody>

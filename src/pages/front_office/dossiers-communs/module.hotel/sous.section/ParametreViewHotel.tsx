@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import TableParametre from '../components/TableParametre';
 import { createPlateforme, fetchPlateformes } from '../../../../../app/front_office/parametre_hotel/plateformeSlice';
 import TabContainer from '../../../../../layouts/TabContainer';
-import type { AppDispatch, RootState } from '../../../../../app/store';
+import type { AppDispatch } from '../../../../../app/store';
 import { useLocation } from 'react-router-dom';
 import { createTypeChambre, fetchTypesChambre } from '../../../../../app/front_office/parametre_hotel/typeChambreSlice';
 import { createServiceHotel, fetchServicesHotel } from '../../../../../app/front_office/parametre_hotel/serviceHotelSlice';
@@ -36,7 +36,7 @@ const ParametreViewHotel = () => {
     error: errorServices,
   } = useSelector((state: any) => state.serviceHotel);
 
-  const raisonState = useSelector((state: RootState) => state.raisonAnnulation);
+  // const raisonState = useSelector((state: RootState) => state.raisonAnnulation);
 
   const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'plateformes');
 
@@ -55,9 +55,7 @@ const ParametreViewHotel = () => {
     dispatch(fetchPlateformes());
     dispatch(fetchTypesChambre());
     dispatch(fetchServicesHotel());
-    if (activeTab === 'listeRaisonAnnulation' && raisonState.items.length === 0) {
-        dispatch(fetchRaisonsAnnulation());
-        }
+    dispatch(fetchRaisonsAnnulation());
   }, [dispatch]);
 
   useEffect(() => {

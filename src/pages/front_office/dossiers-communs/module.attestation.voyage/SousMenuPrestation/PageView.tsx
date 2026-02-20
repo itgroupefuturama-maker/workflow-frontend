@@ -4,8 +4,20 @@ import { useLocation, useNavigate } from 'react-router-dom';           // ← AJ
 import type { AppDispatch, RootState } from '../../../../../app/store';
 import { createAttestationEntete, fetchAttestationEntetes, setSelectedEntete } from '../../../../../app/front_office/parametre_attestation/attestationEnteteSlice';
 import { AttestationHeader } from './components.attestation/AttestationHeader';
-import axios from '../../../../../service/Axios';
 import TabContainer from '../../../../../layouts/TabContainer';
+import { clearCommentaireFournisseur, fetchLastCommentaireFournisseur } from '../../../../../app/front_office/fournisseurCommentaire/fournisseurCommentaireSlice';
+import FournisseurAlerteBadge from '../../../../../components/fournisseurAlerteBadget/FournisseurAlerteBadge';
+import { FiClock } from 'react-icons/fi';
+
+const Field = ({ label, value }: { label: string; value?: string | null }) => {
+  if (!value) return null;
+  return (
+    <div>
+      <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">{label}</p>
+      <p className="text-sm text-gray-700 mt-0.5 font-medium">{value}</p>
+    </div>
+  );
+};
 
 const PageViewAttestation = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -23,6 +35,16 @@ const PageViewAttestation = () => {
 
   console.log("dossierActif", dossierActif);
 
+  const { lastComment, confirmed } = useSelector(
+      (state: RootState) => state.fournisseurCommentaire
+    );
+
+    // Calculer si le bouton doit être bloqué
+    const upper = lastComment?.alerte?.toUpperCase() ?? '';
+    const isBlocked =
+      upper === 'TRES_ELEVE' ||           // toujours bloqué
+      (upper === 'ELEVE' && !confirmed);  // bloqué tant que pas confirmé
+
   // On extrait l'id de la prestation attestation
   const prestationId = dossierActif?.dossierCommunColab
     ?.find(colab => colab.module?.nom?.toLowerCase() === "attestation")
@@ -30,14 +52,6 @@ const PageViewAttestation = () => {
 
   // ─── États pour le commentaire fournisseur ────────────────────────────────
   const [selectedFournisseurId, setSelectedFournisseurId] = useState<string>('');
-  const [lastComment, setLastComment] = useState<{
-    commentaire: string;
-    alerte: string;
-    dateEnregistrement: string;
-  } | null>(null);
-
-  const [, setCommentLoading] = useState(false);
-  const [, setCommentError] = useState<string | null>(null);
 
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -60,71 +74,10 @@ const PageViewAttestation = () => {
 
   useEffect(() => {
     if (!selectedFournisseurId) {
-      setLastComment(null);
-      setCommentError(null);
       return;
     }
-
-    const fetchLastComment = async () => {
-      setCommentLoading(true);
-      setCommentError(null);
-      setLastComment(null);
-
-      try {
-        const response = await axios.get(
-          `/commentaires-fournisseur/fournisseur/${selectedFournisseurId}/last`
-        );
-
-        if (!response.data?.success) {
-          throw new Error(response.data?.message || 'Réponse invalide');
-        }
-
-        const data = response.data.data;
-
-        if (data) {
-          setLastComment({
-            commentaire: data.commentaire || '—',
-            alerte: data.alerte || 'INCONNU',
-            dateEnregistrement: data.dateEnregistrement
-              ? new Date(data.dateEnregistrement).toLocaleString('fr-FR')
-              : '—',
-          });
-        } else {
-          setLastComment(null);
-        }
-      } catch (err: any) {
-        // console.error('Erreur chargement commentaire fournisseur:', err);
-        setCommentError(
-          err.response?.data?.message ||
-          err.message ||
-          'Impossible de charger le dernier commentaire'
-        );
-        setLastComment(null);
-      } finally {
-        setCommentLoading(false);
-      }
-    };
-    fetchLastComment();
   }, [selectedFournisseurId]); // ← Déclenche à chaque changement de fournisseur
 
-  // ─── Style selon alerte ───────────────────────────────────────────────
-  const getAlertStyle = (alerte: string) => {
-    const upper = alerte.toUpperCase();
-    if (upper === 'ELEVE' || upper === 'TRES_ELEVE') {
-      return 'bg-red-50 border-red-400 text-red-900';
-    }
-    if (upper === 'NORMAL') {
-      return 'bg-orange-50 border-orange-400 text-orange-900';
-    }
-    return 'bg-green-50 border-green-400 text-green-900'; // FAIBLE ou autre
-  };
-
-  const getIcon = (alerte: string) => {
-    const upper = alerte.toUpperCase();
-    if (upper === 'ELEVE' || upper === 'TRES_ELEVE') return '🔴';
-    if (upper === 'NORMAL') return '🟠';
-    return '🟢';
-  };
 
   const handleCreate = async () => {
     if (!prestationId) {
@@ -178,7 +131,15 @@ const PageViewAttestation = () => {
                   </label>
                   <select
                     value={selectedFournisseurId}
-                    onChange={(e) => setSelectedFournisseurId(e.target.value)}
+                    onChange={(e) => {
+                      const id = e.target.value;
+                      setSelectedFournisseurId(id);
+                      if (id) {
+                        dispatch(fetchLastCommentaireFournisseur(id));
+                      } else {
+                        dispatch(clearCommentaireFournisseur());
+                      }
+                    }}
                     className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   >
                     <option value="">— Choisir —</option>
@@ -192,10 +153,10 @@ const PageViewAttestation = () => {
 
                 <button
                   onClick={handleCreate}
-                  disabled={loading || !selectedFournisseurId}
+                  disabled={loading || !selectedFournisseurId || isBlocked}
                   className={`
                     px-5 py-2 rounded-lg font-medium text-white
-                    ${loading || !selectedFournisseurId
+                    ${loading || !selectedFournisseurId || isBlocked
                       ? 'bg-gray-400 cursor-not-allowed'
                       : 'bg-indigo-600 hover:bg-indigo-700'
                     }
@@ -203,32 +164,7 @@ const PageViewAttestation = () => {
                 >
                   {loading ? 'Création...' : 'Créer entête'}
                 </button>
-                {/* Notification alerte commentaire (fixe en haut à droite) */}
-                {selectedFournisseurId && lastComment && lastComment.alerte && (
-                  <div className="fixed top-4 right-4 z-50 max-w-sm animate-slide-in pointer-events-none">
-                    <div
-                      className={`
-                        flex items-start gap-3 p-4 rounded-xl shadow-lg border
-                        ${getAlertStyle(lastComment.alerte)}
-                      `}
-                    >
-                      <div className="shrink-0 mt-0.5 text-xl">
-                        {getIcon(lastComment.alerte)}
-                      </div>
-                      <div className="flex-1">
-                        <div className="font-semibold text-base mb-1">
-                          Alerte fournisseur : {lastComment.alerte}
-                        </div>
-                        <p className="text-sm leading-tight">
-                          {lastComment.commentaire}
-                        </p>
-                        <p className="text-xs mt-2 opacity-80">
-                          {lastComment.dateEnregistrement}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
+                <FournisseurAlerteBadge />
               </div>
             )}
           </div>
@@ -240,17 +176,49 @@ const PageViewAttestation = () => {
           </div>
         )}
 
+        <div className="bg-white border border-gray-200 rounded-lg p-6 mb-5">
+          {/* Grille d'informations */}
+          <div className="grid grid-cols-4 gap-x-8 gap-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">N° dossier Commun</p>
+                <p className="text-xl font-semibold text-gray-800 ">{dossierActif?.numero}</p>
+              </div>
+
+              {dossierActif?.raisonAnnulation && (
+                <div className="flex items-center gap-2 bg-red-50 border border-red-100 text-red-600 text-xs font-medium px-3 py-1.5 rounded-full">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" />
+                  Annulé
+                </div>
+              )}
+            </div>
+
+            {dossierActif?.raisonAnnulation && (
+              <Field label="Raison d'annulation" value={dossierActif.raisonAnnulation} />
+            )}
+
+            {dossierActif?.dateAnnulation && (
+              <Field label="Date d'annulation" value={dossierActif.dateAnnulation} />
+            )}
+
+            <Field label="Contact principal"   value={dossierActif?.contactPrincipal} />
+            <Field label="WhatsApp"            value={dossierActif?.whatsapp} />
+            <Field label="Réf. Travel Planner" value={dossierActif?.referenceTravelPlaner} />
+            <Field label="Client facturé"      value={dossierActif?.clientfacture?.libelle} />
+            <Field label="Code client"         value={dossierActif?.clientfacture?.code} />
+
+          </div>
+        </div>
+
         {loading ? (
           <div className="bg-white rounded-lg p-10 text-center shadow">
             <div className="animate-pulse text-gray-500">Chargement des entêtes...</div>
           </div>
         ) : error ? (
-        //   <div className="bg-red-50 border border-red-200 text-red-700 p-6 rounded-lg">
-        //     Erreur : {error}
-        //   </div>
-        // ) : items.length === 0 ? (
-          <div className="bg-white rounded-lg p-10 text-center shadow text-gray-500 italic">
-            Aucune entête d'attestation trouvée
+          <div className="flex flex-col items-center justify-center py-16 text-slate-400 bg-white rounded-2xl border-2 border-dashed border-slate-200">
+            <FiClock size={48} className="mb-4 opacity-30" />
+            <p className="text-lg font-medium">Aucun élément trouvé</p>
+            <p className="text-sm mt-2">{error}</p>
           </div>
         ) : (
           <div className="bg-white rounded-xl shadow overflow-hidden border border-gray-200">

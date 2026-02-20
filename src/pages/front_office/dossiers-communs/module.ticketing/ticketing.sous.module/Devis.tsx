@@ -9,6 +9,7 @@ import axios from '../../../../../service/Axios';
 import TabContainer from '../../../../../layouts/TabContainer';
 import { TicketingHeader } from '../../../../../components/TicketingBreadcrumb';
 import AnnulationDevisModal from '../../../../../components/modals/AnnulationDevisModal';
+import { API_URL } from '../../../../../service/env';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -48,7 +49,7 @@ export default function Devis () {
     const handleTabChange = (id: string) => {
       if (id === 'billet') {
         // On remonte au parent (PageView) en passant le state pour l'onglet
-        navigate(`/dossiers-communs/${billet?.prospectionEntete.prestationId}/pages`, { 
+        navigate(`/dossiers-communs/ticketing/pages`, { 
           state: { targetTab: 'billet' }
         });
       } else {
@@ -71,7 +72,7 @@ export default function Devis () {
 
     try {
       // const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:6060';
-      const apiBaseUrl = 'http://192.168.1.125:5001';
+      // const apiBaseUrl = 'http://192.168.1.125:5001';
       // Appel POST avec axios – exactement comme le style de ton slice
       const response = await axios.post(`/devis/${devisId}/pdf/save`, {
         // Body → souvent vide suffit, mais tu peux passer des options si besoin
@@ -91,7 +92,7 @@ export default function Devis () {
 
       // Vérification plus robuste (structure que tu attends)
       if (result?.success && result?.data?.filepath) {
-        const pdfUrl = `${apiBaseUrl}/${result.data.filepath}`;
+        const pdfUrl = `${API_URL}/${result.data.filepath}`;
         window.open(pdfUrl, '_blank');
       } else {
         console.warn('Réponse inattendue :', result);
@@ -170,8 +171,8 @@ export default function Devis () {
 
     if (filepath) {
       // Construction de l'URL complète
-      const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://192.168.1.125:5001';
-      const pdfUrl = `${apiBaseUrl}/${filepath}`;
+      // const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://192.168.1.125:5001';
+      const pdfUrl = `${API_URL}/${filepath}`;
 
       // Ouvrir dans un nouvel onglet
       window.open(pdfUrl, '_blank');
@@ -207,12 +208,12 @@ export default function Devis () {
           items={[
             { 
               label: "Liste Entete Prospection", 
-              path: `/dossiers-communs/${billet?.prospectionEntete.prestationId}/pages`, 
+              path: `/dossiers-communs/ticketing/pages`, 
               state: { targetTab: 'prospection' } 
             },
             { 
               label: "Prospection detail",
-              path: `/dossiers-communs/${billet?.prospectionEntete.prestationId}/pages/prospection/${enteteId}` 
+              path: `/dossiers-communs/ticketing/pages/prospection/${enteteId}`
             },
             { label: "Liste Devis", isCurrent: true }
           ]}

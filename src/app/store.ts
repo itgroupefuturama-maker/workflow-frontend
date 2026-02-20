@@ -52,6 +52,9 @@ import typeChambreReducer from './front_office/parametre_hotel/typeChambreSlice'
 import serviceHotelReducer from './front_office/parametre_hotel/serviceHotelSlice';
 import hotelProspectionReducer from './front_office/parametre_hotel/hotelProspectionEnteteSlice';
 import hotelReservationEnteteReducer from './front_office/parametre_hotel/hotelReservationEnteteSlice';
+import fournisseurCommentaireReducer from './front_office/fournisseurCommentaire/fournisseurCommentaireSlice';
+import attestationParamsReducer from './front_office/parametre_attestation/attestationParamsSlice';
+import hotelDevisReducer from './front_office/parametre_hotel/hotelDevisSlice';
 
 import {
   FLUSH,
@@ -111,6 +114,9 @@ const appReducer = combineReducers({
   serviceHotel: serviceHotelReducer,
   hotelProspectionEntete: hotelProspectionReducer,
   hotelReservationEntete: hotelReservationEnteteReducer,
+  fournisseurCommentaire: fournisseurCommentaireReducer,
+  attestationParams: attestationParamsReducer,
+  hotelDevis: hotelDevisReducer,
 
   // Portail-client
   clientBeneficiaireInfos: clientBeneficiaireInfosReducer,

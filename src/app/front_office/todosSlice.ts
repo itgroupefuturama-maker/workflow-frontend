@@ -11,6 +11,11 @@ interface Todo {
     moment: string;
     status: 'FAIT' | 'INACTIF' | 'SUPPRIMER';
   };
+  prestation: {
+    id: string;
+    numeroDos: string;
+    statut: string;
+  };
   status: 'ACTIF' | 'INACTIF';
 }
 

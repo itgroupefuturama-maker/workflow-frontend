@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FiPlus, FiCheckSquare, FiX, FiSave, FiFileText } from 'react-icons/fi';
-import type { AppDispatch, RootState } from '../../../../app/store';
-import { fetchProspectionLignes, createProspectionLigne } from '../../../../app/front_office/prospectionsLignesSlice';
-import axios from '../../../../service/Axios';
-import { fetchDestinations } from '../../../../app/front_office/parametre_ticketing/destinationSlice';
-import { fetchPays } from '../../../../app/front_office/parametre_ticketing/paysSlice';
-import TabContainer from '../../../../layouts/TabContainer';
-import { TicketingHeader } from '../../../../components/TicketingBreadcrumb';
+import type { AppDispatch, RootState } from '../../../../../app/store';
+import { fetchProspectionLignes, createProspectionLigne } from '../../../../../app/front_office/prospectionsLignesSlice';
+import axios from '../../../../../service/Axios';
+import { fetchDestinations } from '../../../../../app/front_office/parametre_ticketing/destinationSlice';
+import { fetchPays } from '../../../../../app/front_office/parametre_ticketing/paysSlice';
+import TabContainer from '../../../../../layouts/TabContainer';
+import { TicketingHeader } from '../../../../../components/TicketingBreadcrumb';
 
 export default function ProspectionDetail() {
     const { enteteId } = useParams<{ enteteId: string }>();
@@ -66,7 +66,7 @@ export default function ProspectionDetail() {
     const handleTabChange = (id: string) => {
       if (id === 'billet') {
         // On remonte au parent (PageView) en passant le state pour l'onglet
-        navigate(`/dossiers-communs/${billet?.prospectionEntete.prestationId}/pages`, { 
+        navigate(`/dossiers-communs/ticketing/pages`, { 
           state: { targetTab: 'billet' }
         });
       } else {
@@ -256,7 +256,7 @@ export default function ProspectionDetail() {
           alert('Devis créé avec succès !');
           setSelectedLigneIds([]);
           setSelectionMode(false);
-          navigate(`/dossiers-communs/${enteteId}/pages/devis/${enteteId}`)
+          navigate(`/dossiers-communs/ticketing/pages/devis/${enteteId}`)
         } else {
           alert('Réponse invalide du serveur');
         }
@@ -311,7 +311,7 @@ export default function ProspectionDetail() {
             items={[
               { 
                 label: "Liste Entete Prospection", 
-                path: `/dossiers-communs/${entete?.prestationId}/pages`, 
+                path: `/dossiers-communs/ticketing/pages`, 
                 state: { targetTab: 'prospection' }
               },
               { label: "Prospection detail", isCurrent: true }
@@ -426,7 +426,7 @@ export default function ProspectionDetail() {
                   ) : (
                     <>
                       <button
-                        onClick={() => navigate(`/dossiers-communs/${enteteId}/pages/devis/${enteteId}`)}
+                        onClick={() => navigate(`/dossiers-communs/ticketing/pages/devis/${enteteId}`)}
                         className="flex items-center gap-2 px-4 py-2.5 border border-blue-200 text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 hover:border-blue-300 transition-all font-medium"
                       >
                         <FiFileText size={16} />

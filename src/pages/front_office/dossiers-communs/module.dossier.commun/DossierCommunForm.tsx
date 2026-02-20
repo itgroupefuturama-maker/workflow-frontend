@@ -2,9 +2,9 @@ import { FiArrowLeft, FiPlus, FiCheck, FiTrash2, FiChevronDown, FiX } from "reac
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { useState, useEffect } from "react";
-import type { RootState, AppDispatch } from "../../../app/store";
-import { createDossierCommun, resetCreateStatus } from "../../../app/front_office/dossierCommunSlice";
-import axiosInstance from "../../../service/Axios";
+import type { RootState, AppDispatch } from "../../../../app/store";
+import { createDossierCommun, resetCreateStatus } from "../../../../app/front_office/dossierCommunSlice";
+import axiosInstance from "../../../../service/Axios";
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -20,7 +20,7 @@ interface SectionHeaderProps {
 const SectionHeader = ({ num, title, isComplete, isExpanded, onToggle }: SectionHeaderProps) => (
   <button
     onClick={onToggle}
-    className={`w-full flex items-center justify-between p-4 transition-all border-b ${
+    className={`w-full flex items-center justify-between p-4 transition-all border-b border-slate-100 ${
       isExpanded ? "bg-white shadow-sm" : "bg-gray-50 hover:bg-gray-100"
     }`}
   >
@@ -62,7 +62,7 @@ export default function DossierCommunForm() {
   const [description, setDescription] = useState("");
   const [contactPrincipal, setContactPrincipal] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
-  const [expandedSections, setExpandedSections] = useState<number[]>([0, 1, 2]);
+  const [expandedSections, setExpandedSections] = useState<number[]>([0]);
 
   // Suggestions automatiques des collaborateurs
   const [suggestedCollaborators, setSuggestedCollaborators] = useState<Record<string, string>>({});

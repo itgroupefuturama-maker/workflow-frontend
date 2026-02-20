@@ -81,7 +81,7 @@ function HomePage() {
             </div>
 
             {/* Ticketing */}
-            <div onClick={() => navigate('/dossiers-communs/id-module')} className="group relative bg-white rounded-xl p-6 cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 border border-gray-100 hover:border-amber-200 overflow-hidden">
+            <div onClick={() => navigate('/dossiers-communs/ticketing')} className="group relative bg-white rounded-xl p-6 cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 border border-gray-100 hover:border-amber-200 overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full -mr-16 -mt-16 group-hover:scale-150 transition-transform duration-500"></div>
               <div className="relative z-10">
                 <div className="w-12 h-12 bg-amber-500/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-amber-400 transition-colors duration-300">

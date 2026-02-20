@@ -114,8 +114,8 @@ export default function Sidebar({ module }: SidebarProps) {
   const subLinks =
     module === 'ticketing'
       ? [
-          { label: 'Entête Prospection', path: '/dossiers-communs/prestation-detail/pages', icon: <FiPlusSquare size={16} />, tab: 'prospection' },
-          { label: 'Liste Billets',      path: '/dossiers-communs/prestation-detail/pages', icon: <FiList       size={16} />, tab: 'billet'      },
+          { label: 'Entête Prospection', path: '/dossiers-communs/ticketing/pages', icon: <FiPlusSquare size={16} />, tab: 'prospection' },
+          { label: 'Liste Billets',      path: '/dossiers-communs/ticketing/pages', icon: <FiList       size={16} />, tab: 'billet'      },
         ]
       : module === 'hotel'
       ? [
@@ -131,7 +131,7 @@ export default function Sidebar({ module }: SidebarProps) {
   // ── Navigation ───────────────────────────────────────────────────
   const handleDossierSelect = async (dossier: DossierCommun) => {
     await dispatch(setCurrentClientFactureId(dossier));
-    if (module === 'ticketing')   navigate('/dossiers-communs/prestation-detail/pages', { state: { targetTab: 'prospection'  } });
+    if (module === 'ticketing')   navigate('/dossiers-communs/ticketing/pages', { state: { targetTab: 'prospection'  } });
     if (module === 'attestation') navigate('/dossiers-communs/attestation/pages',        { state: { targetTab: 'attestation'  } });
     if (module === 'hotel')       navigate('/dossiers-communs/hotel/pages',              { state: { targetTab: 'benchmarking' } });
   };

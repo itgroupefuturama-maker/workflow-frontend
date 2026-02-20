@@ -1,11 +1,11 @@
 import { useNavigate } from "react-router-dom";
 import { FiArrowLeft, FiCalendar, FiEdit, FiFileText, FiPackage, FiPhone, FiUser, FiCheckCircle } from "react-icons/fi";
 import { useDispatch, useSelector } from "react-redux";
-import type { AppDispatch, RootState } from "../../../app/store";
+import type { AppDispatch, RootState } from "../../../../app/store";
 import { useEffect, useState } from "react";
-import { fetchClientFactureById } from "../../../app/back_office/clientFacturesSlice";
-import { fetchClientBeneficiaireInfos } from "../../../app/portail_client/clientBeneficiaireInfosSlice";
-import BeneficiaireInfosModal from "../../../components/modals/BeneficiaireInfosModal";
+import { fetchClientFactureById } from "../../../../app/back_office/clientFacturesSlice";
+import { fetchClientBeneficiaireInfos } from "../../../../app/portail_client/clientBeneficiaireInfosSlice";
+import BeneficiaireInfosModal from "../../../../components/modals/BeneficiaireInfosModal";
 
 export default function DossierCommunDetail() {
   const navigate = useNavigate();

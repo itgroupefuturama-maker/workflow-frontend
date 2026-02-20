@@ -8,8 +8,9 @@ interface Props {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (payload: {
-    hotelProspectionEnteteId: string;
-    benchmarkingLigneIds: string[];
+    totalGeneral: number;
+    prospectionHotelId: string;
+    benchmarkingEnteteIds: string[];
   }) => void;
   entete: HotelProspectionEntete;
   loading: boolean;
@@ -24,19 +25,27 @@ const ModalBenchmarkingToHotel: React.FC<Props> = ({
 }) => {
   const [selectedLigneIds, setSelectedLigneIds] = useState<string[]>([]);
   const [showConfirmation, setShowConfirmation] = useState(false);
+  // const [totalGeneral, setTotalGeneral] = useState<number>(0);
 
   if (!isOpen) return null;
 
   // Récupérer toutes les lignes de type "client" de tous les benchmarkings
-  const lignesClient = entete.benchmarkingEntete.flatMap((bench) =>
-    bench.benchmarkingLigne
-      .filter((ligne) => ligne.plateforme?.nom?.toLowerCase() === 'client')
-      .map((ligne) => ({
-        ...ligne,
-        benchNumero: bench.numero, // pour afficher d'où vient la ligne
-        benchId: bench.id,
-      }))
+  const lignesClient = entete.benchmarkingEntete.filter((bench) =>
+    bench.benchmarkingLigne.some(
+      (l) => l.plateforme?.nom?.toLowerCase() === 'client'
+    )
   );
+
+  // Calcul automatique du total général = somme des montantAriary des lignes "client"
+  // pour les benchmarkings sélectionnés uniquement
+  const totalGeneralAuto = entete.benchmarkingEntete
+    .filter((bench) => selectedLigneIds.includes(bench.id))
+    .reduce((total, bench) => {
+      const ligneClient = bench.benchmarkingLigne.find(
+        (l) => l.plateforme?.nom?.toLowerCase() === 'client'
+      );
+      return total + (ligneClient?.montantAriary ?? 0);
+    }, 0);
 
   const toggleLigne = (ligneId: string) => {
     setSelectedLigneIds((prev) =>
@@ -66,275 +75,253 @@ const ModalBenchmarkingToHotel: React.FC<Props> = ({
 
   const handleConfirmAndSubmit = () => {
     onSubmit({
-      hotelProspectionEnteteId: entete.id,
-      benchmarkingLigneIds: selectedLigneIds,
+      totalGeneral: totalGeneralAuto,
+      prospectionHotelId: entete.id,
+      benchmarkingEnteteIds: selectedLigneIds,
     });
     setShowConfirmation(false);
   };
 
-  return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
 
-        {/* Header */}
-        <div className="bg-orange-50 border-b border-orange-200 px-6 py-4 flex justify-between items-center">
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+
+        {/* ── Header ── */}
+        <div className="bg-gray-950 px-6 py-5 flex justify-between items-center shrink-0">
           <div>
-            <h2 className="text-lg font-semibold text-orange-900">
-              Transformer en Réservation Hôtel
-            </h2>
-            <p className="text-sm text-orange-700 mt-0.5">
-              Entête : <span className="font-medium">{entete.numeroEntete}</span>
-              {' · '}
-              Fournisseur : <span className="font-medium">{entete.fournisseur?.libelle}</span>
+            <p className="text-gray-500 text-xs uppercase tracking-widest mb-1">Transformation</p>
+            <h2 className="text-white font-bold text-base">Benchmarking → Devis</h2>
+            <p className="text-gray-400 text-xs mt-1">
+              {entete.numeroEntete}
+              <span className="mx-2 text-gray-600">·</span>
+              {entete.fournisseur?.libelle}
             </p>
           </div>
           <button
             onClick={onClose}
-            className="text-orange-400 hover:text-orange-600 p-1 hover:bg-orange-100 rounded transition"
+            className="text-gray-500 hover:text-white hover:bg-white/10 p-1.5 rounded-lg transition"
           >
-            <FiX size={20} />
+            <FiX size={16} />
           </button>
         </div>
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-5">
-
-          {/* Info */}
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
-            <p>
-              Sélectionnez les lignes <strong>client</strong> des benchmarkings à inclure dans la réservation hôtel.
-              Seules les lignes avec la plateforme <strong>"client"</strong> sont affichées.
-            </p>
-          </div>
+        {/* ── Body ── */}
+        <div className="flex-1 overflow-y-auto bg-gray-50">
 
           {lignesClient.length === 0 ? (
-            <div className="text-center py-10 border-2 border-dashed border-gray-200 rounded-lg">
-              <p className="text-gray-500 text-sm">
-                Aucune ligne client trouvée dans les benchmarkings de cette entête.
-              </p>
+            <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+              <svg className="w-10 h-10 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <p className="text-sm text-gray-500">Aucune ligne client dans les benchmarkings</p>
+              <p className="text-xs text-gray-400 mt-1">Validez d'abord la commission sur chaque benchmarking</p>
             </div>
           ) : (
-            <div className="border border-gray-200 rounded-lg overflow-hidden">
-              {/* Header tableau */}
-              <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-                <div className="flex items-center gap-3">
+            <div className="p-5 space-y-3">
+
+              {/* Sélectionner tout + total */}
+              <div className="bg-white border border-gray-200 rounded-lg px-4 py-3 flex items-center justify-between">
+                <label className="flex items-center gap-3 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={selectedLigneIds.length === lignesClient.length && lignesClient.length > 0}
                     onChange={toggleAll}
-                    className="w-4 h-4 accent-orange-500 cursor-pointer"
+                    className="w-4 h-4 accent-gray-900 cursor-pointer"
                   />
-                  <span className="text-xs font-semibold text-gray-700 uppercase">
-                    Tout sélectionner
+                  <span className="text-sm font-medium text-gray-700">Tout sélectionner</span>
+                  <span className="text-xs text-gray-400">
+                    ({selectedLigneIds.length}/{lignesClient.length})
                   </span>
+                </label>
+
+                {/* Total auto */}
+                <div className="text-right">
+                  <p className="text-xs text-gray-400 uppercase tracking-wide">Total général</p>
+                  <p className="text-sm font-mono font-semibold text-gray-800">
+                    {totalGeneralAuto > 0
+                      ? `${totalGeneralAuto.toLocaleString('fr-FR')} Ar`
+                      : <span className="text-gray-400 font-normal text-xs">— sélectionnez des lignes</span>
+                    }
+                  </p>
                 </div>
-                <span className="text-xs text-gray-500">
-                  {selectedLigneIds.length} / {lignesClient.length} sélectionné(s)
-                </span>
               </div>
 
-              {/* Lignes groupées par benchmarking */}
-              {entete.benchmarkingEntete.map((bench) => {
-                const lignesDuBench = bench.benchmarkingLigne.filter(
+              {/* Liste benchmarkings */}
+              {entete.benchmarkingEntete
+                .filter((bench) =>
+                  bench.benchmarkingLigne.some(
+                    (l) => l.plateforme?.nom?.toLowerCase() === 'client'
+                  )
+                )
+                .map((bench) => {
+                const isSelected = selectedLigneIds.includes(bench.id);
+                const ligneClient = bench.benchmarkingLigne.find(
                   (l) => l.plateforme?.nom?.toLowerCase() === 'client'
                 );
-                if (lignesDuBench.length === 0) return null;
 
                 return (
-                  <div key={bench.id} className="border-b border-gray-100 last:border-b-0">
-                    {/* Sous-header benchmarking */}
-                    <div className="bg-gray-50 px-4 py-2 border-b border-gray-100">
-                      <span className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
-                        Benchmarking : {bench.numero}
-                      </span>
-                      <span className="text-xs text-gray-400 ml-2">
-                        ({new Date(bench.du).toLocaleDateString('fr-FR')} → {new Date(bench.au).toLocaleDateString('fr-FR')})
-                      </span>
-                    </div>
-
-                    {/* Lignes */}
-                    {lignesDuBench.map((ligne) => {
-                      const isSelected = selectedLigneIds.includes(ligne.id);
-                      return (
-                        <div
-                          key={ligne.id}
-                          onClick={() => toggleLigne(ligne.id)}
-                          className={`flex items-center gap-4 px-4 py-3 cursor-pointer transition-colors hover:bg-orange-50 ${
-                            isSelected ? 'bg-orange-50 border-l-4 border-orange-500' : 'border-l-4 border-transparent'
-                          }`}
-                        >
-                          {/* Checkbox */}
-                          <input
-                            type="checkbox"
-                            checked={isSelected}
-                            onChange={() => toggleLigne(ligne.id)}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-4 h-4 accent-orange-500 cursor-pointer flex-shrink-0"
-                          />
-
-                          {/* Infos ligne */}
-                          <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                            <div>
-                              <p className="text-xs text-gray-500 mb-0.5">Hôtel</p>
-                              <p className="font-semibold text-gray-900">{ligne.hotel}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-gray-500 mb-0.5">Type Chambre</p>
-                              <p className="font-medium text-gray-700">{ligne.typeChambre?.type}</p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-gray-500 mb-0.5">Nuitée Devise</p>
-                              <p className="font-mono text-gray-900">
-                                {ligne.nuiteDevise} {ligne.devise}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-gray-500 mb-0.5">Montant Ar</p>
-                              <p className="font-mono font-semibold text-gray-900">
-                                {ligne.montantAriary?.toLocaleString('fr-FR')} Ar
-                              </p>
-                            </div>
-                          </div>
-
-                          {/* Badge client */}
-                          <span className="text-xs font-medium px-2 py-1 bg-blue-100 text-blue-700 rounded-full flex-shrink-0">
-                            {ligne.plateforme?.nom}
+                  <div
+                    key={bench.id}
+                    onClick={() => toggleLigne(bench.id)}
+                    className={`bg-white border rounded-lg cursor-pointer transition-all ${
+                      isSelected
+                        ? 'border-gray-800 shadow-sm'
+                        : 'border-gray-200 hover:border-gray-400'
+                    }`}
+                  >
+                    {/* Header bench */}
+                    <div className="px-4 py-3 flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleLigne(bench.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-4 h-4 accent-gray-900 cursor-pointer shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-semibold text-gray-800 font-mono">
+                            {bench.numero}
+                          </span>
+                          <span className="text-xs text-gray-400">
+                            {new Date(bench.du).toLocaleDateString('fr-FR')}
+                            <span className="mx-1">→</span>
+                            {new Date(bench.au).toLocaleDateString('fr-FR')}
+                          </span>
+                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                            {bench.nuite} nuit{bench.nuite > 1 ? 's' : ''}
                           </span>
                         </div>
-                      );
-                    })}
+                        <p className="text-xs text-gray-400 mt-0.5">{bench.ville}, {bench.pays}</p>
+                      </div>
+
+                      {/* Montant ligne client */}
+                      {ligneClient ? (
+                        <div className="text-right shrink-0">
+                          <p className="text-xs text-gray-400">Ligne client</p>
+                          <p className="text-sm font-mono font-semibold text-gray-800">
+                            {ligneClient.montantAriary.toLocaleString('fr-FR')} Ar
+                          </p>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-gray-400 italic shrink-0">Pas de ligne client</span>
+                      )}
+                    </div>
+
+                    {/* Détails ligne client — visible si sélectionné */}
+                    {isSelected && ligneClient && (
+                      <div className="px-4 pb-3 border-t border-gray-100 pt-3 grid grid-cols-4 gap-3">
+                        {[
+                          { label: 'Type chambre', value: ligneClient.typeChambre?.type ?? '—' },
+                          { label: 'Nb chambres', value: ligneClient.nombreChambre },
+                          { label: 'Nuit/devise', value: `${ligneClient.nuiteDevise.toLocaleString('fr-FR')} ${ligneClient.devise}` },
+                          { label: 'Taux', value: ligneClient.tauxChange.toLocaleString('fr-FR') },
+                        ].map(({ label, value }) => (
+                          <div key={label}>
+                            <p className="text-xs text-gray-400 mb-0.5">{label}</p>
+                            <p className="text-xs font-medium text-gray-700">{value}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
           )}
-
-          {/* Récapitulatif sélection */}
-          {selectedLigneIds.length > 0 && (
-            <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
-              <p className="text-xs font-semibold text-orange-800 uppercase mb-2">
-                Récapitulatif de la sélection
-              </p>
-              <div className="space-y-1">
-                {selectedLigneIds.map((id) => {
-                  const ligne = lignesClient.find((l) => l.id === id);
-                  if (!ligne) return null;
-                  return (
-                    <div key={id} className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2">
-                        <span className="text-orange-500">✓</span>
-                        <span className="font-medium">{ligne.hotel}</span>
-                        <span className="text-gray-500">— {ligne.typeChambre?.type}</span>
-                        <span className="text-xs text-gray-400">({ligne.benchNumero})</span>
-                      </div>
-                      <span className="font-mono text-xs text-gray-600">
-                        {ligne.montantAriary?.toLocaleString('fr-FR')} Ar
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
         </div>
 
-        {/* Footer */}
-        <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-between items-center">
-          <p className="text-xs text-gray-600">
-            <span className="text-red-600 font-semibold">*</span> Sélection obligatoire
+        {/* ── Footer ── */}
+        <div className="bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-between shrink-0">
+          <p className="text-xs text-gray-400">
+            {selectedLigneIds.length === 0
+              ? 'Sélectionnez au moins un benchmarking'
+              : `${selectedLigneIds.length} benchmarking${selectedLigneIds.length > 1 ? 's' : ''} · ${totalGeneralAuto.toLocaleString('fr-FR')} Ar`
+            }
           </p>
-          <div className="flex gap-3">
+          <div className="flex gap-2">
             <button
               onClick={onClose}
-              className="px-5 py-2 border border-gray-300 rounded text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
+              className="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg transition"
             >
               Annuler
             </button>
             <button
               onClick={handleShowConfirmation}
               disabled={!isFormValid}
-              className={`px-5 py-2 rounded text-sm font-medium transition flex items-center gap-2 ${
-                isFormValid
-                  ? 'bg-orange-500 text-white hover:bg-orange-600'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
+              className="px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
             >
-              <FiCheck size={16} />
-              Vérifier & Confirmer
+              <FiCheck size={14} />
+              Confirmer
             </button>
           </div>
         </div>
 
-        {/* Confirmation overlay */}
+        {/* ── Confirmation overlay ── */}
         {showConfirmation && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-            <div className="bg-white rounded-lg shadow-xl max-w-lg w-full overflow-hidden">
-              <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
-                <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <FiCheck size={20} />
-                  Confirmation finale
-                </h3>
-                <p className="text-sm text-gray-600 mt-1">
-                  Vérifiez avant de créer la réservation hôtel
-                </p>
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+            <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden">
+
+              {/* Header confirmation */}
+              <div className="bg-gray-950 px-6 py-5">
+                <p className="text-gray-500 text-xs uppercase tracking-widest mb-1">Confirmation</p>
+                <h3 className="text-white font-bold text-base">Vérifier avant de soumettre</h3>
               </div>
 
               <div className="p-6 space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-gray-50 border border-gray-200 rounded p-3">
-                    <p className="text-xs text-gray-500 uppercase mb-1">Entête</p>
-                    <p className="font-semibold text-gray-900">{entete.numeroEntete}</p>
+
+                {/* Récap */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                    <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Entête</p>
+                    <p className="text-sm font-semibold text-gray-900">{entete.numeroEntete}</p>
                   </div>
-                  <div className="bg-gray-50 border border-gray-200 rounded p-3">
-                    <p className="text-xs text-gray-500 uppercase mb-1">Lignes sélectionnées</p>
-                    <p className="font-semibold text-gray-900">{selectedLigneIds.length}</p>
+                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                    <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Benchmarkings</p>
+                    <p className="text-sm font-semibold text-gray-900">{selectedLigneIds.length}</p>
+                  </div>
+                  <div className="col-span-2 bg-gray-950 rounded-lg p-3">
+                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Total général</p>
+                    <p className="text-lg font-mono font-bold text-white">
+                      {totalGeneralAuto.toLocaleString('fr-FR')} Ar
+                    </p>
                   </div>
                 </div>
 
-                <pre className="bg-gray-900 text-green-400 p-4 rounded text-xs overflow-x-auto font-mono whitespace-pre-wrap">
-                  {JSON.stringify(
-                    {
-                      hotelProspectionEnteteId: entete.id,
-                      benchmarkingLigneIds: selectedLigneIds,
-                    },
-                    null,
-                    2
-                  )}
-                </pre>
-
-                <div className="bg-amber-50 border border-amber-200 rounded p-3 flex items-start gap-2">
-                  <span>⚠️</span>
-                  <p className="text-sm text-amber-800">
-                    Cette action créera une réservation hôtel à partir des lignes sélectionnées.
+                {/* Avertissement */}
+                <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+                  <svg className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-xs text-amber-700">
+                    Cette action créera un devis à partir des benchmarkings sélectionnés. L'opération est irréversible.
                   </p>
                 </div>
               </div>
 
-              <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
+              {/* Footer confirmation */}
+              <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end gap-2">
                 <button
                   onClick={() => setShowConfirmation(false)}
-                  className="px-5 py-2 border border-gray-300 rounded text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="px-4 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 hover:bg-gray-50 rounded-lg transition"
                 >
                   ← Modifier
                 </button>
                 <button
                   onClick={handleConfirmAndSubmit}
                   disabled={loading}
-                  className={`px-5 py-2 rounded text-sm font-medium flex items-center gap-2 ${
-                    loading
-                      ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      : 'bg-orange-500 text-white hover:bg-orange-600'
-                  }`}
+                  className="px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {loading ? (
                     <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
                       Création...
                     </>
                   ) : (
                     <>
-                      <FiCheck size={16} />
-                      Confirmer →
+                      <FiCheck size={14} />
+                      Créer le devis
                     </>
                   )}
                 </button>

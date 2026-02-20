@@ -446,8 +446,8 @@ export default function CommentairesFournisseurs() {
                                   onChange={(e) => setForm({ ...form, alerte: e.target.value as CommentaireFournisseur['alerte'] })}
                                   className={inputClass}
                                 >
-                                  <option value="FAIBLE">Faible</option>
                                   <option value="NORMAL">Normal</option>
+                                  <option value="FAIBLE">Faible</option>
                                   <option value="ELEVE">Élevé</option>
                                   <option value="TRES_ELEVE">Très élevé</option>
                                 </select>

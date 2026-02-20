@@ -40,7 +40,7 @@ export type SendDevisPayload = {
     tauxPrixUnitaire: number;
     forfaitaireUnitaire: number;
     forfaitaireGlobal: number;
-    montantAriary: number;
+    montantCommission: number;
   };
 };
 
@@ -124,6 +124,7 @@ export type HotelProspectionEntete = {
   numeroEntete: string;
   prestationId: string;
   fournisseurId: string;
+  isDevis: boolean;
   createdAt: string;
   prestation?: PrestationLight;
   fournisseur?: FournisseurLight;
@@ -148,7 +149,7 @@ export type BenchmarkingDetail = {
   hotelProspectionEntete?: {
     id: string;
     numeroEntete: string;
-    // ... autres champs si besoin
+    isDevis: boolean;
   };
   benchmarkingLigne: Array<{
     id: string;
@@ -205,7 +206,7 @@ export const fetchHotelProspectionEntetes = createAsyncThunk(
       return response.data.data as HotelProspectionEntete[];
     } catch (err: any) {
       return rejectWithValue(
-        err.response?.data?.message || 'Erreur chargement entêtes prospection'
+        err.response?.data?.message || 'Dossier vide'
       );
     }
   }
@@ -310,7 +311,7 @@ export const sendBenchmarkingDevis = createAsyncThunk(
   async (payload: SendDevisPayload, { rejectWithValue }) => {
     try {
       const { benchmarkingId, ...data } = payload;
-      const response = await axios.post(`/hotel/benchmarking/${benchmarkingId}/devis`, data);
+      const response = await axios.post(`/hotel/benchmarking/${benchmarkingId}/client-booking`, data);
       
       if (!response.data.success) {
         throw new Error(response.data.message || 'Échec de l\'envoi du devis');
@@ -410,16 +411,17 @@ export const createHotelEnteteFromBenchmarking = createAsyncThunk(
   'hotelReservation/createFromBenchmarking',
   async (
     payload: {
-      hotelProspectionEnteteId: string;
-      benchmarkingLigneIds: string[];
+      totalGeneral: number;
+      prospectionHotelId: string;
+      benchmarkingEnteteIds: string[];
     },
     { rejectWithValue }
   ) => {
     try {
-      const res = await axios.post(`/hotel/entete`, payload);
+      const res = await axios.post(`/hotel/devis`, payload);
       return res.data.data;
     } catch (err: any) {
-      return rejectWithValue(err.response?.data?.message || 'Erreur création hôtel depuis benchmarking');
+      return rejectWithValue(err.response?.data?.message || 'Erreur création devis depuis benchmarking');
     }
   }
 );

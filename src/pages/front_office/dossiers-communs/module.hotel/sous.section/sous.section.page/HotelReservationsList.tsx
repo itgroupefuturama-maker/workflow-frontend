@@ -1,6 +1,4 @@
-// src/pages/parametres/hotel/HotelReservationsList.tsx
-
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState, AppDispatch } from '../../../../../../app/store';
 import { fetchHotelReservations } from '../../../../../../app/front_office/parametre_hotel/hotelReservationEnteteSlice';
@@ -15,159 +13,137 @@ interface Props {
 const HotelReservationsList = ({ prestationId, dossierNumero }: Props) => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
+  const hasFetched = useRef(false);
 
-  // ✅ UNE SEULE déclaration avec déstructuration ET valeur par défaut
   const {
-    items: reservations = [],  // ← Ajout de = [] pour éviter undefined
+    items: reservations = [],
     loading: reservationsLoading,
     error: reservationsError,
   } = useSelector((state: RootState) => state.hotelReservationEntete);
 
-  // ❌ SUPPRIMEZ ces lignes (doublon)
-  // const reservations = useSelector(
-  //   (state: RootState) => state.hotelReservationEntete.items
-  // );
-
-  // const reservationsLoading = useSelector(
-  //   (state: RootState) => state.hotelReservationEntete.loading
-  // );
-
   useEffect(() => {
-    if (!prestationId) return;
-    
-    // Maintenant reservations est toujours un tableau grâce à = []
-    if (reservations.length > 0 || reservationsLoading) {
-      return;
-    }
-
+    if (!prestationId || hasFetched.current) return;
+    hasFetched.current = true;
     dispatch(fetchHotelReservations(prestationId));
-  }, [dispatch, prestationId, reservations.length, reservationsLoading]);
+  }, [dispatch, prestationId]);
+
+  // Reset si la prestation change
+  useEffect(() => {
+    hasFetched.current = false;
+  }, [prestationId]);
 
   const formatMontant = (montant: number) => montant.toLocaleString('fr-FR');
 
-  if (reservationsLoading) {
-    return (
-      <div className="flex justify-center items-center py-32">
-        <div className="animate-spin rounded-full h-14 w-14 border-t-4 border-orange-500 border-b-4 border-neutral-300"></div>
-      </div>
-    );
-  }
+  const statutLabel: Record<string, string> = {
+    CREER: 'Créé',
+    APPORUVER: 'Approuvé',
+    FACTURE_EMISE: 'Facture émise',
+    ANNULER: 'Annulé',
+  };
 
-  if (reservationsError) {
-    return (
-      <div className="bg-red-50 border-l-4 border-red-600 p-6 rounded-lg text-red-800">
-        {reservationsError}
-      </div>
-    );
-  }
-
-  if (reservations.length === 0) {
-    return (
-      <div className="bg-white border border-neutral-200 rounded-xl p-12 text-center my-8">
-        <p className="text-neutral-600 text-lg">Aucune réservation hôtel trouvée pour cette prestation</p>
-      </div>
-    );
-  }
+  const statutStyle: Record<string, string> = {
+    FACTURE_EMISE: 'bg-green-100 text-green-800',
+    ANNULER: 'bg-red-100 text-red-800',
+    APPORUVER: 'bg-blue-100 text-blue-800',
+    CREER: 'bg-amber-100 text-amber-800',
+  };
 
   return (
-    <div className="min-h-screen bg-neutral-50 ">
+    <div className="min-h-screen bg-neutral-50">
       <div className="mb-5">
-        <HotelHeader numerohotel={dossierNumero} navigate={navigate} isBenchmarking={false}/>
+        <HotelHeader numerohotel={dossierNumero} navigate={navigate} isBenchmarking={false} />
       </div>
+
       <div className="mb-6">
-        <h2 className="text-xl font-bold text-neutral-800">
-          Réservations Hôtel
-        </h2>
+        <h2 className="text-xl font-bold text-neutral-800">Réservations Hôtel</h2>
         <p className="text-sm text-neutral-500 mt-1">
           Liste des entêtes de réservation hôtel associées
         </p>
       </div>
 
-      <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-sm">
-        <table className="min-w-full divide-y divide-neutral-200">
-          <thead className="bg-neutral-50">
-            <tr>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">
-                N° Entête
-              </th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">
-                Statut
-              </th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">
-                Fournisseur
-              </th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">
-                Dossier
-              </th>
-              <th className="px-6 py-4 text-right text-xs font-semibold text-neutral-600 uppercase tracking-wider">
-                Lignes
-              </th>
-              <th className="px-6 py-4 text-right text-xs font-semibold text-neutral-600 uppercase tracking-wider">
-                Montant total
-              </th>
-              <th className="px-6 py-4 text-right text-xs font-semibold text-neutral-600 uppercase tracking-wider">
-                Commission
-              </th>
-              <th className="px-6 py-4"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-neutral-100 bg-white">
-            {reservations.map((entete) => (
-              <tr
-                key={entete.id}
-                className="hover:bg-neutral-50 transition-colors cursor-pointer"
-                onClick={() => navigate(`/dossiers-communs/hotel/detailsHotel/${entete.id}`)}
-              >
-                <td className="px-6 py-4 font-medium text-neutral-900">
-                  {entete.HotelProspectionEntete.numeroEntete}
-                </td>
-                <td className="px-6 py-4 uppercase">
-                  <span
-                    className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${
-                      entete.statut === 'FACTURE_EMISE'
-                        ? 'bg-green-100 text-green-800'
-                        : entete.statut === 'ANNULER'
-                        ? 'bg-red-100 text-red-800'
-                        : 'bg-amber-100 text-amber-800'
-                    }`}
-                  >
-                    {entete.statut == 'CREER' ? 'crée' : entete.statut == 'APPORUVER' ? 'approuvé' : entete.statut == 'FACTURE_EMISE' ? 'facture emise' : entete.statut == 'ANNULER' ? 'annulé' : 'en cours'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-neutral-700">
-                  {entete.HotelProspectionEntete.fournisseur.libelle}
-                  <span className="text-neutral-500 text-xs ml-1.5">
-                    ({entete.HotelProspectionEntete.fournisseur.code})
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-neutral-600">
-                  {entete.HotelProspectionEntete.prestation.numeroDos || '—'}
-                </td>
-                <td className="px-6 py-4 text-right font-medium">
-                  {entete.hotelLigne.length}
-                </td>
-                <td className="px-6 py-4 text-right font-medium text-neutral-900">
-                  {formatMontant(
-                    entete.hotelLigne.reduce((sum, l) => sum + (l.puResaMontantAriary || 0), 0)
-                  )}{' '}
-                  Ar
-                </td>
-                <td className="px-6 py-4 text-right font-medium text-emerald-700">
-                  {formatMontant(
-                    entete.hotelLigne.reduce((sum, l) => sum + (l.commissionUnitaire || 0), 0)
-                  )}{' '}
-                  Ar
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <span className="text-orange-600 hover:text-orange-800 text-sm font-medium">
-                    Détail →
-                  </span>
-                </td>
+      {/* ── États ── */}
+      {reservationsLoading ? (
+        <div className="flex items-center justify-center py-16">
+          <div className="text-center">
+            <div className="w-8 h-8 border-2 border-neutral-200 border-t-neutral-900 rounded-full animate-spin mx-auto mb-3" />
+            <p className="text-sm text-neutral-500">Chargement des réservations...</p>
+          </div>
+        </div>
+      ) : reservationsError ? (
+        <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg text-red-700 text-sm">
+          {reservationsError}
+        </div>
+      ) : reservations.length === 0 ? (
+        <div className="bg-white border border-neutral-200 rounded-xl p-12 text-center">
+          <svg className="w-12 h-12 mx-auto mb-3 text-neutral-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          <p className="text-sm text-neutral-500">Aucune réservation trouvée</p>
+        </div>
+      ) : (
+        <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-sm">
+          <table className="min-w-full divide-y divide-neutral-200">
+            <thead className="bg-neutral-50">
+              <tr>
+                {['N° Entête', 'Statut', 'Fournisseur', 'Dossier'].map((h) => (
+                  <th key={h} className="px-6 py-4 text-left text-xs font-semibold text-neutral-600 uppercase tracking-wider">
+                    {h}
+                  </th>
+                ))}
+                {['Lignes', 'Montant total', 'Commission', ''].map((h) => (
+                  <th key={h} className="px-6 py-4 text-right text-xs font-semibold text-neutral-600 uppercase tracking-wider">
+                    {h}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody className="divide-y divide-neutral-100 bg-white">
+              {reservations.map((entete) => {
+                const montantTotal = entete.hotelLigne.reduce((sum, l) => sum + (l.puResaMontantAriary || 0), 0);
+                const commission = entete.hotelLigne.reduce((sum, l) => sum + (l.commissionUnitaire || 0), 0);
+
+                return (
+                  <tr
+                    key={entete.id}
+                    onClick={() => navigate(`/dossiers-communs/hotel/detailsHotel/${entete.id}`)}
+                    className="hover:bg-neutral-50 transition-colors cursor-pointer"
+                  >
+                    <td className="px-6 py-4 font-mono text-sm font-medium text-neutral-900">
+                      {entete.HotelProspectionEntete.numeroEntete}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${statutStyle[entete.statut] ?? 'bg-neutral-100 text-neutral-600'}`}>
+                        {statutLabel[entete.statut] ?? entete.statut}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-neutral-700">
+                      {entete.HotelProspectionEntete.fournisseur.libelle}
+                      <span className="text-neutral-400 text-xs ml-1.5">
+                        ({entete.HotelProspectionEntete.fournisseur.code})
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-neutral-600">
+                      {entete.HotelProspectionEntete.prestation.numeroDos || '—'}
+                    </td>
+                    <td className="px-6 py-4 text-right text-sm font-medium text-neutral-800">
+                      {entete.hotelLigne.length}
+                    </td>
+                    <td className="px-6 py-4 text-right font-mono text-sm font-medium text-neutral-900">
+                      {formatMontant(montantTotal)} Ar
+                    </td>
+                    <td className="px-6 py-4 text-right font-mono text-sm font-medium text-emerald-700">
+                      {formatMontant(commission)} Ar
+                    </td>
+                    <td className="px-6 py-4 text-right text-sm text-neutral-400 hover:text-neutral-700 transition-colors">
+                      Détail →
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 };

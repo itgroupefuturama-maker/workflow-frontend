@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { FiHelpCircle, FiBell, FiUser, FiChevronDown, FiLogOut, FiX ,FiTrash2 } from "react-icons/fi";
+import { FiHelpCircle, FiBell, FiUser, FiChevronDown, FiLogOut, FiX ,FiTrash2, FiHome } from "react-icons/fi";
 import { useState, useRef, useEffect } from "react";
 import { logout } from '../app/authSlice';
 import { useDispatch, useSelector } from 'react-redux';
@@ -152,7 +152,7 @@ const markAllAsRead = async () => {
     ?.flatMap(p => p.profile.modules.map(m => m.module.nom)) || [];
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-slate-200 backdrop-blur-md px-10 py-2">
+    <header className="sticky top-0 z-50 bg-white border-b border-slate-200 backdrop-blur-md px-5 py-2">
       <div className="h-16 flex items-center justify-between">
         <div className="flex items-center gap-8">
           <Link to="/" className="flex items-center gap-2 group">
@@ -164,41 +164,19 @@ const markAllAsRead = async () => {
             </span>
           </Link>
 
-          <nav className="hidden md:flex items-center text-sm font-medium">
-            <div className="h-4 w-px bg-gray-200 mx-2" />
-            <div className="flex items-center gap-2 text-gray-400">
-              {paths.map((p, index) => {
-                // Détection intelligente : est-ce un ID (UUID ou MongoDB ID) ?
-                const isId = p.length > 20 || (/\d/.test(p) && p.length > 12);
-                // Si c'est un ID, on regarde le segment précédent pour savoir comment le nommer
-                let displayLabel = segmentLabels[p] || p.replace(/-/g, ' ').charAt(0).toUpperCase() + p.replace(/-/g, ' ').slice(1);
-                if (isId) {
-                  const previousSegment = paths[index - 1];
-                  if (previousSegment === 'prestations') displayLabel = "Détail Prestation";
-                  else if (previousSegment === 'dossiers-communs') displayLabel = "Réf. Dossier";
-                  else displayLabel = "Détails";
-                }
-
-                const url = `/${paths.slice(0, index + 1).join("/")}`;
-
-                return (
-                  <div key={index} className="flex items-center gap-2">
-                    <Link
-                      to={url}
-                      className={`transition-colors ${
-                        index === paths.length - 1
-                          ? "text-indigo-600 font-bold"
-                          : "hover:text-gray-600"
-                      }`}
-                    >
-                      {displayLabel}
-                    </Link>
-                    {index < paths.length - 1 && <span className="text-gray-300"> / </span>}
-                  </div>
-                );
-              })}
-            </div>
-          </nav>
+          {/* On n'affiche le bouton que si "paths" n'est pas vide (donc pas sur "/") */}
+          {paths.length > 0 && (
+            <nav className="hidden md:flex items-center text-sm font-medium">
+              <div className="h-4 w-px bg-gray-200 mx-2" />
+              <button
+                onClick={() => navigate("/")}
+                className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-gray-700 py-2 px-5 ml-4 rounded-2xl transition-colors cursor-pointer"
+              >
+                <FiHome size={20} />
+                <span className="text-sm font-semibold">Accueil</span>
+              </button>
+            </nav>
+          )}
         </div>
 
         {/* RIGHT : Icons & User */}
