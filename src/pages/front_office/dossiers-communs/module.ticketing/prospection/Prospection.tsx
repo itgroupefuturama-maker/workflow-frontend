@@ -505,7 +505,7 @@ export default function ProspectionDetail() {
                         }`}
                       >
                         <FiLayout size={16} />
-                        Ajout inline
+                        Ajout (Ligne)
                       </button>
 
                       {/* Bouton ajout via modal */}
