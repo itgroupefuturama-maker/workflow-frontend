@@ -347,7 +347,7 @@ export default function PageView() {
                       <tr
                         key={billet.id}
                         className="hover:bg-emerald-50/30 transition-colors cursor-pointer"
-                        onClick={() => navigate(`/dossiers-communs/${prestationId}/pages/billet/${billet.devisId}?prospectionEnteteId=${billet.prospectionEnteteId}`)}
+                        onClick={() => navigate(`/dossiers-communs/ticketing/pages/billet/${billet.devisId}?prospectionEnteteId=${billet.prospectionEnteteId}`)}
                       >
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
                           {billet.numeroBillet}
@@ -380,7 +380,7 @@ export default function PageView() {
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              navigate(`/dossiers-communs/${prestationId}/pages/billet/${billet.devisId}?prospectionEnteteId=${billet.prospectionEnteteId}`)
+                              navigate(`/dossiers-communs/ticketing/pages/billet/${billet.devisId}?prospectionEnteteId=${billet.prospectionEnteteId}`)
                             }}
                             className="text-emerald-600 hover:text-emerald-800 font-medium"
                           >

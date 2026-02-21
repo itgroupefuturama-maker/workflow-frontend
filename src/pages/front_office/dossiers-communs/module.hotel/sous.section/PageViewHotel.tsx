@@ -91,10 +91,9 @@ const PageViewHotel = () => {
   }, [dispatch, prestationId, activeTab]);
 
   useEffect(() => {
-    if (entetes.length === 0 && prestationId) {
-      dispatch(fetchHotelProspectionEntetes(prestationId));
-    }
-  }, [dispatch, prestationId, entetes.length]);
+    if (!prestationId) return;
+    dispatch(fetchHotelProspectionEntetes(prestationId));
+  }, [dispatch, prestationId]);
 
   const handleCreate = () => {
     if (!prestationId || !selectedFournisseurId) {

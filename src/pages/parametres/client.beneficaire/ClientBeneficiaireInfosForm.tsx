@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   createClientBeneficiaireInfos,
@@ -9,6 +9,7 @@ import {
 } from '../../../app/portail_client/clientBeneficiaireInfosSlice';
 import type { AppDispatch, RootState } from '../../../app/store';
 import { FiArrowLeft, FiUpload, FiLoader, FiFileText, FiCalendar, FiEdit2, FiX, FiUser, FiCheck } from 'react-icons/fi';
+import { API_URL } from '../../../service/env';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -16,6 +17,9 @@ export default function ClientBeneficiaireInfosForm() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+
+  const location = useLocation();
+  const libelle = location.state?.libelle as string | undefined;
 
   const { list, loadingList, loading: isLoading } = useSelector((state: RootState) => state.clientBeneficiaireInfos);
 
@@ -121,7 +125,7 @@ export default function ClientBeneficiaireInfosForm() {
 
   const formatDate = (isoString: string) => isoString ? new Date(isoString).toLocaleDateString('fr-FR') : '-';
 
-  const apiUrl = import.meta.env.VITE_API_URL || '';
+  // const apiUrl = import.meta.env.VITE_API_URL || '';
 
   return (
   <div className="min-h-screen bg-gray-50/50 pb-20 px-4">
@@ -132,11 +136,19 @@ export default function ClientBeneficiaireInfosForm() {
           onClick={() => navigate(-1)}
           className="group flex items-center gap-2 text-gray-500 hover:text-indigo-600 transition-colors text-sm font-medium mb-4"
         >
-          <FiArrowLeft className="group-hover:-translate-x-1 transition-transform" /> 
+          <FiArrowLeft className="group-hover:-translate-x-1 transition-transform" />
           Retour à l'édition du bénéficiaire
         </button>
+
+        {/* Libelle affiché si disponible */}
+        
+
         <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
-          Informations Complémentaires
+          {libelle && (
+            <p className="text-xs font-semibold text-indigo-500 uppercase tracking-widest mb-1">
+              Informations Complémentaires : {libelle}
+            </p>
+          )}
         </h1>
       </div>
 
@@ -356,7 +368,7 @@ export default function ClientBeneficiaireInfosForm() {
                     )}
                     <div className="flex items-center gap-2 ml-4">
                       {info.document && (
-                        <a href={`${apiUrl}/${info.document}`} target="_blank" className="p-2 text-indigo-400 hover:bg-indigo-50 rounded-md" title="Passeport">
+                        <a href={`${API_URL}/${info.document}`} target="_blank" className="p-2 text-indigo-400 hover:bg-indigo-50 rounded-md" title="Passeport">
                           <FiFileText size={16} />
                         </a>
                       )}

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FiPlus, FiCheckSquare, FiX, FiSave, FiFileText } from 'react-icons/fi';
+import { FiPlus, FiCheckSquare, FiX, FiSave, FiFileText, FiLayout } from 'react-icons/fi';
 import type { AppDispatch, RootState } from '../../../../../app/store';
 import { fetchProspectionLignes, createProspectionLigne } from '../../../../../app/front_office/prospectionsLignesSlice';
 import axios from '../../../../../service/Axios';
@@ -9,6 +9,8 @@ import { fetchDestinations } from '../../../../../app/front_office/parametre_tic
 import { fetchPays } from '../../../../../app/front_office/parametre_ticketing/paysSlice';
 import TabContainer from '../../../../../layouts/TabContainer';
 import { TicketingHeader } from '../../../../../components/TicketingBreadcrumb';
+import NewLineRow from './NewLigneProspection';
+import AddProspectionLigneModal from './AddProspectionLigneModal';
 
 export default function ProspectionDetail() {
     const { enteteId } = useParams<{ enteteId: string }>();
@@ -20,6 +22,8 @@ export default function ProspectionDetail() {
     );
 
     const { current: billet } = useSelector((state: RootState) => state.billet);
+
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     const tabs = [
       { id: 'prospection', label: 'Listes des entête prospection' },
@@ -109,6 +113,28 @@ export default function ProspectionDetail() {
         serviceValues: initialServiceValues,
         isSaving: false,
       });
+    };
+
+    // Nouvelle fonction pour sauvegarder depuis le modal :
+    const handleSaveFromModal = async (formData: any) => {
+      if (!enteteId) return;
+      const payload = {
+        prospectionEnteteId: enteteId,
+        ...formData,
+        nombre: Number(formData.nombre) || 1,
+        tauxEchange: Number(formData.tauxEchange) || 4900,
+        puBilletCompagnieDevise: Number(formData.puBilletCompagnieDevise) || 0,
+        puServiceCompagnieDevise: Number(formData.puServiceCompagnieDevise) || 0,
+        puPenaliteCompagnieDevise: Number(formData.puPenaliteCompagnieDevise) || 0,
+        montantBilletCompagnieDevise: Number(formData.montantBilletCompagnieDevise) || 0,
+        montantServiceCompagnieDevise: Number(formData.montantServiceCompagnieDevise) || 0,
+        montantPenaliteCompagnieDevise: Number(formData.montantPenaliteCompagnieDevise) || 0,
+        montantBilletClientDevise: Number(formData.montantBilletClientDevise) || 0,
+        montantServiceClientDevise: Number(formData.montantServiceClientDevise) || 0,
+        montantPenaliteClientDevise: Number(formData.montantPenaliteClientDevise) || 0,
+      };
+      await dispatch(createProspectionLigne(payload)).unwrap();
+      dispatch(fetchProspectionLignes(enteteId));
     };
 
     const updateItineraireAuto = (updatedLine: any) => {
@@ -425,6 +451,27 @@ export default function ProspectionDetail() {
                     </>
                   ) : (
                     <>
+                      {/* <button
+                        onClick={() => navigate(`/dossiers-communs/ticketing/pages/devis/${enteteId}`)}
+                        className="flex items-center gap-2 px-4 py-2.5 border border-blue-200 text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 hover:border-blue-300 transition-all font-medium"
+                      >
+                        <FiFileText size={16} />
+                        Voir les devis
+                      </button>
+
+                      <button
+                        onClick={toggleSelectionMode}
+                        disabled={lignes.length === 0 || !!newLine || loadingLignes}
+                        className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all font-medium ${
+                          lignes.length === 0 || !!newLine || loadingLignes
+                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            : 'border border-green-200 text-green-700 bg-green-50 hover:bg-green-100 hover:border-green-300'
+                        }`}
+                      >
+                        <FiCheckSquare size={16} />
+                        Sélectionner pour devis
+                      </button> */}
+
                       <button
                         onClick={() => navigate(`/dossiers-communs/ticketing/pages/devis/${enteteId}`)}
                         className="flex items-center gap-2 px-4 py-2.5 border border-blue-200 text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 hover:border-blue-300 transition-all font-medium"
@@ -446,9 +493,26 @@ export default function ProspectionDetail() {
                         Sélectionner pour devis
                       </button>
 
+                      {/* Bouton ajout inline dans le tableau */}
                       <button
                         onClick={handleAddNewLine}
+                        disabled={!!newLine || loadingLignes || selectionMode || isModalOpen}
+                        title="Ajouter directement dans le tableau"
+                        className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all font-medium ${
+                          !!newLine || loadingLignes || selectionMode || isModalOpen
+                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            : 'border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 hover:border-slate-400'
+                        }`}
+                      >
+                        <FiLayout size={16} />
+                        Ajout inline
+                      </button>
+
+                      {/* Bouton ajout via modal */}
+                      <button
+                        onClick={() => setIsModalOpen(true)}
                         disabled={!!newLine || loadingLignes || selectionMode}
+                        title="Ajouter via une fenêtre modale"
                         className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all font-medium ${
                           !!newLine || loadingLignes || selectionMode
                             ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
@@ -456,7 +520,7 @@ export default function ProspectionDetail() {
                         }`}
                       >
                         <FiPlus size={16} />
-                        Ajouter une ligne
+                        Ajouter (Modal)
                       </button>
                     </>
                   )}
@@ -669,412 +733,14 @@ export default function ProspectionDetail() {
           )}
         </section>
       </div>
+      <AddProspectionLigneModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        destinations={destinations}
+        servicesDisponibles={servicesDisponibles}
+        onSave={handleSaveFromModal}
+      />
     </TabContainer>
   );
 }
 
-interface NewLineRowProps {
-  newLine: any;
-  destinations: any[];
-  servicesDisponibles: any[];
-  updateNewLineField: (field: string, value: any) => void;
-  updateServiceValue: (index: number, value: string) => void;
-  handleSaveNewLine: () => void;
-  handleCancelNewLine: () => void;
-}
-
-function NewLineRow({
-  newLine,
-  destinations,
-  servicesDisponibles,
-  updateNewLineField,
-  updateServiceValue,
-  handleSaveNewLine,
-  handleCancelNewLine,
-}: NewLineRowProps) {
-  const inputClassName = "w-full min-w-[120px] px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white";
-  const numberInputClassName = "w-full min-w-[140px] px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-right font-medium bg-white";
-
-  return (
-    <tr className="bg-linear-to-r from-blue-50 to-blue-100/50 border-t-4 border-blue-400">
-      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
-      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
-      {/* <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td> */}
-      <td className="px-4 py-3">
-        <input
-          type="number"
-          step="1"
-          value={newLine.nombre}
-          onChange={(e) => updateNewLineField('nombre', Number(e.target.value))}
-          className={numberInputClassName + " text-emerald-700"}
-          placeholder="1"
-        />
-      </td>
-      <td className="px-4 py-3">
-        <input
-          type="text"
-          value={newLine.numeroVol}
-          onChange={(e) => updateNewLineField('numeroVol', e.target.value)}
-          className={inputClassName}
-          placeholder="MD-003"
-          required
-        />
-      </td>
-
-      <td className="px-4 py-3">
-        <input
-          type="text"
-          value={newLine.avion}
-          onChange={(e) => updateNewLineField('avion', e.target.value)}
-          className={inputClassName}
-          placeholder="Boeing 737"
-        />
-      </td>
-
-      <td className="px-4 py-3">
-        <select
-          value={newLine.departId}
-          onChange={e => updateNewLineField('departId', e.target.value)}
-          className={inputClassName}
-          required
-        >
-          <option value="">— Départ —</option>
-          {destinations.map(d => (
-            <option key={d.id} value={d.id}>
-              {d.code} – {d.ville}
-            </option>
-          ))}
-        </select>
-      </td>
-
-      <td className="px-4 py-3">
-        <select
-          value={newLine.destinationId}
-          onChange={e => updateNewLineField('destinationId', e.target.value)}
-          className={inputClassName}
-          required
-        >
-          <option value="">— Destination —</option>
-          {destinations.map(d => (
-            <option key={d.id} value={d.id}>
-              {d.code} – {d.ville}
-            </option>
-          ))}
-        </select>
-      </td>
-
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-2 px-3 py-2 border border-blue-300 rounded-lg bg-blue-50/50 text-sm min-w-[160px]">
-          {newLine.departId && destinations.find(d => d.id === newLine.departId) ? (
-            <span className="font-semibold text-blue-800">
-              {destinations.find(d => d.id === newLine.departId)?.code}
-            </span>
-          ) : (
-            <span className="text-slate-400">?</span>
-          )}
-          <span className="text-slate-500 font-bold">→</span>
-          {newLine.destinationId && destinations.find(d => d.id === newLine.destinationId) ? (
-            <span className="font-semibold text-blue-800">
-              {destinations.find(d => d.id === newLine.destinationId)?.code}
-            </span>
-          ) : (
-            <span className="text-slate-400">?</span>
-          )}
-        </div>
-      </td>
-
-      <td className="px-4 py-3">
-        <select
-          value={newLine.classe}
-          onChange={(e) => updateNewLineField('classe', e.target.value)}
-          className={inputClassName}
-        >
-          <option value="ECONOMIE">Économie</option>
-          <option value="BUSINESS">Business</option>
-          <option value="PREMIUM">Premium</option>
-          <option value="PREMIERE">Première</option>
-        </select>
-      </td>
-
-      <td className="px-4 py-3">
-        <select
-          value={newLine.typePassager}
-          onChange={(e) => updateNewLineField('typePassager', e.target.value)}
-          className={inputClassName}
-        >
-          <option value="ADULTE">Adulte</option>
-          <option value="ENFANT">Enfant</option>
-          <option value="BEBE">Bébé</option>
-        </select>
-      </td>
-
-      <td className="px-4 py-3">
-        <input
-          type="datetime-local"
-          value={newLine.dateHeureDepart}
-          onChange={(e) => updateNewLineField('dateHeureDepart', e.target.value)}
-          className={inputClassName}
-          required
-        />
-      </td>
-
-      <td className="px-4 py-3">
-        <input
-          type="datetime-local"
-          value={newLine.dateHeureArrive}
-          onChange={(e) => updateNewLineField('dateHeureArrive', e.target.value)}
-          className={inputClassName}
-        />
-      </td>
-
-      <td className="px-4 py-3">
-        <input
-          type="text"
-          value={newLine.dureeVol}
-          onChange={(e) => updateNewLineField('dureeVol', e.target.value)}
-          className={inputClassName}
-          placeholder="12h00"
-        />
-      </td>
-
-      <td className="px-4 py-3">
-        <input
-          type="text"
-          value={newLine.dureeEscale}
-          onChange={(e) => updateNewLineField('dureeEscale', e.target.value)}
-          className={inputClassName}
-          placeholder="2h00"
-        />
-      </td>
-
-      <td className="px-4 py-3">
-        <input
-          type="number"
-          step="0.01"
-          value={newLine.puBilletCompagnieDevise}
-          onChange={(e) => updateNewLineField('puBilletCompagnieDevise', Number(e.target.value))}
-          className={numberInputClassName}
-          placeholder="0.00"
-        />
-      </td>
-
-      <td className="px-4 py-3">
-        <input
-          type="number"
-          step="0.01"
-          value={newLine.puServiceCompagnieDevise}
-          onChange={(e) => updateNewLineField('puServiceCompagnieDevise', Number(e.target.value))}
-          className={numberInputClassName}
-          placeholder="0.00"
-        />
-      </td>
-
-      <td className="px-4 py-3">
-        <input
-          type="number"
-          step="0.01"
-          value={newLine.puPenaliteCompagnieDevise}
-          onChange={(e) => updateNewLineField('puPenaliteCompagnieDevise', Number(e.target.value))}
-          className={numberInputClassName}
-          placeholder="0.00"
-        />
-      </td>
-
-      <td className="px-4 py-3">
-        <select
-          value={newLine.devise}
-          onChange={(e) => updateNewLineField('devise', e.target.value)}
-          className={inputClassName}
-        >
-          <option value="EUR">EUR</option>
-          <option value="USD">USD</option>
-          <option value="MGA">MGA</option>
-        </select>
-      </td>
-
-      <td className="px-4 py-3">
-        <input
-          type="number"
-          step="1"
-          value={newLine.tauxEchange}
-          onChange={(e) => updateNewLineField('tauxEchange', Number(e.target.value))}
-          className={numberInputClassName}
-          placeholder="4900"
-        />
-      </td>
-
-      <td className="px-4 py-3">
-        <input
-          type="number"
-          step="0.01"
-          value={newLine.montantBilletCompagnieDevise}
-          onChange={(e) => updateNewLineField('montantBilletCompagnieDevise', Number(e.target.value))}
-          className={numberInputClassName + " text-emerald-700"}
-          placeholder="0.00"
-        />
-      </td>
-
-      <td className="px-4 py-3">
-        <input
-          type="number"
-          step="0.01"
-          value={newLine.montantServiceCompagnieDevise}
-          onChange={(e) => updateNewLineField('montantServiceCompagnieDevise', Number(e.target.value))}
-          className={numberInputClassName + " text-emerald-700"}
-          placeholder="0.00"
-        />
-      </td>
-
-      <td className="px-4 py-3">
-        <input
-          type="number"
-          step="0.01"
-          value={newLine.montantPenaliteCompagnieDevise}
-          onChange={(e) => updateNewLineField('montantPenaliteCompagnieDevise', Number(e.target.value))}
-          className={numberInputClassName + " text-emerald-700"}
-          placeholder="0.00"
-        />
-      </td>
-
-      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
-      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
-      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
-
-      {/* <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
-      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
-      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td> */}
-
-      <td className="px-4 py-3">
-        <input
-          type="number"
-          step="0.01"
-          value={newLine.montantBilletClientDevise}
-          onChange={(e) => {
-            const val = e.target.value;
-            // Autorise vide temporairement (pour effacer)
-            if (val === '' || val === '-' || val === '.') {
-              updateNewLineField('montantBilletClientDevise', val);
-            } else {
-              const num = Number(val);
-              if (!isNaN(num)) {
-                updateNewLineField('montantBilletClientDevise', num);
-              }
-              // sinon on ignore (pas de mise à jour si lettre tapée)
-            }
-          }}
-          className={numberInputClassName + " text-emerald-700"}
-          placeholder="0.00"
-        />
-      </td>
-
-      <td className="px-4 py-3">
-        <input
-          type="number"
-          step="0.01"
-          value={newLine.montantServiceClientDevise}
-          onChange={(e) => updateNewLineField('montantServiceClientDevise', Number(e.target.value))}
-          className={numberInputClassName + " text-emerald-700"}
-          placeholder="0.00"
-        />
-      </td>
-
-      <td className="px-4 py-3">
-        <input
-          type="number"
-          step="0.01"
-          value={newLine.montantPenaliteClientDevise}
-          onChange={(e) => updateNewLineField('montantPenaliteClientDevise', Number(e.target.value))}
-          className={numberInputClassName + " text-emerald-700"}
-          placeholder="0.00"
-        />
-      </td>
-
-      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
-      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
-      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
-      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
-      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
-
-      
-
-      <td className="px-4 py-4">
-        {servicesDisponibles.length === 0 ? (
-          <div className="text-amber-600 py-2 text-sm">Aucun service</div>
-        ) : (
-          <div className="flex flex-row gap-3 text-sm">
-            {servicesDisponibles.map((svc, idx) => {
-              const current = newLine.serviceValues[idx];
-              if (!current) return null;
-
-              const isBoolean =
-                svc.type === 'SPECIFIQUE' || svc.type === 'SERVICE' &&
-                !svc.libelle.toLowerCase().includes('bagage') &&
-                !svc.libelle.toLowerCase().includes('supplément') ;
-
-              return (
-                <div key={svc.id} className="flex flex-col gap-1.5 p-3 bg-white rounded-lg border border-slate-200 shadow-sm">
-                  <label className="text-xs font-semibold text-slate-700">
-                    {svc.libelle}
-                    {/* <span className="ml-1 text-slate-400 font-normal">({svc.code})</span> */}
-                  </label>
-                  {isBoolean ? (
-                    <label className="inline-flex items-center">
-                      <input
-                        type="checkbox"
-                        checked={current.valeur === 'true'}
-                        onChange={(e) => updateServiceValue(idx, e.target.checked ? 'true' : 'false')}
-                        className="h-4 w-4 text-blue-600 border-slate-300 rounded focus:ring-2 focus:ring-blue-500"
-                      />
-                      <span className="ml-2 text-sm text-slate-700">Activé</span>
-                    </label>
-                  ) : (
-                    <input
-                      type="text"
-                      value={current.valeur}
-                      onChange={(e) => updateServiceValue(idx, e.target.value)}
-                      placeholder={svc.libelle.includes('Bagage') ? 'ex: 23Kg' : 'valeur'}
-                      className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </td>
-
-      <td className="px-4 py-3">
-        <div className="flex flex-col gap-2 min-w-[100px]">
-          <button
-            onClick={handleSaveNewLine}
-            disabled={newLine.isSaving}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium shadow-sm"
-            title="Enregistrer"
-          >
-            {newLine.isSaving ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-white"></div>
-                Enregistrement...
-              </>
-            ) : (
-              <>
-                <FiSave size={16} />
-                Enregistrer
-              </>
-            )}
-          </button>
-
-          <button
-            onClick={handleCancelNewLine}
-            disabled={newLine.isSaving}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium shadow-sm"
-            title="Annuler"
-          >
-            <FiX size={16} />
-            Annuler
-          </button>
-        </div>
-      </td>
-    </tr>
-  );
-}

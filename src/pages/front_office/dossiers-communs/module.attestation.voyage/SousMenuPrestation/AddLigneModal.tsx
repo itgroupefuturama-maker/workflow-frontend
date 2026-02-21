@@ -14,7 +14,6 @@ type Props = {
   onLigneCreated: () => void;
 };
 
-// ─── Helper : calcul durée entre deux datetime ────────────────────────────────
 const calculerDuree = (depart: string, arrivee: string): string => {
   if (!depart || !arrivee) return '';
   const diff = new Date(arrivee).getTime() - new Date(depart).getTime();
@@ -35,16 +34,13 @@ const AddLigneModal = ({
 }: Props) => {
   const dispatch = useDispatch<AppDispatch>();
 
-  // ─── Prix actif depuis Redux ──────────────────────────────────────────────
   const { items: prixItems } = useSelector((state: RootState) => state.attestationParams);
-
   const prixActif = prixItems.find((p) => p.status === 'ACTIF') ?? null;
 
   useEffect(() => {
     if (prixItems.length === 0) dispatch(fetchAttestationParams());
   }, [dispatch]);
 
-  // ─── États sélection ─────────────────────────────────────────────────────
   const [selectedBeneficiaireIds, setSelectedBeneficiaireIds] = useState<string[]>([]);
   const [selectedPassagerIds, setSelectedPassagerIds] = useState<string[]>([]);
   const [beneficiairePassagers, setBeneficiairePassagers] = useState<Record<string, any[]>>({});
@@ -68,29 +64,41 @@ const AddLigneModal = ({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // ─── Sync puAriary quand prixActif charge ─────────────────────────────────
   useEffect(() => {
     if (prixActif) {
       setFormData((prev) => ({ ...prev, puAriary: String(prixActif.prix) }));
     }
   }, [prixActif?.id]);
 
-  // ─── Calcul automatique durée vol ─────────────────────────────────────────
+  // ─── Calcul automatique durée vol ────────────────────────────────────────
   useEffect(() => {
     const duree = calculerDuree(formData.dateHeureDepart, formData.dateHeureArrive);
     if (duree) setFormData((prev) => ({ ...prev, dureeVol: duree }));
   }, [formData.dateHeureDepart, formData.dateHeureArrive]);
 
-  // ─── Chargement passagers ─────────────────────────────────────────────────
+  // ─── Calcul automatique itinéraire ───────────────────────────────────────
+  useEffect(() => {
+    const depart = destinations.find((d) => d.id === formData.departId);
+    const dest = destinations.find((d) => d.id === formData.destinationId);
+    if (depart && dest) {
+      setFormData((prev) => ({
+        ...prev,
+        itineraire: `${depart.ville} (${depart.paysVoyage?.pays || depart.code || '?'}) → ${dest.ville} (${dest.paysVoyage?.pays || dest.code || '?'})`,
+      }));
+    } else if (depart) {
+      setFormData((prev) => ({ ...prev, itineraire: `${depart.ville} → ?` }));
+    } else if (dest) {
+      setFormData((prev) => ({ ...prev, itineraire: `? → ${dest.ville}` }));
+    }
+  }, [formData.departId, formData.destinationId, destinations]);
+
   useEffect(() => {
     selectedBeneficiaireIds.forEach((id) => {
-      if (!beneficiairePassagers[id]) {
-        dispatch(fetchClientBeneficiaireInfos(id)).then((action) => {
-          if (action.meta.requestStatus === 'fulfilled') {
-            setBeneficiairePassagers((prev) => ({ ...prev, [id]: action.payload || [] }));
-          }
-        });
-      }
+      dispatch(fetchClientBeneficiaireInfos(id)).then((action) => {
+        if (action.meta.requestStatus === 'fulfilled') {
+          setBeneficiairePassagers((prev) => ({ ...prev, [id]: action.payload || [] }));
+        }
+      });
     });
   }, [selectedBeneficiaireIds, dispatch]);
 
@@ -143,7 +151,7 @@ const AddLigneModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-9999 p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl max-h-[94vh] overflow-hidden flex flex-col">
 
         {/* ── Header ── */}
@@ -193,24 +201,22 @@ const AddLigneModal = ({
                     key={ben.id}
                     className={`flex items-start gap-2.5 p-3 rounded-lg border cursor-pointer transition-all ${
                       isSelected
-                        ? 'bg-gray-950 border-gray-950 text-white'
-                        : 'bg-white border-gray-200 hover:border-gray-400 text-gray-800'
+                        ? 'bg-blue-50 border-blue-500 text-blue-900'
+                        : 'bg-white border-gray-200 hover:border-blue-300 text-gray-800'
                     }`}
                   >
                     <input
                       type="checkbox"
                       checked={isSelected}
                       onChange={() => toggleBeneficiaire(ben.id)}
-                      className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-white"
+                      className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-blue-600"
                     />
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium truncate">
-                        {ben.code && <span className={`${isSelected ? 'text-gray-400' : 'text-gray-400'} mr-1`}>{ben.code} ·</span>}
+                        {ben.code && <span className="text-gray-400 mr-1">{ben.code} ·</span>}
                         {ben.libelle || 'Sans nom'}
                       </div>
-                      <div className={`text-xs mt-0.5 ${isSelected ? 'text-gray-400' : 'text-gray-400'}`}>
-                        {ben.statut || '—'}
-                      </div>
+                      <div className="text-xs mt-0.5 text-gray-400">{ben.statut || '—'}</div>
                     </div>
                   </label>
                 );
@@ -220,12 +226,12 @@ const AddLigneModal = ({
 
           {/* ── Section 2 : Passagers ── */}
           {selectedBeneficiaireIds.length > 0 && (
-            <section className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="px-5 py-3.5 border-b border-gray-100 flex items-center gap-2">
-                <span className="w-5 h-5 rounded-full bg-gray-950 text-white text-xs flex items-center justify-center font-bold shrink-0">2</span>
-                <h3 className="text-sm font-semibold text-gray-800">Sélection des passagers</h3>
+            <section className="bg-white rounded-xl border border-blue-400 shadow-sm overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-blue-100 bg-blue-50 flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold shrink-0">2</span>
+                <h3 className="text-sm font-semibold text-blue-800">Sélection des passagers</h3>
                 {selectedPassagerIds.length > 0 && (
-                  <span className="ml-auto text-xs font-medium bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full">
+                  <span className="ml-auto text-xs font-medium bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full">
                     {selectedPassagerIds.length} sélectionné{selectedPassagerIds.length > 1 ? 's' : ''}
                   </span>
                 )}
@@ -260,21 +266,21 @@ const AddLigneModal = ({
                                   key={info.id}
                                   className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
                                     isChecked
-                                      ? 'bg-gray-950 border-gray-950 text-white'
-                                      : 'bg-white border-gray-200 hover:border-gray-400'
+                                      ? 'bg-blue-50 border-blue-500 text-blue-900'
+                                      : 'bg-white border-gray-200 hover:border-blue-300 text-gray-800'
                                   }`}
                                 >
                                   <input
                                     type="checkbox"
                                     checked={isChecked}
                                     onChange={() => togglePassager(info.id)}
-                                    className="mt-1 h-4 w-4 rounded border-gray-300 accent-white"
+                                    className="mt-1 h-4 w-4 rounded border-gray-300 accent-blue-600"
                                   />
                                   <div className="flex-1 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-2.5">
 
                                     {/* Nom */}
                                     <div className="col-span-2">
-                                      <div className={`text-xs uppercase tracking-wide mb-0.5 ${isChecked ? 'text-gray-400' : 'text-gray-400'}`}>Passager</div>
+                                      <div className="text-xs uppercase tracking-wide mb-0.5 text-gray-400">Passager</div>
                                       <div className="text-sm font-semibold">{info.prenom} {info.nom}</div>
                                     </div>
 
@@ -285,26 +291,24 @@ const AddLigneModal = ({
                                         label: 'Document',
                                         value: (
                                           <div>
-                                            <span className={`text-xs font-medium px-2 py-0.5 rounded ${isChecked ? 'bg-white/20' : 'bg-gray-100'}`}>{info.typeDoc}</span>
-                                            <div className={`text-xs font-mono mt-0.5 ${isChecked ? 'text-gray-300' : 'text-gray-500'}`}>{info.referenceDoc}</div>
+                                            <span className={`text-xs font-medium px-2 py-0.5 rounded ${isChecked ? 'bg-blue-100 text-blue-700' : 'bg-gray-100'}`}>{info.typeDoc}</span>
+                                            <div className="text-xs font-mono mt-0.5 text-gray-500">{info.referenceDoc}</div>
                                           </div>
                                         )
                                       },
                                       {
                                         label: 'Validité doc',
                                         value: (
-                                          <div>
-                                            <span className={`text-xs font-medium ${docExpired ? 'text-red-400' : ''}`}>
-                                              {new Date(info.dateValiditeDoc).toLocaleDateString('fr-FR')}
-                                            </span>
-                                          </div>
+                                          <span className={`text-xs font-medium ${docExpired ? 'text-red-500' : ''}`}>
+                                            {new Date(info.dateValiditeDoc).toLocaleDateString('fr-FR')}
+                                          </span>
                                         )
                                       },
-                                      { label: 'CIN', value: <span className={`text-xs font-mono ${isChecked ? 'text-gray-300' : 'text-gray-600'}`}>{info.cin} — {info.referenceCin}</span> },
+                                      { label: 'CIN', value: <span className="text-xs font-mono text-gray-600">{info.cin} — {info.referenceCin}</span> },
                                       { label: 'WhatsApp', value: <span className="text-xs font-mono">{info.whatsapp}</span> },
                                     ].map(({ label, value }) => (
                                       <div key={label}>
-                                        <div className={`text-xs uppercase tracking-wide mb-0.5 ${isChecked ? 'text-gray-400' : 'text-gray-400'}`}>{label}</div>
+                                        <div className="text-xs uppercase tracking-wide mb-0.5 text-gray-400">{label}</div>
                                         <div className="text-sm">{value}</div>
                                       </div>
                                     ))}
@@ -331,7 +335,6 @@ const AddLigneModal = ({
 
             <div className="p-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
 
-              {/* Champs texte simples */}
               {[
                 { label: 'N° Vol', name: 'numeroVol', placeholder: 'MD123' },
                 { label: 'Avion', name: 'avion', placeholder: 'ATR 72' },
@@ -346,29 +349,16 @@ const AddLigneModal = ({
                     value={(formData as any)[name]}
                     onChange={handleInputChange}
                     placeholder={placeholder}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
                   />
                 </div>
               ))}
-
-              {/* Itinéraire — full width */}
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Itinéraire</label>
-                <input
-                  type="text"
-                  name="itineraire"
-                  value={formData.itineraire}
-                  onChange={handleInputChange}
-                  placeholder="TNR - NOS"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white"
-                />
-              </div>
 
               {/* Départ */}
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Départ</label>
                 <select name="departId" value={formData.departId} onChange={handleInputChange}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white">
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white">
                   <option value="">Sélectionner</option>
                   {destinations.map((d) => <option key={d.id} value={d.id}>{d.ville} ({d.paysVoyage?.pays || '—'})</option>)}
                 </select>
@@ -378,17 +368,33 @@ const AddLigneModal = ({
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Destination</label>
                 <select name="destinationId" value={formData.destinationId} onChange={handleInputChange}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white">
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white">
                   <option value="">Sélectionner</option>
                   {destinations.map((d) => <option key={d.id} value={d.id}>{d.ville} ({d.paysVoyage?.pays || '—'})</option>)}
                 </select>
+              </div>
+
+              {/* Itinéraire — calculé automatiquement, lecture seule */}
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">
+                  Itinéraire
+                  <span className="ml-2 text-gray-400 normal-case tracking-normal font-normal">(calculé auto)</span>
+                </label>
+                <input
+                  type="text"
+                  name="itineraire"
+                  value={formData.itineraire}
+                  readOnly
+                  placeholder="Sélectionnez un départ et une destination"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-slate-100 text-slate-500 cursor-not-allowed"
+                />
               </div>
 
               {/* Classe */}
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Classe</label>
                 <select name="classe" value={formData.classe} onChange={handleInputChange}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white">
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white">
                   <option value="ECONOMIE">Économie</option>
                   <option value="BUSINESS">Business</option>
                   <option value="PREMIUM">Premium</option>
@@ -400,7 +406,7 @@ const AddLigneModal = ({
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Type passager</label>
                 <select name="typePassager" value={formData.typePassager} onChange={handleInputChange}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white">
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white">
                   <option value="ADULTE">Adulte</option>
                   <option value="ENFANT">Enfant</option>
                   <option value="BEBE">Bébé</option>
@@ -411,17 +417,17 @@ const AddLigneModal = ({
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Date / Heure départ</label>
                 <input type="datetime-local" name="dateHeureDepart" value={formData.dateHeureDepart} onChange={handleInputChange}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white" />
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white" />
               </div>
 
               {/* Date arrivée */}
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Date / Heure arrivée</label>
                 <input type="datetime-local" name="dateHeureArrive" value={formData.dateHeureArrive} onChange={handleInputChange}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white" />
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white" />
               </div>
 
-              {/* Durée vol — calculée auto, modifiable */}
+              {/* Durée vol — calculée auto, lecture seule */}
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">
                   Durée vol
@@ -433,13 +439,13 @@ const AddLigneModal = ({
                   type="text"
                   name="dureeVol"
                   value={formData.dureeVol}
-                  onChange={handleInputChange}
-                  placeholder="1h30"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white"
+                  readOnly
+                  placeholder="Calculé automatiquement"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-slate-100 text-slate-500 cursor-not-allowed"
                 />
               </div>
 
-              {/* PU Ariary — pré-rempli avec prix actif */}
+              {/* PU Ariary */}
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">
                   PU Ariary
@@ -457,7 +463,7 @@ const AddLigneModal = ({
                     onChange={handleInputChange}
                     min="0"
                     placeholder="450000"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white"
+                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-medium pointer-events-none">
                     Ar

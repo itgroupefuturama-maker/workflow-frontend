@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import type { AppDispatch, RootState } from '../../../../../../app/store';
-import { approuverDevis, envoyerDevis, fetchHotelWithDevis, genererPdfClient, genererPdfDirection, transformerEnHotel, type BenchmarkingEntete, type LigneClient } from '../../../../../../app/front_office/parametre_hotel/hotelDevisSlice';
+import { approuverDevis, envoyerDevis, fetchHotelWithDevis, genererPdfClient, genererPdfDirection, resetDevis, transformerEnHotel, type BenchmarkingEntete, type LigneClient } from '../../../../../../app/front_office/parametre_hotel/hotelDevisSlice';
 import { API_URL } from '../../../../../../service/env';
 import TabContainer from '../../../../../../layouts/TabContainer';
 import { HotelHeader } from '../../components/HotelHeader';
@@ -51,9 +51,9 @@ const BenchmarkingCard = ({ bench }: { bench: BenchmarkingEntete }) => {
       {/* Totaux */}
       <div className="px-5 py-3 bg-gray-50 border-b border-gray-100 grid grid-cols-3 gap-4">
         {[
-          { label: 'Taux PU', value: `${bench.tauxPrixUnitaire.toLocaleString('fr-FR')} Ar` },
-          { label: 'Forfait unitaire', value: `${bench.forfaitaireUnitaire.toLocaleString('fr-FR')} Ar` },
-          { label: 'Forfait global', value: `${bench.forfaitaireGlobal.toLocaleString('fr-FR')} Ar` },
+          { label: 'Taux PU', value: `${bench.tauxPrixUnitaire.toLocaleString('fr-FR')} %` },
+          { label: 'Forfait unitaire', value: `${bench.forfaitaireUnitaire.toLocaleString('fr-FR')} ${bench.ligneClient?.devise}` },
+          { label: 'Forfait global', value: `${bench.forfaitaireGlobal.toLocaleString('fr-FR')} ${bench.ligneClient?.devise}` },
         ].map(({ label, value }) => (
           <div key={label}>
             <p className="text-xs text-gray-400 uppercase tracking-wide">{label}</p>
@@ -167,32 +167,19 @@ export default function PageHotelDevis() {
     if (!prospection?.id || !devis?.id) return;
     await dispatch(transformerEnHotel({ hotelProspectionEnteteId: prospection.id, devisModuleId: devis.id })).unwrap();
   };
-  // const handlePdfClient = async () => {
-  //   if (!enteteId) return;
-  //   const result = await dispatch(genererPdfClient(enteteId)).unwrap();
-  //   window.open(`${API_URL}/${result}`, '_blank');
-  // };
-  // const handlePdfDirection = async () => {
-  //   if (!prospection?.id) return;
-  //   const result = await dispatch(genererPdfDirection({ id: prospection.id, montantTotalClient, tauxCommission, montantTotalCommission })).unwrap();
-  //   window.open(`${API_URL}/${result}`, '_blank');
-  // };
 
   // Génération automatique au chargement
   useEffect(() => {
-    if (!data) return;
+    // Attendre que data soit chargé ET corresponde au bon enteteId
+    if (!data || !enteteId) return;
 
     const genererPdfs = async () => {
-      // PDF Client
-      if (enteteId && !devis?.url1 && !pdfClientUrl) {
+      if (!devis?.url1 && !pdfClientUrl) {
         try {
           await dispatch(genererPdfClient(enteteId)).unwrap();
-        } catch {
-          // silencieux — l'erreur sera dans actionError si besoin
-        }
+        } catch { /* silencieux */ }
       }
 
-      // PDF Direction
       if (prospection?.id && !devis?.url2 && !pdfDirectionUrl) {
         try {
           await dispatch(genererPdfDirection({
@@ -201,16 +188,19 @@ export default function PageHotelDevis() {
             tauxCommission,
             montantTotalCommission,
           })).unwrap();
-        } catch {
-          // silencieux
-        }
+        } catch { /* silencieux */ }
       }
     };
 
     genererPdfs();
-    // On ne déclenche qu'une seule fois quand data est chargé
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data?.devis?.id]);
+  }, [data?.devis?.id, enteteId]); // ← ajoute enteteId ici
+
+  useEffect(() => {
+    return () => {
+      dispatch(resetDevis()); // nettoyage au démontage
+    };
+  }, [dispatch]);
 
   const urlPdfClient = pdfClientUrl || devis?.url1;
   const urlPdfDirection = pdfDirectionUrl || devis?.url2;
@@ -268,6 +258,7 @@ export default function PageHotelDevis() {
                     <div>
                       <p className="text-gray-500 text-xs uppercase tracking-wide mb-0.5">Statut</p>
                       <StatutBadge statut={devis.statut} />
+                      {/* {devis.statut} */}
                     </div>
                     <div className="w-px h-8 bg-white/10" />
                     <div>
@@ -377,7 +368,8 @@ export default function PageHotelDevis() {
               {/* Transformer — disabled si pas approuvé ou déjà transformé */}
               <button
                 onClick={handleTransformer}
-                disabled={actionLoading !== null || devis.statut !== 'DEVIS_APPROUVE' || transformed}
+                // disabled={actionLoading !== null || devis.statut !== 'DEVIS_APPROUVE' || transformed}
+                disabled={devis.statut !== 'DEVIS_APPROUVE'}
                 className="flex items-center gap-2 px-4 py-2 bg-indigo-500 text-white text-sm font-medium rounded-lg hover:bg-indigo-600 transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
               >
                 {actionLoading === 'transformation'

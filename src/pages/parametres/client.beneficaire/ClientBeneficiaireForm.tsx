@@ -166,7 +166,7 @@ const ClientBeneficiaireFormPage = () => {
 
           {/* Bouton secondaire flottant */}
           <button
-            onClick={() => navigate(`infos`)}
+            onClick={() => navigate(`infos`, { state: { libelle: currentBeneficiaire.libelle } })}
             className="flex items-center gap-2 px-5 py-2 bg-white border border-indigo-200 text-indigo-600 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-indigo-50 transition-all shadow-sm"
           >
             <FiUserPlus size={16} />

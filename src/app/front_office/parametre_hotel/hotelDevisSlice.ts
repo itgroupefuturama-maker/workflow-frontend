@@ -223,6 +223,11 @@ const hotelDevisSlice = createSlice({
       state.actionError = null;
       state.transformed = false;
     },
+    resetDevis: (state) => {
+      state.data = null;
+      state.pdfClientUrl = null;
+      state.pdfDirectionUrl = null;
+    }
   },
   extraReducers: (builder) => {
     builder
@@ -317,5 +322,5 @@ const hotelDevisSlice = createSlice({
   },
 });
 
-export const { clearHotelDevis } = hotelDevisSlice.actions;
+export const { clearHotelDevis, resetDevis } = hotelDevisSlice.actions;
 export default hotelDevisSlice.reducer;

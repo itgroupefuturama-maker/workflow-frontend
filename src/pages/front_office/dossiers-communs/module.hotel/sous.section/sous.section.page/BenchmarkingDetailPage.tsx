@@ -117,8 +117,7 @@ const BenchmarkingDetailPage = () => {
     const nuiteDevise = benchmarkLine.nuiteDevise || 0;
     const tauxChange  = benchmarkLine.tauxChange  || 0;
     const nuiteAriary = benchmarkLine.nuiteAriary  || 0;
-    const nbChambre = benchmarkLine.nombreChambre || 0;
-    // const nuite       = detail.nuite || 1;
+    const nbChambre   = benchmarkLine.nombreChambre || 0;
 
     setBookingData({
       nuiteDevise,
@@ -138,11 +137,12 @@ const BenchmarkingDetailPage = () => {
 
     setNbChambreClient(benchmarkLine?.nombreChambre);
 
+    // ── Initialisation avec les valeurs de "Informations générales" ──
     setCommissionData({
-      tauxPrixUnitaire:    0,
-      forfaitaireUnitaire: 0,
-      forfaitaireGlobal:   0,
-      montantCommission:   0,
+      tauxPrixUnitaire:    detail.tauxPrixUnitaire    || 0,  // Taux unitaire
+      forfaitaireUnitaire: detail.forfaitaireUnitaire || 0,  // Forfait unitaire
+      forfaitaireGlobal:   detail.forfaitaireGlobal   || 0,  // Forfait global
+      montantCommission:   detail.montantCommission   || 0,  // Commission
     });
 
   }, [benchmarkLineId, detail?.id]);
@@ -281,7 +281,7 @@ const BenchmarkingDetailPage = () => {
           tauxPrixUnitaire: commissionData.tauxPrixUnitaire,
           forfaitaireUnitaire: commissionData.forfaitaireUnitaire,
           forfaitaireGlobal: commissionData.forfaitaireGlobal,
-          montantCommission: commissionData.montantCommission,
+          montantCommission: commissionData.montantCommission * clientData.tauxChange,
         },
       };
 
@@ -403,7 +403,6 @@ const BenchmarkingDetailPage = () => {
               </h1>
             </div>
             {/* Nouveaux boutons d'actions */}
-            
           </div>
         </div>
 

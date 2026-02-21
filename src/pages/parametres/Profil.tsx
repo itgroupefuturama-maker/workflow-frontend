@@ -4,16 +4,55 @@ import {
   fetchProfiles,
   createProfil,
   updateProfil,
-  // deleteProfil,
 } from '../../app/back_office/profilesSlice';
 import type { RootState, AppDispatch } from '../../app/store';
 import type { Profil } from '../../app/back_office/profilesSlice';
-import { FiPlus, FiX, FiCheckCircle, FiAlertCircle, FiLoader, FiShield, FiArrowLeft} from 'react-icons/fi';
-// import AuditModal from '../../components/AuditModal';
-// import type { User } from '../../app/usersSlice';
+import { FiPlus, FiX, FiCheckCircle, FiAlertCircle, FiLoader, FiShield, FiArrowLeft } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
+
+// ── Composant badge liste avec collapse ──────────────────────────────────────
+const BadgeList = ({
+  items,
+  colorClass,
+}: {
+  items: string[];
+  colorClass: string;
+}) => {
+  const [expanded, setExpanded] = useState(false);
+  const LIMIT = 2;
+  const visible = expanded ? items : items.slice(0, LIMIT);
+  const rest = items.length - LIMIT;
+
+  if (items.length === 0) return <span className="text-xs text-gray-300 italic">—</span>;
+
+  return (
+    <div className="flex flex-wrap gap-1.5 max-w-[220px]">
+      {visible.map((label, i) => (
+        <span key={i} className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold ${colorClass}`}>
+          {label}
+        </span>
+      ))}
+      {!expanded && rest > 0 && (
+        <button
+          onClick={() => setExpanded(true)}
+          className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
+        >
+          +{rest}
+        </button>
+      )}
+      {expanded && rest > 0 && (
+        <button
+          onClick={() => setExpanded(false)}
+          className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-gray-100 text-gray-500 hover:bg-gray-200 transition-colors"
+        >
+          Réduire
+        </button>
+      )}
+    </div>
+  );
+};
 
 const ProfilPage = () => {
   const navigate = useNavigate();
@@ -28,26 +67,18 @@ const ProfilPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingProfil, setEditingProfil] = useState<Profil | null>(null);
   const [message, setMessage] = useState({ text: '', isError: false });
-
-  // Form states
   const [nomProfil, setNomProfil] = useState('');
-  // const [statut, setStatut] = useState('');
-
-  // const [auditEntityId, setAuditEntityId] = useState<string | null>(null);
-  // const [auditEntityName, setAuditEntityName] = useState('');
 
   const closeModal = () => {
     setActiveModal('none');
     setEditingProfil(null);
     setNomProfil('');
-    // setStatut('ACTIF');
     setMessage({ text: '', isError: false });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-
     const payload = { profil: nomProfil };
 
     if (editingProfil) {
@@ -70,226 +101,212 @@ const ProfilPage = () => {
     setIsSubmitting(false);
   };
 
-  // const openEdit = (prof: Profil) => {
-  //   setEditingProfil(prof);
-  //   setNomProfil(prof.profil);
-  //   setStatut(prof.status);
-  //   setActiveModal('form');
-  // };
-
   return (
-    <div className="p-8 max-w-[1600px] mx-auto animate-in fade-in duration-500">
+    <div className="px-4 sm:px-6 lg:px-8 py-8 max-w-[1600px] mx-auto">
+
       {isSubmitting && (
         <div className="fixed inset-0 z-60 bg-white/20 backdrop-blur-[1px] flex items-center justify-center">
-          <div className="bg-white p-6 rounded-3xl shadow-2xl flex flex-col items-center gap-3 border border-gray-100">
-            <FiLoader className="text-indigo-600 animate-spin" size={32} />
+          <div className="bg-white p-6 rounded-2xl shadow-2xl flex flex-col items-center gap-3 border border-gray-100">
+            <FiLoader className="text-indigo-600 animate-spin" size={28} />
             <p className="text-[10px] font-black uppercase tracking-widest text-gray-500">Traitement...</p>
           </div>
         </div>
       )}
 
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
+      {/* ── Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
         <div className="flex items-center gap-4">
-          <button onClick={() => navigate(-1)} className="p-3 bg-white rounded-xl hover:bg-gray-200 transition-all">
-            <FiArrowLeft size={20} />
+          <button
+            onClick={() => navigate(-1)}
+            className="p-2.5 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-all shadow-sm"
+          >
+            <FiArrowLeft size={18} />
           </button>
           <div>
-            <h2 className="text-3xl font-black text-gray-900 flex items-center gap-3">
-              <FiShield className="text-indigo-600" /> Profils
+            <h2 className="text-2xl font-black text-gray-900 flex items-center gap-2">
+              <FiShield className="text-indigo-600" size={22} /> Profils
             </h2>
-            <p className="text-gray-500 font-medium italic">Gestion des rôles et permissions dans le système.</p>
+            <p className="text-sm text-gray-400 font-medium mt-0.5">Gestion des rôles et permissions</p>
           </div>
         </div>
         <button
           onClick={() => setActiveModal('form')}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-7 py-3.5 rounded-2xl font-black transition-all shadow-lg shadow-indigo-100 flex items-center gap-2"
+          className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-md shadow-indigo-100 self-start sm:self-auto"
         >
-          <FiPlus size={20} /> Nouveau Profil
+          <FiPlus size={16} /> Nouveau Profil
         </button>
       </div>
 
       {globalError && (
-        <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-2xl border border-red-100 flex items-center gap-2 font-bold italic">
-          <FiAlertCircle /> {globalError}
+        <div className="mb-5 p-4 bg-red-50 text-red-600 rounded-xl border border-red-100 flex items-center gap-2 text-sm font-semibold">
+          <FiAlertCircle size={16} /> {globalError}
         </div>
       )}
 
-      {/* TABLEAU PROFILS */}
+      {/* ── Tableau ── */}
+      <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-100">
+            <thead className="bg-gray-50">
+              <tr>
+                {['Profil', 'Privilèges', 'Modules', 'Utilisateurs', 'Statut', 'Créé le', ''].map((h) => (
+                  <th
+                    key={h}
+                    className={`px-5 py-3.5 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest ${h === '' ? 'text-right' : ''}`}
+                  >
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50 bg-white">
+              {profiles.map((prof) => (
+                <tr key={prof.id} className="hover:bg-gray-50/60 transition-colors align-top">
 
-      <div className="bg-white shadow-sm border border-gray-100 overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-100">
-          <thead className="bg-gray-50/50 uppercase text-[10px] font-black text-gray-400 tracking-widest">
-            <tr>
-              <th className="px-6 py-5 text-left">Nom du Profil</th>
-              <th className="px-6 py-5 text-left">Privilèges</th>
-              <th className="px-6 py-5 text-left">Modules</th>
-              <th className="px-6 py-5 text-left">Utilisateurs</th>
-              <th className="px-6 py-5 text-left">Statut</th>
-              <th className="px-6 py-5 text-left">Date Création</th>
-              <th className="px-6 py-5 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50 bg-white font-medium">
-            {profiles.map((prof) => (
-              <tr key={prof.id} className="hover:bg-indigo-50/30 transition-colors">
-                <td className="px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl border border-indigo-100">
-                      <FiShield size={18} />
+                  {/* Profil */}
+                  <td className="px-5 py-4">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg border border-indigo-100 shrink-0">
+                        <FiShield size={15} />
+                      </div>
+                      <span className="text-sm font-black text-gray-900 uppercase">{prof.profil}</span>
                     </div>
-                    <span className="text-gray-900 font-black text-sm uppercase">{prof.profil}</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-center text-sm">
-                  <span className="flex flex-col gap-2">
-                    {prof.privileges?.map((p) => (
-                      <span key={p.privilege.id} className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-bold mr-2">
-                        {p.privilege.privilege}
-                      </span>
-                    ))}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-center text-sm">
-                  <span className="flex flex-col gap-2">
-                    {prof.modules?.map((p) => (
-                      <span key={p.module.id} className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold">
-                        {p.module.nom}
-                      </span>
-                    ))}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-center text-sm">
-                  <span className="flex flex-col gap-2">
-                    {prof.users?.map((p) => (
-                      <span key={p.user.id} className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold">
-                        {p.user.nom} {p.user.prenom}
-                      </span>
-                    ))}
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase ${prof.status === 'ACTIF' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                    <span className={`h-1.5 w-1.5 rounded-full ${prof.status === 'ACTIF' ? 'bg-green-500' : 'bg-red-500'}`} />
-                    {prof.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase`}>
-                    <span className={`h-1.5 w-1.5 rounded-full`} />
-                    {prof.dateCreation ? new Date(prof.dateCreation).toLocaleDateString('fr-FR', {
-                      day: '2-digit',
-                      month: 'long',
-                      year: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    }) : '-'}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <div className="flex justify-end gap-4 text-[11px] font-black uppercase tracking-tighter">
-                    <button 
+                  </td>
+
+                  {/* Privilèges */}
+                  <td className="px-5 py-4">
+                    <BadgeList
+                      items={prof.privileges?.map((p) => p.privilege.privilege) ?? []}
+                      colorClass="bg-purple-50 text-purple-700 border border-purple-100"
+                    />
+                  </td>
+
+                  {/* Modules */}
+                  <td className="px-5 py-4">
+                    <BadgeList
+                      items={prof.modules?.map((p) => p.module.nom) ?? []}
+                      colorClass="bg-blue-50 text-blue-700 border border-blue-100"
+                    />
+                  </td>
+
+                  {/* Utilisateurs */}
+                  <td className="px-5 py-4">
+                    <BadgeList
+                      items={prof.users?.map((p) => `${p.user.prenom} ${p.user.nom}`) ?? []}
+                      colorClass="bg-emerald-50 text-emerald-700 border border-emerald-100"
+                    />
+                  </td>
+
+                  {/* Statut */}
+                  <td className="px-5 py-4">
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase ${
+                      prof.status === 'ACTIF'
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                        : 'bg-red-50 text-red-600 border border-red-100'
+                    }`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${prof.status === 'ACTIF' ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                      {prof.status}
+                    </span>
+                  </td>
+
+                  {/* Date */}
+                  <td className="px-5 py-4 text-xs text-gray-400 whitespace-nowrap">
+                    {prof.dateCreation
+                      ? new Date(prof.dateCreation).toLocaleDateString('fr-FR', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })
+                      : '—'}
+                  </td>
+
+                  {/* Action */}
+                  <td className="px-5 py-4 text-right">
+                    <button
                       onClick={() => navigate(`/parametre/profil/${prof.id}`)}
-                      className="text-blue-600 hover:underline"
+                      className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:underline transition-colors"
                     >
                       Modifier
                     </button>
-                    {/* <button
-                      onClick={() => { setAuditEntityId(prof.id); setAuditEntityName(prof.profil); }}
-                      className="text-purple-600 hover:underline"
-                    >
-                      Tracer
-                    </button> */}
-                    {/* <button
-                      onClick={() => window.confirm('Supprimer ce profil ?') && dispatch(deleteProfil(prof.id))}
-                      className="text-red-500 hover:underline border-l border-gray-100 pl-4"
-                    >
-                      Supprimer
-                    </button> */}
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
         {loading && profiles.length === 0 && (
-          <div className="p-20 flex flex-col items-center justify-center text-gray-400 gap-3">
-            <FiLoader className="animate-spin text-indigo-600" size={32} />
-            <p className="text-[10px] font-black uppercase tracking-widest">Chargement des profils...</p>
+          <div className="p-16 flex flex-col items-center justify-center text-gray-400 gap-3">
+            <FiLoader className="animate-spin text-indigo-600" size={28} />
+            <p className="text-[10px] font-black uppercase tracking-widest">Chargement...</p>
+          </div>
+        )}
+
+        {!loading && profiles.length === 0 && (
+          <div className="p-16 text-center text-gray-400 text-sm">
+            Aucun profil trouvé
           </div>
         )}
       </div>
 
-
-
-      {/* MODALE FORMULAIRE */}
+      {/* ── Modal ── */}
       {activeModal === 'form' && (
-        <div className="fixed inset-0 z-70 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden">
-            <div className="p-8 border-b flex justify-between items-center bg-gray-50/50">
-              <h3 className="text-2xl font-black text-gray-800">
-                {editingProfil ? 'Modifier Profil' : 'Nouveau Profil'}
+        <div className="fixed inset-0 z-70 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div className="px-6 py-5 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+              <h3 className="text-base font-bold text-gray-800">
+                {editingProfil ? 'Modifier le profil' : 'Nouveau profil'}
               </h3>
-              <button onClick={closeModal} className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-400">
-                <FiX size={24} />
+              <button onClick={closeModal} className="p-1.5 hover:bg-gray-200 rounded-lg transition-colors text-gray-400">
+                <FiX size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-8 space-y-6">
+            <form onSubmit={handleSubmit} className="p-6 space-y-5">
               <div>
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Nom du Profil</label>
+                <label className="block text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">
+                  Nom du Profil
+                </label>
                 <input
                   type="text"
                   placeholder="ex: ADMIN, AGENT, MANAGER"
                   value={nomProfil}
                   onChange={(e) => setNomProfil(e.target.value.toUpperCase())}
-                  className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl font-black outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all uppercase"
+                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all uppercase"
                   required
                 />
               </div>
 
-              {/* <div>
-                <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 ml-1">Statut</label>
-                <select
-                  value={statut}
-                  onChange={(e) => setStatut(e.target.value as 'ACTIF' | 'INACTIF')}
-                  className="w-full p-4 bg-gray-50 border border-gray-100 rounded-2xl font-medium outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all"
-                >
-                  <option value="ACTIF">ACTIF</option>
-                  <option value="INACTIF">INACTIF</option>
-                </select>
-              </div> */}
-
               {message.text && (
-                <div className={`p-4 rounded-2xl flex items-center gap-3 font-bold text-xs ${message.isError ? 'bg-red-50 text-red-600' : 'bg-green-50 text-green-700'}`}>
-                  {message.isError ? <FiAlertCircle /> : <FiCheckCircle />}
+                <div className={`p-3 rounded-xl flex items-center gap-2 text-sm font-semibold ${
+                  message.isError ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-700'
+                }`}>
+                  {message.isError ? <FiAlertCircle size={15} /> : <FiCheckCircle size={15} />}
                   {message.text}
                 </div>
               )}
 
-              <div className="flex gap-4 pt-4">
-                <button type="button" onClick={closeModal} className="flex-1 py-4 border border-gray-100 rounded-2xl font-black text-gray-400 uppercase text-xs tracking-widest hover:bg-gray-50 transition-all">
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="flex-1 py-2.5 border border-gray-200 rounded-xl text-sm font-semibold text-gray-500 hover:bg-gray-50 transition-all"
+                >
                   Annuler
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="flex-1 py-4 bg-indigo-600 text-white rounded-2xl font-black shadow-lg shadow-indigo-100 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 uppercase text-xs tracking-widest"
+                  className="flex-1 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
                 >
-                  {isSubmitting ? <FiLoader className="animate-spin" /> : 'Confirmer'}
+                  {isSubmitting ? <FiLoader className="animate-spin" size={14} /> : <FiCheckCircle size={14} />}
+                  Confirmer
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-
-      {/* <AuditModal
-        entity="PROFIL"
-        entityId={auditEntityId}
-        entityName={auditEntityName}
-        isOpen={!!auditEntityId}
-        onClose={() => setAuditEntityId(null)}
-      /> */}
     </div>
   );
 };

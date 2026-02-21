@@ -72,11 +72,11 @@ export const BilletActions = ({
 
       {/* Bouton : Marquer comme Émis */}
       <button
-        disabled={!(allLinesEmission && billet?.statut !== 'ANNULER' && billet?.statut !== 'BILLET_EMIS' && billet?.statut !== 'FACTURE_EMISE' && billet?.statut !== 'FACTURE_REGLEE')}
+        disabled={!(allLinesEmission && billet?.statut !== 'ANNULER' && billet?.statut !== 'BILLET_EMIS' && billet?.statut !== 'FACTURE_EMISE' && billet?.statut !== 'FACTURE_REGLEE' && billet?.statut !== 'BC_CLIENT_A_APPROUVER')}
         onClick={onShowEmission}
         className={`
           flex items-center gap-2 px-6 py-2.5 rounded-lg font-semibold transition-all shadow-sm
-          ${allLinesEmission && billet?.statut !== 'ANNULER' && billet?.statut !== 'BILLET_EMIS' && billet?.statut !== 'FACTURE_EMISE' && billet?.statut !== 'FACTURE_REGLEE'
+          ${allLinesEmission && billet?.statut !== 'ANNULER' && billet?.statut !== 'BILLET_EMIS' && billet?.statut !== 'FACTURE_EMISE' && billet?.statut !== 'FACTURE_REGLEE' && billet?.statut !== 'BC_CLIENT_A_APPROUVER'
             ? 'bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100'
             : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'}
         `}

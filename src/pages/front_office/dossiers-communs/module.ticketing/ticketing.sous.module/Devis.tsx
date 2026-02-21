@@ -266,7 +266,7 @@ export default function Devis () {
                       if (response.data?.success && response.data?.data?.id) {
                         alert('Creation billet avec succée')
 
-                        navigate(`/dossiers-communs/${devis.data.entete.prestation.id}/pages/billet/${devis.id}?prospectionEnteteId=${devis.data?.entete?.id}`);
+                        navigate(`/dossiers-communs/ticketing/pages/billet/${devis.id}?prospectionEnteteId=${devis.data?.entete?.id}`);
                         // Option 2 (alternative) : juste l'ID et re-fetch dans la page billet
                         // navigate(`/dossiers-communs/ticketing/billet/${nouveauBilletId}`);
                       } else {
@@ -461,16 +461,18 @@ export default function Devis () {
                                         </div>
                                         
                                         {/* Conditions Modif/Annul */}
-                                        <div className="grid grid-cols-2 gap-2 mt-2">
-                                          <div className="p-1.5 bg-orange-50 rounded border border-orange-100 text-center">
-                                            <p className="text-[9px] uppercase font-bold text-orange-600">Modif</p>
-                                            <p className="text-[10px] text-orange-800 font-medium truncate" title={ligne.conditionModif}>{ligne.conditionModif || 'N/A'}</p>
+                                        {(ligne.conditionModif || ligne.conditionAnnul) && (
+                                          <div className="grid grid-cols-2 gap-2 mt-2">
+                                            <div className="p-1.5 bg-orange-50 rounded border border-orange-100 text-center">
+                                              <p className="text-[9px] uppercase font-bold text-orange-600">Modif</p>
+                                              <p className="text-[10px] text-orange-800 font-medium truncate" title={ligne.conditionModif}>{ligne.conditionModif || 'N/A'}</p>
+                                            </div>
+                                            <div className="p-1.5 bg-red-50 rounded border border-red-100 text-center">
+                                              <p className="text-[9px] uppercase font-bold text-red-600">Annul</p>
+                                              <p className="text-[10px] text-red-800 font-medium truncate" title={ligne.conditionAnnul}>{ligne.conditionAnnul || 'N/A'}</p>
+                                            </div>
                                           </div>
-                                          <div className="p-1.5 bg-red-50 rounded border border-red-100 text-center">
-                                            <p className="text-[9px] uppercase font-bold text-red-600">Annul</p>
-                                            <p className="text-[10px] text-red-800 font-medium truncate" title={ligne.conditionAnnul}>{ligne.conditionAnnul || 'N/A'}</p>
-                                          </div>
-                                        </div>
+                                        )}
                                       </div>
                                     </td>
                                   </tr>
@@ -485,7 +487,7 @@ export default function Devis () {
                           {/* Bouton Voir liste Billet - Toujours actif */}
                           <button
                           disabled= { devis.statut == 'ANNULER' || devis.statut == 'DEVIS_A_APPROUVER'}
-                            onClick={() => navigate(`/dossiers-communs/${devis.data.entete.prestation.id}/pages/billet/${devis.id}?prospectionEnteteId=${devis.data?.entete?.id}`)}
+                            onClick={() => navigate(`/dossiers-communs/ticketing/pages/billet/${devis.id}?prospectionEnteteId=${devis.data?.entete?.id}`)}
                             className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-2 font-medium ${
                               devis.statut === 'DEVIS_APPROUVE'
                                 ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'

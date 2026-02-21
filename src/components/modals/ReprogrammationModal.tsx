@@ -132,10 +132,9 @@ export default function ReprogrammationModal({
 
   // Chargement raisons annulation
   useEffect(() => {
-    if (isOpen && raisons.length === 0 && !raisonsLoading) {
-      dispatch(fetchRaisonsAnnulation());
-    }
-  }, [isOpen, raisons.length, raisonsLoading, dispatch]);
+    if (!isOpen) return;
+    dispatch(fetchRaisonsAnnulation());
+  }, [isOpen, dispatch]); // ← retire raisons.length et raisonsLoading des deps
 
   // Chargement infos bénéficiaire quand on change le courant
   useEffect(() => {
@@ -304,7 +303,7 @@ export default function ReprogrammationModal({
                 {/* Raison */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Raison de modification <span className="text-red-600">*</span>
+                    Raison Annulation <span className="text-red-600">*</span>
                   </label>
                   {raisonsLoading ? (
                     <div className="flex items-center gap-2 text-gray-500 text-sm py-2">
