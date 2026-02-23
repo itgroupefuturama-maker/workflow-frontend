@@ -287,7 +287,7 @@ function NewLineRow({
         />
       </td>
 
-      <td className="px-4 py-3">
+      {/* <td className="px-4 py-3">
         <input
           type="number"
           step="0.01"
@@ -295,6 +295,17 @@ function NewLineRow({
           onChange={(e) => updateNewLineField('montantPenaliteCompagnieDevise', Number(e.target.value))}
           className={numberInputClassName + " text-emerald-700"}
           placeholder="0.00"
+        />
+      </td> */}
+
+      <td className="px-4 py-3">
+        <input
+          type="number"
+          step="0.01"
+          value={newLine.montantPenaliteCompagnieDevise}
+          readOnly
+          className="w-full min-w-[140px] px-3 py-2 border border-slate-200 rounded-lg text-sm text-right font-medium bg-slate-100 text-slate-400 cursor-not-allowed"
+          placeholder="—"
         />
       </td>
 
@@ -336,7 +347,7 @@ function NewLineRow({
         />
       </td>
 
-      <td className="px-4 py-3">
+      {/* <td className="px-4 py-3">
         <input
           type="number"
           step="0.01"
@@ -344,6 +355,17 @@ function NewLineRow({
           onChange={(e) => updateNewLineField('montantPenaliteClientDevise', Number(e.target.value))}
           className={numberInputClassName + " text-emerald-700"}
           placeholder="0.00"
+        />
+      </td> */}
+
+      <td className="px-4 py-3">
+        <input
+          type="number"
+          step="0.01"
+          value={newLine.montantPenaliteClientDevise}
+          readOnly
+          className="w-full min-w-[140px] px-3 py-2 border border-slate-200 rounded-lg text-sm text-right font-medium bg-slate-100 text-slate-400 cursor-not-allowed"
+          placeholder="—"
         />
       </td>
 

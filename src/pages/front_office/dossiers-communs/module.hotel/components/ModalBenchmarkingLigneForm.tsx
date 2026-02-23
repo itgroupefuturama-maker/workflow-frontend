@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { FiX, FiInfo, FiSave } from 'react-icons/fi';
 
 type Props = {
   isOpen: boolean;
@@ -30,12 +31,14 @@ const ModalBenchmarkingLigneForm: React.FC<Props> = ({
     montantAriary: '',
     devise: 'EUR',
     tauxChange: '',
+    isRefundable: false,       // ← boolean dès le départ
+    dateLimiteAnnulation: '',
   });
 
   // ── Calculs automatiques ──────────────────────────────────────
   useEffect(() => {
-    const nuiteDevise  = parseFloat(form.nuiteDevise)  || 0;
-    const tauxChange   = parseFloat(form.tauxChange)   || 0;
+    const nuiteDevise   = parseFloat(form.nuiteDevise)   || 0;
+    const tauxChange    = parseFloat(form.tauxChange)    || 0;
     const nombreChambre = parseFloat(form.nombreChambre) || 0;
 
     const nuiteAriary   = nuiteDevise * tauxChange;
@@ -50,9 +53,15 @@ const ModalBenchmarkingLigneForm: React.FC<Props> = ({
     }));
   }, [form.nuiteDevise, form.tauxChange, form.nombreChambre]);
 
+  // ── Handlers séparés pour text/select et checkbox ────────────
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // ── FIX isRefundable : on gère le boolean directement ─────────
+  const handleCheckbox = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm((prev) => ({ ...prev, isRefundable: e.target.checked }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -63,47 +72,53 @@ const ModalBenchmarkingLigneForm: React.FC<Props> = ({
     }
     onSubmit({
       benchmarkingEnteteId,
-      hotel:          form.hotel.trim(),
-      plateformeId:   form.plateformeId,
-      typeChambreId:  form.typeChambreId,
-      nuiteDevise:    Number(form.nuiteDevise),
-      nombreChambre:  Number(form.nombreChambre)  || 1,
-      nuiteAriary:    Number(form.nuiteAriary)    || 0,
-      montantDevise:  Number(form.montantDevise)  || 0,
-      montantAriary:  Number(form.montantAriary)  || 0,
-      devise:         form.devise,
-      tauxChange:     Number(form.tauxChange)     || 1,
+      hotel:               form.hotel.trim(),
+      plateformeId:        form.plateformeId,
+      typeChambreId:       form.typeChambreId,
+      nuiteDevise:         Number(form.nuiteDevise),
+      nombreChambre:       Number(form.nombreChambre)  || 1,
+      nuiteAriary:         Number(form.nuiteAriary)    || 0,
+      montantDevise:       Number(form.montantDevise)  || 0,
+      montantAriary:       Number(form.montantAriary)  || 0,
+      devise:              form.devise,
+      tauxChange:          Number(form.tauxChange)     || 1,
+      isRefundable:        form.isRefundable,           // ← boolean true/false
+      dateLimiteAnnulation: form.dateLimiteAnnulation || null,
     });
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] overflow-hidden flex flex-col">
 
         {/* ── Header ── */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <div>
-            <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">Benchmarking</p>
-            <h3 className="text-base font-semibold text-gray-800 mt-0.5">Nouvelle ligne</h3>
+        <div className="bg-gradient-to-r from-orange-500 to-orange-400 px-6 py-5 shrink-0">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-orange-100 text-xs font-semibold uppercase tracking-widest">Benchmarking Hôtel</p>
+              <h3 className="text-white font-bold text-lg mt-0.5">Nouvelle ligne</h3>
+            </div>
+            <button
+              onClick={onClose}
+              disabled={loading}
+              className="text-orange-200 hover:text-white hover:bg-white/20 rounded-xl p-2 transition-colors"
+            >
+              <FiX size={20} />
+            </button>
           </div>
-          <button
-            onClick={onClose}
-            disabled={loading}
-            className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg p-1.5 transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
         </div>
 
         {/* ── Body ── */}
-        <form onSubmit={handleSubmit} className="px-6 py-5">
+        <form onSubmit={handleSubmit} className="overflow-y-auto flex-1 p-6 space-y-5 bg-gray-50">
 
-          {/* Section : Identification */}
-          <Section label="Identification">
+          {/* Section 1 — Identification */}
+          <Section
+            label="Identification"
+            number="1"
+            color="orange"
+          >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Field label="Hôtel" required>
                 <input
@@ -126,11 +141,12 @@ const ModalBenchmarkingLigneForm: React.FC<Props> = ({
                   required
                 >
                   <option value="">— Choisir —</option>
-                  {plateformes.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.code} – {p.nom}
-                    </option>
-                  ))}
+                  {plateformes
+                    .filter((p) => p.nom.toLowerCase().startsWith('platforme'))
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>{p.code} – {p.nom}</option>
+                    ))
+                  }
                 </select>
               </Field>
 
@@ -144,9 +160,7 @@ const ModalBenchmarkingLigneForm: React.FC<Props> = ({
                 >
                   <option value="">— Choisir —</option>
                   {typesChambre.map((t) => (
-                    <option key={t.id} value={t.id}>
-                      {t.type} ({t.capacite} pers.)
-                    </option>
+                    <option key={t.id} value={t.id}>{t.type} ({t.capacite} pers.)</option>
                   ))}
                 </select>
               </Field>
@@ -165,10 +179,8 @@ const ModalBenchmarkingLigneForm: React.FC<Props> = ({
             </div>
           </Section>
 
-          <Divider />
-
-          {/* Section : Tarif devise */}
-          <Section label="Tarif en devise">
+          {/* Section 2 — Tarif */}
+          <Section label="Tarif en devise" number="2" color="blue">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <Field label="Devise">
                 <select
@@ -210,12 +222,45 @@ const ModalBenchmarkingLigneForm: React.FC<Props> = ({
                 />
               </Field>
             </div>
+
+            {/* Remboursable + Date limite */}
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+
+              {/* ── FIX : toggle switch au lieu du checkbox natif ── */}
+              <Field label="Remboursable">
+                <label className="inline-flex items-center gap-3 cursor-pointer mt-1">
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      name="isRefundable"
+                      checked={form.isRefundable}
+                      onChange={handleCheckbox}   // ← handleCheckbox, pas handleChange
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-gray-200 rounded-full peer-checked:bg-green-500 transition-colors" />
+                    <div className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform peer-checked:translate-x-5" />
+                  </div>
+                  <span className={`text-sm font-semibold ${form.isRefundable ? 'text-green-600' : 'text-gray-400'}`}>
+                    {form.isRefundable ? 'Oui' : 'Non'}
+                  </span>
+                </label>
+              </Field>
+
+              <Field label="Date limite d'annulation">
+                <input
+                  type="date"
+                  name="dateLimiteAnnulation"
+                  value={form.dateLimiteAnnulation}
+                  onChange={handleChange}
+                  disabled={!form.isRefundable}
+                  className={`${inputClass} disabled:bg-gray-100 disabled:text-gray-300 disabled:cursor-not-allowed`}
+                />
+              </Field>
+            </div>
           </Section>
 
-          <Divider />
-
-          {/* Section : Totaux calculés (lecture seule) */}
-          <Section label="Totaux calculés automatiquement">
+          {/* Section 3 — Totaux */}
+          <Section label="Totaux calculés automatiquement" number="3" color="emerald">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <CalcField
                 label="Nuit / Ariary"
@@ -236,33 +281,36 @@ const ModalBenchmarkingLigneForm: React.FC<Props> = ({
               />
             </div>
           </Section>
-
-          {/* ── Footer ── */}
-          <div className="flex items-center justify-end gap-3 mt-6 pt-4 border-t border-gray-100">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={loading}
-              className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50"
-            >
-              Annuler
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="px-5 py-2 text-sm font-medium text-white bg-gray-800 hover:bg-gray-900 rounded-lg transition-colors disabled:opacity-50 flex items-center gap-2"
-            >
-              {loading && (
-                <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4l3-3-3-3v4a8 8 0 00-8 8h4z" />
-                </svg>
-              )}
-              {loading ? 'Enregistrement...' : 'Enregistrer la ligne'}
-            </button>
-          </div>
-
         </form>
+
+        {/* ── Footer ── */}
+        <div className="bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-end gap-3 shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            className="px-5 py-2.5 text-sm font-medium text-gray-600 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors disabled:opacity-50"
+          >
+            Annuler
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="flex items-center gap-2 px-6 py-2.5 text-sm font-bold text-white bg-orange-500 hover:bg-orange-600 rounded-xl transition-colors disabled:opacity-50 shadow-lg shadow-orange-100"
+          >
+            {loading ? (
+              <>
+                <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                Enregistrement...
+              </>
+            ) : (
+              <>
+                <FiSave size={16} />
+                Enregistrer la ligne
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -271,16 +319,38 @@ const ModalBenchmarkingLigneForm: React.FC<Props> = ({
 /* ── Helpers ────────────────────────────────────────────────── */
 
 const inputClass =
-  'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 bg-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:border-transparent transition';
+  'w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 bg-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-transparent transition';
 
-const Section = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <div className="mb-5">
-    <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-3">{label}</p>
-    {children}
-  </div>
-);
+const sectionColors = {
+  orange:  { badge: 'bg-orange-500',  border: 'border-orange-200',  title: 'text-orange-600'  },
+  blue:    { badge: 'bg-blue-500',    border: 'border-blue-200',    title: 'text-blue-600'    },
+  emerald: { badge: 'bg-emerald-500', border: 'border-emerald-200', title: 'text-emerald-600' },
+};
 
-const Divider = () => <div className="border-t border-gray-100 my-5" />;
+const Section = ({
+  label,
+  number,
+  color = 'orange',
+  children,
+}: {
+  label: string;
+  number: string;
+  color?: keyof typeof sectionColors;
+  children: React.ReactNode;
+}) => {
+  const c = sectionColors[color];
+  return (
+    <div className={`bg-white rounded-xl border ${c.border} shadow-sm overflow-hidden`}>
+      <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center gap-2">
+        <span className={`w-5 h-5 rounded-full ${c.badge} text-white text-xs flex items-center justify-center font-bold shrink-0`}>
+          {number}
+        </span>
+        <h4 className={`text-xs font-bold uppercase tracking-wider ${c.title}`}>{label}</h4>
+      </div>
+      <div className="p-5">{children}</div>
+    </div>
+  );
+};
 
 const Field = ({
   label,
@@ -292,15 +362,14 @@ const Field = ({
   children: React.ReactNode;
 }) => (
   <div>
-    <label className="block text-xs font-medium text-gray-500 mb-1.5">
+    <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
       {label}
-      {required && <span className="text-gray-400 ml-0.5">*</span>}
+      {required && <span className="text-red-400 ml-0.5">*</span>}
     </label>
     {children}
   </div>
 );
 
-/* Champ calculé : lecture seule avec formule en tooltip */
 const CalcField = ({
   label,
   value,
@@ -314,25 +383,20 @@ const CalcField = ({
 }) => (
   <div>
     <div className="flex items-center gap-1.5 mb-1.5">
-      <p className="text-xs font-medium text-gray-500">{label}</p>
-      <span
-        title={formula}
-        className="text-gray-300 hover:text-gray-500 cursor-help transition-colors"
-      >
-        <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-          <path fillRule="evenodd" d="M18 10A8 8 0 11 2 10a8 8 0 0116 0zm-8-3a1 1 0 00-.867.5L8.2 8.4A1 1 0 009 10h.01A1 1 0 0010 9V7a1 1 0 00-1-1zm1 6a1 1 0 11-2 0 1 1 0 012 0z" clipRule="evenodd" />
-        </svg>
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{label}</p>
+      <span title={formula} className="text-gray-300 hover:text-gray-500 cursor-help transition-colors">
+        <FiInfo size={12} />
       </span>
     </div>
-    <div className="flex items-center gap-2 w-full border border-dashed border-gray-200 rounded-lg px-3 py-2 bg-gray-50">
-      <span className="text-sm font-medium text-gray-700 flex-1">
+    <div className="flex items-center gap-2 w-full border border-dashed border-emerald-200 rounded-xl px-3 py-2.5 bg-emerald-50">
+      <span className="text-sm font-bold text-emerald-700 flex-1">
         {value
           ? Number(value).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-          : <span className="text-gray-300">—</span>
+          : <span className="text-gray-300 font-normal">—</span>
         }
       </span>
       {suffix && (
-        <span className="text-xs font-medium text-gray-400 shrink-0">{suffix}</span>
+        <span className="text-xs font-bold text-emerald-500 shrink-0">{suffix}</span>
       )}
     </div>
   </div>

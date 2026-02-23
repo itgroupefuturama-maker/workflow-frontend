@@ -451,27 +451,6 @@ export default function ProspectionDetail() {
                     </>
                   ) : (
                     <>
-                      {/* <button
-                        onClick={() => navigate(`/dossiers-communs/ticketing/pages/devis/${enteteId}`)}
-                        className="flex items-center gap-2 px-4 py-2.5 border border-blue-200 text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 hover:border-blue-300 transition-all font-medium"
-                      >
-                        <FiFileText size={16} />
-                        Voir les devis
-                      </button>
-
-                      <button
-                        onClick={toggleSelectionMode}
-                        disabled={lignes.length === 0 || !!newLine || loadingLignes}
-                        className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all font-medium ${
-                          lignes.length === 0 || !!newLine || loadingLignes
-                            ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                            : 'border border-green-200 text-green-700 bg-green-50 hover:bg-green-100 hover:border-green-300'
-                        }`}
-                      >
-                        <FiCheckSquare size={16} />
-                        Sélectionner pour devis
-                      </button> */}
-
                       <button
                         onClick={() => navigate(`/dossiers-communs/ticketing/pages/devis/${enteteId}`)}
                         className="flex items-center gap-2 px-4 py-2.5 border border-blue-200 text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 hover:border-blue-300 transition-all font-medium"
@@ -479,6 +458,9 @@ export default function ProspectionDetail() {
                         <FiFileText size={16} />
                         Voir les devis
                       </button>
+
+                      {/* Séparateur */}
+                      <div className="w-px h-6 bg-gray-300 mx-1" />
 
                       <button
                         onClick={toggleSelectionMode}
@@ -492,6 +474,9 @@ export default function ProspectionDetail() {
                         <FiCheckSquare size={16} />
                         Sélectionner pour devis
                       </button>
+
+                      {/* Séparateur */}
+                      <div className="w-px h-6 bg-gray-300 mx-1" />
 
                       {/* Bouton ajout inline dans le tableau */}
                       <button

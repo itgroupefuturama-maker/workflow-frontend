@@ -56,6 +56,8 @@ export type CreateBenchmarkingLignePayload = {
   montantAriary: number;
   devise: string;
   tauxChange: number;
+  isRefundable: boolean;
+  dateLimiteAnnulation: string;
 };
 
 export type CreateBenchmarkingPayload = {
@@ -163,6 +165,7 @@ export type BenchmarkingDetail = {
     nuiteAriary: number;
     montantDevise: number;
     montantAriary: number;
+    isRefundable: boolean;
     isBenchMark: boolean;
   }>;
   benchService: Array<{

@@ -56,6 +56,34 @@ export const createRaisonAnnulation = createAsyncThunk(
   }
 );
 
+// Ajouter les deux thunks après createRaisonAnnulation
+
+export const activateRaisonAnnulation = createAsyncThunk(
+  'raisonAnnulation/activate',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      const response = await axios.patch(`/raison-annulation/${id}/activate`);
+      if (!response.data.success) throw new Error('Échec activation');
+      return response.data.data as RaisonAnnulation;
+    } catch (err: any) {
+      return rejectWithValue(err.response?.data?.message || 'Erreur activation');
+    }
+  }
+);
+
+export const deactivateRaisonAnnulation = createAsyncThunk(
+  'raisonAnnulation/deactivate',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      const response = await axios.patch(`/raison-annulation/${id}/deactivate`);
+      if (!response.data.success) throw new Error('Échec désactivation');
+      return response.data.data as RaisonAnnulation;
+    } catch (err: any) {
+      return rejectWithValue(err.response?.data?.message || 'Erreur désactivation');
+    }
+  }
+);
+
 const raisonAnnulationSlice = createSlice({
   name: 'raisonAnnulation',
   initialState,
@@ -86,6 +114,14 @@ const raisonAnnulationSlice = createSlice({
       .addCase(createRaisonAnnulation.rejected, (state, action) => {
         state.createLoading = false;
         state.createError = action.payload as string;
+      })
+      .addCase(activateRaisonAnnulation.fulfilled, (state, action: PayloadAction<RaisonAnnulation>) => {
+        const index = state.items.findIndex((i) => i.id === action.payload.id);
+        if (index !== -1) state.items[index] = action.payload;
+      })
+      .addCase(deactivateRaisonAnnulation.fulfilled, (state, action: PayloadAction<RaisonAnnulation>) => {
+        const index = state.items.findIndex((i) => i.id === action.payload.id);
+        if (index !== -1) state.items[index] = action.payload;
       });
   },
 });

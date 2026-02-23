@@ -11,7 +11,7 @@ const useAppDispatch = () => useDispatch<AppDispatch>();
 const ALL_MODULES = [
   { label: 'Dossier',             desc: 'Accédez à vos fichiers partagés',        path: '/dossiers-communs',            icon: FiFolder,      color: 'blue',   locked: false },
   { label: 'To Do List',          desc: 'Gérez vos tâches quotidiennes',           path: '/dossiers-communs/todolist',   icon: FiCheckCircle, color: 'green',  locked: false },
-  { label: 'Vol',                 desc: 'Suivez vos demandes et tickets',          path: '/dossiers-communs/ticketing',  icon: FiTag,         color: 'amber',  locked: false },
+  { label: 'Ticketing',           desc: 'Suivez vos demandes et tickets',          path: '/dossiers-communs/ticketing',  icon: FiTag,         color: 'amber',  locked: false },
   { label: 'Attestation Voyage',  desc: 'Générez vos attestations',                path: '/dossiers-communs/attestation',icon: FiFileText,    color: 'rose',   locked: false },
   { label: 'Paramètre',           desc: 'Commentaires et configurations',          path: '/dossiers-communs/parametre',  icon: FiSettings,    color: 'violet', locked: false },
   { label: 'Hôtel',               desc: 'Gestion des réservations',                path: '/dossiers-communs/hotel',      icon: FiHome,        color: 'orange', locked: false },

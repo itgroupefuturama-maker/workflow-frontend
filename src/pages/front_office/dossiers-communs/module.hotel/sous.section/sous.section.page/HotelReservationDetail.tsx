@@ -101,6 +101,8 @@ const HotelReservationDetail = () => {
   console.log('Client Facture ID:', clientFactureId);
   console.log('Client Facture Data:', clientFactureData);
 
+  
+
   // Charger les détails de la réservation
   useEffect(() => {
     if (enteteId) {
@@ -280,6 +282,8 @@ const HotelReservationDetail = () => {
     }
   };
 
+  
+
   if (detailLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-neutral-50">
@@ -306,6 +310,10 @@ const HotelReservationDetail = () => {
 
   const entete = selectedDetail;
   // const beneficiaires = clientFactureData?.beneficiaires || [];
+
+  const hasNonRefundableLignes = entete.hotelLigne.some(
+    (l) => l.BenchmarkingLigne.isRefundable === false
+  );
 
   return (
     <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange}>
@@ -490,6 +498,7 @@ const HotelReservationDetail = () => {
                           <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-600 uppercase">Hôtel</th>
                           <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-600 uppercase">Chambre</th>
                           <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-600 uppercase">Statut</th>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-600 uppercase">Taux de change</th>
                           <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-600 uppercase">PU Nuit Hôtel Devise</th>
                           <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-600 uppercase">PU Nuit Hôtel Ariary</th>
                           <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-600 uppercase">PU Montant Devise</th>
@@ -506,6 +515,7 @@ const HotelReservationDetail = () => {
                           <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-600 uppercase">Conf. Montant Nuit Client Ar</th>
                           <th className="px-6 py-4 text-right text-xs font-semibold text-neutral-600 uppercase">Conf. Commission Ar</th>
                           <th className="px-6 py-4 text-right text-xs font-semibold text-neutral-600 uppercase">Commission (Ar)</th>
+                          <th className="px-6 py-4 text-left text-xs font-semibold text-neutral-600 uppercase">Remboursable</th>
                           <th className="px-6 py-4 text-right text-xs font-semibold text-neutral-600 uppercase">Actions</th>
                         </tr>
                       </thead>
@@ -517,6 +527,7 @@ const HotelReservationDetail = () => {
                             <td className="px-6 py-4">{ligne.BenchmarkingLigne.hotel}</td>
                             <td className="px-6 py-4">{ligne.BenchmarkingLigne.typeChambre.type}</td>
                             <td className="px-6 py-4">{ligne.statut}</td>
+                            <td className="px-6 py-4">{ligne.BenchmarkingLigne.tauxChange}</td>
                             <td className="px-6 py-4">{ligne.BenchmarkingLigne.nuiteDevise}</td>
                             <td className="px-6 py-4">{ligne.BenchmarkingLigne.nuiteAriary}</td>
                             <td className="px-6 py-4">{ligne.BenchmarkingLigne.montantDevise}</td>
@@ -537,6 +548,7 @@ const HotelReservationDetail = () => {
                             <td className="px-6 py-4 text-right font-medium text-emerald-700">
                               {ligne.commissionUnitaire?.toLocaleString('fr-FR')} Ar
                             </td>
+                            <td className="px-6 py-4">{ligne.BenchmarkingLigne.isRefundable ? 'Oui' : 'Non'}</td>
                             <td className="px-6 py-4 text-right">
                               <div className="flex items-center justify-end gap-2">
                                 <button
@@ -798,11 +810,12 @@ const HotelReservationDetail = () => {
 
         {/* Modal Annulation */}
         {showAnnulationModal && (
+          
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-xl w-full max-w-md overflow-hidden">
               <div className="bg-red-50 border-b border-red-200 px-6 py-4 flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold text-red-800">✕ Annulation de réservation</h3>
+                  <h3 className="text-lg font-semibold text-red-800">Annulation de réservation</h3>
                   <p className="text-sm text-red-600 mt-0.5">
                     {entete.HotelProspectionEntete.numeroEntete} — {entete.HotelProspectionEntete.fournisseur.libelle}
                   </p>
@@ -823,7 +836,9 @@ const HotelReservationDetail = () => {
                       className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-red-500 focus:border-red-500"
                     >
                       <option value="">Sélectionner une raison</option>
-                      {raisonsAnnulation.map((raison) => (
+                      {raisonsAnnulation
+                      .filter((raison) => raison.statut === 'ACTIF')
+                      .map((raison) => (
                         <option key={raison.id} value={raison.id}>{raison.libelle}</option>
                       ))}
                     </select>
@@ -852,10 +867,27 @@ const HotelReservationDetail = () => {
                     </div>
                   </div>
                 )}
-                <div className="bg-amber-50 border border-amber-200 rounded p-3 flex items-start gap-2">
-                  <span>⚠️</span>
-                  <p className="text-xs text-amber-800">Cette action est <strong>irréversible</strong>. La réservation sera définitivement annulée.</p>
+
+
+                <div className={`border rounded p-3 flex items-start gap-2 ${
+                  hasNonRefundableLignes
+                    ? 'bg-red-50 border-red-300'
+                    : 'bg-amber-50 border-amber-200'
+                }`}>
+                  <span>{hasNonRefundableLignes ? '🚨' : '⚠️'}</span>
+                  <div className="flex flex-col gap-1">
+                    <p className={`text-xs font-bold ${hasNonRefundableLignes ? 'text-red-800' : 'text-amber-800'}`}>
+                      Cette action est <strong>irréversible</strong>. La réservation sera définitivement annulée.
+                    </p>
+                    {hasNonRefundableLignes && (
+                      <p className="text-xs text-red-700 mt-1 font-semibold">
+                        ⚠️ Attention : certaines lignes de cette réservation sont <strong>non remboursables</strong>. 
+                        Des frais d'annulation peuvent s'appliquer.
+                      </p>
+                    )}
+                  </div>
                 </div>
+
               </div>
               <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
                 <button onClick={() => setShowAnnulationModal(false)} className="px-4 py-2 border border-gray-300 rounded text-sm font-medium text-gray-700 hover:bg-gray-50">Fermer</button>

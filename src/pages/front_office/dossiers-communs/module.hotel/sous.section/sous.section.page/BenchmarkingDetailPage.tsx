@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
 import type { RootState, AppDispatch } from '../../../../../../app/store';
-import { createBenchmarkingLigne, fetchBenchmarkingDetail, sendBenchmarkingDevis, setBenchmarkOfficial } from '../../../../../../app/front_office/parametre_hotel/hotelProspectionEnteteSlice';
+import { createBenchmarkingLigne, fetchBenchmarkingDetail, sendBenchmarkingDevis, setBenchmarkOfficial, type CreateBenchmarkingLignePayload } from '../../../../../../app/front_office/parametre_hotel/hotelProspectionEnteteSlice';
 import ModalBenchmarkingLigneForm from '../../components/ModalBenchmarkingLigneForm';
 import { HotelHeader } from '../../components/HotelHeader';
 import ModalConfirmDevis from '../../components/ModalConfirmDevis';
@@ -297,7 +297,7 @@ const BenchmarkingDetailPage = () => {
   };
 
   // Handler création
-  const handleCreateLigne = (data: any) => {
+  const handleCreateLigne = (data: CreateBenchmarkingLignePayload) => {
     dispatch(createBenchmarkingLigne(data)).then((result) => {
       if (createBenchmarkingLigne.fulfilled.match(result)) {
         setShowLigneModal(false);
@@ -583,6 +583,9 @@ const BenchmarkingDetailPage = () => {
                         Prix Ariary
                       </th>
                       <th className="px-6 py-3.5 text-center text-xs font-semibold text-neutral-700 uppercase tracking-wide">
+                        Rembourssable
+                      </th>
+                      <th className="px-6 py-3.5 text-center text-xs font-semibold text-neutral-700 uppercase tracking-wide">
                         Benchmark
                       </th>
                     </tr>
@@ -622,6 +625,17 @@ const BenchmarkingDetailPage = () => {
                         </td>
                         <td className="px-6 py-4 text-right text-sm font-mono font-medium text-neutral-900">
                           {ligne.nuiteAriary?.toLocaleString('fr-FR')} <span className="text-neutral-500">Ar</span>
+                        </td>
+                        <td className="px-6 py-4 text-right text-sm font-mono font-medium text-neutral-900">
+                          {ligne.isRefundable ? (
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-900 text-white">
+                              Oui
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-neutral-100 text-neutral-600">
+                              Non
+                            </span>
+                          )}
                         </td>
                         <td className="px-6 py-4 text-center">
                           {ligne.isBenchMark ? (
@@ -789,15 +803,6 @@ const BenchmarkingDetailPage = () => {
                               <td className="px-3 py-2 border border-neutral-200 text-right font-mono">
                                 {benchmarkLine.nombreChambre }
                               </td>
-                              {/* <td className="px-3 py-2 border border-neutral-200">
-                                <input
-                                  type="number"
-                                  min={benchmarkLine.nombreChambre}
-                                  value={nbChambreClient}
-                                  onChange={(e) => handleNbChambreClientChange(parseInt(e.target.value) || benchmarkLine.nombreChambre)}
-                                  className="w-full px-2 py-1 text-right font-mono border border-neutral-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                />
-                              </td> */}
                               <td className="px-3 py-2 border border-neutral-200 text-right font-mono font-bold bg-neutral-100">
                                 {clientData.montantAriary?.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                               </td>

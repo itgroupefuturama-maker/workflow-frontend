@@ -308,8 +308,11 @@ export default function AddProspectionLigneModal({
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-emerald-600 mb-1.5 uppercase tracking-wide">Mt Pénalité Cie</label>
-                <input type="number" step="0.01" value={form.montantPenaliteCompagnieDevise} onChange={(e) => set('montantPenaliteCompagnieDevise', Number(e.target.value))} className={numberCls + " text-emerald-700"} placeholder="0.00" />
+                <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">
+                  Mt Pénalité Cie
+                  <span className="ml-1 text-gray-400 normal-case font-normal">(auto)</span>
+                </label>
+                <input type="number" step="0.01" value={form.montantPenaliteCompagnieDevise} readOnly className={readonlyCls + " text-right"} placeholder="—" />
               </div>
 
               {/* Montants Client */}
@@ -324,8 +327,11 @@ export default function AddProspectionLigneModal({
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-blue-600 mb-1.5 uppercase tracking-wide">Mt Pénalité Client</label>
-                <input type="number" step="0.01" value={form.montantPenaliteClientDevise} onChange={(e) => set('montantPenaliteClientDevise', Number(e.target.value))} className={numberCls + " text-blue-700"} placeholder="0.00" />
+                <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">
+                  Mt Pénalité Client
+                  <span className="ml-1 text-gray-400 normal-case font-normal">(auto)</span>
+                </label>
+                <input type="number" step="0.01" value={form.montantPenaliteClientDevise} readOnly className={readonlyCls + " text-right"} placeholder="—" />
               </div>
             </div>
           </section>
@@ -350,32 +356,32 @@ export default function AddProspectionLigneModal({
                     <div key={svc.id} className="flex flex-col gap-1.5 p-4 bg-white rounded-xl border border-slate-200 shadow-sm min-w-[160px]">
                       <label className="text-xs font-semibold text-slate-700">{svc.libelle}</label>
                       {isBoolean ? (
-                        <label className="inline-flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={current.valeur === 'true'}
-                            onChange={(e) => {
-                              const newVals = [...serviceValues];
-                              newVals[idx] = { ...newVals[idx], valeur: e.target.checked ? 'true' : 'false' };
-                              setServiceValues(newVals);
-                            }}
-                            className="h-4 w-4 text-blue-600 border-slate-300 rounded focus:ring-2 focus:ring-blue-500"
-                          />
-                          <span className="text-sm text-slate-700">Activé</span>
-                        </label>
-                      ) : (
+                      <label className="inline-flex items-center gap-2 cursor-pointer">
                         <input
-                          type="text"
-                          value={current.valeur}
+                          type="checkbox"
+                          checked={current?.valeur === 'true'}
                           onChange={(e) => {
                             const newVals = [...serviceValues];
-                            newVals[idx] = { ...newVals[idx], valeur: e.target.value };
+                            newVals[idx] = { ...newVals[idx], valeur: e.target.checked ? 'true' : 'false' };
                             setServiceValues(newVals);
                           }}
-                          placeholder={svc.libelle.includes('Bagage') ? 'ex: 23Kg' : 'valeur'}
-                          className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          className="h-4 w-4 text-blue-600 border-slate-300 rounded focus:ring-2 focus:ring-blue-500"
                         />
-                      )}
+                        <span className="text-sm text-slate-700">Activé</span>
+                      </label>
+                    ) : (
+                      <input
+                        type="text"
+                        value={current?.valeur ?? ''}
+                        onChange={(e) => {
+                          const newVals = [...serviceValues];
+                          newVals[idx] = { ...newVals[idx], valeur: e.target.value };
+                          setServiceValues(newVals);
+                        }}
+                        placeholder={svc.libelle.includes('Bagage') ? 'ex: 23Kg' : 'valeur'}
+                        className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    )}
                     </div>
                   );
                 })}

@@ -25,15 +25,15 @@ import TabContainer from '../../../../../layouts/TabContainer';
 import { fetchSuivis } from '../../../../../app/front_office/suiviSlice';
 import EmissionBilletModal from '../../../../../components/modals/EmissionBilletModal';
 import FactureClientModal from '../../../../../components/modals/FactureClientModal';
-import { fetchCommentairesByPrestation, createCommentaire, type Commentaire, updateCommentaire, deleteCommentaire } from '../../../../../app/front_office/commentaireSlice';
-import { deleteTodo,markAsDone } from '../../../../../app/front_office/todosSlice';
+import { fetchCommentairesByPrestation,  } from '../../../../../app/front_office/commentaireSlice';
 import { BilletHeader } from './components.billet/BilletHeader';
 import { BilletActions } from './components.billet/BilletActions';
 import BilletInfoCards from './components.billet/BilletInfoCards';
 import BilletTable from './components.billet/BilletTable';
 import ServiceTable from './components.billet/ServiceTable';
-import SuiviTab from './components.billet/SuiviTable';
+// import SuiviTab from './components.billet/SuiviTable';
 import ReprogrammationModal from '../../../../../components/modals/ReprogrammationModal';
+import SuiviTabContent from './components.billet/SuiviTabContent';
 
 const Billet = () => {
   const navigate = useNavigate();
@@ -42,16 +42,6 @@ const Billet = () => {
   const { enteteId, prestationId } = useParams<{ enteteId: string , prestationId : string}>();
   // const [searchParams] = useSearchParams();
 
-  const [newComment, setNewComment] = useState('');
-  const [creating, setCreating] = useState(false);
-
-  // Dans le composant
-  const { list: commentaires, loading: commLoading, error: commError } = useSelector(
-    (state: RootState) => state.commentaire
-  );
-  const { items: todos, loading: todosLoading, error: todosError } = useSelector(
-    (state: RootState) => state.todos
-  );
 
   const [showAnnulModal, setShowAnnulModal] = useState(false);
   const [annulType, setAnnulType] = useState<'reservation' | 'emission' | null>(null);
@@ -75,10 +65,6 @@ const Billet = () => {
   // Dans le composant Billet
   const serviceState = useSelector((state: RootState) => state.serviceSpecifique);
   const services = serviceState.items;   // ← tableau des services { id, code, libelle, type, ... }
-
-  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
-  const [editCommentText, setEditCommentText] = useState('');
-  const [updating, setUpdating] = useState(false);
 
   const tabs = [
     { id: 'prospection', label: 'Listes des entête prospection' },
@@ -132,60 +118,6 @@ const Billet = () => {
       dispatch(fetchCommentairesByPrestation(prestationId));
     }
   }, [dispatch, prestationId]);
-
-  // Fonction pour démarrer l'édition
-  const startEditing = (comment: Commentaire) => {
-    setEditingCommentId(comment.id);
-    setEditCommentText(comment.commentaire);
-  };
-
-  // Fonction pour annuler l'édition
-  const cancelEdit = () => {
-    setEditingCommentId(null);
-    setEditCommentText('');
-  };
-
-  // Fonction pour sauvegarder la modification
-  const saveEdit = async (id: string) => {
-    if (!editCommentText.trim()) {
-      alert('Le commentaire ne peut pas être vide');
-      return;
-    }
-
-    setUpdating(true);
-
-    try {
-      await dispatch(
-        updateCommentaire({
-          id,
-          commentaire: editCommentText.trim(),
-        })
-      ).unwrap();
-
-      // Le slice met déjà à jour la liste → pas besoin de refetch
-      setEditingCommentId(null);
-      setEditCommentText('');
-    } catch (err: any) {
-      alert('Erreur : ' + (err.message || 'Échec modification'));
-    } finally {
-      setUpdating(false);
-    }
-  };
-
-  // Handler pour supprimer un commentaire
-  const handleDeleteComment = async (id: string, commentairePreview: string) => {
-    // Confirmation simple (tu peux utiliser une modale plus jolie si tu veux)
-    if (!window.confirm(`Voulez-vous vraiment supprimer ce commentaire ?\n\n"${commentairePreview.substring(0, 60)}${commentairePreview.length > 60 ? '...' : ''}"`)) {
-      return;
-    }
-
-    try {
-      await dispatch(deleteCommentaire(id)).unwrap();
-      // Le slice retire déjà l'élément → pas besoin de refetch
-    } catch (err: any) {
-      alert('Erreur : ' + (err.message || 'Échec suppression'));
-    }
-  };
 
   // FONCTION DE NAVIGATION INTERCEPTÉE
   const handleTabChange = (id: string) => {
@@ -315,33 +247,6 @@ const Billet = () => {
       alert("Facture marquée comme réglée !");
     } catch (err: any) {
       alert("Erreur : " + (err.message || "Échec règlement facture"));
-    }
-  };
-
-  // Handler de soumission
-  const handleAddComment = async () => {
-    if (!newComment.trim() || !prestationId) {
-      alert('Veuillez entrer un commentaire et vérifier que la prestation est chargée.');
-      return;
-    }
-
-    setCreating(true);
-
-    try {
-      await dispatch(
-        createCommentaire({
-          commentaire: newComment.trim(),
-          prestationId: prestationId,
-          // date: new Date().toISOString(),   ← optionnel si l’API le gère
-        })
-      ).unwrap();
-
-      setNewComment(''); // reset champ
-      // Le slice ajoute déjà le nouveau commentaire → pas besoin de refetch
-    } catch (err: any) {
-      alert('Erreur : ' + (err.message || 'Échec création commentaire'));
-    } finally {
-      setCreating(false);
     }
   };
 
@@ -548,35 +453,10 @@ const Billet = () => {
 
             {/* CONTENU : SUIVI (Déplacé ici pour correspondre à l'image) */}
             {innerTab === 'suivi' && (
-              <SuiviTab
-                // Suivis
-                suivis={suivis}
-                suivisLoading={suivisLoading}
-                suivisError={suivisError}
-                // Commentaires
-                commentaires={commentaires}
-                commLoading={commLoading}
-                commError={commError}
-                newComment={newComment}
-                setNewComment={setNewComment}
-                handleAddComment={handleAddComment}
-                creating={creating}
-                // Edition
-                editingCommentId={editingCommentId}
-                editCommentText={editCommentText}
-                setEditCommentText={setEditCommentText}
-                startEditing={startEditing}
-                cancelEdit={cancelEdit}
-                saveEdit={saveEdit}
-                updating={updating}
-                handleDeleteComment={handleDeleteComment}
-                // Todos
-                todos={todos}
-                todosLoading={todosLoading}
-                todosError={todosError}
-                onMarkAsDone={(id) => dispatch(markAsDone(id))}
-                onDeleteTodo={(id) => dispatch(deleteTodo(id))}
-              />
+              <SuiviTabContent
+                  suivis={suivis}
+                  loading= {suivisLoading}
+                />
             )}
           </div>
 

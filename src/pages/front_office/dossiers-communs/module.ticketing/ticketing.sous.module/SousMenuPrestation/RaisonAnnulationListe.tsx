@@ -1,8 +1,26 @@
-import { useSelector } from 'react-redux';
-import type { RootState } from '../../../../../../app/store';
+import { useSelector, useDispatch } from 'react-redux';
+import type { RootState, AppDispatch } from '../../../../../../app/store';
+import { activateRaisonAnnulation, deactivateRaisonAnnulation } from '../../../../../../app/front_office/parametre_ticketing/raisonAnnulationSlice';
+import { useState } from 'react';
 
 export default function RaisonAnnulationListe() {
+  const dispatch = useDispatch<AppDispatch>();
   const { items, loading, error } = useSelector((state: RootState) => state.raisonAnnulation);
+
+  // Tracker quel item est en cours de traitement
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+
+  const handleActivate = async (id: string) => {
+    setLoadingId(id);
+    await dispatch(activateRaisonAnnulation(id));
+    setLoadingId(null);
+  };
+
+  const handleDeactivate = async (id: string) => {
+    setLoadingId(id);
+    await dispatch(deactivateRaisonAnnulation(id));
+    setLoadingId(null);
+  };
 
   if (loading) {
     return (
@@ -36,30 +54,54 @@ export default function RaisonAnnulationListe() {
             <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Libellé</th>
             <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Statut</th>
             <th className="px-6 py-4 text-left text-xs font-semibold text-slate-600 uppercase">Créé le</th>
+            <th className="px-6 py-4 text-right text-xs font-semibold text-slate-600 uppercase">Actions</th>
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-slate-200">
-          {items.map((item) => (
-            <tr key={item.id} className="hover:bg-slate-50 transition-colors">
-              <td className="px-6 py-4 text-sm font-medium text-slate-900">{item.libelle}</td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <span
-                  className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+          {items.map((item) => {
+            const isProcessing = loadingId === item.id;
+            return (
+              <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                <td className="px-6 py-4 text-sm font-medium text-slate-900">{item.libelle}</td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
                     item.statut === 'ACTIF'
                       ? 'bg-green-100 text-green-800'
                       : item.statut === 'CREER'
                       ? 'bg-amber-100 text-amber-800'
                       : 'bg-gray-100 text-gray-800'
-                  }`}
-                >
-                  {item.statut}
-                </span>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                {new Date(item.createdAt).toLocaleDateString('fr-FR')}
-              </td>
-            </tr>
-          ))}
+                  }`}>
+                    {item.statut}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                  {new Date(item.createdAt).toLocaleDateString('fr-FR')}
+                </td>
+                <td className="px-6 py-4 text-right">
+                  {isProcessing ? (
+                    <div className="inline-flex justify-end">
+                      <div className="w-5 h-5 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+                    </div>
+                  ) : item.statut === 'ACTIF' ? (
+                    <button
+                      onClick={() => handleDeactivate(item.id)}
+                      className="px-3 py-1.5 text-xs font-semibold text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-600 hover:text-white transition-colors"
+                    >
+                      Désactiver
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleActivate(item.id)}
+                      disabled={item.statut === 'INACTIF' && false}
+                      className="px-3 py-1.5 text-xs font-semibold text-green-600 bg-green-50 border border-green-200 rounded-lg hover:bg-green-600 hover:text-white transition-colors"
+                    >
+                      Activer
+                    </button>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

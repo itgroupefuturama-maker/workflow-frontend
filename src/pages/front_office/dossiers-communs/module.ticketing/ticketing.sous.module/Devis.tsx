@@ -220,8 +220,8 @@ export default function Devis () {
         />
         {/* Header */}
         <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 gap-4">
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-800">
-            Devis liés à l'en-tête
+          <h1 className="text-xl font-bold text-slate-800">
+            Liste devis liés à l'en-tête
           </h1>
         </header>
 
@@ -483,7 +483,8 @@ export default function Devis () {
                         ) : (
                           <p className="text-slate-500 italic mt-4">Aucune ligne dans ce devis</p>
                         )}
-                        <div className="mt-6 flex flex-wrap justify-end gap-3">
+                        <div className="mt-6 flex flex-wrap justify-end gap-3 items-center">
+                          
                           {/* Bouton Voir liste Billet - Toujours actif */}
                           <button
                           disabled= { devis.statut == 'ANNULER' || devis.statut == 'DEVIS_A_APPROUVER'}
@@ -495,6 +496,59 @@ export default function Devis () {
                             }`}
                           >
                             <FiList size={16} />
+                          </button>
+
+                          
+                          {/* Bouton Voir/Télécharger PDF - Toujours actif */}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDownloadPdf(devis.id, devis.reference);
+                            }}
+                            disabled={isLoadingPdf || devis.statut == 'ANNULER'}
+                            className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {isLoadingPdf ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-white"></div>
+                                Génération...
+                              </>
+                            ) : (
+                              <>
+                                <FiEye size={16} />
+                                PDF
+                              </>
+                            )}
+                          </button>
+
+                          {/* Séparateur */}
+                          <div className="w-px h-6 bg-gray-300 mx-1" />
+
+                          <button
+                            onClick={() => {
+                              if (devis.statut === 'CREER') {   // adapte selon le statut où le bouton doit être actif
+                                handleApprouverDirection(devis.id, devis.reference);
+                              }
+                            }}
+                            disabled={devis.statut !== 'CREER' || directionLoading[devis.id]}
+                            className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-2 font-medium min-w-[180px] justify-center ${
+                              devis.statut === 'CREER' && !directionLoading[devis.id]
+                                ? 'bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer'
+                                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                            }`}
+                            title={devis.statut !== 'DEVIS_APPROUVE' ? 'Disponible uniquement pour les devis approuvés' : ''}
+                          >
+                            {directionLoading[devis.id] ? (
+                              <>
+                                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-white"></div>
+                                En cours...
+                              </>
+                            ) : (
+                              <>
+                                <FiCheck size={16} />
+                                Envoyer Direction
+                              </>
+                            )}
                           </button>
 
                           {/* Bouton Devis à approuver */}
@@ -535,32 +589,8 @@ export default function Devis () {
                             Approuver / Client
                           </button>
 
-                          <button
-                            onClick={() => {
-                              if (devis.statut === 'DEVIS_APPROUVE') {   // adapte selon le statut où le bouton doit être actif
-                                handleApprouverDirection(devis.id, devis.reference);
-                              }
-                            }}
-                            disabled={devis.statut !== 'DEVIS_APPROUVE' || directionLoading[devis.id]}
-                            className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-2 font-medium min-w-[180px] justify-center ${
-                              devis.statut === 'DEVIS_APPROUVE' && !directionLoading[devis.id]
-                                ? 'bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer'
-                                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                            }`}
-                            title={devis.statut !== 'DEVIS_APPROUVE' ? 'Disponible uniquement pour les devis approuvés' : ''}
-                          >
-                            {directionLoading[devis.id] ? (
-                              <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-white"></div>
-                                En cours...
-                              </>
-                            ) : (
-                              <>
-                                <FiCheck size={16} />
-                                Envoyer Direction
-                              </>
-                            )}
-                          </button>
+                          {/* Séparateur */}
+                          <div className="w-px h-6 bg-gray-300 mx-1" />
 
                           {/* Bouton Devis à transformer */}
                           <button
@@ -581,28 +611,8 @@ export default function Devis () {
                             Transformer / Billet
                           </button>
 
-                          {/* Bouton Voir/Télécharger PDF - Toujours actif */}
-                          
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleDownloadPdf(devis.id, devis.reference);
-                            }}
-                            disabled={isLoadingPdf || devis.statut == 'ANNULER'}
-                            className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {isLoadingPdf ? (
-                              <>
-                                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-white"></div>
-                                Génération...
-                              </>
-                            ) : (
-                              <>
-                                <FiEye size={16} />
-                                Voir PDF
-                              </>
-                            )}
-                          </button>
+                          {/* Séparateur */}
+                          <div className="w-px h-6 bg-gray-300 mx-1" />
 
                           {/* Nouveau bouton Annuler */}
                           {/* Bouton Annuler - Visible selon le statut */}

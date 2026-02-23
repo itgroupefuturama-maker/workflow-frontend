@@ -15,6 +15,14 @@ interface Todo {
     id: string;
     numeroDos: string;
     statut: string;
+    dossierCommunColab:{
+      id: string;
+      userId: string;
+      module: {
+        code: string;
+        nom: string;
+      }
+    }
   };
   status: 'ACTIF' | 'INACTIF';
 }

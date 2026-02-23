@@ -26,9 +26,12 @@ export interface HotelLigne {
     typeChambre: { type: string; capacite: number };
     plateforme: { nom: string };
     nuiteDevise: number;
+    tauxChange: number;
     nuiteAriary: number;
     montantDevise: number;
     montantAriary: number;
+    isRefundable: boolean;
+    dateLimiteAnnulation: string;
   };
 }
 

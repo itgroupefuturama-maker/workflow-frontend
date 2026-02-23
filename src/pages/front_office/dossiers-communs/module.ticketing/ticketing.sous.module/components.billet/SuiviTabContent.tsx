@@ -1,14 +1,14 @@
 // SuiviTabContent.tsx
 import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import type { AppDispatch, RootState } from '../../../../../app/store';
+import type { AppDispatch, RootState } from '../../../../../../app/store';
 
 import {
   createCommentaire,
   updateCommentaire,
   deleteCommentaire,
   type Commentaire,
-} from '../../../../../app/front_office/commentaireSlice';
+} from '../../../../../../app/front_office/commentaireSlice';
 
 import {
   createTodo,
@@ -16,26 +16,33 @@ import {
   deleteTodo,
   markAsDone,
   updateTodo,
-} from '../../../../../app/front_office/todosSlice';
-
-import SuiviActions from './SuiviActions';
+} from '../../../../../../app/front_office/todosSlice';
 
 interface SuiviTabContentProps {
-  selectedId: string;
-  selectedDetail: any;        // ton type AttestationEntete
-  selectedSuivi: any;         // ton type AttestationSuivi
-  prestationId: string;
+  suivis: any;
   loading: boolean;
 }
 
+const TableHeader = ({ children }: { children: React.ReactNode }) => (
+  <th className="bg-gray-200 text-slate-800 px-4 py-3 text-xs font-semibold border-r border-gray-100 text-left uppercase tracking-wide">
+    {children}
+  </th>
+);
+
 const SuiviTabContent: React.FC<SuiviTabContentProps> = ({
-  selectedId,
-  selectedDetail,
-  selectedSuivi,
-  prestationId,
-  loading,
+  suivis,
+  // prestationId,
 }) => {
   const dispatch = useDispatch<AppDispatch>();
+
+  // On récupère le dossier actif de Redux au lieu de l'URL
+  const dossierActif = useSelector((state: RootState) => state.dossierCommun.currentClientFactureId);
+
+  // console.log("dossierActif", dossierActif);
+
+  const prestationId = dossierActif?.dossierCommunColab
+    ?.find(colab => colab.module?.nom?.toLowerCase() === "ticketing")
+    ?.prestation?.[0]?.id || '';
 
   // ── États Commentaires ───────────────────────────────────────
   const { list: commentaires, loading: loadingCommentaires } = useSelector(
@@ -170,6 +177,8 @@ const SuiviTabContent: React.FC<SuiviTabContentProps> = ({
       alert('Erreur suppression rappel');
     }
   };
+
+  
 
   return (
   <>
@@ -444,104 +453,131 @@ const SuiviTabContent: React.FC<SuiviTabContentProps> = ({
           </div>
         </div>
 
-        {loadingCommentaires ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="text-center">
-              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-gray-300 border-t-blue-600 mb-4"></div>
-              <p className="text-gray-600 font-medium">Chargement du suivi...</p>
-            </div>
+        <div className="space-y-6">
+        
+        {/* TABLEAU CLIENT */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-linear-to-r from-indigo-500 to-indigo-400 px-4 py-3 ">
+            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              Évolution Client
+            </h3>
           </div>
-        ) : !selectedSuivi || !selectedDetail?.devisModules ? (
-          <div className="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-lg">
-            <p className="text-amber-800 font-medium">
-              Aucune information de suivi disponible ou aucun devis associé
-            </p>
+          
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead>
+                <tr>
+                  <TableHeader>Type</TableHeader>
+                  <TableHeader>Statut</TableHeader>
+                  <TableHeader>Origine</TableHeader>
+                  <TableHeader>Envoi Devis</TableHeader>
+                  <TableHeader>Approbation</TableHeader>
+                  <TableHeader>Réf. BC</TableHeader>
+                  <TableHeader>Création BC</TableHeader>
+                  <TableHeader>Soumission BC</TableHeader>
+                  <TableHeader>Approb. BC</TableHeader>
+                  <TableHeader>Réf. FAC</TableHeader>
+                  <TableHeader>Création FAC</TableHeader>
+                  <TableHeader>Règlement</TableHeader>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-100">
+                {suivis.map((suivi: any) => (
+                  <tr key={suivi.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-4 py-3 text-center border-r border-gray-200">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-indigo-100 text-indigo-800">
+                        CLIENT
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center border-r border-gray-200">
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200">
+                        {suivi.statut.replace(/_/g, ' ')}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-center text-xs text-gray-700 border-r border-gray-200">
+                      {suivi.origineLigne}
+                    </td>
+                    <td className="px-4 py-3 text-center text-xs text-gray-600 border-r border-gray-200 whitespace-nowrap">
+                      {suivi.dateEnvoieDevis ? new Date(suivi.dateEnvoieDevis).toLocaleDateString('fr-FR') : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-center text-xs text-gray-600 border-r border-gray-200 whitespace-nowrap">
+                      {suivi.dateApprobation ? new Date(suivi.dateApprobation).toLocaleDateString('fr-FR') : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-center text-xs font-semibold text-gray-900 border-r border-gray-200">
+                      {suivi.referenceBcClient || '—'}
+                    </td>
+                    <td className="px-4 py-3 text-center text-xs text-gray-600 border-r border-gray-200 whitespace-nowrap">
+                      {suivi.dateCreationBc ? new Date(suivi.dateCreationBc).toLocaleDateString('fr-FR') : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-center text-xs text-gray-600 border-r border-gray-200 whitespace-nowrap">
+                      {suivi.dateSoumisBc ? new Date(suivi.dateSoumisBc).toLocaleDateString('fr-FR') : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-center text-xs text-gray-600 border-r border-gray-200 whitespace-nowrap">
+                      {suivi.dateApprobationBc ? new Date(suivi.dateApprobationBc).toLocaleDateString('fr-FR') : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-center text-xs font-semibold text-gray-900 border-r border-gray-200">
+                      {suivi.referenceFacClient || '—'}
+                    </td>
+                    <td className="px-4 py-3 text-center text-xs text-gray-600 border-r border-gray-200 whitespace-nowrap">
+                      {suivi.dateCreationFac ? new Date(suivi.dateCreationFac).toLocaleDateString('fr-FR') : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-center text-xs font-semibold text-green-700 border-r border-gray-200 whitespace-nowrap">
+                      {suivi.dateReglement ? new Date(suivi.dateReglement).toLocaleDateString('fr-FR') : '—'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        ) : (
-          <>
-            {/* --- TABLEAU RÉCAPITULATIF --- */}
-            <div className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-200 mb-8">
-              <div className="bg-linear-to-r from-indigo-600 to-indigo-700 px-6 py-4">
-                <h3 className="text-white font-semibold text-lg flex items-center gap-2">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                  </svg>
-                  Tableau récapitulatif
-                </h3>
-              </div>
-              
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="bg-gray-50 border-b-2 border-gray-200">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">Evolution</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">Statut</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">Origine Ligne</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">Envoi Devis</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">Approbation</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">Réf BC Client</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">Création BC</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">Soumission BC</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">Approbation BC</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">Réf FAC Client</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">Création FAC</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider whitespace-nowrap">Règlement</th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white">
-                    <tr className="hover:bg-indigo-50 transition-colors duration-150">
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800">
-                          {selectedSuivi.evolution}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800">
-                          {selectedSuivi.statut}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-gray-700">{selectedSuivi.origineLigne || '—'}</td>
-                      <td className="px-4 py-4 whitespace-nowrap text-gray-700">
-                        {selectedSuivi.dateEnvoieDevis ? new Date(selectedSuivi.dateEnvoieDevis).toLocaleDateString('fr-FR') : '—'}
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-gray-700">
-                        {selectedSuivi.dateApprobation ? new Date(selectedSuivi.dateApprobation).toLocaleDateString('fr-FR') : '—'}
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-gray-700">{selectedSuivi.referenceBcClient || '—'}</td>
-                      <td className="px-4 py-4 whitespace-nowrap text-gray-700">
-                        {selectedSuivi.dateCreationBc ? new Date(selectedSuivi.dateCreationBc).toLocaleDateString('fr-FR') : '—'}
-                      </td>
-                      <td className="px-4 py-4 whitespace-nowrap text-gray-400">—</td>
-                      <td className="px-4 py-4 whitespace-nowrap text-gray-400">—</td>
-                      <td className="px-4 py-4 whitespace-nowrap text-gray-700">{selectedSuivi.referenceFacClient || '—'}</td>
-                      <td className="px-4 py-4 whitespace-nowrap text-gray-400">—</td>
-                      <td className="px-4 py-4 whitespace-nowrap">
-                        {selectedSuivi.dateReglement ? (
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800">
-                            {new Date(selectedSuivi.dateReglement).toLocaleDateString('fr-FR')}
-                          </span>
-                        ) : (
-                          <span className="text-gray-400">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
+        </div>
 
-            <SuiviActions
-              devisModuleId={selectedDetail.devisModules?.id || ''}
-              suiviId={selectedSuivi.id}
-              evolution={selectedSuivi.evolution}
-              statut={selectedSuivi.statut}
-              referenceBcClient={selectedSuivi.referenceBcClient}
-              referenceFacClient={selectedSuivi.referenceFacClient}
-              dateReglement={selectedSuivi.dateReglement}
-              selectedId={selectedId!}
-            />
-          </>
-        )}
+        {/* TABLEAU FOURNISSEUR */}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+          <div className="bg-linear-to-r from-orange-600 to-orange-700 px-4 py-3 border-b border-orange-800">
+            <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+              Évolution Fournisseur
+            </h3>
+          </div>
+          
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead>
+                <tr>
+                  <TableHeader>Type</TableHeader>
+                  <TableHeader>Statut</TableHeader>
+                  <TableHeader>Origine</TableHeader>
+                  <TableHeader>Fournisseur</TableHeader>
+                  <TableHeader>Réf. BC FRN</TableHeader>
+                  <TableHeader>Création BC</TableHeader>
+                  <TableHeader>Soumission BC</TableHeader>
+                  <TableHeader>Approb. BC</TableHeader>
+                  <TableHeader>Réf. FAC FRN</TableHeader>
+                  <TableHeader>Création FAC</TableHeader>
+                  <TableHeader>Règlement</TableHeader>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-100">
+                <tr className="bg-gray-50">
+                  <td className="px-4 py-3 text-center border-r border-gray-200">
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-orange-100 text-orange-800">
+                      FRN
+                    </span>
+                  </td>
+                  <td colSpan={10} className="px-4 py-3 text-center text-sm text-gray-500 border-r border-gray-200">
+                    Données fournisseurs synchronisées avec le billet
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
       </div>
   </>
 );
