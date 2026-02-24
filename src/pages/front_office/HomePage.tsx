@@ -5,6 +5,7 @@ import { fetchDossiersCommuns } from '../../app/front_office/dossierCommunSlice'
 import type { RootState, AppDispatch } from '../../app/store';
 import { FiFolder, FiCheckCircle, FiTag, FiFileText, FiLock, FiSettings, FiHome } from 'react-icons/fi';
 import { fetchTodos } from '../../app/front_office/todosSlice';
+import fondImage from '../../assets/images/fond1.webp';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 

@@ -256,7 +256,6 @@ export default function ToDoList() {
               {/* ── Dropdown Calendrier ── */}
               {showCalendar && (
                 <div className="absolute right-0 top-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-2xl z-50 w-80 overflow-hidden">
-                  
                   {/* Mode selector */}
                   <div className="flex border-b border-slate-100">
                     <button

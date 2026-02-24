@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState, AppDispatch } from '../../../../../../app/store';
 import { fetchHotelReservations } from '../../../../../../app/front_office/parametre_hotel/hotelReservationEnteteSlice';
@@ -13,7 +13,6 @@ interface Props {
 const HotelReservationsList = ({ prestationId, dossierNumero }: Props) => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
-  const hasFetched = useRef(false);
 
   const {
     items: reservations = [],
@@ -21,16 +20,12 @@ const HotelReservationsList = ({ prestationId, dossierNumero }: Props) => {
     error: reservationsError,
   } = useSelector((state: RootState) => state.hotelReservationEntete);
 
+  // ── Plus besoin de hasFetched : prestationId dans les deps suffit ──
   useEffect(() => {
-    if (!prestationId || hasFetched.current) return;
-    hasFetched.current = true;
+    if (!prestationId) return;
     dispatch(fetchHotelReservations(prestationId));
-  }, [dispatch, prestationId]);
+  }, [dispatch, prestationId]); // ← re-fetch automatiquement si prestationId change
 
-  // Reset si la prestation change
-  useEffect(() => {
-    hasFetched.current = false;
-  }, [prestationId]);
 
   const formatMontant = (montant: number) => montant.toLocaleString('fr-FR');
 

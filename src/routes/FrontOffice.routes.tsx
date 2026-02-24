@@ -67,7 +67,6 @@ export function frontOfficeRoutes() {
       </Route>
 
       <Route path="dossiers-communs/parametre" element={<Parametre />} />
-      
       <Route path="dossiers-communs/hotel" element={<HomePageHotel />}>
         <Route index element={<Navigate to="accueil" replace />} />
         <Route path="accueil" element={<AccueilViewHotel />} />

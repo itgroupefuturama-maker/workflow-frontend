@@ -3,7 +3,7 @@ import { FiHelpCircle, FiBell, FiUser, FiChevronDown, FiLogOut, FiX, FiTrash2, F
 import { useState, useRef, useEffect } from "react";
 import { logout } from '../app/authSlice';
 import { useDispatch, useSelector } from 'react-redux';
-import type { AppDispatch, RootState } from '../app/store';
+import { persistor, type AppDispatch, type RootState } from '../app/store';
 import logo from '../assets/logo.jpg';
 import axiosInstance from '../service/Axios';
 
@@ -111,7 +111,23 @@ export default function AppBar() {
     } catch (e) { console.error(e); }
   };
 
-  const handleLogout = () => { dispatch(logout()); navigate('/login'); };
+  const handleLogout = async () => {
+    // 1. Vider redux-persist (supprime persist:root)
+    await persistor.purge();
+
+    // 2. Reset tout le state Redux
+    dispatch({ type: 'RESET_APP' });
+
+    // 3. Logout auth + localStorage spécifiques
+    dispatch(logout());
+
+    // 4. Tout vider par sécurité
+    localStorage.clear();
+    sessionStorage.clear();
+
+    // 5. Naviguer
+    navigate('/login');
+  };
 
   const profilsActifs = user?.profiles?.filter((p) => p.status === 'ACTIF')?.map((p) => p.profile.profil) || [];
   const modulesAccessibles = user?.profiles?.filter((p) => p.status === 'ACTIF')?.flatMap((p) => p.profile.modules.map((m) => m.module.nom)) || [];
