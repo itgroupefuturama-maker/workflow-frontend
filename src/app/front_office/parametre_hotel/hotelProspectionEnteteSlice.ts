@@ -291,15 +291,16 @@ export const createBenchmarkingLigne = createAsyncThunk(
 
 export const setBenchmarkOfficial = createAsyncThunk(
   'benchmarking/setBenchmarkOfficial',
-  async (benchmarkingId: string, { rejectWithValue }) => {
+  async ({ benchmarkingId, isRefundable }: { benchmarkingId: string; isRefundable: boolean }, { rejectWithValue }) => {
     try {
-      const response = await axios.patch(`/hotel/benchmarking/${benchmarkingId}/set-benchmark`);
-      
+      const response = await axios.patch(`/hotel/benchmarking/${benchmarkingId}/set-benchmark`, {
+        isRefundable,
+      });
+
       if (!response.data.success) {
         throw new Error(response.data.message || 'Échec de la mise en benchmark');
       }
-      
-      // Le serveur peut renvoyer les données mises à jour ou rien
+
       return response.data.data || { id: benchmarkingId, success: true };
     } catch (err: any) {
       return rejectWithValue(

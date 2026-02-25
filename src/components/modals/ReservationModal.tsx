@@ -29,6 +29,7 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
 
   const defaultDevise = ligne?.prospectionLigne?.devise || 'EUR';
   const defaultTaux = ligne?.prospectionLigne?.tauxEchange || 4900;
+  // const nombrePassagersMax = ligne.prospectionLigne?.nombre || 0;
 
   // ─── États ───────────────────────────────────────────────
   const [formData, setFormData] = useState({
@@ -53,7 +54,7 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
   const [showConfirmation, setShowConfirmation] = useState(false);
 
   // ─── Calculs dérivés ─────────────────────────────────────
-  const nombrePassagers = selectedPassagers.length;
+  const nombrePassagers = ligne.prospectionLigne?.nombre || 0;
 
   const totalBillet = formData.puResaBilletCompagnieDevise * nombrePassagers;
   const totalService = formData.puResaServiceCompagnieDevise * nombrePassagers;
@@ -61,7 +62,7 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
 
   const isFormValid =
     formData.reservation.trim() !== '' &&
-    selectedPassagers.length > 0 &&
+    selectedPassagers.length === nombrePassagers &&  // ← exact, pas juste > 0
     formData.puResaBilletCompagnieDevise > 0 &&
     formData.resaTauxEchange > 0;
 
@@ -117,6 +118,11 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
       return;
     }
 
+    // ✅ Bloquer si quota atteint
+    if (selectedPassagers.length >= nombrePassagers) {
+      alert(`Nombre maximum de passagers atteint (${nombrePassagers})`);
+      return;
+    }
     const beneficiaire = beneficiaires.find((b) => b.clientBeneficiaireId === currentBeneficiaireId);
     const info = infosList.find((i) => i.id === currentInfoId);
 
@@ -212,7 +218,7 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
                     1
                   </div>
                   <div className="flex-1">
-                    <h3 className="text-sm font-semibold text-gray-900">Passagers</h3>
+                    <h3 className="text-sm font-semibold text-gray-900">Passagers (Max : {nombrePassagers})</h3>
                     <p className="text-xs text-gray-600 mt-0.5">
                       Sélection obligatoire • Plusieurs passagers possibles
                     </p>
@@ -346,15 +352,15 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
                     )}
 
                     <button
-                      type="button"
-                      onClick={addPassager}
-                      disabled={!currentBeneficiaireId || !currentInfoId}
-                      className={`w-full px-4 py-2 rounded text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                        currentBeneficiaireId && currentInfoId
-                          ? 'bg-gray-900 text-white hover:bg-gray-800'
-                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      }`}
-                    >
+                        type="button"
+                        onClick={addPassager}
+                        disabled={!currentBeneficiaireId || !currentInfoId || selectedPassagers.length >= nombrePassagers}
+                        className={`w-full px-4 py-2 rounded text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
+                          currentBeneficiaireId && currentInfoId && selectedPassagers.length < nombrePassagers
+                            ? 'bg-gray-900 text-white hover:bg-gray-800'
+                            : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        }`}
+                      >
                       <span className="text-lg">+</span>
                       Ajouter ce passager
                     </button>
@@ -363,9 +369,15 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
                   {/* Liste sélectionnés */}
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-2 flex items-center gap-2">
-                      Passagers sélectionnés 
-                      <span className="bg-gray-200 text-gray-700 px-2 py-0.5 rounded text-xs font-semibold">
-                        {selectedPassagers.length}
+                      Passagers sélectionnés
+                      <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
+                        selectedPassagers.length === nombrePassagers
+                          ? 'bg-green-100 text-green-700'      // ✅ quota exact atteint
+                          : selectedPassagers.length > 0
+                            ? 'bg-amber-100 text-amber-700'    // ⚠️ en cours
+                            : 'bg-gray-200 text-gray-700'      // neutre
+                      }`}>
+                        {selectedPassagers.length} / {nombrePassagers}
                       </span>
                     </label>
 
@@ -542,9 +554,9 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
                         type="number"
                         name="puResaPenaliteCompagnieDevise"
                         value={formData.puResaPenaliteCompagnieDevise}
-                        onChange={handleChange}
+                        readOnly
                         step="0.01"
-                        className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                        className="w-full bg-gray-100 border border-gray-300 rounded px-3 py-2 text-sm text-gray-500 cursor-not-allowed"
                         placeholder="0.00"
                       />
                       {nombrePassagers > 0 && (
@@ -590,9 +602,9 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
                         type="number"
                         name="puResaMontantPenaliteCompagnieDevise"
                         value={formData.puResaMontantPenaliteCompagnieDevise}
-                        onChange={handleChange}
+                        readOnly
                         step="0.01"
-                        className="w-full border border-gray-300 bg-gray-50 rounded px-3 py-2 text-sm font-semibold text-gray-900"
+                        className="w-full bg-gray-100 border border-gray-300 rounded px-3 py-2 text-sm font-semibold text-gray-500 cursor-not-allowed"
                       />
                     </div>
                   </div>

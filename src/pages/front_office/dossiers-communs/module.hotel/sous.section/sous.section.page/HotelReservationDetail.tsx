@@ -482,7 +482,7 @@ const HotelReservationDetail = () => {
             <div className="bg-white border border-slate-100">
               {/* ── Onglet Lignes ── */}
               {activeTabSousSection === 'lignes' && (
-                <div className="bg-white border border-neutral-200 rounded-xl overflow-hidden shadow-sm">
+                <div className="bg-white overflow-hidden">
                   <div className="p-5 border-b border-neutral-200">
                     <h2 className="text-lg font-semibold text-neutral-800">
                       Lignes de réservation ({entete.hotelLigne.length})

@@ -2,6 +2,7 @@ import { FiSave, FiX } from "react-icons/fi";
 
 interface NewLineRowProps {
   newLine: any;
+  commissionPct: number;
   destinations: any[];
   servicesDisponibles: any[];
   updateNewLineField: (field: string, value: any) => void;
@@ -12,6 +13,7 @@ interface NewLineRowProps {
 
 function NewLineRow({
   newLine,
+  commissionPct,
   destinations,
   servicesDisponibles,
   updateNewLineField,
@@ -33,6 +35,51 @@ function NewLineRow({
     const minutes = totalMinutes % 60;
     return `${heures}h${String(minutes).padStart(2, '0')}`;
   }
+
+  // ─── Calculs dérivés corrigés ───
+  const taux   = newLine.tauxEchange || 0;
+  const nombre = newLine.nombre || 1;
+  // commissionPct sera passé en prop depuis le parent
+  const facteur = 1 + (commissionPct / 100);
+
+  // PU Cie Devise (saisis)
+  const puBilletCieDevise   = newLine.puBilletCompagnieDevise  || 0;
+  const puServiceCieDevise  = newLine.puServiceCompagnieDevise || 0;
+  const puPenaliteCieDevise = newLine.puPenaliteCompagnieDevise || 0;
+
+  // Mt Cie Devise = PU * nombre
+  const mtBilletCieDevise   = puBilletCieDevise   * nombre;
+  const mtServiceCieDevise  = puServiceCieDevise  * nombre;
+  const mtPenaliteCieDevise = puPenaliteCieDevise * nombre;
+
+  // PU Cie Ariary = PU Devise * taux
+  const puBilletCieAriary   = puBilletCieDevise   * taux;
+  const puServiceCieAriary  = puServiceCieDevise  * taux;
+  const puPenaliteCieAriary = puPenaliteCieDevise * taux;
+
+  // Mt Cie Ariary = PU Ariary * nombre
+  const mtBilletCieAriary   = puBilletCieAriary   * nombre;
+  const mtServiceCieAriary  = puServiceCieAriary  * nombre;
+  const mtPenaliteCieAriary = puPenaliteCieAriary * nombre;
+
+  // Mt Client Devise = Mt Cie Devise * facteur
+  const mtBilletClientDevise   = mtBilletCieDevise   * facteur;
+  const mtServiceClientDevise  = mtServiceCieDevise  * facteur;
+  const mtPenaliteClientDevise = mtPenaliteCieDevise * facteur;
+
+  // Mt Client Ariary = Mt Client Devise * taux
+  const mtBilletClientAriary   = mtBilletClientDevise   * taux;
+  const mtServiceClientAriary  = mtServiceClientDevise  * taux;
+  const mtPenaliteClientAriary = mtPenaliteClientDevise * taux;
+
+  // Commission = Mt Client Devise - Mt Cie Devise
+  const commissionEnDevise = (mtBilletClientDevise   - mtBilletCieDevise)
+                          + (mtServiceClientDevise  - mtServiceCieDevise)
+                          + (mtPenaliteClientDevise - mtPenaliteCieDevise);
+  const commissionEnAriary = commissionEnDevise * taux;
+
+  const autoReadonlyCls = "w-full min-w-[140px] px-3 py-2 border border-slate-200 rounded-lg text-sm text-right font-medium bg-slate-100 text-slate-600 cursor-not-allowed";
+  const commissionCls   = "w-full min-w-[140px] px-3 py-2 border border-green-300 rounded-lg text-sm text-right font-bold bg-green-50 text-green-700 cursor-not-allowed";
 
   return (
     <tr className="bg-linear-to-r from-blue-50 to-blue-100/50 border-t-4 border-blue-400">
@@ -198,51 +245,6 @@ function NewLineRow({
       </td>
 
       <td className="px-4 py-3">
-        <input
-          type="number"
-          step="0.01"
-          value={newLine.puBilletCompagnieDevise}
-          onChange={(e) => updateNewLineField('puBilletCompagnieDevise', Number(e.target.value))}
-          className={numberInputClassName}
-          placeholder="0.00"
-        />
-      </td>
-
-      <td className="px-4 py-3">
-        <input
-          type="number"
-          step="0.01"
-          value={newLine.puServiceCompagnieDevise}
-          onChange={(e) => updateNewLineField('puServiceCompagnieDevise', Number(e.target.value))}
-          className={numberInputClassName}
-          placeholder="0.00"
-        />
-      </td>
-
-      {/* <td className="px-4 py-3">
-        <input
-          type="number"
-          step="0.01"
-          value={newLine.puPenaliteCompagnieDevise}
-          onChange={(e) => updateNewLineField('puPenaliteCompagnieDevise', Number(e.target.value))}
-          className={numberInputClassName}
-          placeholder="0.00"
-        />
-      </td> */}
-
-      {/* PU Pénalité Cie - champ grisé, non accessible */}
-      <td className="px-4 py-3">
-        <input
-          type="number"
-          step="0.01"
-          value={newLine.puPenaliteCompagnieDevise}
-          readOnly
-          className="w-full min-w-[140px] px-3 py-2 border border-slate-200 rounded-lg text-sm text-right font-medium bg-slate-100 text-slate-400 cursor-not-allowed"
-          placeholder="—"
-        />
-      </td>
-
-      <td className="px-4 py-3">
         <select
           value={newLine.devise}
           onChange={(e) => updateNewLineField('devise', e.target.value)}
@@ -265,117 +267,169 @@ function NewLineRow({
         />
       </td>
 
+      {/* PU Billet Cie Devise — saisie */}
       <td className="px-4 py-3">
         <input
-          type="number"
-          step="0.01"
-          value={newLine.montantBilletCompagnieDevise}
-          onChange={(e) => updateNewLineField('montantBilletCompagnieDevise', Number(e.target.value))}
-          className={numberInputClassName + " text-emerald-700"}
+          type="number" step="0.01"
+          value={newLine.puBilletCompagnieDevise}
+          onChange={(e) => updateNewLineField('puBilletCompagnieDevise', Number(e.target.value))}
+          className={numberInputClassName}
           placeholder="0.00"
         />
       </td>
 
+      {/* PU Service Cie Devise — saisie */}
       <td className="px-4 py-3">
         <input
-          type="number"
-          step="0.01"
-          value={newLine.montantServiceCompagnieDevise}
-          onChange={(e) => updateNewLineField('montantServiceCompagnieDevise', Number(e.target.value))}
-          className={numberInputClassName + " text-emerald-700"}
+          type="number" step="0.01"
+          value={newLine.puServiceCompagnieDevise}
+          onChange={(e) => updateNewLineField('puServiceCompagnieDevise', Number(e.target.value))}
+          className={numberInputClassName}
           placeholder="0.00"
         />
       </td>
 
-      {/* <td className="px-4 py-3">
-        <input
-          type="number"
-          step="0.01"
-          value={newLine.montantPenaliteCompagnieDevise}
-          onChange={(e) => updateNewLineField('montantPenaliteCompagnieDevise', Number(e.target.value))}
-          className={numberInputClassName + " text-emerald-700"}
-          placeholder="0.00"
-        />
-      </td> */}
-
+      {/* PU Pénalité Cie Devise — grisé */}
       <td className="px-4 py-3">
-        <input
-          type="number"
-          step="0.01"
-          value={newLine.montantPenaliteCompagnieDevise}
-          readOnly
-          className="w-full min-w-[140px] px-3 py-2 border border-slate-200 rounded-lg text-sm text-right font-medium bg-slate-100 text-slate-400 cursor-not-allowed"
-          placeholder="—"
+        <input readOnly value={puPenaliteCieDevise.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+          className={autoReadonlyCls} />
+      </td>
+
+      {/* Mt Billet Cie Devise = PU * nombre — auto */}
+      <td className="px-4 py-3">
+        <input readOnly
+          value={mtBilletCieDevise.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+          className={autoReadonlyCls + " text-emerald-700"}
         />
       </td>
 
-      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
-      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
-      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
-
+      {/* Mt Service Cie Devise = PU * nombre — auto */}
       <td className="px-4 py-3">
-        <input
-          type="number"
-          step="0.01"
-          value={newLine.montantBilletClientDevise}
-          onChange={(e) => {
-            const val = e.target.value;
-            // Autorise vide temporairement (pour effacer)
-            if (val === '' || val === '-' || val === '.') {
-              updateNewLineField('montantBilletClientDevise', val);
-            } else {
-              const num = Number(val);
-              if (!isNaN(num)) {
-                updateNewLineField('montantBilletClientDevise', num);
-              }
-              // sinon on ignore (pas de mise à jour si lettre tapée)
-            }
-          }}
-          className={numberInputClassName + " text-emerald-700"}
-          placeholder="0.00"
+        <input readOnly
+          value={mtServiceCieDevise.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+          className={autoReadonlyCls + " text-emerald-700"}
         />
       </td>
 
+      {/* Mt Pénalité Cie Devise — grisé */}
       <td className="px-4 py-3">
-        <input
-          type="number"
-          step="0.01"
-          value={newLine.montantServiceClientDevise}
-          onChange={(e) => updateNewLineField('montantServiceClientDevise', Number(e.target.value))}
-          className={numberInputClassName + " text-emerald-700"}
-          placeholder="0.00"
+        <input readOnly
+          value={mtPenaliteCieDevise.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+          className={autoReadonlyCls}
         />
       </td>
 
-      {/* <td className="px-4 py-3">
-        <input
-          type="number"
-          step="0.01"
-          value={newLine.montantPenaliteClientDevise}
-          onChange={(e) => updateNewLineField('montantPenaliteClientDevise', Number(e.target.value))}
-          className={numberInputClassName + " text-emerald-700"}
-          placeholder="0.00"
-        />
-      </td> */}
-
+      {/* PU Billet Cie Ariary = PU Devise * taux — auto */}
       <td className="px-4 py-3">
-        <input
-          type="number"
-          step="0.01"
-          value={newLine.montantPenaliteClientDevise}
-          readOnly
-          className="w-full min-w-[140px] px-3 py-2 border border-slate-200 rounded-lg text-sm text-right font-medium bg-slate-100 text-slate-400 cursor-not-allowed"
-          placeholder="—"
+        <input readOnly
+          value={puBilletCieAriary.toLocaleString('fr-FR')}
+          className={autoReadonlyCls + " text-emerald-600"}
         />
       </td>
 
-      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
-      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
-      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
-      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
-      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
+      {/* PU Service Cie Ariary — auto */}
+      <td className="px-4 py-3">
+        <input readOnly
+          value={puServiceCieAriary.toLocaleString('fr-FR')}
+          className={autoReadonlyCls + " text-emerald-600"}
+        />
+      </td>
 
-      
+      {/* PU Pénalité Cie Ariary — auto */}
+      <td className="px-4 py-3">
+        <input readOnly
+          value={puPenaliteCieAriary.toLocaleString('fr-FR')}
+          className={autoReadonlyCls + " text-emerald-600"}
+        />
+      </td>
+
+      {/* Mt Billet Cie Ariary = PU Ariary * nombre — auto */}
+      <td className="px-4 py-3">
+        <input readOnly
+          value={mtBilletCieAriary.toLocaleString('fr-FR')}
+          className={autoReadonlyCls + " text-emerald-700"}
+        />
+      </td>
+
+      {/* Mt Service Cie Ariary — auto */}
+      <td className="px-4 py-3">
+        <input readOnly
+          value={mtServiceCieAriary.toLocaleString('fr-FR')}
+          className={autoReadonlyCls + " text-emerald-700"}
+        />
+      </td>
+
+      {/* Mt Pénalité Cie Ariary — auto */}
+      <td className="px-4 py-3">
+        <input readOnly
+          value={mtPenaliteCieAriary.toLocaleString('fr-FR')}
+          className={autoReadonlyCls + " text-emerald-700"}
+        />
+      </td>
+
+      {/* Mt Billet Client Devise = Mt Cie * facteur — auto */}
+      <td className="px-4 py-3">
+        <input readOnly
+          value={mtBilletClientDevise.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+          className={autoReadonlyCls + " text-blue-700"}
+        />
+      </td>
+
+      {/* Mt Service Client Devise — auto */}
+      <td className="px-4 py-3">
+        <input readOnly
+          value={mtServiceClientDevise.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+          className={autoReadonlyCls + " text-blue-700"}
+        />
+      </td>
+
+      {/* Mt Pénalité Client Devise — auto */}
+      <td className="px-4 py-3">
+        <input readOnly
+          value={mtPenaliteClientDevise.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+          className={autoReadonlyCls + " text-blue-700"}
+        />
+      </td>
+
+      {/* Mt Billet Client Ariary = Mt Client Devise * taux — auto */}
+      <td className="px-4 py-3">
+        <input readOnly
+          value={mtBilletClientAriary.toLocaleString('fr-FR')}
+          className={autoReadonlyCls + " text-blue-600"}
+        />
+      </td>
+
+      {/* Mt Service Client Ariary — auto */}
+      <td className="px-4 py-3">
+        <input readOnly
+          value={mtServiceClientAriary.toLocaleString('fr-FR')}
+          className={autoReadonlyCls + " text-blue-600"}
+        />
+      </td>
+
+      {/* Mt Pénalité Client Ariary — auto */}
+      <td className="px-4 py-3">
+        <input readOnly
+          value={mtPenaliteClientAriary.toLocaleString('fr-FR')}
+          className={autoReadonlyCls + " text-blue-600"}
+        />
+      </td>
+
+      {/* Commission Devise — auto */}
+      <td className="px-4 py-3">
+        <input readOnly
+          value={commissionEnDevise.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+          className={commissionCls}
+        />
+      </td>
+
+      {/* Commission Ariary — auto */}
+      <td className="px-4 py-3">
+        <input readOnly
+          value={commissionEnAriary.toLocaleString('fr-FR')}
+          className={commissionCls}
+        />
+      </td>
 
       <td className="px-4 py-4">
         {servicesDisponibles.length === 0 ? (

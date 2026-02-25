@@ -39,7 +39,6 @@ export default function PageView() {
   const dossierActif = useSelector((state: RootState) => state.dossierCommun.currentClientFactureId);
 
   const { 
-    prestationId,
     entetes, 
     loadingEntetes, 
     errorEntetes, 

@@ -9,6 +9,7 @@ import ModalConfirmDevis from '../../components/ModalConfirmDevis';
 // import { API_URL } from '../../../../../../service/env';
 import TabContainer from '../../../../../../layouts/TabContainer';
 import LoadingButton from '../../components/LoadingButton';
+import ConfirmBenchmarkModal from '../../../../../../components/modals/Hotel/ConfirmBenchmarkModal';
 
 const BenchmarkingDetailPage = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -310,25 +311,24 @@ const BenchmarkingDetailPage = () => {
     });
   };
 
-  const handleSetBenchmark = async () => {
-    if (!detail?.id) return;
+  const [showBenchmarkModal, setShowBenchmarkModal] = useState(false);
 
-    if (!window.confirm("Confirmez-vous de définir ce benchmarking comme référence officielle ?")) {
-      return;
-    }
+
+  const handleSetBenchmark = () => {
+    if (!detail?.id) return;
+    setShowBenchmarkModal(true);
+  };
+
+  const handleConfirmBenchmark = async (isRefundable: boolean) => {
+    if (!detail?.id) return;
     setSettingBenchmark(true);
 
-    console.log(`detail sssss : ${detail.id}`);
-    
-
     try {
-      await dispatch(setBenchmarkOfficial(detail.id)).unwrap();
+      await dispatch(setBenchmarkOfficial({ benchmarkingId: detail.id, isRefundable })).unwrap();
       alert("Benchmark défini avec succès !");
+      setShowBenchmarkModal(false);
       dispatch(fetchBenchmarkingDetail(detail.id));
-      
-      console.log("tonga eto");
     } catch (err: any) {
-      console.log("tsy tonga");
       alert(err.message || "Erreur lors de la définition du benchmark");
     } finally {
       setSettingBenchmark(false);
@@ -515,7 +515,7 @@ const BenchmarkingDetailPage = () => {
                   label="Définir le minimum"
                   loadingLabel="En cours..."
                   isLoading={settingBenchmark}
-                  disabled={settingBenchmark || loadingDetail || hasLigneClient || hasBenchmarkLine || false }
+                  disabled={settingBenchmark || loadingDetail || hasLigneClient || hasBenchmarkLine}
                   onClick={handleSetBenchmark}
                   variant="success"
                   icon={
@@ -908,6 +908,14 @@ const BenchmarkingDetailPage = () => {
             }}
             loading={sendingDevis}
           />
+
+          <ConfirmBenchmarkModal
+            isOpen={showBenchmarkModal}
+            onClose={() => !settingBenchmark && setShowBenchmarkModal(false)}
+            onConfirm={handleConfirmBenchmark}
+            isLoading={settingBenchmark}
+          />
+
           {/* Modal création ligne */}
           <ModalBenchmarkingLigneForm
             isOpen={showLigneModal}

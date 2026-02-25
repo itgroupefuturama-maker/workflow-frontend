@@ -20,6 +20,8 @@ const HotelReservationsList = ({ prestationId, dossierNumero }: Props) => {
     error: reservationsError,
   } = useSelector((state: RootState) => state.hotelReservationEntete);
 
+  console.log(`prestation ici ${prestationId}`);
+
   // ── Plus besoin de hasFetched : prestationId dans les deps suffit ──
   useEffect(() => {
     if (!prestationId) return;

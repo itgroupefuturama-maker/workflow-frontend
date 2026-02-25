@@ -222,8 +222,17 @@ const Billet = () => {
 
   const billetLignes = billet?.billetLigne;
 
-  const allLinesReservation = billetLignes?.every(l => l.statut === 'FAIT' || l.statut === 'MODIFIER' || l.statut === 'ANNULER' ) ?? false;
-  const allLinesEmission    = billetLignes?.every(l => l.statut === 'CLOTURER' || l.statut === 'MODIFIER' || l.statut === 'ANNULER' || l.statut === 'FAIT' ) ?? false;
+  // On filtre uniquement les lignes "actives" (on ignore ANNULATION et ANNULER)
+  const lignesActives = billetLignes?.filter(
+    l => l.statusLigne !== 'ANNULATION' && l.statusLigne !== 'ANNULER'
+  ) ?? [];
+
+  // Parmi les lignes actives, on vérifie les statuts
+  const allLinesReservation = lignesActives.length > 0 &&
+    lignesActives.every(l => l.statut === 'FAIT' || l.statut === 'MODIFIER' || l.statut === 'ANNULER');
+
+  const allLinesEmission = lignesActives.length > 0 &&
+    lignesActives.every(l => l.statut === 'CLOTURER' || l.statut === 'MODIFIER' || l.statut === 'ANNULER' || l.statut === 'FAIT');
 
   const handleMarkAsReserved = async (billetId: string) => {
     if (!enteteId) return;

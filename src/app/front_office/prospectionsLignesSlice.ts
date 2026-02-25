@@ -108,26 +108,48 @@ export const initialState: ProspectionLignesState = {
 
 export interface CreateProspectionLignePayload {
   prospectionEnteteId: string;
+  departId: string;
+  destinationId: string;
   numeroVol: string;
-  avion: string;
-  itineraire: string;
+  avion?: string | null;
+  itineraire?: string | null;
   classe: string;
   typePassager: string;
-  dateHeureDepart: string;          // ISO string
-  dateHeureArrive: string;          // ISO string
-  dureeVol: string;
-  dureeEscale: string;
+  dateHeureDepart: string;
+  dateHeureArrive?: string | null;
+  dureeVol?: string | null;
+  dureeEscale?: string | null;
+  devise: string;
+  tauxEchange: number;
+  // PU Devise
   puBilletCompagnieDevise: number;
   puServiceCompagnieDevise: number;
   puPenaliteCompagnieDevise: number;
-  devise: string;
-  tauxEchange: number;
+  // Montants Devise Compagnie
   montantBilletCompagnieDevise: number;
   montantServiceCompagnieDevise: number;
   montantPenaliteCompagnieDevise: number;
+  // Montants Devise Client
   montantBilletClientDevise: number;
   montantServiceClientDevise: number;
   montantPenaliteClientDevise: number;
+  // PU Ariary
+  puBilletCompagnieAriary: number;
+  puServiceCompagnieAriary: number;
+  puPenaliteCompagnieAriary: number;
+  // Montants Ariary Compagnie
+  montantBilletCompagnieAriary: number;
+  montantServiceCompagnieAriary: number;
+  montantPenaliteCompagnieAriary: number;
+  // Montants Ariary Client
+  montantBilletClientAriary: number;
+  montantServiceClientAriary: number;
+  montantPenaliteClientAriary: number;
+  // Commission
+  commissionEnDevise: number;
+  commissionEnAriary: number;
+  nombre: number;
+  services: { serviceSpecifiqueId: string; valeur: string }[];
 }
 
 // Thunk pour charger les lignes d'un entête

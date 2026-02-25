@@ -1,20 +1,17 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchTodos } from '../../../../app/front_office/todosSlice';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet } from 'react-router-dom';
 import type {AppDispatch, RootState } from '../../../../app/store';
 import { fetchProspectionEntetes, updateProspectionEntete, createProspectionEntete } from '../../../../app/front_office/prospectionsEntetesSlice';
 import type { ProspectionEntete } from '../../../../app/front_office/prospectionsEntetesSlice';
 import { fetchFournisseurs } from '../../../../app/back_office/fournisseursSlice';
 import ProspectionModals from '../../../../components/modals/ProspectionModals';
 import Sidebar from '../../../../layouts/Sidebar';
-import { FiArrowLeft } from 'react-icons/fi';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
 const HomePageTicketing = () => {
-
-  const navigate = useNavigate();
   const { data: fournisseurs, loading: fournisseursLoading } = useSelector(
     (state: RootState) => state.fournisseurs
   );

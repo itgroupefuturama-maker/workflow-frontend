@@ -22,8 +22,6 @@ interface ProspectionModalsProps {
   onConfirmCreate: () => void;
 }
 
-
-
 // ─── Composant principal ──────────────────────────────────────────────────────
 export default function ProspectionModals({
   selectedEntete,
