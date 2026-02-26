@@ -270,7 +270,7 @@ const MilesPage = () => {
                           : miles.status === 'INACTIF' ? 'bg-red-500'
                           : 'bg-amber-500'
                         }`} />
-                        {miles.status}
+                        {miles.status == 'CREER' ? 'Créer' : miles.status}
                       </span>
                     </td>
 

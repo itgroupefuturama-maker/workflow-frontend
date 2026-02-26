@@ -24,17 +24,17 @@ function NewLineRow({
   const inputClassName = "w-full min-w-[120px] px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white";
   const numberInputClassName = "w-full min-w-[140px] px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-right font-medium bg-white";
 
-  function calculerDureeVol(dateDepart: string, dateArrive: string): string {
-    if (!dateDepart || !dateArrive) return '';
-    const depart = new Date(dateDepart);
-    const arrive = new Date(dateArrive);
-    const diffMs = arrive.getTime() - depart.getTime();
-    if (diffMs <= 0) return '';
-    const totalMinutes = Math.floor(diffMs / 60000);
-    const heures = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    return `${heures}h${String(minutes).padStart(2, '0')}`;
-  }
+  // function calculerDureeVol(dateDepart: string, dateArrive: string): string {
+  //   if (!dateDepart || !dateArrive) return '';
+  //   const depart = new Date(dateDepart);
+  //   const arrive = new Date(dateArrive);
+  //   const diffMs = arrive.getTime() - depart.getTime();
+  //   if (diffMs <= 0) return '';
+  //   const totalMinutes = Math.floor(diffMs / 60000);
+  //   const heures = Math.floor(totalMinutes / 60);
+  //   const minutes = totalMinutes % 60;
+  //   return `${heures}h${String(minutes).padStart(2, '0')}`;
+  // }
 
   // ─── Calculs dérivés corrigés ───
   const taux   = newLine.tauxEchange || 0;
@@ -201,8 +201,8 @@ function NewLineRow({
           value={newLine.dateHeureDepart}
           onChange={(e) => {
             updateNewLineField('dateHeureDepart', e.target.value);
-            const duree = calculerDureeVol(e.target.value, newLine.dateHeureArrive);
-            if (duree) updateNewLineField('dureeVol', duree);
+                // const duree = calculerDureeVol(e.target.value, newLine.dateHeureArrive);
+                // if (duree) updateNewLineField('dureeVol', duree);
           }}
           className={inputClassName}
           required
@@ -216,21 +216,31 @@ function NewLineRow({
           value={newLine.dateHeureArrive}
           onChange={(e) => {
             updateNewLineField('dateHeureArrive', e.target.value);
-            const duree = calculerDureeVol(newLine.dateHeureDepart, e.target.value);
-            if (duree) updateNewLineField('dureeVol', duree);
+            // const duree = calculerDureeVol(newLine.dateHeureDepart, e.target.value);
+            // if (duree) updateNewLineField('dureeVol', duree);
           }}
           className={inputClassName}
         />
       </td>
 
       {/* Durée Vol - readonly, calculé automatiquement */}
-      <td className="px-4 py-3">
+      {/* <td className="px-4 py-3">
         <input
           type="text"
           value={newLine.dureeVol}
           readOnly
           className="w-full min-w-[120px] px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-100 text-slate-500 cursor-not-allowed"
           placeholder="Calculé auto"
+        />
+      </td> */}
+
+      <td className="px-4 py-3">
+        <input
+          type="text"
+          value={newLine.dureeVol}
+          onChange={(e) => updateNewLineField('dureeVol', e.target.value)}
+          className={inputClassName}
+          placeholder="12h00"
         />
       </td>
 

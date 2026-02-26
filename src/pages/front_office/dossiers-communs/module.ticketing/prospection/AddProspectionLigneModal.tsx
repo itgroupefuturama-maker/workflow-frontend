@@ -9,17 +9,17 @@ interface AddProspectionLigneModalProps {
   onSave: (payload: any) => Promise<void>;
 }
 
-function calculerDureeVol(dateDepart: string, dateArrive: string): string {
-  if (!dateDepart || !dateArrive) return '';
-  const depart = new Date(dateDepart);
-  const arrive = new Date(dateArrive);
-  const diffMs = arrive.getTime() - depart.getTime();
-  if (diffMs <= 0) return '';
-  const totalMinutes = Math.floor(diffMs / 60000);
-  const heures = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  return `${heures}h${String(minutes).padStart(2, '0')}`;
-}
+// function calculerDureeVol(dateDepart: string, dateArrive: string): string {
+//   if (!dateDepart || !dateArrive) return '';
+//   const depart = new Date(dateDepart);
+//   const arrive = new Date(dateArrive);
+//   const diffMs = arrive.getTime() - depart.getTime();
+//   if (diffMs <= 0) return '';
+//   const totalMinutes = Math.floor(diffMs / 60000);
+//   const heures = Math.floor(totalMinutes / 60);
+//   const minutes = totalMinutes % 60;
+//   return `${heures}h${String(minutes).padStart(2, '0')}`;
+// }
 
 export default function AddProspectionLigneModal({
   isOpen,
@@ -109,10 +109,10 @@ export default function AddProspectionLigneModal({
   }, [form.departId, form.destinationId, destinations]);
 
   // Calcul durée vol auto
-  useEffect(() => {
-    const duree = calculerDureeVol(form.dateHeureDepart, form.dateHeureArrive);
-    if (duree) setForm((prev) => ({ ...prev, dureeVol: duree }));
-  }, [form.dateHeureDepart, form.dateHeureArrive]);
+  // useEffect(() => {
+  //   const duree = calculerDureeVol(form.dateHeureDepart, form.dateHeureArrive);
+  //   if (duree) setForm((prev) => ({ ...prev, dureeVol: duree }));
+  // }, [form.dateHeureDepart, form.dateHeureArrive]);
 
   // Après les useEffect existants, ajouter :
 
@@ -343,7 +343,7 @@ export default function AddProspectionLigneModal({
                 <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">
                   Durée vol <span className="ml-1 text-gray-400 normal-case font-normal">(calculée auto)</span>
                 </label>
-                <input type="text" value={form.dureeVol} readOnly placeholder="Calculé automatiquement" className={readonlyCls} />
+                <input type="text" value={form.dureeVol} onChange={(e) => set('dureeVol', e.target.value)} placeholder="2h00" className={inputCls} />
               </div>
 
               <div>

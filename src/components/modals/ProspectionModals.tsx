@@ -1,4 +1,4 @@
-import { FiX } from 'react-icons/fi';
+import { FiX, FiEdit3, FiPlus, FiSave, FiPercent } from 'react-icons/fi';
 import type { ProspectionEntete } from '../../app/front_office/prospectionsEntetesSlice';
 import type { AppDispatch, RootState } from '../../app/store';
 import { useDispatch, useSelector } from 'react-redux';
@@ -22,7 +22,66 @@ interface ProspectionModalsProps {
   onConfirmCreate: () => void;
 }
 
-// ─── Composant principal ──────────────────────────────────────────────────────
+// ── Petit composant label/valeur en lecture seule ─────────────────────────────
+const ReadField = ({ label, value }: { label: string; value?: string | null }) => (
+  <div className="bg-slate-50 rounded-xl px-4 py-3 border border-slate-100">
+    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">{label}</p>
+    <p className="text-sm font-semibold text-slate-700">{value || '—'}</p>
+  </div>
+);
+
+// ── Wrapper backdrop ──────────────────────────────────────────────────────────
+const Backdrop = ({ children }: { children: React.ReactNode }) => (
+  <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    {children}
+  </div>
+);
+
+// ── Header modal réutilisable ─────────────────────────────────────────────────
+const ModalHeader = ({
+  icon,
+  gradient,
+  title,
+  subtitle,
+  onClose,
+  disabled,
+}: {
+  icon: React.ReactNode;
+  gradient: string;
+  title: string;
+  subtitle?: string;
+  onClose: () => void;
+  disabled?: boolean;
+}) => (
+  <div className="relative overflow-hidden">
+    {/* Barre gradient en haut */}
+    <div className={`h-1 bg-gradient-to-r ${gradient}`} />
+
+    <div className="flex items-center justify-between px-6 py-4">
+      <div className="flex items-center gap-3">
+        <div className={`w-9 h-9 bg-gradient-to-br ${gradient} rounded-xl flex items-center justify-center shadow-sm`}>
+          <span className="text-white">{icon}</span>
+        </div>
+        <div>
+          <h3 className="text-base font-bold text-slate-800">{title}</h3>
+          {subtitle && <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>}
+        </div>
+      </div>
+      <button
+        onClick={onClose}
+        disabled={disabled}
+        className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors disabled:opacity-40"
+      >
+        <FiX size={18} />
+      </button>
+    </div>
+
+    {/* Séparateur */}
+    <div className="mx-6 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+  </div>
+);
+
+// ── Composant principal ───────────────────────────────────────────────────────
 export default function ProspectionModals({
   selectedEntete,
   modalCommission,
@@ -42,133 +101,141 @@ export default function ProspectionModals({
   const dispatch = useDispatch<AppDispatch>();
 
   const { lastComment, confirmed } = useSelector(
-  (state: RootState) => state.fournisseurCommentaire
-);
+    (state: RootState) => state.fournisseurCommentaire
+  );
 
-  // Calculer si le bouton doit être bloqué
   const upper = lastComment?.alerte?.toUpperCase() ?? '';
-
   const isBlocked =
-    upper === 'TRES_ELEVE' ||          // bloqué même après fermeture du badge
-    (upper === 'ELEVE' && !confirmed); // bloqué tant que pas confirmé
+    upper === 'TRES_ELEVE' ||
+    (upper === 'ELEVE' && !confirmed);
+
+  // Classes communes pour les selects / inputs
+  const inputCls = "w-full px-4 py-2.5 text-sm bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 outline-none transition-all disabled:opacity-50 disabled:cursor-not-allowed";
 
   return (
     <>
-      {/* ── MODAL ÉDITION ── */}
+      {/* ════════════════════════════════════════
+          MODAL ÉDITION
+      ════════════════════════════════════════ */}
       {selectedEntete && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-slate-200 flex justify-between items-center">
-              <h3 className="text-xl font-bold text-slate-800">
-                Modifier l'en-tête de prospection
-              </h3>
-              <button onClick={onCloseEdit} className="text-slate-500 hover:text-slate-800">
-                <FiX size={24} />
-              </button>
+        <Backdrop>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto">
+            <ModalHeader
+              icon={<FiEdit3 size={16} />}
+              gradient="from-indigo-500 to-violet-500"
+              title="Modifier l'en-tête"
+              subtitle={`N° ${selectedEntete.numeroEntete}`}
+              onClose={onCloseEdit}
+              disabled={isSaving}
+            />
+
+            <div className="px-6 py-5 space-y-4">
+              {/* Infos en lecture seule */}
+              <div className="grid grid-cols-2 gap-3">
+                <ReadField label="N° En-tête"  value={selectedEntete.numeroEntete} />
+                <ReadField label="Type de vol" value={selectedEntete.typeVol} />
+                <ReadField label="Fournisseur" value={selectedEntete.fournisseur?.libelle} />
+                <ReadField label="Crédit"      value={selectedEntete.credit} />
+              </div>
+
+              {/* Commissions */}
+              <div className="grid grid-cols-2 gap-3">
+                <ReadField label="Comm. proposée" value={`${selectedEntete.commissionPropose} %`} />
+
+                {/* Seul champ éditable */}
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
+                    Comm. appliquée <span className="text-indigo-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={modalCommission}
+                      onChange={(e) => setModalCommission(Number(e.target.value) || 0)}
+                      className={`${inputCls} pr-10 font-semibold text-indigo-600`}
+                      disabled={isSaving}
+                    />
+                    <FiPercent
+                      size={14}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div className="p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">N° En-tête</label>
-                  <p className="text-slate-900 font-medium">{selectedEntete.numeroEntete}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Type de vol</label>
-                  <p className="text-slate-900">{selectedEntete.typeVol}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Fournisseur</label>
-                  <p className="text-slate-900">{selectedEntete.fournisseur?.libelle || '—'}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Crédit</label>
-                  <p className="text-slate-900">{selectedEntete.credit}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">Commission proposée</label>
-                  <p className="text-slate-900">{selectedEntete.commissionPropose} %</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Commission appliquée *
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={modalCommission}
-                    onChange={(e) => setModalCommission(Number(e.target.value) || 0)}
-                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-                    disabled={isSaving}
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-4 pt-6 border-t border-slate-200">
-                <button
-                  onClick={onCloseEdit}
-                  disabled={isSaving}
-                  className="px-6 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-xl hover:bg-slate-50 disabled:opacity-50"
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={onSaveEdit}
-                  disabled={isSaving}
-                  className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
-                >
-                  {isSaving ? (
-                    <>
-                      <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                      Sauvegarde...
-                    </>
-                  ) : 'Enregistrer'}
-                </button>
-              </div>
+            {/* Footer */}
+            <div className="px-6 pb-5 flex justify-end gap-3">
+              <button
+                onClick={onCloseEdit}
+                disabled={isSaving}
+                className="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 text-sm font-semibold rounded-xl hover:bg-slate-50 transition-colors disabled:opacity-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={onSaveEdit}
+                disabled={isSaving}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white text-sm font-semibold rounded-xl shadow-sm hover:shadow-md transition-all disabled:opacity-50 active:scale-[0.98]"
+              >
+                {isSaving ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    Sauvegarde...
+                  </>
+                ) : (
+                  <>
+                    <FiSave size={15} />
+                    Enregistrer
+                  </>
+                )}
+              </button>
             </div>
           </div>
-        </div>
+        </Backdrop>
       )}
 
-      {/* ── MODAL CRÉATION ── */}
+      {/* ════════════════════════════════════════
+          MODAL CRÉATION
+      ════════════════════════════════════════ */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full">
-            <div className="p-6 border-b border-slate-200 flex justify-between items-center">
-              <h3 className="text-xl font-bold text-slate-800">Nouvel en-tête de prospection</h3>
-              <button onClick={onCloseCreate} disabled={isCreating} className="text-slate-500 hover:text-slate-800">
-                <FiX size={24} />
-              </button>
-            </div>
+        <Backdrop>
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md">
+            <ModalHeader
+              icon={<FiPlus size={16} />}
+              gradient="from-yellow-400 to-yellow-500"
+              title="Nouvel en-tête"
+              subtitle="Prospection supplémentaire"
+              onClose={onCloseCreate}
+              disabled={isCreating}
+            />
 
-            <div className="p-6 space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Ajouter une nouvelle en-tête pour un autre prospection
-                </label>
-              </div>
+            <div className="px-6 py-5 space-y-4">
 
               {/* Fournisseur */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Fournisseur *
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
+                  Fournisseur <span className="text-red-400">*</span>
                 </label>
                 {fournisseursLoading ? (
-                  <p className="text-slate-500">Chargement...</p>
+                  <div className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                    <span className="w-4 h-4 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+                    <span className="text-sm text-slate-400">Chargement...</span>
+                  </div>
                 ) : (
                   <select
                     value={newEntete.fournisseurId}
-                    // onChange={(e) => setNewEntete({ ...newEntete, fournisseurId: e.target.value })}
                     onChange={(e) => {
                       const id = e.target.value;
                       setNewEntete({ ...newEntete, fournisseurId: id });
                       if (id) dispatch(fetchLastCommentaireFournisseur(id));
                       else    dispatch(clearCommentaireFournisseur());
                     }}
-                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-indigo-500"
+                    className={inputCls}
                     required
-                    disabled={isCreating} 
+                    disabled={isCreating}
                   >
                     <option value="">— Choisir un fournisseur —</option>
                     {fournisseurs.map((f) => (
@@ -180,69 +247,87 @@ export default function ProspectionModals({
                 )}
               </div>
 
-              {/* Crédit */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Crédit</label>
-                <select
-                  value={newEntete.credit}
-                  onChange={(e) => setNewEntete({ ...newEntete, credit: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg"
-                  disabled={isCreating}
-                >
-                  <option value="CREDIT_0">CREDIT_0</option>
-                  <option value="CREDIT_15">CREDIT_15</option>
-                  <option value="CREDIT_30">CREDIT_30</option>
-                  <option value="CREDIT_60">CREDIT_60</option>
-                  <option value="CREDIT_90">CREDIT_90</option>
-                </select>
+              {/* Crédit + Type vol côte à côte */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
+                    Crédit
+                  </label>
+                  <select
+                    value={newEntete.credit}
+                    onChange={(e) => setNewEntete({ ...newEntete, credit: e.target.value })}
+                    className={inputCls}
+                    disabled={isCreating}
+                  >
+                    <option value="CREDIT_0">Crédit 0</option>
+                    <option value="CREDIT_15">Crédit 15</option>
+                    <option value="CREDIT_30">Crédit 30</option>
+                    <option value="CREDIT_60">Crédit 60</option>
+                    <option value="CREDIT_90">Crédit 90</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1.5">
+                    Type de vol
+                  </label>
+                  <select
+                    value={newEntete.typeVol}
+                    onChange={(e) => setNewEntete({ ...newEntete, typeVol: e.target.value })}
+                    className={inputCls}
+                    disabled={isCreating}
+                  >
+                    <option value="NATIONAL">Nationale</option>
+                    <option value="LONG_COURRIER">Long courrier</option>
+                    <option value="REGIONAL">Régionale</option>
+                  </select>
+                </div>
               </div>
 
-              {/* Type Vol */}
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Type de vol</label>
-                <select
-                  value={newEntete.typeVol}
-                  onChange={(e) => setNewEntete({ ...newEntete, typeVol: e.target.value })}
-                  className="w-full px-4 py-2.5 border border-slate-300 rounded-lg"
-                  disabled={isCreating}
-                >
-                  <option value="NATIONAL">Nationale</option>
-                  <option value="LONG_COURRIER">Long courrier</option>
-                  <option value="REGIONAL">Régionale</option>
-                </select>
-              </div>
+              {/* Message bloqué */}
+              {isBlocked && (
+                <div className="flex items-start gap-2.5 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0 mt-1.5" />
+                  <p className="text-xs text-red-600 font-medium leading-relaxed">
+                    Ce fournisseur est bloqué en raison d'une alerte de niveau élevé.
+                    La création est désactivée.
+                  </p>
+                </div>
+              )}
+            </div>
 
-              {/* Pied */}
-              <div className="flex justify-end gap-4 pt-4">
-                <button
-                  onClick={onCloseCreate}
-                  disabled={isCreating}
-                  className="px-6 py-2.5 bg-white border border-slate-300 text-slate-700 rounded-xl"
-                >
-                  Annuler
-                </button>
-                <button
-                  onClick={onConfirmCreate}
-                  disabled={isCreating || !newEntete.fournisseurId || isBlocked}
-                  className={
-                    isCreating || !newEntete.fournisseurId || isBlocked
-                      ? "px-6 py-2.5 bg-indigo-600 text-white rounded-xl flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                      : "px-6 py-2.5 bg-indigo-600 text-white rounded-xl flex items-center gap-2"
-                  }
-                >
-                  {isCreating ? (
-                    <>
-                      <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full " />
-                      Création...
-                    </>
-                  ) : 'Créer'}
-                </button>
-              </div>
+            {/* Footer */}
+            <div className="px-6 pb-5 flex justify-end gap-3">
+              <button
+                onClick={onCloseCreate}
+                disabled={isCreating}
+                className="px-5 py-2.5 bg-white border border-slate-200 text-slate-600 text-sm font-semibold rounded-xl hover:bg-slate-50 transition-colors disabled:opacity-50"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={onConfirmCreate}
+                disabled={isCreating || !newEntete.fournisseurId || isBlocked}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-linear-to-r from-yellow-500 to-orange-500 hover:from-yellow-600 hover:to-orange-600 text-white text-sm font-semibold rounded-xl shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
+              >
+                {isCreating ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                    Création...
+                  </>
+                ) : (
+                  <>
+                    <FiPlus size={15} />
+                    Créer
+                  </>
+                )}
+              </button>
             </div>
           </div>
-        </div>
+        </Backdrop>
       )}
-      <FournisseurAlerteBadge /> 
+
+      <FournisseurAlerteBadge />
     </>
   );
 }
