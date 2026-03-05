@@ -31,6 +31,7 @@ import AccueilViewVisa from "../pages/front_office/dossiers-communs/module.visa/
 import ParametreViewVisa from "../pages/front_office/dossiers-communs/module.visa/sous.section/ParametreViewVisa";
 import PageViewVisa from "../pages/front_office/dossiers-communs/module.visa/sous.section/PageViewVisa";
 import PageDetailProspection from "../pages/front_office/dossiers-communs/module.visa/sous.section/sous.section.page/PageDetailProspection";
+import PageDetailVisa from "../pages/front_office/dossiers-communs/module.visa/sous.section/sous.section.page/PageDetailVisa";
 
 export function frontOfficeRoutes() {
   return (
@@ -88,6 +89,7 @@ export function frontOfficeRoutes() {
         <Route path="parametres" element={<ParametreViewVisa />} />
         <Route path="pages" element={<PageViewVisa />} />
         <Route path="details/:enteteId" element={<PageDetailProspection />} />
+        <Route path="visa-detail/:visaEnteteId" element={<PageDetailVisa />} />
       </Route>
     </>
   );

@@ -2,6 +2,56 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import axios from '../../../service/Axios';
 
 // ── Types ──────────────────────────────────────────────────────────────────
+export interface AccesPortail {
+  id: string;
+  visaLigneId: string;
+  passagerId: string;
+  login: string | null;
+  password: string | null;
+  statut: string;
+  createdAt: string;
+  updatedAt: string;
+  passager: {
+    id: string;
+    code: string;
+    libelle: string;
+    statut: string;
+  };
+}
+
+// Ajouter cette interface
+export interface Passager {
+  id: string;
+  clientbeneficiaireInfoId: string | null;
+  clientbeneficiaireId: string;
+  entityLineId: string;
+  entity: string;
+  createdAt: string;
+  updatedAt: string;
+  clientbeneficiaireInfo: null;
+  clientbeneficiaire: {
+    id: string;
+    code: string;
+    libelle: string;
+    statut: string;
+    dateApplication: string;
+    dateCreation: string;
+    updatedAt: string;
+  };
+}
+
+export interface SoumissionLigne {
+  id: string;
+  visaLigneId: string;
+  tauxChange: number | null;
+  puConsilatAriary: number | null;
+  puClientAriary: number | null;
+  commissionAriary: number | null;
+  reference: string | null;
+  limite: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
 
 export interface VisaLigne {
   id: string;
@@ -26,6 +76,10 @@ export interface VisaLigne {
   createdAt: string;
   updatedAt: string;
   RaisonAnnulation: null;
+  accesPortail?: AccesPortail[];
+  soumissionLigne?: SoumissionLigne[];
+  passagers?: Passager[];          // ← champ réel retourné par le serveur
+  visa?: any[];
   visaProspectionLigne: {
     id: string;
     nombre: number;

@@ -65,6 +65,8 @@ import visaConsultatReducer from './front_office/parametre_visa/visaConsultatSli
 import visaProspectionEnteteReducer from './front_office/parametre_visa/prospectionEnteteVisaSlice';
 import visaDevisReducer from './front_office/parametre_visa/visaDevisSlice';
 import visaEnteteReducer from './front_office/parametre_visa/visaEnteteSlice';
+import visaEnteteDetailReducer from './front_office/parametre_visa/visaEnteteDetailSlice';
+import passagerDetailReducer from './front_office/parametre_visa/passagerDetailSlice';
 
 import {
   FLUSH,
@@ -138,6 +140,8 @@ const appReducer = combineReducers({
   visaProspectionEntete: visaProspectionEnteteReducer,
   visaDevis: visaDevisReducer,
   visaEntete: visaEnteteReducer,
+  visaEnteteDetail: visaEnteteDetailReducer,
+  passagerDetail: passagerDetailReducer,
 
   // Portail-client
   clientBeneficiaireInfos: clientBeneficiaireInfosReducer,
