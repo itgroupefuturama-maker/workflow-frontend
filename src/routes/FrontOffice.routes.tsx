@@ -26,6 +26,11 @@ import BenchmarkingDetailPage from "../pages/front_office/dossiers-communs/modul
 import HotelReservationDetail from "../pages/front_office/dossiers-communs/module.hotel/sous.section/sous.section.page/HotelReservationDetail";
 import PageHotelDevis from "../pages/front_office/dossiers-communs/module.hotel/sous.section/sous.section.page/PageHotelDevis";
 import HomePageTicketing from "../pages/front_office/dossiers-communs/module.ticketing/ticketing";
+import HomePageVisa from "../pages/front_office/dossiers-communs/module.visa/HomePage.visa";
+import AccueilViewVisa from "../pages/front_office/dossiers-communs/module.visa/sous.section/AccueilViewVisa";
+import ParametreViewVisa from "../pages/front_office/dossiers-communs/module.visa/sous.section/ParametreViewVisa";
+import PageViewVisa from "../pages/front_office/dossiers-communs/module.visa/sous.section/PageViewVisa";
+import PageDetailProspection from "../pages/front_office/dossiers-communs/module.visa/sous.section/sous.section.page/PageDetailProspection";
 
 export function frontOfficeRoutes() {
   return (
@@ -75,6 +80,14 @@ export function frontOfficeRoutes() {
         <Route path="details" element={<BenchmarkingDetailPage />} />
         <Route path="detailsHotel/:enteteId" element={<HotelReservationDetail />} />
         <Route path="devishotel/:enteteId" element={<PageHotelDevis />} />
+      </Route>
+
+      <Route path="dossiers-communs/visa" element={<HomePageVisa />}>
+        <Route index element={<Navigate to="accueil" replace />} />
+        <Route path="accueil" element={<AccueilViewVisa />} />
+        <Route path="parametres" element={<ParametreViewVisa />} />
+        <Route path="pages" element={<PageViewVisa />} />
+        <Route path="details/:enteteId" element={<PageDetailProspection />} />
       </Route>
     </>
   );

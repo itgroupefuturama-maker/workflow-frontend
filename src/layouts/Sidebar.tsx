@@ -12,7 +12,7 @@ import { fetchDossiersCommuns, setCurrentClientFactureId, type DossierCommun } f
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
 interface SidebarProps {
-  module?: 'ticketing' | 'attestation' | 'hotel';
+  module?: 'ticketing' | 'attestation' | 'hotel' | 'visa';
 }
 
 export default function Sidebar({ module }: SidebarProps) {
@@ -93,6 +93,16 @@ export default function Sidebar({ module }: SidebarProps) {
             { label: 'Service',           path: 'parametres', icon: <FiMap    size={15} />, tab: 'service'               },
             { label: 'Raison Annulation', path: 'parametres', icon: <FiMap    size={15} />, tab: 'listeRaisonAnnulation' },
           ]
+        : module === 'visa'
+        ? [
+            { label: 'Type de Visa',         path: 'parametres', icon: <FiLayers size={15} />, tab: 'type'          },
+            { label: 'Durée de Visa',        path: 'parametres', icon: <FiMap    size={15} />, tab: 'duree'           },
+            { label: 'Visa Entrée',          path: 'parametres', icon: <FiMap    size={15} />, tab: 'entree'               },
+            { label: 'Paramétre de Visa',    path: 'parametres', icon: <FiMap    size={15} />, tab: 'params'               },
+            { label: 'Document Visa',        path: 'parametres', icon: <FiMap    size={15} />, tab: 'docs'               },
+            { label: 'Visa Consulat',        path: 'parametres', icon: <FiMap    size={15} />, tab: 'consulat'               },
+            { label: 'Raison Annulation',    path: 'parametres', icon: <FiMap    size={15} />, tab: 'listeRaisonAnnulation' },
+          ]
         : [
             { label: 'Service & spécifique', path: 'parametres', icon: <FiLayers size={15} />, tab: 'listeService'          },
             { label: 'Exigence de voyage',   path: 'parametres', icon: <FiMap    size={15} />, tab: 'listeExigence'         },
@@ -116,6 +126,11 @@ export default function Sidebar({ module }: SidebarProps) {
       ? [
           { label: 'Entête Attestation', path: '/dossiers-communs/attestation/pages', icon: <FiPlusSquare size={14} />, tab: 'attestation'  },
         ]
+      : module === 'visa'
+      ? [
+          { label: 'Liste Prospection', path: '/dossiers-communs/visa/pages',       icon: <FiPlusSquare size={14} />, tab: 'prospection' },
+          { label: 'Liste Reservation',  path: '/dossiers-communs/visa/pages',       icon: <FiList       size={14} />, tab: 'visa'        },
+        ]
       : [];
 
   const handleDossierSelect = async (dossier: DossierCommun) => {
@@ -123,6 +138,7 @@ export default function Sidebar({ module }: SidebarProps) {
     if (module === 'ticketing')   navigate('/dossiers-communs/ticketing/pages',   { state: { targetTab: 'prospection'  } });
     if (module === 'attestation') navigate('/dossiers-communs/attestation/pages', { state: { targetTab: 'attestation'  } });
     if (module === 'hotel')       navigate('/dossiers-communs/hotel/pages',       { state: { targetTab: 'benchmarking' } });
+    if (module === 'visa')        navigate('/dossiers-communs/visa/pages',        { state: { targetTab: 'devis'        } });
   };
 
   const handleSubPageClick = (path: string, tab: string) => {
@@ -134,6 +150,7 @@ export default function Sidebar({ module }: SidebarProps) {
     ticketing:   { label: 'Ticketing',   icon: <FiList   size={15} />, gradient: 'from-amber-400 to-orange-500',  iconBg: 'bg-amber-500',   activeBg: 'bg-amber-500',   activeText: 'text-amber-600',   border: 'border-amber-200',   dotColor: 'bg-amber-400'   },
     attestation: { label: 'Attestation', icon: <FiFolder size={15} />, gradient: 'from-rose-400 to-pink-500',     iconBg: 'bg-rose-500',    activeBg: 'bg-rose-500',    activeText: 'text-rose-600',    border: 'border-rose-200',    dotColor: 'bg-rose-400'    },
     hotel:       { label: 'Hôtel',       icon: <FiHome   size={15} />, gradient: 'from-orange-400 to-red-500',    iconBg: 'bg-orange-500',  activeBg: 'bg-orange-500',  activeText: 'text-orange-600',  border: 'border-orange-200',  dotColor: 'bg-orange-400'  },
+    visa:        { label: 'Visa',        icon: <FiMap    size={15} />, gradient: 'from-blue-400 to-indigo-500', iconBg: 'bg-blue-500',    activeBg: 'bg-blue-500',    activeText: 'text-blue-600',    border: 'border-blue-200',    dotColor: 'bg-blue-400'    },
   };
 
   const current = module
@@ -157,7 +174,7 @@ export default function Sidebar({ module }: SidebarProps) {
         {!collapsed ? (
           <div className="flex items-center gap-2">
             {/* Badge module */}
-            <div className={`flex-1 flex items-center gap-2.5 bg-gradient-to-r ${current.gradient} rounded-xl px-3 py-2.5 shadow-sm`}>
+            <div className={`flex-1 flex items-center gap-2.5 bg-linear-to-r ${current.gradient} rounded-xl px-3 py-2.5 shadow-sm`}>
               <div className="bg-white/20 p-1.5 rounded-lg">
                 <span className="text-white">{current.icon}</span>
               </div>
@@ -181,7 +198,7 @@ export default function Sidebar({ module }: SidebarProps) {
         ) : (
           <div className="flex flex-col items-center gap-2">
             {/* Icône module seule */}
-            <div className={`w-9 h-9 bg-gradient-to-br ${current.gradient} rounded-xl flex items-center justify-center shadow-sm`}>
+            <div className={`w-9 h-9 bg-linear-to-br ${current.gradient} rounded-xl flex items-center justify-center shadow-sm`}>
               <span className="text-white">{current.icon}</span>
             </div>
             {/* Bouton expand */}
@@ -197,7 +214,7 @@ export default function Sidebar({ module }: SidebarProps) {
       </div>
 
       {/* Séparateur */}
-      <div className="mx-3 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent shrink-0" />
+      <div className="mx-3 h-px bg-linear-to-r from-transparent via-slate-200 to-transparent shrink-0" />
 
       {/* ══ NAV ══ */}
       <nav className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent py-2">
@@ -216,7 +233,7 @@ export default function Sidebar({ module }: SidebarProps) {
                       onClick={() => navigate(item.path, { state: { targetTab: item.tab } })}
                       className={`w-full flex items-center justify-center p-2.5 rounded-lg transition-all duration-200 ${
                         active
-                          ? `bg-gradient-to-br ${current.gradient} text-white shadow-sm`
+                          ? `bg-linear-to-br ${current.gradient} text-white shadow-sm`
                           : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700'
                       }`}
                     >
@@ -246,7 +263,7 @@ export default function Sidebar({ module }: SidebarProps) {
                     onClick={() => handleDossierSelect(dossier)}
                     className={`w-full flex items-center justify-center p-2.5 rounded-lg transition-all duration-200 ${
                       isActive
-                        ? `bg-gradient-to-br ${current.gradient} text-white shadow-sm`
+                        ? `bg-linear-to-br ${current.gradient} text-white shadow-sm`
                         : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700'
                     }`}
                   >
@@ -334,7 +351,7 @@ export default function Sidebar({ module }: SidebarProps) {
                               onClick={() => navigate(link.path, { state: { targetTab: link.tab } })}
                               className={`w-full flex items-center gap-2.5 px-2.5 py-2 text-sm rounded-lg transition-all duration-200 ${
                                 active
-                                  ? `bg-gradient-to-r ${current.gradient} text-white shadow-sm font-medium`
+                                  ? `bg-linear-to-r ${current.gradient} text-white shadow-sm font-medium`
                                   : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
                               }`}
                             >

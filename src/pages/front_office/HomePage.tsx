@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchDossiersCommuns } from '../../app/front_office/dossierCommunSlice';
 import type { RootState, AppDispatch } from '../../app/store';
-import { FiFolder, FiCheckCircle, FiTag, FiFileText, FiLock, FiSettings, FiHome, FiArrowRight } from 'react-icons/fi';
+import { FiFolder, FiCheckCircle, FiTag, FiFileText, FiLock, FiSettings, FiHome, FiArrowRight, FiMapPin } from 'react-icons/fi';
 import { fetchTodos } from '../../app/front_office/todosSlice';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
@@ -16,10 +16,10 @@ const ALL_MODULES = [
   { label: 'Paramètre',          desc: 'Commentaires et configurations',          path: '/dossiers-communs/parametre',   icon: FiSettings,    color: 'violet', locked: false },
   { label: 'Hôtel',              desc: 'Gestion des réservations',                path: '/dossiers-communs/hotel',       icon: FiHome,        color: 'orange', locked: false },
   { label: 'Assurance',          desc: 'Contrats et garanties',                   path: '',                              icon: FiLock,        color: 'gray',   locked: true  },
-  { label: 'Visa',               desc: 'Suivi des demandes',                      path: '',                              icon: FiLock,        color: 'gray',   locked: true  },
-  { label: 'Location',           desc: 'Véhicules et matériel',                   path: '',                              icon: FiLock,        color: 'gray',   locked: true  },
-  { label: 'Activité',           desc: 'Excursions et loisirs',                   path: '',                              icon: FiLock,        color: 'gray',   locked: true  },
-  { label: 'Guidage',            desc: 'Planning des guides',                     path: '',                              icon: FiLock,        color: 'gray',   locked: true  },
+  { label: 'Visa',               desc: 'Gestion des visas',                       path: '/dossiers-communs/visa',        icon: FiMapPin,      color: 'blue',   locked: false  },
+  // { label: 'Location',           desc: 'Véhicules et matériel',                   path: '',                              icon: FiLock,        color: 'gray',   locked: true  },
+  // { label: 'Activité',           desc: 'Excursions et loisirs',                   path: '',                              icon: FiLock,        color: 'gray',   locked: true  },
+  // { label: 'Guidage',            desc: 'Planning des guides',                     path: '',                              icon: FiLock,        color: 'gray',   locked: true  },
   { label: 'Résultats Stats',    desc: 'Analyses de données',                     path: '',                              icon: FiLock,        color: 'gray',   locked: true  },
   { label: 'Tableau de bord',    desc: "Vue d'ensemble",                          path: '',                              icon: FiLock,        color: 'gray',   locked: true  },
   { label: 'Miles',              desc: 'Fidélité voyageurs',                      path: '',                              icon: FiLock,        color: 'gray',   locked: true  },
@@ -68,16 +68,16 @@ function HomePage() {
       ══════════════════════════════════════════ */}
 
       {/* Gradient de base */}
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-100 via-white to-blue-50/40 pointer-events-none" />
+      <div className="absolute inset-0 bg-linear-to-br from-slate-100 via-white to-blue-50/40 pointer-events-none" />
 
       {/* Grande forme floue haut-gauche */}
-      <div className="absolute -top-40 -left-40 w-[500px] h-[500px] bg-gradient-to-br from-blue-400/10 to-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -top-40 -left-40 w-[500px] h-[500px] bg-linear-to-br from-blue-400/10 to-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
 
       {/* Grande forme floue bas-droite */}
-      <div className="absolute -bottom-40 -right-40 w-[600px] h-[600px] bg-gradient-to-tl from-violet-400/10 to-purple-500/8 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-40 -right-40 w-[600px] h-[600px] bg-linear-to-tl from-violet-400/10 to-purple-500/8 rounded-full blur-3xl pointer-events-none" />
 
       {/* Forme médiane centre */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-gradient-to-r from-sky-300/5 to-indigo-300/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-linear-to-r from-sky-300/5 to-indigo-300/5 rounded-full blur-3xl pointer-events-none" />
 
       {/* Grille de points subtile */}
       <div
@@ -168,10 +168,10 @@ function HomePage() {
                 `}
               >
                 {/* Barre colorée en haut */}
-                <div className={`absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r ${c.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-t-2xl`} />
+                <div className={`absolute top-0 left-0 right-0 h-0.5 bg-linear-to-r ${c.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-t-2xl`} />
 
                 {/* Blob décoratif interne */}
-                <div className={`absolute -top-6 -right-6 w-24 h-24 bg-gradient-to-br ${c.gradient} opacity-[0.06] rounded-full group-hover:scale-150 group-hover:opacity-[0.10] transition-all duration-500`} />
+                <div className={`absolute -top-6 -right-6 w-24 h-24 bg-linear-to-br ${c.gradient} opacity-[0.06] rounded-full group-hover:scale-150 group-hover:opacity-[0.10] transition-all duration-500`} />
 
                 <div className="relative z-10">
                   {/* Icône */}

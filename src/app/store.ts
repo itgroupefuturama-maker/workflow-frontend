@@ -55,6 +55,16 @@ import hotelReservationEnteteReducer from './front_office/parametre_hotel/hotelR
 import fournisseurCommentaireReducer from './front_office/fournisseurCommentaire/fournisseurCommentaireSlice';
 import attestationParamsReducer from './front_office/parametre_attestation/attestationParamsSlice';
 import hotelDevisReducer from './front_office/parametre_hotel/hotelDevisSlice';
+import visaTypeReducer from './front_office/parametre_visa/visaTypeSlice';
+import visaDureeReducer from './front_office/parametre_visa/visaDureeSlice';
+import visaEntreeReducer from './front_office/parametre_visa/visaEntreeSlice';
+import visaParamReducer from './front_office/parametre_visa/visaParamSlice';
+import visaDocParamsReducer from './front_office/parametre_visa/visaDocParamsSlice';
+import visaDocReducer from './front_office/parametre_visa/visaDocSlice';
+import visaConsultatReducer from './front_office/parametre_visa/visaConsultatSlice';
+import visaProspectionEnteteReducer from './front_office/parametre_visa/prospectionEnteteVisaSlice';
+import visaDevisReducer from './front_office/parametre_visa/visaDevisSlice';
+import visaEnteteReducer from './front_office/parametre_visa/visaEnteteSlice';
 
 import {
   FLUSH,
@@ -117,6 +127,17 @@ const appReducer = combineReducers({
   fournisseurCommentaire: fournisseurCommentaireReducer,
   attestationParams: attestationParamsReducer,
   hotelDevis: hotelDevisReducer,
+
+  visaType: visaTypeReducer,
+  visaDuree: visaDureeReducer,
+  visaEntree: visaEntreeReducer,
+  visaParam: visaParamReducer,
+  visaDocParams: visaDocParamsReducer,
+  visaDoc: visaDocReducer,
+  visaConsultat: visaConsultatReducer,
+  visaProspectionEntete: visaProspectionEnteteReducer,
+  visaDevis: visaDevisReducer,
+  visaEntete: visaEnteteReducer,
 
   // Portail-client
   clientBeneficiaireInfos: clientBeneficiaireInfosReducer,

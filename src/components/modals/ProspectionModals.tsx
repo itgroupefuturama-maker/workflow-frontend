@@ -178,7 +178,7 @@ export default function ProspectionModals({
               <button
                 onClick={onSaveEdit}
                 disabled={isSaving}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white text-sm font-semibold rounded-xl shadow-sm hover:shadow-md transition-all disabled:opacity-50 active:scale-[0.98]"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-linear-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white text-sm font-semibold rounded-xl shadow-sm hover:shadow-md transition-all disabled:opacity-50 active:scale-[0.98]"
               >
                 {isSaving ? (
                   <>
