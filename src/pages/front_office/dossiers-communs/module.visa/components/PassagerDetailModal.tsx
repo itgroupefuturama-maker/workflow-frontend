@@ -35,6 +35,7 @@ const ActionButton = ({
   loading,
   done,
   label,
+  statut,
   doneLabel,
   color = 'green',
 }: {
@@ -42,6 +43,7 @@ const ActionButton = ({
   loading: boolean;
   done: boolean;
   label: string;
+  statut: string;
   doneLabel: string;
   color?: 'green' | 'indigo' | 'violet';
 }) => {
@@ -53,8 +55,8 @@ const ActionButton = ({
   return (
     <button
       onClick={onClick}
-      disabled={loading || done}
-      className={`px-3 py-1.5 text-white text-xs rounded-lg flex items-center gap-1.5 transition shrink-0 disabled:opacity-60 ${colors[color]}`}
+      disabled={loading || statut === 'VALIDER'}
+      className={`px-3 py-1.5 text-white text-xs rounded-lg flex items-center gap-1.5 transition shrink-0 ${statut === 'VALIDER' ? 'bg-gray-300 opacity-50' : colors[color]}`}
     >
       {loading ? (
         <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
@@ -162,6 +164,7 @@ const PassagerDetailModal = ({ idVisaAbstract, nomPassager, onClose }: Props) =>
               onClick={handleSync}
               loading={syncLoading}
               done={syncDone}
+              statut=''
               label="⚡ Synchroniser"
               doneLabel="Synchronisé"
               color="violet"
@@ -247,6 +250,7 @@ const PassagerDetailModal = ({ idVisaAbstract, nomPassager, onClose }: Props) =>
                       <ActionButton
                         onClick={() => handleValidateForm(form.id)}
                         loading={formLoading[form.id] ?? false}
+                        statut={form.status}
                         done={formDone[form.id] ?? form.status === 'VALIDE'}
                         label="✓ Confirmer"
                         doneLabel="Confirmé"
@@ -365,7 +369,7 @@ const PassagerDetailModal = ({ idVisaAbstract, nomPassager, onClose }: Props) =>
                           {/* Actions document */}
                           <div className="flex items-center gap-2 shrink-0">
                             <a
-                              href={`${API_URL_PORTAIL}${doc.pj}`}
+                              href={`${API_URL}${doc.pj}`}
                               target="_blank"
                               rel="noreferrer"
                               className="px-2.5 py-1.5 bg-indigo-50 border border-indigo-200 text-indigo-600 text-xs rounded-lg hover:bg-indigo-100"
@@ -375,6 +379,7 @@ const PassagerDetailModal = ({ idVisaAbstract, nomPassager, onClose }: Props) =>
                             <ActionButton
                               onClick={() => handleValidateDoc(doc.id)}
                               loading={docLoading[doc.id] ?? false}
+                              statut={doc.status}
                               done={docDone[doc.id] ?? doc.status === 'VALIDE'}
                               label="✓ Valider"
                               doneLabel="Validé"

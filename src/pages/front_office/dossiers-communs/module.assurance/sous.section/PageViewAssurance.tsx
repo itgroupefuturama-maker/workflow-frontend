@@ -3,19 +3,14 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 import type { AppDispatch, RootState } from '../../../../../app/store';
 import TabContainer from '../../../../../layouts/TabContainer';
-import { fetchProspectionEntetes } from '../../../../../app/front_office/parametre_visa/prospectionEnteteVisaSlice';
-import { fetchVisaEntetes } from '../../../../../app/front_office/parametre_visa/visaEnteteSlice';
-import ProspectionTab from '../components/ProspectionTab';
-import VisaTab from '../components/VisaTab';
-import DossierActifCard from '../../../../../components/CarteDossierActif/DossierActifCard';
 
-const PageViewVisa = () => {
+const PageViewAssurance = () => {
   const dispatch = useDispatch<AppDispatch>();
   const location = useLocation();
 
   const tabs = [
     { id: 'prospection', label: 'Listes des prospections' },
-    { id: 'visa',        label: 'Listes des visa' },
+    { id: 'assurance',        label: 'Listes des assurance' },
   ];
 
   const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'prospection');
@@ -24,14 +19,14 @@ const PageViewVisa = () => {
   const dossierActif = useSelector((state: RootState) => state.dossierCommun.currentClientFactureId);
 
   const prestationId = dossierActif?.dossierCommunColab
-    ?.find((colab) => colab.module?.nom?.toLowerCase() === 'visa')
+    ?.find((colab) => colab.module?.nom?.toLowerCase() === 'assurance')
     ?.prestation?.[0]?.id ?? '';
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (prestationId) {
-      dispatch(fetchProspectionEntetes(prestationId));
-      dispatch(fetchVisaEntetes(prestationId));
+      console.log('fetch');
+      
     }
   }, [prestationId, dispatch]);
 
@@ -45,11 +40,10 @@ const PageViewVisa = () => {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab}>
-      
-      {activeTab === 'prospection' && <ProspectionTab prestationId={prestationId} />}
-      {activeTab === 'visa'        && <VisaTab />}
+      {activeTab === 'prospection' && <div>Page prospection</div>}
+      {activeTab === 'assurance'   && <div>Page assurance</div>}
     </TabContainer>
   );
 };
 
-export default PageViewVisa;
+export default PageViewAssurance;

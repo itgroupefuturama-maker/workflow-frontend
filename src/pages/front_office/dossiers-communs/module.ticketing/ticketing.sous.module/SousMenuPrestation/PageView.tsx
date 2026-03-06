@@ -6,6 +6,7 @@ import type { RootState } from '../../../../../../app/store';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchBilletsByDossierCommun, type BilletEntete } from '../../../../../../app/front_office/billetSlice';
 import { fetchServiceSpecifiques } from '../../../../../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
+import DossierActifCard from '../../../../../../components/CarteDossierActif/DossierActifCard';
 
 interface PrestationContext {
   prestationId: string;
@@ -128,51 +129,12 @@ export default function PageView() {
           </div>
 
           {/* ── Carte dossier actif ── */}
-          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-            {/* Bandeau supérieur coloré */}
-            <div className="h-1 bg-gradient-to-r from-amber-400 via-orange-400 to-amber-500" />
-
-            <div className="p-5">
-              {/* Numéro + statut annulation */}
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">
-                    N° Dossier Commun
-                  </p>
-                  <p className="text-2xl font-bold text-slate-800 tracking-tight">
-                    {dossierActif?.numero}
-                  </p>
-                </div>
-
-                {dossierActif?.raisonAnnulation && (
-                  <span className="inline-flex items-center gap-1.5 bg-red-50 border border-red-100 text-red-600 text-xs font-semibold px-3 py-1.5 rounded-full">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
-                    Annulé
-                  </span>
-                )}
-              </div>
-
-              {/* Grille d'infos */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-8 gap-y-3 pt-3 border-t border-slate-100">
-                {dossierActif?.raisonAnnulation && (
-                  <Field label="Raison d'annulation" value={dossierActif.raisonAnnulation} />
-                )}
-                {dossierActif?.dateAnnulation && (
-                  <Field label="Date d'annulation"   value={dossierActif.dateAnnulation} />
-                )}
-                <Field label="Contact principal"   value={dossierActif?.contactPrincipal} />
-                <Field label="WhatsApp"            value={dossierActif?.whatsapp} />
-                <Field label="Réf. Travel Planner" value={dossierActif?.referenceTravelPlaner} />
-                <Field label="Client facturé"      value={dossierActif?.clientfacture?.libelle} />
-                <Field label="Code client"         value={dossierActif?.clientfacture?.code} />
-              </div>
-            </div>
-          </div>
+          <DossierActifCard gradient="from-amber-400 via-orange-400 to-amber-500" />
 
           {/* ── États de chargement ── */}
           {loadingEntetes ? (
             <div className="flex flex-col items-center justify-center py-14 bg-white rounded-2xl border border-slate-100">
-              <div className="w-10 h-10 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center mb-3 animate-pulse">
+              <div className="w-10 h-10 bg-linear-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center mb-3 animate-pulse">
                 <FiTag className="text-white" size={18} />
               </div>
               <p className="text-sm text-slate-400 animate-pulse">Chargement des en-têtes...</p>
@@ -299,6 +261,8 @@ export default function PageView() {
               </button>
             </div>
           </header>
+
+          <DossierActifCard gradient="from-amber-400 via-orange-400 to-amber-500" />
 
           {/* ── États ── */}
           {loadingBillets ? (

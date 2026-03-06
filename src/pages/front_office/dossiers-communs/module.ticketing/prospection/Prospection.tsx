@@ -840,8 +840,8 @@ export default function ProspectionDetail() {
                         <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[180px]">Itinéraire</th>
                         <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[100px]">Classe</th>
                         <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[120px]">Type pax</th>
-                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[150px]">Date Départ</th>
-                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[150px]">Date Arrivée</th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[150px]">Date Départ Pays</th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[150px]">Date Arrivée Pays</th>
                         <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[100px]">Durée vol</th>
                         <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[110px]">Durée escale</th>
                       </>

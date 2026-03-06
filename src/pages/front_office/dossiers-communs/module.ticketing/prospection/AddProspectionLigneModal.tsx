@@ -330,18 +330,18 @@ export default function AddProspectionLigneModal({
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Date / Heure départ <span className="text-red-500">*</span></label>
+                <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Date / Heure départ de {destinations.find((d) => d.id === form.departId)?.ville} <span className="text-red-500">*</span></label>
                 <input type="datetime-local" value={form.dateHeureDepart} onChange={(e) => set('dateHeureDepart', e.target.value)} className={inputCls} />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Date / Heure arrivée</label>
+                <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Date / Heure arrivée à {destinations.find((d) => d.id === form.destinationId)?.ville} <span className="text-red-500">*</span></label>
                 <input type="datetime-local" value={form.dateHeureArrive} onChange={(e) => set('dateHeureArrive', e.target.value)} className={inputCls} />
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">
-                  Durée vol <span className="ml-1 text-gray-400 normal-case font-normal">(calculée auto)</span>
+                  Durée vol <span className="ml-1 text-gray-400 normal-case font-normal"></span>
                 </label>
                 <input type="text" value={form.dureeVol} onChange={(e) => set('dureeVol', e.target.value)} placeholder="2h00" className={inputCls} />
               </div>

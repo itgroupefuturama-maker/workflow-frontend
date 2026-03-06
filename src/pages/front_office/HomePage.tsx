@@ -3,20 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchDossiersCommuns } from '../../app/front_office/dossierCommunSlice';
 import type { RootState, AppDispatch } from '../../app/store';
-import { FiFolder, FiCheckCircle, FiTag, FiFileText, FiLock, FiSettings, FiHome, FiArrowRight, FiMapPin } from 'react-icons/fi';
+import { FiFolder, FiCheckCircle, FiTag, FiFileText, FiLock, FiSettings, FiHome, FiArrowRight, FiMapPin, FiShield } from 'react-icons/fi';
 import { fetchTodos } from '../../app/front_office/todosSlice';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
 const ALL_MODULES = [
-  { label: 'Dossier',            desc: 'Accédez à vos fichiers partagés',        path: '/dossiers-communs',             icon: FiFolder,      color: 'blue',   locked: false },
-  { label: 'To Do List',         desc: 'Gérez vos tâches quotidiennes',           path: '/dossiers-communs/todolist',    icon: FiCheckCircle, color: 'green',  locked: false },
+  { label: 'Dossier',            desc: 'Accédez à vos fichiers partagés',        path: '/dossiers-communs',              icon: FiFolder,      color: 'blue',   locked: false },
+  { label: 'To Do List',         desc: 'Gérez vos tâches quotidiennes',           path: '/dossiers-communs/todolist',    icon: FiCheckCircle, color: 'teal',  locked: false },
   { label: 'Ticketing',          desc: 'Suivez vos demandes et tickets',          path: '/dossiers-communs/ticketing',   icon: FiTag,         color: 'amber',  locked: false },
   { label: 'Attestation Voyage', desc: 'Générez vos attestations',                path: '/dossiers-communs/attestation', icon: FiFileText,    color: 'rose',   locked: false },
   { label: 'Paramètre',          desc: 'Commentaires et configurations',          path: '/dossiers-communs/parametre',   icon: FiSettings,    color: 'violet', locked: false },
   { label: 'Hôtel',              desc: 'Gestion des réservations',                path: '/dossiers-communs/hotel',       icon: FiHome,        color: 'orange', locked: false },
-  { label: 'Assurance',          desc: 'Contrats et garanties',                   path: '',                              icon: FiLock,        color: 'gray',   locked: true  },
-  { label: 'Visa',               desc: 'Gestion des visas',                       path: '/dossiers-communs/visa',        icon: FiMapPin,      color: 'blue',   locked: false  },
+  { label: 'Assurance',          desc: 'Contrats et garanties',                   path: '/dossiers-communs/assurance',   icon: FiShield,        color: 'green',   locked: false  },
+  { label: 'Visa',               desc: 'Gestion des visas',                       path: '/dossiers-communs/visa',        icon: FiMapPin,      color: 'indigo',   locked: false  },
   // { label: 'Location',           desc: 'Véhicules et matériel',                   path: '',                              icon: FiLock,        color: 'gray',   locked: true  },
   // { label: 'Activité',           desc: 'Excursions et loisirs',                   path: '',                              icon: FiLock,        color: 'gray',   locked: true  },
   // { label: 'Guidage',            desc: 'Planning des guides',                     path: '',                              icon: FiLock,        color: 'gray',   locked: true  },
@@ -43,6 +43,56 @@ const COLOR_MAP: Record<string, {
   rose:   { gradient: 'from-rose-500 to-pink-600',    iconBg: 'bg-rose-500/10',   iconText: 'text-rose-500',   border: 'border-rose-100 hover:border-rose-300',    glow: 'hover:shadow-rose-100',   badge: 'bg-rose-50 text-rose-600',   arrow: 'text-rose-400' },
   violet: { gradient: 'from-violet-500 to-purple-600',iconBg: 'bg-violet-500/10', iconText: 'text-violet-500', border: 'border-violet-100 hover:border-violet-300', glow: 'hover:shadow-violet-100', badge: 'bg-violet-50 text-violet-600',arrow: 'text-violet-400' },
   orange: { gradient: 'from-orange-400 to-red-500',   iconBg: 'bg-orange-500/10', iconText: 'text-orange-500', border: 'border-orange-100 hover:border-orange-300', glow: 'hover:shadow-orange-100', badge: 'bg-orange-50 text-orange-600',arrow: 'text-orange-400' },
+  teal: { gradient: 'from-teal-500 to-emerald-600', iconBg: 'bg-teal-500/10', iconText: 'text-teal-500', border: 'border-teal-100 hover:border-teal-300', glow: 'hover:shadow-teal-100', badge: 'bg-teal-50 text-teal-600', arrow: 'text-teal-400' },
+  indigo: {
+    gradient: 'from-blue-700 to-blue-700',
+    iconBg: 'bg-blue-700/10',
+    iconText: 'text-blue-700',
+    border: 'border-blue-100 hover:border-blue-300',
+    glow: 'hover:shadow-blue-100',
+    badge: 'bg-blue-50 text-blue-600',
+    arrow: 'text-blue-700'
+  },
+
+  cyan: {
+    gradient: 'from-cyan-400 to-cyan-600',
+    iconBg: 'bg-cyan-500/10',
+    iconText: 'text-cyan-500',
+    border: 'border-cyan-100 hover:border-cyan-300',
+    glow: 'hover:shadow-cyan-100',
+    badge: 'bg-cyan-50 text-cyan-600',
+    arrow: 'text-cyan-400'
+  },
+
+  lime: {
+    gradient: 'from-lime-400 to-green-500',
+    iconBg: 'bg-lime-500/10',
+    iconText: 'text-lime-500',
+    border: 'border-lime-100 hover:border-lime-300',
+    glow: 'hover:shadow-lime-100',
+    badge: 'bg-lime-50 text-lime-600',
+    arrow: 'text-lime-400'
+  },
+
+  red: {
+    gradient: 'from-red-500 to-rose-600',
+    iconBg: 'bg-red-500/10',
+    iconText: 'text-red-500',
+    border: 'border-red-100 hover:border-red-300',
+    glow: 'hover:shadow-red-100',
+    badge: 'bg-red-50 text-red-600',
+    arrow: 'text-red-400'
+  },
+
+  yellow: {
+    gradient: 'from-yellow-400 to-amber-500',
+    iconBg: 'bg-yellow-500/10',
+    iconText: 'text-yellow-500',
+    border: 'border-yellow-100 hover:border-yellow-300',
+    glow: 'hover:shadow-yellow-100',
+    badge: 'bg-yellow-50 text-yellow-600',
+    arrow: 'text-yellow-400'
+  },
   gray:   { gradient: 'from-gray-300 to-gray-400',    iconBg: 'bg-gray-100',      iconText: 'text-gray-300',   border: 'border-gray-100',                          glow: '',                        badge: '',                           arrow: '' },
 };
 

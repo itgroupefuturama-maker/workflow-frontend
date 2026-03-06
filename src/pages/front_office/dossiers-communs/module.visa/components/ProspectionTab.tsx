@@ -6,6 +6,8 @@ import { createProspectionEntete, fetchProspectionEntetes, type VisaProspectionL
 import StatusBadge from './StatusBadge';
 import CreateProspectionLigneModal from './CreateProspectionLigneModal';
 import CreateDevisModal from './CreateDevisModal';
+import { VisaHeader } from './VisaHeader';
+import DossierActifCard from '../../../../../components/CarteDossierActif/DossierActifCard';
 
 interface Props {
   prestationId: string;
@@ -28,6 +30,8 @@ const ProspectionTab = ({ prestationId }: Props) => {
 
   const handleCreate = async () => {
     if (!prestationId) return;
+    console.log(prestationId);
+    
     const result = await dispatch(createProspectionEntete(prestationId));
     // re-fetch après création pour avoir la liste à jour
     if (createProspectionEntete.fulfilled.match(result)) {
@@ -40,9 +44,19 @@ const ProspectionTab = ({ prestationId }: Props) => {
   return (
     <div className="min-h-screen bg-neutral-50 p-4 space-y-4">
 
+      <VisaHeader
+        numerovisa={prestationId}
+        navigate={navigate}
+        isDetail={false}
+        isProspection={true}
+        isDevis={false}
+      />
+
+      <DossierActifCard gradient="from-blue-400 via-indigo-400 to-blue-500" />
+
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-gray-800">Prospections</h2>
+        <h2 className="text-xl font-bold text-gray-800">Liste des Prospections</h2>
         <button
           onClick={handleCreate}
           disabled={creating || !prestationId}
@@ -75,17 +89,6 @@ const ProspectionTab = ({ prestationId }: Props) => {
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
           </svg>
           Chargement...
-        </div>
-      )}
-
-      {/* Liste vide */}
-      {!loading && prospections.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-16 text-gray-400 space-y-2">
-          <svg className="h-12 w-12 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
-              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          <p className="text-sm">Aucune prospection pour ce dossier</p>
         </div>
       )}
 

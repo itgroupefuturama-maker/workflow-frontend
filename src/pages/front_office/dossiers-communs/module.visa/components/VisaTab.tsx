@@ -3,6 +3,9 @@ import type { RootState } from '../../../../../app/store';
 import type { VisaEntete } from '../../../../../app/front_office/parametre_visa/visaEnteteSlice';
 import StatusBadge from './StatusBadge';
 import { useNavigate } from 'react-router-dom';
+import { VisaHeader } from './VisaHeader';
+import { FiArrowDownCircle, FiArrowRight } from 'react-icons/fi';
+import DossierActifCard from '../../../../../components/CarteDossierActif/DossierActifCard';
 
 const VisaTab = () => {
   const { data: visaEntetes, loading, error } =
@@ -14,6 +17,16 @@ const VisaTab = () => {
 
   return (
     <div className="min-h-screen bg-neutral-50 p-4 space-y-4">
+
+      <VisaHeader
+        numerovisa=''
+        navigate={navigate}
+        isDetail={false}
+        isProspection={false}
+        isDevis={false}
+      />
+
+      <DossierActifCard gradient="from-blue-400 via-indigo-400 to-blue-500" />
 
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -75,6 +88,7 @@ const VisaTab = () => {
               <div className="flex items-center gap-2">
                 <StatusBadge status={entete.statut} />
                 <StatusBadge status={entete.statutEntete} />
+                <FiArrowRight />
               </div>
             </div>
 

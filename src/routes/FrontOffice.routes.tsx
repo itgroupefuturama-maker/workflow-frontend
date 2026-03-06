@@ -32,6 +32,10 @@ import ParametreViewVisa from "../pages/front_office/dossiers-communs/module.vis
 import PageViewVisa from "../pages/front_office/dossiers-communs/module.visa/sous.section/PageViewVisa";
 import PageDetailProspection from "../pages/front_office/dossiers-communs/module.visa/sous.section/sous.section.page/PageDetailProspection";
 import PageDetailVisa from "../pages/front_office/dossiers-communs/module.visa/sous.section/sous.section.page/PageDetailVisa";
+import HomePageAssurance from "../pages/front_office/dossiers-communs/module.assurance/HomePage.assurance";
+import AccueilViewAssurance from "../pages/front_office/dossiers-communs/module.assurance/sous.section/AccueilViewAssurance";
+import ParametreViewAssurance from "../pages/front_office/dossiers-communs/module.assurance/sous.section/ParametreViewAssurance";
+import PageViewAssurance from "../pages/front_office/dossiers-communs/module.assurance/sous.section/PageViewAssurance";
 
 export function frontOfficeRoutes() {
   return (
@@ -90,6 +94,13 @@ export function frontOfficeRoutes() {
         <Route path="pages" element={<PageViewVisa />} />
         <Route path="details/:enteteId" element={<PageDetailProspection />} />
         <Route path="visa-detail/:visaEnteteId" element={<PageDetailVisa />} />
+      </Route>
+
+      <Route path="dossiers-communs/assurance" element={<HomePageAssurance />}>
+        <Route index element={<Navigate to="accueil" replace />} />
+        <Route path="accueil" element={<AccueilViewAssurance />} />
+        <Route path="parametres" element={<ParametreViewAssurance />} />
+        <Route path="pages" element={<PageViewAssurance />} />
       </Route>
     </>
   );

@@ -13,6 +13,7 @@ import HotelReservationsList from './sous.section.page/HotelReservationsList';
 import ModalBenchmarkingToHotel from '../../../../../components/modals/Hotel/ModalBenchmarkingToHotel';
 import { clearCommentaireFournisseur, fetchLastCommentaireFournisseur } from '../../../../../app/front_office/fournisseurCommentaire/fournisseurCommentaireSlice';
 import FournisseurAlerteBadge from '../../../../../components/fournisseurAlerteBadget/FournisseurAlerteBadge';
+import DossierActifCard from '../../../../../components/CarteDossierActif/DossierActifCard';
 
 const PageViewHotel = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -190,11 +191,11 @@ const PageViewHotel = () => {
   return (
     <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab}>
       {activeTab === 'benchmarking' ? (
-        <div className="min-h-screen bg-neutral-50">
-          <div className='flex justify-between mb-5'>
-            <div className="">
-              <HotelHeader numerohotel={dossierActif?.numero} navigate={navigate} isBenchmarking={true}/>
-            </div>
+        <div className="min-h-screen bg-neutral-50 space-y-4">
+          <div className='flex justify-between'>
+
+            <HotelHeader numerohotel={dossierActif?.numero} navigate={navigate} isBenchmarking={true}/>
+
 
             {/* Formulaire création - Design épuré */}
             {prestationId && fournisseurs.length > 0 && !fournisseursLoading && (
@@ -243,39 +244,7 @@ const PageViewHotel = () => {
             </div>
           )}
 
-          <div className="bg-white border border-gray-200 rounded-lg p-6 mb-5">
-            {/* Grille d'informations */}
-            <div className="grid grid-cols-4 gap-x-8 gap-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">N° dossier Commun</p>
-                  <p className="text-xl font-semibold text-gray-800 ">{dossierActif?.numero}</p>
-                </div>
-
-                {dossierActif?.raisonAnnulation && (
-                  <div className="flex items-center gap-2 bg-red-50 border border-red-100 text-red-600 text-xs font-medium px-3 py-1.5 rounded-full">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" />
-                    Annulé
-                  </div>
-                )}
-              </div>
-
-              {dossierActif?.raisonAnnulation && (
-                <Field label="Raison d'annulation" value={dossierActif.raisonAnnulation} />
-              )}
-
-              {dossierActif?.dateAnnulation && (
-                <Field label="Date d'annulation" value={dossierActif.dateAnnulation} />
-              )}
-
-              <Field label="Contact principal"   value={dossierActif?.contactPrincipal} />
-              <Field label="WhatsApp"            value={dossierActif?.whatsapp} />
-              <Field label="Réf. Travel Planner" value={dossierActif?.referenceTravelPlaner} />
-              <Field label="Client facturé"      value={dossierActif?.clientfacture?.libelle} />
-              <Field label="Code client"         value={dossierActif?.clientfacture?.code} />
-
-            </div>
-          </div>
+          <DossierActifCard gradient="from-orange-400 via-red-400 to-orange-500" />
 
           {entetesLoading ? (
             <div className="flex items-center justify-center py-16">

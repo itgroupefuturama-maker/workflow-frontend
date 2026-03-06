@@ -4,6 +4,7 @@ import type { RootState, AppDispatch } from '../../../../../../app/store';
 import { fetchHotelReservations } from '../../../../../../app/front_office/parametre_hotel/hotelReservationEnteteSlice';
 import { useNavigate } from 'react-router-dom';
 import { HotelHeader } from '../../components/HotelHeader';
+import DossierActifCard from '../../../../../../components/CarteDossierActif/DossierActifCard';
 
 interface Props {
   prestationId: string;
@@ -46,10 +47,11 @@ const HotelReservationsList = ({ prestationId, dossierNumero }: Props) => {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50">
-      <div className="mb-5">
-        <HotelHeader numerohotel={dossierNumero} navigate={navigate} isBenchmarking={false} />
-      </div>
+    <div className="min-h-screen bg-neutral-50 space-y-4">
+
+      <HotelHeader numerohotel={dossierNumero} navigate={navigate} isBenchmarking={false} />
+
+      <DossierActifCard gradient="from-orange-400 via-red-400 to-orange-500" />
 
       <div className="mb-6">
         <h2 className="text-xl font-bold text-neutral-800">Réservations Hôtel</h2>

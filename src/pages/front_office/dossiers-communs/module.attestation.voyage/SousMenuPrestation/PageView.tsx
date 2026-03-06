@@ -8,6 +8,7 @@ import TabContainer from '../../../../../layouts/TabContainer';
 import { clearCommentaireFournisseur, fetchLastCommentaireFournisseur } from '../../../../../app/front_office/fournisseurCommentaire/fournisseurCommentaireSlice';
 import FournisseurAlerteBadge from '../../../../../components/fournisseurAlerteBadget/FournisseurAlerteBadge';
 import { FiClock } from 'react-icons/fi';
+import DossierActifCard from '../../../../../components/CarteDossierActif/DossierActifCard';
 
 const Field = ({ label, value }: { label: string; value?: string | null }) => {
   if (!value) return null;
@@ -176,39 +177,7 @@ const PageViewAttestation = () => {
           </div>
         )}
 
-        <div className="bg-white border border-gray-200 rounded-lg p-6 mb-5">
-          {/* Grille d'informations */}
-          <div className="grid grid-cols-4 gap-x-8 gap-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wider">N° dossier Commun</p>
-                <p className="text-xl font-semibold text-gray-800 ">{dossierActif?.numero}</p>
-              </div>
-
-              {dossierActif?.raisonAnnulation && (
-                <div className="flex items-center gap-2 bg-red-50 border border-red-100 text-red-600 text-xs font-medium px-3 py-1.5 rounded-full">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" />
-                  Annulé
-                </div>
-              )}
-            </div>
-
-            {dossierActif?.raisonAnnulation && (
-              <Field label="Raison d'annulation" value={dossierActif.raisonAnnulation} />
-            )}
-
-            {dossierActif?.dateAnnulation && (
-              <Field label="Date d'annulation" value={dossierActif.dateAnnulation} />
-            )}
-
-            <Field label="Contact principal"   value={dossierActif?.contactPrincipal} />
-            <Field label="WhatsApp"            value={dossierActif?.whatsapp} />
-            <Field label="Réf. Travel Planner" value={dossierActif?.referenceTravelPlaner} />
-            <Field label="Client facturé"      value={dossierActif?.clientfacture?.libelle} />
-            <Field label="Code client"         value={dossierActif?.clientfacture?.code} />
-
-          </div>
-        </div>
+        <DossierActifCard gradient="from-rose-400 via-pink-400 to-rose-500" />
 
         {loading ? (
           <div className="bg-white rounded-lg p-10 text-center shadow">

@@ -6,7 +6,7 @@ const HomePageHotel = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="flex h-screen bg-[#F8FAFC] overflow-hidden">
+    <div className="flex flex-1 h-full min-h-0 bg-[#F8FAFC] overflow-hidden">
       {/* La Sidebar prendra automatiquement 100% de la hauteur grâce à h-screen */}
       <Sidebar module="hotel"/>
       {/* Le contenu principal */}
