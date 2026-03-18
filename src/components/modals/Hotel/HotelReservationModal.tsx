@@ -170,8 +170,8 @@ const HotelReservationModal: React.FC<HotelReservationModalProps> = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col">
+    <div className="fixed overflow-y-auto inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[80vh] overflow-hidden flex flex-col">
         {/* Header - Fixed */}
         <div className="bg-gray-50 border-b border-gray-200 px-6 py-4 flex justify-between items-center">
           <div>

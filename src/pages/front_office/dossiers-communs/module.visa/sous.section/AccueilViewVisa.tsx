@@ -136,7 +136,7 @@ const AccueilViewVisa = () => {
           ONGLET DASHBOARD
       ══════════════════════════════════════════════════════════ */}
       {activeTab === 'dashboard' && (
-        <div className="space-y-6">
+        <div className="space-y-6 mt-5">
 
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -243,7 +243,7 @@ const AccueilViewVisa = () => {
           ONGLET ÉTAT DES VENTES
       ══════════════════════════════════════════════════════════ */}
       {activeTab === 'etat' && (
-        <div className="space-y-6">
+        <div className="space-y-6 mt-5">
 
           {/* ── Filtres ── */}
           <div className="bg-white border border-gray-200 rounded-xl p-5">

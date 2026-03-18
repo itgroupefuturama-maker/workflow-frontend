@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchTodos } from '../../../../app/front_office/todosSlice';
 import { Outlet } from 'react-router-dom';
 import type {AppDispatch, RootState } from '../../../../app/store';
 import { fetchProspectionEntetes, updateProspectionEntete, createProspectionEntete } from '../../../../app/front_office/prospectionsEntetesSlice';
@@ -49,7 +48,6 @@ const HomePageTicketing = () => {
   useEffect(() => {
     if (!prestationId) return; // ← on attend que prestationId soit défini
     dispatch(fetchFournisseurs());
-    dispatch(fetchTodos());
     dispatch(fetchProspectionEntetes(prestationId));
   }, [prestationId, dispatch]);
 

@@ -6,7 +6,7 @@ import DossierCommunManage from "../pages/front_office/dossiers-communs/module.d
 
 import ToDoList from "../pages/front_office/dossiers-communs/todolist/ToDoList";
 import Prospection from "../pages/front_office/dossiers-communs/module.ticketing/prospection/Prospection";
-import ParametreTicketing from "../pages/front_office/dossiers-communs/module.ticketing/ticketing.sous.module/ParamétreTicketing";
+// import ParametreTicketing from "../pages/front_office/dossiers-communs/module.ticketing/ticketing.sous.module/ParamétreTicketing";
 import Devis from "../pages/front_office/dossiers-communs/module.ticketing/ticketing.sous.module/Devis";
 import Billet from "../pages/front_office/dossiers-communs/module.ticketing/ticketing.sous.module/Billet";
 import AccueilView from "../pages/front_office/dossiers-communs/module.ticketing/ticketing.sous.module/SousMenuPrestation/AccueilView";
@@ -36,6 +36,12 @@ import HomePageAssurance from "../pages/front_office/dossiers-communs/module.ass
 import AccueilViewAssurance from "../pages/front_office/dossiers-communs/module.assurance/sous.section/AccueilViewAssurance";
 import ParametreViewAssurance from "../pages/front_office/dossiers-communs/module.assurance/sous.section/ParametreViewAssurance";
 import PageViewAssurance from "../pages/front_office/dossiers-communs/module.assurance/sous.section/PageViewAssurance";
+import PageDetailPassager from "../pages/front_office/dossiers-communs/module.visa/sous.section/sous.section.page/PageDetailPassager";
+import PageDetailProspectionAssurance from "../pages/front_office/dossiers-communs/module.assurance/sous.section/sous.section.page/PageDetailProspectionAssurance";
+import PageDetailAssurance from "../pages/front_office/dossiers-communs/module.assurance/sous.section/sous.section.page/PageDetailAssurance";
+import PageDetailPassagerAssurance from "../pages/front_office/dossiers-communs/module.assurance/sous.section/sous.section.page/PageDetailPassagerAssurance";
+import HomePageBaseDonnee from "../pages/front_office/dossiers-communs/module.base.donnee/HomePageBaseDonnee";
+import PageDetailClient from "../pages/front_office/dossiers-communs/module.base.donnee/sous.section/PageDetailClient";
 
 export function frontOfficeRoutes() {
   return (
@@ -67,7 +73,7 @@ export function frontOfficeRoutes() {
       </Route>
 
       {/* <Route path="dossiers-communs/:prestationId/prospection/:enteteId" element={<Prospection />} /> */}
-      <Route path="dossiers-communs/ticketing/parametres" element={<ParametreTicketing />} />
+      {/* <Route path="dossiers-communs/ticketing/parametres" element={<ParametreTicketing />} /> */}
       <Route path="dossiers-communs/attestation" element={<Attestation />} >
         <Route index element={<Navigate to="accueil" replace />} />
         <Route path="accueil" element={<AccueilView />} />
@@ -94,6 +100,7 @@ export function frontOfficeRoutes() {
         <Route path="pages" element={<PageViewVisa />} />
         <Route path="details/:enteteId" element={<PageDetailProspection />} />
         <Route path="visa-detail/:visaEnteteId" element={<PageDetailVisa />} />
+        <Route path="passager/:passagerId" element={<PageDetailPassager />} />
       </Route>
 
       <Route path="dossiers-communs/assurance" element={<HomePageAssurance />}>
@@ -101,7 +108,13 @@ export function frontOfficeRoutes() {
         <Route path="accueil" element={<AccueilViewAssurance />} />
         <Route path="parametres" element={<ParametreViewAssurance />} />
         <Route path="pages" element={<PageViewAssurance />} />
+        <Route path="detailsProspection/:enteteId" element={<PageDetailProspectionAssurance />} />
+        <Route path="detailsAssurance/:ligneId" element={<PageDetailAssurance />} />
+        <Route path="passager/:passagerId" element={<PageDetailPassagerAssurance />} />
       </Route>
+
+      <Route path="dossiers-communs/base-donnee" element={<HomePageBaseDonnee />}/>   
+      <Route path="dossiers-communs/base-donnee/details/:clientId" element={<PageDetailClient />} />
     </>
   );
 }

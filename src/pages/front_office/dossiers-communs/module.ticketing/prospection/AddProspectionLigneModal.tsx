@@ -9,18 +9,6 @@ interface AddProspectionLigneModalProps {
   onSave: (payload: any) => Promise<void>;
 }
 
-// function calculerDureeVol(dateDepart: string, dateArrive: string): string {
-//   if (!dateDepart || !dateArrive) return '';
-//   const depart = new Date(dateDepart);
-//   const arrive = new Date(dateArrive);
-//   const diffMs = arrive.getTime() - depart.getTime();
-//   if (diffMs <= 0) return '';
-//   const totalMinutes = Math.floor(diffMs / 60000);
-//   const heures = Math.floor(totalMinutes / 60);
-//   const minutes = totalMinutes % 60;
-//   return `${heures}h${String(minutes).padStart(2, '0')}`;
-// }
-
 export default function AddProspectionLigneModal({
   isOpen,
   onClose,
@@ -247,7 +235,7 @@ export default function AddProspectionLigneModal({
   const numberCls = inputCls + " text-right font-medium";
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+    <div className="fixed top-16 inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-9999 p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl max-h-[94vh] overflow-hidden flex flex-col">
 
         {/* ── Header ── */}

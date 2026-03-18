@@ -66,7 +66,7 @@ const KpiCard = ({
   </div>
 );
 
-const AccueilViewVisa = () => {
+const AccueilViewAssurance = () => {
   const location = useLocation();
   const dispatch = useAppDispatch();
 
@@ -130,13 +130,13 @@ const AccueilViewVisa = () => {
   ];
 
   return (
-    <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab}>
+    <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} color="bg-blue-400" >
 
       {/* ══════════════════════════════════════════════════════════
           ONGLET DASHBOARD
       ══════════════════════════════════════════════════════════ */}
       {activeTab === 'dashboard' && (
-        <div className="space-y-6">
+        <div className="space-y-6 mt-5">
 
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -243,7 +243,7 @@ const AccueilViewVisa = () => {
           ONGLET ÉTAT DES VENTES
       ══════════════════════════════════════════════════════════ */}
       {activeTab === 'etat' && (
-        <div className="space-y-6">
+        <div className="space-y-6 mt-5">
 
           {/* ── Filtres ── */}
           <div className="bg-white border border-gray-200 rounded-xl p-5">
@@ -547,4 +547,4 @@ const AccueilViewVisa = () => {
   );
 };
 
-export default AccueilViewVisa;
+export default AccueilViewAssurance;

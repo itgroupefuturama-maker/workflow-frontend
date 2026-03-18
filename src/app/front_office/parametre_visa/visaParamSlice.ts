@@ -19,6 +19,14 @@ export interface VisaParam {
   visaDuree?: { duree: number };
   visaEntree?: { entree: string };
   pays?: { pays: string; photo: string };
+  visaDoc?: Array<{ 
+    id: string;
+    visaDocParams: {
+      id: string;
+      code: string;
+      document: string;
+    }
+  }>;
 }
 
 interface VisaParamState { data: VisaParam[]; loading: boolean; error: string | null; }

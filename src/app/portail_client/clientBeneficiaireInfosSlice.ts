@@ -3,13 +3,14 @@ import axiosInstance from '../../service/Axios';
 
 export interface ClientBeneficiaireInfo {
   id: string;
-  clientbeneficiaireId: string;
+  clientbeneficiaireId: string;  // ← minuscule maintenant
   prenom: string;
   nom: string;
   nationalite: string;
-  clientType: 'ADULTE' | 'ENFANT' | 'BEBE' | 'JEUNE';
+  clientType: 'ADULTE' | 'ENFANT' | 'BEBE' | 'JEUNE' | null; // ← peut être null
   typeDoc: 'LAISSE_PASSER' | 'PASSEPORT';
   referenceDoc: string;
+  document: string | null;       // ← c'est la référence doc maintenant (pas un File)
   referenceCin?: string | null;
   dateDelivranceDoc: string;
   dateValiditeDoc: string;
@@ -17,11 +18,18 @@ export interface ClientBeneficiaireInfo {
   dateValiditeCin?: string | null;
   whatsapp?: string | null;
   tel?: string | null;
-  document?: string | null;     // chemin du fichier
-  cin?: string | null;          // chemin du fichier
+  cin?: string | null;
+  clientBeneficiaireFormId: string; // ← nouveau champ
   statut: string;
   createdAt: string;
   updatedAt: string;
+  clientbeneficiaire?: {          // ← nouveau champ nested
+    id: string;
+    code: string;
+    libelle: string;
+    statut: string;
+  };
+  dossierCommunClient?: any[];
 }
 
 export interface ClientBeneficiaireInfosState {

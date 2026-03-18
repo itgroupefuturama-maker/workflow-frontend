@@ -9,12 +9,13 @@ import { fetchAttestationEnteteDetail, fetchAttestationSuivi, fetchDevisForPasse
 import AddLigneModal from './AddLigneModal';
 import {   fetchCommentairesByPrestation } from '../../../../../app/front_office/commentaireSlice';
 import { fetchTodosByPrestation} from '../../../../../app/front_office/todosSlice';
-import SuiviTabContent from './SuiviTabContent';
 import { AttestationHeader } from './components.attestation/AttestationHeader';
 import ViewDevisModal from '../../../../../components/modals/Attestation/ViewDevisModal';
 import PassagerDropdown from './components.attestation/PassagerDropdown';
 import { API_URL } from '../../../../../service/env';
 import TabContainer from '../../../../../layouts/TabContainer';
+import SuiviTabSection from '../../module.suivi/SuiviTabSection';
+import { fetchSuivis } from '../../../../../app/front_office/suiviSlice';
 
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
@@ -25,18 +26,12 @@ const DetailAttestation = () => {
   const location = useLocation();
 
   const {
-    items: entetes,           // ← renommé pour éviter confusion
+    items: entetes,
     selectedId,
     selectedDetail,
     selectedSuivi,
     loading: loadingEntete,
   } = useSelector((state: RootState) => state.attestationEntete);
-
-  // Pour les todos / rappels
-  const {
-    items: todos,             // ← c'est CELA qu'il faut utiliser dans la liste
-    loading: loadingTodos,
-  } = useSelector((state: RootState) => state.todos);
 
   const { items: destinations, loading: loadingDestinations } = useSelector((state: RootState) => state.destination);
   const { current: clientFactureDetail, loading: loadingClientFactureDetail } = useSelector(
@@ -44,10 +39,10 @@ const DetailAttestation = () => {
   );
 
   const tabs = [
-    { id: 'attestation', label: 'Listes des entête attestation' }
+    { id: 'prospection', label: 'Listes des entête attestation' }
   ];
   
-  const [activeTabEntete, setActiveTabEntete] = useState(location.state?.targetTab || 'attestation');
+  const [activeTabEntete, setActiveTabEntete] = useState(location.state?.targetTab || 'prospection');
   
 
   const dossierActif = useSelector((state: RootState) => state.dossierCommun.currentClientFactureId);
@@ -63,17 +58,9 @@ const DetailAttestation = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'lignes' | 'suivi'>('lignes'); // ← onglets
 
-  // Récupère les commentaires depuis le store
-  const { list: commentaires, loading: loadingCommentaires } = useSelector(
-    (state: RootState) => state.commentaire
-  );
-
   const [devisModalOpen, setDevisModalOpen] = useState(false);
 // Dans ViewDevisModal.tsx
   const { selectedDevisDetail } = useSelector((state: RootState) => state.attestationEntete);
-
-// Puis utiliser selectedDevisDetail au lieu de props.devisData
-
 
   useEffect(() => {
     if (destinations.length === 0) dispatch(fetchDestinations());
@@ -91,21 +78,6 @@ const DetailAttestation = () => {
       dispatch(fetchAttestationSuivi(selectedId)); // ← charge le suivi
     }
   }, [dispatch, selectedId]);
-
-  // Charge les commentaires quand on passe sur l'onglet suivi
-  useEffect(() => {
-    if (activeTab === 'suivi' && prestationId) {
-      dispatch(fetchCommentairesByPrestation(prestationId));
-    }
-  }, [dispatch, activeTab, prestationId]);
-
-  useEffect(() => {
-    if (activeTab === 'suivi' && prestationId) {
-      // Charger les rappels spécifiques à cette prestation
-      dispatch(fetchTodosByPrestation(prestationId));
-    }
-  }, [dispatch, activeTab, prestationId]);
-
 
   const handleBack = () => navigate(-1);
 
@@ -132,7 +104,7 @@ const DetailAttestation = () => {
     <TabContainer tabs={tabs} activeTab={activeTabEntete} setActiveTab={setActiveTabEntete}>
       <div className="">
         {/* Header */}
-        <div className="mb-6">
+        <div className="mt-5 mb-6">
           <AttestationHeader
             numeroAttestation={selectedEntete?.numeroEntete}
             navigate={navigate}
@@ -141,65 +113,89 @@ const DetailAttestation = () => {
         </div>
 
         {/* Infos principales (tu peux extraire dans un composant) */}
-        <div className="bg-white rounded-xl p-8 border border-gray-200 mb-2">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-700 mb-4">Informations principales</h2>
-              <dl className="space-y-4">
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">N° En-tête</dt>
-                  <dd className="mt-1 text-gray-900 font-medium text-lg">
-                    {selectedEntete.numeroEntete}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">N° Dossier</dt>
-                  <dd className="mt-1 text-gray-900">
+        <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden mb-2">
+
+          {/* Header de la card */}
+          <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
+            <p className="text-xs font-bold uppercase tracking-widest text-gray-400">Détail de l'en-tête</p>
+            <span className="font-mono text-xs text-indigo-600 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md">
+              {selectedEntete.numeroEntete}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-100">
+
+            {/* Colonne gauche — Informations principales */}
+            <div className="px-5 py-4 space-y-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                Informations principales
+              </p>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between py-2.5 border-b border-gray-50">
+                  <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">N° Dossier</span>
+                  <span className="text-sm font-medium text-gray-800">
                     {selectedEntete.prestation?.numeroDos || '—'}
-                  </dd>
+                  </span>
                 </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Fournisseur</dt>
-                  <dd className="mt-1 text-gray-900">
-                    {selectedEntete.fournisseur?.libelle || '—'}
+
+                <div className="flex items-center justify-between py-2.5 border-b border-gray-50">
+                  <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">Fournisseur</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-800">
+                      {selectedEntete.fournisseur?.libelle || '—'}
+                    </span>
                     {selectedEntete.fournisseur?.code && (
-                      <span className="text-gray-500 text-sm ml-2">
-                        ({selectedEntete.fournisseur.code})
+                      <span className="font-mono text-[11px] bg-gray-100 text-gray-500 px-2 py-0.5 rounded-md border border-gray-200">
+                        {selectedEntete.fournisseur.code}
                       </span>
                     )}
-                  </dd>
+                  </div>
                 </div>
-              </dl>
+              </div>
             </div>
-            <div>
-              <h2 className="text-lg font-semibold text-gray-700 mb-4">Montants & Dates</h2>
-              <dl className="space-y-4">
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Total Commission</dt>
-                  <dd className="mt-1 text-xl font-bold text-green-700">
+
+            {/* Colonne droite — Montants & Dates */}
+            <div className="px-5 py-4 space-y-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">
+                Montants & Dates
+              </p>
+
+              <div className="space-y-3">
+
+                {/* Total commission — mis en avant */}
+                <div className="bg-emerald-50 border border-emerald-100 rounded-xl px-4 py-3 flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-widest text-emerald-500">
+                    Total Commission
+                  </span>
+                  <span className="text-lg font-bold text-emerald-700">
                     {selectedEntete.totalCommission.toLocaleString('fr-FR')} Ar
-                  </dd>
+                  </span>
                 </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Créé le</dt>
-                  <dd className="mt-1 text-gray-900">
+
+                <div className="flex items-center justify-between py-2.5 border-b border-gray-50">
+                  <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">Créé le</span>
+                  <span className="text-sm font-medium text-gray-800">
                     {new Date(selectedEntete.createdAt).toLocaleString('fr-FR', {
                       dateStyle: 'long',
                       timeStyle: 'short',
                     })}
-                  </dd>
+                  </span>
                 </div>
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Mis à jour le</dt>
-                  <dd className="mt-1 text-gray-900">
+
+                <div className="flex items-center justify-between py-2.5">
+                  <span className="text-xs font-semibold uppercase tracking-widest text-gray-400">Mis à jour le</span>
+                  <span className="text-sm font-medium text-gray-800">
                     {new Date(selectedEntete.updatedAt).toLocaleString('fr-FR', {
                       dateStyle: 'long',
                       timeStyle: 'short',
                     })}
-                  </dd>
+                  </span>
                 </div>
-              </dl>
+
+              </div>
             </div>
+
           </div>
         </div>
 
@@ -257,7 +253,7 @@ const DetailAttestation = () => {
                         <thead className="bg-gray-50">
                           <tr>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Origin Line</th>  
+                            {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Origin Line</th>   */}
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Vol</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Compagnie</th>
                             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Itinéraire</th>
@@ -287,9 +283,9 @@ const DetailAttestation = () => {
                               </td>
 
                               {/* 2. Origin Line */}
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                              {/* <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                                 {selectedSuivi?.origineLigne || '—'}
-                              </td>
+                              </td> */}
 
                               {/* 3. Vol */}
                               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
@@ -394,12 +390,8 @@ const DetailAttestation = () => {
               )}
 
               {activeTab === 'suivi' && (
-                <SuiviTabContent
-                  selectedId={selectedId!}
-                  selectedDetail={selectedDetail}
-                  selectedSuivi={selectedSuivi}
+                <SuiviTabSection
                   prestationId={prestationId}
-                  loading={loadingDestinations || loadingClientFactureDetail || loadingCommentaires || loadingTodos}
                 />
               )}
             </div>

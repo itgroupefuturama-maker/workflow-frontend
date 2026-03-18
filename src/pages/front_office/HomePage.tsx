@@ -3,20 +3,20 @@ import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchDossiersCommuns } from '../../app/front_office/dossierCommunSlice';
 import type { RootState, AppDispatch } from '../../app/store';
-import { FiFolder, FiCheckCircle, FiTag, FiFileText, FiLock, FiSettings, FiHome, FiArrowRight, FiMapPin, FiShield } from 'react-icons/fi';
-import { fetchTodos } from '../../app/front_office/todosSlice';
+import { FiFolder, FiCheckCircle, FiTag, FiFileText, FiLock, FiSettings, FiHome, FiArrowRight, FiMapPin, FiShield, FiDatabase } from 'react-icons/fi';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
 const ALL_MODULES = [
   { label: 'Dossier',            desc: 'Accédez à vos fichiers partagés',        path: '/dossiers-communs',              icon: FiFolder,      color: 'blue',   locked: false },
   { label: 'To Do List',         desc: 'Gérez vos tâches quotidiennes',           path: '/dossiers-communs/todolist',    icon: FiCheckCircle, color: 'teal',  locked: false },
-  { label: 'Ticketing',          desc: 'Suivez vos demandes et tickets',          path: '/dossiers-communs/ticketing',   icon: FiTag,         color: 'amber',  locked: false },
-  { label: 'Attestation Voyage', desc: 'Générez vos attestations',                path: '/dossiers-communs/attestation', icon: FiFileText,    color: 'rose',   locked: false },
+  { label: 'Ticketing',          desc: 'Suivez vos demandes et tickets',          path: '/dossiers-communs/ticketing/pages',   icon: FiTag,         color: 'amber',  locked: false },
+  { label: 'Attestation Voyage', desc: 'Générez vos attestations',                path: '/dossiers-communs/attestation/pages', icon: FiFileText,    color: 'rose',   locked: false },
   { label: 'Paramètre',          desc: 'Commentaires et configurations',          path: '/dossiers-communs/parametre',   icon: FiSettings,    color: 'violet', locked: false },
-  { label: 'Hôtel',              desc: 'Gestion des réservations',                path: '/dossiers-communs/hotel',       icon: FiHome,        color: 'orange', locked: false },
-  { label: 'Assurance',          desc: 'Contrats et garanties',                   path: '/dossiers-communs/assurance',   icon: FiShield,        color: 'green',   locked: false  },
-  { label: 'Visa',               desc: 'Gestion des visas',                       path: '/dossiers-communs/visa',        icon: FiMapPin,      color: 'indigo',   locked: false  },
+  { label: 'Hôtel',              desc: 'Gestion des réservations',                path: '/dossiers-communs/hotel/pages',       icon: FiHome,        color: 'orange', locked: false },
+  { label: 'Assurance',          desc: 'Contrats et garanties',                   path: '/dossiers-communs/assurance/pages',   icon: FiShield,        color: 'green',   locked: false  },
+  { label: 'Visa',               desc: 'Gestion des visas',                       path: '/dossiers-communs/visa/pages',        icon: FiMapPin,      color: 'indigo',   locked: false  },
+  { label: 'Base de Données',     desc: 'Consultation information',               path: '/dossiers-communs/base-donnee', icon: FiDatabase,      color: 'cyan',   locked: false  },
   // { label: 'Location',           desc: 'Véhicules et matériel',                   path: '',                              icon: FiLock,        color: 'gray',   locked: true  },
   // { label: 'Activité',           desc: 'Excursions et loisirs',                   path: '',                              icon: FiLock,        color: 'gray',   locked: true  },
   // { label: 'Guidage',            desc: 'Planning des guides',                     path: '',                              icon: FiLock,        color: 'gray',   locked: true  },
@@ -107,7 +107,6 @@ function HomePage() {
   useEffect(() => {
     if (!token) { navigate('/login'); return; }
     dispatch(fetchDossiersCommuns());
-    dispatch(fetchTodos());
   }, [dispatch, token, navigate]);
 
   return (
@@ -225,8 +224,8 @@ function HomePage() {
 
                 <div className="relative z-10">
                   {/* Icône */}
-                  <div className={`w-11 h-11 sm:w-12 sm:h-12 ${c.iconBg} rounded-xl flex items-center justify-center mb-4 transition-all duration-300 group-hover:scale-105`}>
-                    <Icon className={`${c.iconText} transition-all duration-300`} size={22} />
+                  <div className={`w-13 h-13 sm:w-13 sm:h-13 ${c.iconBg} rounded-xl flex items-center justify-center mb-4 transition-all duration-300 group-hover:scale-105`}>
+                    <Icon className={`${c.iconText} transition-all duration-300`} size={30} />
                   </div>
 
                   {/* Texte */}

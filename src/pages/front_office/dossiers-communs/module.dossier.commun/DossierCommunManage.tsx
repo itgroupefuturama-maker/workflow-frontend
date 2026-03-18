@@ -330,15 +330,39 @@ const handleAnnulerDossier = async () => {
     <div className="max-w-[1600px] mx-auto px-6 py-8">
       {/* SECTION RESPONSABLES */}
       <div className="mb-8">
-        <div className="mb-6">
-          <h2 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
-            <FiUsers className="text-indigo-600" size={20} />
-            Attribution des responsables
-          </h2>
-          <p className="text-sm text-slate-600">
-            Gérez les responsables de chaque module ({currentColabs.length} module(s) activé(s))
-          </p>
+        <div className="flex justify-between items-center">
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold text-slate-900 mb-1 flex items-center gap-2">
+              <FiUsers className="text-indigo-600" size={20} />
+              Attribution des responsables
+            </h2>
+            <p className="text-sm text-slate-600">
+              Gérez les responsables de chaque module ({currentColabs.length} module(s) activé(s))
+            </p>
+          </div>
+
+          {/* FOOTER AVEC BOUTON DE SAUVEGARDE */}
+          <div className="flex justify-end">
+            <button
+              onClick={handleSaveColabs}
+              disabled={isSavingColabs}
+              className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
+            >
+              {isSavingColabs ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Sauvegarde en cours...
+                </>
+              ) : (
+                <>
+                  <FiCheck size={18} />
+                  Sauvegarder les responsables
+                </>
+              )}
+            </button>
+          </div>
         </div>
+        
 
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
           <div className="overflow-x-auto">
@@ -453,26 +477,7 @@ const handleAnnulerDossier = async () => {
             </table>
           </div>
 
-          {/* FOOTER AVEC BOUTON DE SAUVEGARDE */}
-          <div className="px-6 py-4 bg-slate-50 border-t border-slate-200 flex justify-end">
-            <button
-              onClick={handleSaveColabs}
-              disabled={isSavingColabs}
-              className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
-            >
-              {isSavingColabs ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Sauvegarde en cours...
-                </>
-              ) : (
-                <>
-                  <FiCheck size={18} />
-                  Sauvegarder les responsables
-                </>
-              )}
-            </button>
-          </div>
+          
         </div>
       </div>
     </div>

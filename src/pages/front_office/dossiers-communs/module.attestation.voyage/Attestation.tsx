@@ -2,9 +2,6 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from '../../../../layouts/Sidebar';
 
 const Attestation = () => {
-  const contextValue = {
-    prestationId: '',
-  };
 
   return (
     <div className="flex flex-1 h-full min-h-0 bg-[#F8FAFC] overflow-hidden">
@@ -15,7 +12,7 @@ const Attestation = () => {
         {/* Zone de contenu scrollable indépendamment de la sidebar */}
         <div className="flex-1 overflow-y-auto p-8">
           <div className="">
-            <Outlet context={contextValue} />
+            <Outlet />
           </div>
         </div>
       </div>

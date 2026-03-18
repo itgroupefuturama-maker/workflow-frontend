@@ -72,7 +72,7 @@ export const fetchHotelReservations = createAsyncThunk(
   'hotelReservation/fetchEntetes',
   async (prestationId: string, { rejectWithValue }) => {
     try {
-      const res = await axios.get(`/hotel/entete?prestationId=${prestationId}`); // ← adapte si query différente
+      const res = await axios.get(`/hotel/entete/prestation/${prestationId}`); // ← adapte si query différente
       return res.data.data; // on prend le tableau data[]
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.message || 'Erreur chargement résas hôtel');

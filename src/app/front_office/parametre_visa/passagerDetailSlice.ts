@@ -58,9 +58,40 @@ export interface ClientBeneficiaireForm {
   clientBeneficiairePerson: ClientBeneficiairePerson[];
 }
 
+// ── Nouveau type pour l'assurance ──────────────────────────────────────────
+
+export interface ClientAssuranceForm {
+  id: string;
+  nom: string;
+  prenom: string;
+  dateNaissance: string;
+  numero: string;
+  email: string;
+  adresse: string;
+  numeroPassport: string;
+  status: string;
+  assuranceId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AssuranceDetail {
+  id: string;
+  idAssuranceLigne: string;
+  zoneDestination: string;
+  destination: string;
+  assureur: string;
+  createdAt: string;
+  updatedAt: string;
+  userId: string;
+  clientAssuranceForms: ClientAssuranceForm[];
+}
+
 export interface UserDocument {
   id: string;
   idVisadocClient: string;
+  idAssuranceDoc?: string;       // présent pour ASSURANCE
+  type?: string;                  // 'ASSURANCE' | 'VISA'
   nomDoc: string;
   pj: string;
   status: string;
@@ -73,11 +104,17 @@ export interface PassagerDetail {
   id: string;
   nom: string;
   motDePasse: string;
-  idVisaAbstract: string;
+  idVisaAbstract?: string;
+  clientBeneficiaireId?: string;
+  userType: 'VISA' | 'ASSURANCE';   // ← nouveau champ
   actif: boolean;
   isValidate: boolean;
   createdAt: string;
+  // VISA
   clientBeneficiaireForms: ClientBeneficiaireForm[];
+  // ASSURANCE
+  clientAssuranceForms: ClientAssuranceForm[];
+  assurance: AssuranceDetail | null;
   userDocument: UserDocument[];
 }
 
@@ -93,24 +130,27 @@ const initialState: PassagerDetailState = {
   error: null,
 };
 
-// ── Thunk ──────────────────────────────────────────────────────────────────
+// ── Thunks communs ─────────────────────────────────────────────────────────
 
 export const fetchPassagerDetail = createAsyncThunk(
   'passagerDetail/fetch',
-  async (idVisaAbstract: string, { rejectWithValue }) => {
+  async (id: string, { rejectWithValue }) => {
     try {
-      const res = await axios.get(`/portail-client/client-form/visa-abstract/${idVisaAbstract}`);
+      const res = await axios.get(`/portail-client/client-form/information/${id}`);
       return unwrapApiResponse<PassagerDetail>(res.data, 'Erreur chargement détail passager');
     } catch (err: any) {
       return rejectWithValue(err.message || 'Erreur chargement détail passager');
     }
   }
 );
+
+// ── Thunks VISA ────────────────────────────────────────────────────────────
+
 export const validateClientForm = createAsyncThunk(
   'passagerDetail/validateForm',
   async (formId: string, { rejectWithValue }) => {
     try {
-      const res = await axios.patch(`/portail-client/client-form/${formId}/validate`);
+      const res = await axios.patch(`/portail-client/client-form/${formId}/validate-visa`);
       if (!res.data.success) return rejectWithValue(res.data.message || 'Erreur validation formulaire');
       return res.data.data;
     } catch (err: any) {
@@ -123,7 +163,7 @@ export const validateDocument = createAsyncThunk(
   'passagerDetail/validateDocument',
   async (documentId: string, { rejectWithValue }) => {
     try {
-      const res = await axios.patch(`/portail-client/document/${documentId}/validate`);
+      const res = await axios.patch(`/portail-client/document/${documentId}/validate-visa`);
       if (!res.data.success) return rejectWithValue(res.data.message || 'Erreur validation document');
       return res.data.data;
     } catch (err: any) {
@@ -136,11 +176,52 @@ export const syncPassagerInfo = createAsyncThunk(
   'passagerDetail/sync',
   async (idVisaAbstract: string, { rejectWithValue }) => {
     try {
-      const res = await axios.post(`/portail-client/sync-info/${idVisaAbstract}`);
+      const res = await axios.post(`/portail-client/sync-info-visa/${idVisaAbstract}`);
       if (!res.data.success) return rejectWithValue(res.data.message || 'Erreur synchronisation');
       return res.data.data;
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.message || 'Erreur synchronisation');
+    }
+  }
+);
+
+// ── Thunks ASSURANCE ───────────────────────────────────────────────────────
+
+export const validateAssuranceForm = createAsyncThunk(
+  'passagerDetail/validateAssuranceForm',
+  async (formId: string, { rejectWithValue }) => {
+    try {
+      const res = await axios.patch(`/portail-client/client-form/${formId}/validate-assurance`);
+      if (!res.data.success) return rejectWithValue(res.data.message || 'Erreur validation formulaire assurance');
+      return res.data.data;
+    } catch (err: any) {
+      return rejectWithValue(err.response?.data?.message || 'Erreur validation formulaire assurance');
+    }
+  }
+);
+
+export const validateAssuranceDocument = createAsyncThunk(
+  'passagerDetail/validateAssuranceDocument',
+  async (documentId: string, { rejectWithValue }) => {
+    try {
+      const res = await axios.patch(`/portail-client/document/${documentId}/validate-assurance`);
+      if (!res.data.success) return rejectWithValue(res.data.message || 'Erreur validation document assurance');
+      return res.data.data;
+    } catch (err: any) {
+      return rejectWithValue(err.response?.data?.message || 'Erreur validation document assurance');
+    }
+  }
+);
+
+export const syncAssuranceInfo = createAsyncThunk(
+  'passagerDetail/syncAssurance',
+  async (idAssurance: string, { rejectWithValue }) => {
+    try {
+      const res = await axios.post(`/portail-client/sync-info-assurance/${idAssurance}`);
+      if (!res.data.success) return rejectWithValue(res.data.message || 'Erreur synchronisation assurance');
+      return res.data.data;
+    } catch (err: any) {
+      return rejectWithValue(err.response?.data?.message || 'Erreur synchronisation assurance');
     }
   }
 );
@@ -154,24 +235,25 @@ const passagerDetailSlice = createSlice({
     clearPassagerDetail: (state) => { state.detail = null; state.error = null; },
   },
   extraReducers: (builder) => {
+    // helper pour réduire la répétition
+    const addLoadingCases = (thunk: any) => {
+      builder
+        .addCase(thunk.pending,   (state) => { state.loading = true;  state.error = null; })
+        .addCase(thunk.fulfilled, (state) => { state.loading = false; })
+        .addCase(thunk.rejected,  (state, action: any) => { state.loading = false; state.error = action.payload as string; });
+    };
+
     builder
-        .addCase(fetchPassagerDetail.pending,   (state) => { state.loading = true;  state.error = null; })
-        .addCase(fetchPassagerDetail.fulfilled, (state, action) => { state.loading = false; state.detail = action.payload; })
-        .addCase(fetchPassagerDetail.rejected,  (state, action) => { state.loading = false; state.error = action.payload as string; })
-        // ── validateClientForm ──
-        .addCase(validateClientForm.pending,   (state) => { state.loading = true;  state.error = null; })
-        .addCase(validateClientForm.fulfilled, (state) => { state.loading = false; })
-        .addCase(validateClientForm.rejected,  (state, action) => { state.loading = false; state.error = action.payload as string; })
+      .addCase(fetchPassagerDetail.pending,   (state) => { state.loading = true;  state.error = null; })
+      .addCase(fetchPassagerDetail.fulfilled, (state, action) => { state.loading = false; state.detail = action.payload; })
+      .addCase(fetchPassagerDetail.rejected,  (state, action: any) => { state.loading = false; state.error = action.payload as string; });
 
-        // ── validateDocument ──
-        .addCase(validateDocument.pending,   (state) => { state.loading = true;  state.error = null; })
-        .addCase(validateDocument.fulfilled, (state) => { state.loading = false; })
-        .addCase(validateDocument.rejected,  (state, action) => { state.loading = false; state.error = action.payload as string; })
-
-        // ── syncPassagerInfo ──
-        .addCase(syncPassagerInfo.pending,   (state) => { state.loading = true;  state.error = null; })
-        .addCase(syncPassagerInfo.fulfilled, (state) => { state.loading = false; })
-        .addCase(syncPassagerInfo.rejected,  (state, action) => { state.loading = false; state.error = action.payload as string; })
+    addLoadingCases(validateClientForm);
+    addLoadingCases(validateDocument);
+    addLoadingCases(syncPassagerInfo);
+    addLoadingCases(validateAssuranceForm);
+    addLoadingCases(validateAssuranceDocument);
+    addLoadingCases(syncAssuranceInfo);
   },
 });
 

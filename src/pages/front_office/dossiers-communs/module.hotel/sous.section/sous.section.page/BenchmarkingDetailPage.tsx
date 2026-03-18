@@ -30,11 +30,11 @@ const BenchmarkingDetailPage = () => {
   const { items: typesChambre } = useSelector((state: RootState) => state.typeChambre);
 
   const tabs = [
-    { id: 'benchmarking', label: 'Listes des entête benchmarking' },
+    { id: 'prospection', label: 'Listes des entête benchmarking' },
     { id: 'hotel', label: 'Listes des reservation hotel' }
   ];
 
-  const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'benchmarking');
+  const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'prospection');
 
   // États pour les données éditables de Booking et Client
   const [bookingData, setBookingData] = useState({
@@ -354,16 +354,16 @@ const BenchmarkingDetailPage = () => {
     );
   }
 
-  if (loadingDetail) {
-    return (
-      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-10 h-10 border-2 border-neutral-200 border-t-neutral-900 rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-sm text-neutral-500">Chargement des détails...</p>
-        </div>
-      </div>
-    );
-  }
+  // if (loadingDetail) {
+  //   return (
+  //     <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+  //       <div className="text-center">
+  //         <div className="w-10 h-10 border-2 border-neutral-200 border-t-neutral-900 rounded-full animate-spin mx-auto mb-4"></div>
+  //         <p className="text-sm text-neutral-500">Chargement des détails...</p>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   if (errorDetail || !detail) {
     return (
@@ -390,12 +390,12 @@ const BenchmarkingDetailPage = () => {
 
   return (
     <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange}>
-      <div className="min-h-screen bg-neutral-50">
-        <div className="mb-8">
-          <HotelHeader numerohotel={detail.numero} navigate={navigate} isDetail={true} isBenchmarking={true}/>
+      <div className="min-h-screen bg-neutral-50 mt-5">
+        <div className="space-y-4">
+          <HotelHeader numerohotel={detail?.numero} navigate={navigate} isDetail={true} isBenchmarking={true}/>
         </div>
         {/* En-tête avec navigation + boutons d'actions */}
-        <div className="flex flex-col gap-4 mb-8">
+        <div className="flex flex-col gap-4 mb-8 mt-2">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold text-neutral-900">
@@ -418,7 +418,7 @@ const BenchmarkingDetailPage = () => {
                   Période
                 </div>
                 <div className="text-sm text-neutral-900">
-                  {formatDate(detail.du)} → {formatDate(detail.au)}
+                  {formatDate(detail?.du)} → {formatDate(detail?.au)}
                 </div>
               </div>
               <div>

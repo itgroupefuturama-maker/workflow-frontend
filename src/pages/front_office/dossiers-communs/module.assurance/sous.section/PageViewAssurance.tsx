@@ -3,6 +3,10 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 import type { AppDispatch, RootState } from '../../../../../app/store';
 import TabContainer from '../../../../../layouts/TabContainer';
+import { fetchAssuranceProspections } from '../../../../../app/front_office/parametre_assurance/assuranceProspectionSlice';
+import { fetchAssuranceEntetes } from '../../../../../app/front_office/parametre_assurance/assuranceEnteteSlice';
+import AssuranceProspectionListe from '../components/AssuranceProspectionListe';
+import AssuranceEnteteListe from '../components/AssuranceEnteteListe';
 
 const PageViewAssurance = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -10,23 +14,23 @@ const PageViewAssurance = () => {
 
   const tabs = [
     { id: 'prospection', label: 'Listes des prospections' },
-    { id: 'assurance',        label: 'Listes des assurance' },
+    { id: 'assurance',   label: 'Listes des assurance' },
   ];
 
   const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'prospection');
 
-  // ── Sélecteurs ─────────────────────────────────────────────────────────────
   const dossierActif = useSelector((state: RootState) => state.dossierCommun.currentClientFactureId);
-
   const prestationId = dossierActif?.dossierCommunColab
     ?.find((colab) => colab.module?.nom?.toLowerCase() === 'assurance')
     ?.prestation?.[0]?.id ?? '';
 
-  // ── Fetch ──────────────────────────────────────────────────────────────────
+    console.log(prestationId);
+    
+
   useEffect(() => {
     if (prestationId) {
-      console.log('fetch');
-      
+      dispatch(fetchAssuranceProspections(prestationId));
+      dispatch(fetchAssuranceEntetes(prestationId));
     }
   }, [prestationId, dispatch]);
 
@@ -37,11 +41,10 @@ const PageViewAssurance = () => {
     }
   }, [location.state?.targetTab]);
 
-  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab}>
-      {activeTab === 'prospection' && <div>Page prospection</div>}
-      {activeTab === 'assurance'   && <div>Page assurance</div>}
+    <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} color="bg-blue-400" >
+      {activeTab === 'prospection' && <AssuranceProspectionListe />}
+      {activeTab === 'assurance'   && <AssuranceEnteteListe />}
     </TabContainer>
   );
 };

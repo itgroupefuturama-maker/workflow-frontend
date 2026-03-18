@@ -26,14 +26,16 @@ import { fetchSuivis } from '../../../../../app/front_office/suiviSlice';
 import EmissionBilletModal from '../../../../../components/modals/EmissionBilletModal';
 import FactureClientModal from '../../../../../components/modals/FactureClientModal';
 import { fetchCommentairesByPrestation,  } from '../../../../../app/front_office/commentaireSlice';
-import { BilletHeader } from './components.billet/BilletHeader';
 import { BilletActions } from './components.billet/BilletActions';
 import BilletInfoCards from './components.billet/BilletInfoCards';
 import BilletTable from './components.billet/BilletTable';
 import ServiceTable from './components.billet/ServiceTable';
 // import SuiviTab from './components.billet/SuiviTable';
 import ReprogrammationModal from '../../../../../components/modals/ReprogrammationModal';
-import SuiviTabContent from './components.billet/SuiviTabContent';
+import { TicketingHeader } from './components.billet/TicketingHeader';
+import { billetDetailItems } from './components.billet/utils/ticketingHeaderItems';
+import Spinner from '../../../../../layouts/Spinner';
+import SuiviTabSection from '../../module.suivi/SuiviTabSection';
 
 const Billet = () => {
   const navigate = useNavigate();
@@ -86,11 +88,6 @@ const Billet = () => {
   );
   const clientFactureId = useSelector(
     (state: RootState) => state.dossierCommun.currentClientFactureId?.clientfacture?.id
-  );
-
-  // Selectors
-  const { list: suivis, loading: suivisLoading, error: suivisError } = useSelector(
-    (state: RootState) => state.suivi
   );
 
   const dossier = useSelector(
@@ -321,16 +318,22 @@ const Billet = () => {
     // Option : setAnnulType('reservation') ou autre selon ton besoin
   };
 
-  if (!enteteId) return <div className="p-8 text-red-600">ID du billet manquant</div>;
+  // if (!enteteId) return <div className="p-8 text-red-600">ID du billet manquant</div>;
 
-  if (loading || cfLoading || cfError) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-indigo-600" />
-        <span className="ml-4 text-slate-600 font-medium">Chargement...</span>
-      </div>
-    );
-  }
+  // if (loading || cfLoading || cfError) {
+  //   return (
+  //     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+  //       <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-indigo-600" />
+  //       <span className="ml-4 text-slate-600 font-medium">Chargement...</span>
+  //     </div>
+  //   );
+  // }
+
+  if (loading || cfLoading || cfError) return (
+    <div className="flex items-center justify-center py-16 gap-3 text-gray-400">
+      <Spinner /> <span className="text-sm">Chargement…</span>
+    </div>
+  );
 
   if (error || !billet) {
     return (
@@ -375,29 +378,27 @@ const Billet = () => {
     <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange}>
       <div className="flex h-screen bg-[#F8FAFC] overflow-hidden">
         <div className="flex-1 overflow-y-auto ">
-          <BilletHeader
-            numeroBillet={billet?.numeroBillet} 
-            prestationId={billet?.prospectionEntete.prestationId} 
-            navigate={navigate} 
-          />
+          <div className='flex justify-between'>
+            <TicketingHeader items={billetDetailItems(billet?.numeroBillet)} />
 
-          <BilletActions
-            billet={billet}
-            allLinesEmission={allLinesEmission}
-            allLinesReservation={allLinesReservation}
-            onShowFacture={() => setShowFactureModal(true)}
-            onRegler={handleReglerFacture}
-            onApprouver={() => handleMarkAsReserved(billet.id)}
-            onShowEmission={() => setShowEmissionModal(true)}
-            onAnnulerReservation={() => {
-              setAnnulType('reservation');
-              setShowAnnulModal(true);
-            }}
-            onAnnulerEmission={() => {
-              setAnnulType('emission');
-              setShowAnnulModal(true);
-            }}
-          />
+            <BilletActions
+              billet={billet}
+              allLinesEmission={allLinesEmission}
+              allLinesReservation={allLinesReservation}
+              onShowFacture={() => setShowFactureModal(true)}
+              onRegler={handleReglerFacture}
+              onApprouver={() => handleMarkAsReserved(billet.id)}
+              onShowEmission={() => setShowEmissionModal(true)}
+              onAnnulerReservation={() => {
+                setAnnulType('reservation');
+                setShowAnnulModal(true);
+              }}
+              onAnnulerEmission={() => {
+                setAnnulType('emission');
+                setShowAnnulModal(true);
+              }}
+            />
+          </div>
 
           {/* Infos principales */}
           <BilletInfoCards
@@ -407,7 +408,7 @@ const Billet = () => {
           />
 
           {/* Tableau groupé avec Sous-Onglets */}
-          <div className="mt-2 rounded-t-lg flex space-x-1">
+          <div className="mt-5 rounded-t-lg flex space-x-1">
             {innerTabs.map((tab) => (
               <button
                 key={tab.id}
@@ -462,9 +463,8 @@ const Billet = () => {
 
             {/* CONTENU : SUIVI (Déplacé ici pour correspondre à l'image) */}
             {innerTab === 'suivi' && (
-              <SuiviTabContent
-                  suivis={suivis}
-                  loading= {suivisLoading}
+              <SuiviTabSection
+                  prestationId={enteteId || ''}
                 />
             )}
           </div>

@@ -92,7 +92,7 @@ export default function DossierCommunDetail() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <button
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/dossiers-communs')}
                 className="flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all group"
               >
                 <FiArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />

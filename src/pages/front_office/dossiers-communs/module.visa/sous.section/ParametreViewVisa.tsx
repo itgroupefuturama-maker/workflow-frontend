@@ -131,9 +131,9 @@ const ParametreViewVisa = () => {
   // ─── View ────────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 p-6">
+    <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900">
       <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab}>
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">Paramètres Visa</h1>
+        <h1 className="text-2xl font-bold text-gray-800 mt-5 mb-6">{activeTab === 'type' ? 'Gestion de Type de Visa' : activeTab === 'duree' ? 'Gestion de Durée' : activeTab === 'entree' ? 'Gestion d\'Entrée' : activeTab === 'params' ? 'Paramètre de Visa' : activeTab === 'docsparams' ? 'Paramètre de documents' : activeTab === 'docs' ? 'Document Visa' : activeTab === 'consulat' ? 'Gestion de Consulat / Fournisseur' : activeTab === 'listeRaisonAnnulation' ? 'Raison Annulation' : ''}</h1>
 
         <div className="space-y-8">
 
@@ -196,8 +196,8 @@ const ParametreViewVisa = () => {
           {activeTab === 'params' && (
             <>
               <SectionHeader label="Ajouter un Paramètre Visa" onAdd={() => setShowParamModal(true)} />
-              <TableWrapper headers={['Code', 'Description', 'Pays', 'Type', 'Durée', 'Entrée', 'Traitement', 'Prix vente', 'Achat devise', 'Statut']}>
-                {visaParams.loading ? <LoadingRow /> : visaParams.data.length === 0 ? <EmptyRow colSpan={11} /> :
+              <TableWrapper headers={['Code', 'Description', 'Pays', 'Type', 'Durée', 'Entrée', 'Traitement', 'Prix vente', 'Achat devise', 'Statut', 'Documents']}>
+                {visaParams.loading ? <LoadingRow /> : visaParams.data.length === 0 ? <EmptyRow colSpan={12} /> :
                   visaParams.data.map(item => (
                     <tr key={item.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 font-mono font-semibold text-indigo-600">{item.code}</td>
@@ -210,6 +210,13 @@ const ParametreViewVisa = () => {
                       <td className="px-4 py-3">{item.pVenteAriary.toLocaleString('fr-FR')} Ar</td>
                       <td className="px-4 py-3">{item.puAchatDevise}</td>
                       <td className="px-4 py-3"><StatusBadge status={item.status} /></td>
+                      <td className="px-4 py-3">
+                        {item.visaDoc?.map(doc => (
+                          <span key={doc.id} className="px-2 py-1 text-xs font-medium text-indigo-700 bg-indigo-100 rounded-full">
+                            {doc.visaDocParams.document}  
+                          </span>
+                        ))}
+                      </td>
                       <td className="px-4 py-3"><ActionButtons /></td>
                     </tr>
                   ))

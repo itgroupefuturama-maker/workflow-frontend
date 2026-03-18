@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import type { AppDispatch, RootState } from '../../../../../../app/store';
-import { approuverDevis, clearVisaDevis, creerVisaEntete, envoyerDevis, fetchVisaDevis } from '../../../../../../app/front_office/parametre_visa/visaDevisSlice';
+import { approuverDevis, clearVisaDevis, creerVisaEntete, envoyerDevis, fetchVisaDevis, genererPdfClient, genererPdfDirection } from '../../../../../../app/front_office/parametre_visa/visaDevisSlice';
 import TabContainer from '../../../../../../layouts/TabContainer';
 import { HotelHeader } from '../../../module.hotel/components/HotelHeader';
 import { VisaHeader } from '../../components/VisaHeader';
+import { API_URL } from '../../../../../../service/env';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -22,7 +23,7 @@ const STATUT_COLORS: Record<string, string> = {
 };
 
 const Badge = ({ label }: { label: string }) => (
-  <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${STATUT_COLORS[label] ?? 'bg-gray-100 text-gray-600'}`}>
+  <span className={`px-3 py-2 rounded-full border border-slate-200 text-xs font-semibold ${STATUT_COLORS[label] ?? 'bg-gray-100 text-gray-600'}`}>
     {label.replace('_', ' ')}
   </span>
 );
@@ -41,6 +42,14 @@ const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
     <span className="text-gray-400 shrink-0 w-44">{label}</span>
     <span className="font-medium text-gray-800 text-right">{value ?? '—'}</span>
   </div>
+);
+
+{/* Spinner réutilisable */}
+const BtnSpinner = () => (
+  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+  </svg>
 );
 
 // ── Timeline suivi ─────────────────────────────────────────────────────────
@@ -143,6 +152,43 @@ const PageDetailProspection = () => {
         }
     };
 
+    const handlePdfDirection = async () => {
+        if (!detail) return;
+        setActionLoading('pdf-direction');
+        setActionError('');
+        setActionSuccess('');
+        try {
+            const path = await dispatch(
+            genererPdfDirection(detail.prospectionVisa.id)
+            ).unwrap();
+            window.open(`${API_URL}/${path}`, '_blank');
+            setActionSuccess('PDF direction généré avec succès.');
+        } catch (e: any) {
+            setActionError(e ?? 'Erreur génération PDF direction.');
+        } finally {
+            setActionLoading(null);
+        }
+        };
+
+        const handlePdfClient = async () => {
+        if (!detail) return;
+        setActionLoading('pdf-client');
+        setActionError('');
+        setActionSuccess('');
+        try {
+            const path = await dispatch(
+            genererPdfClient(detail.prospectionVisa.id)
+            ).unwrap();
+            window.open(`${API_URL}/${path}`, '_blank');
+            setActionSuccess('PDF client généré avec succès.');
+        } catch (e: any) {
+            setActionError(e ?? 'Erreur génération PDF client.');
+        } finally {
+            setActionLoading(null);
+        }
+        };
+
+
     // ── Loading ──────────────────────────────────────────────────────────────
     if (loading) return (
         <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
@@ -174,88 +220,131 @@ const PageDetailProspection = () => {
 
     return (
         <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange}>
-            <div className="min-h-screen bg-neutral-50 p-4 space-y-4">
+            <div className="min-h-screen bg-neutral-50 pt-4 space-y-4">
                 <div className="">
-                    <VisaHeader numerovisa={devis.reference} navigate={navigate} isDetail={true} isProspection={true}/>
+                    <VisaHeader numerovisa={devis.reference} nomPassager= {''} navigate={navigate} isDetail={true} isProspection={true}/>
                 </div>
 
                 {/* ── Topbar ── */}
-                <div className="flex items-center justify-between flex-wrap gap-3">
+                <div className="bg-white p-4 flex items-center justify-between flex-wrap gap-3">
+                    {/* Gauche : retour + titre */}
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => navigate(-1)}
+                            className="p-2 rounded-lg hover:bg-gray-200 text-gray-500 transition"
+                        >
+                            ←
+                        </button>
+                        <div>
+                            <h1 className="text-2xl font-bold text-gray-800">
+                                Devis {devis.reference}
+                            </h1>
+                            <p className="text-sm text-gray-400">
+                                {prospectionVisa.prestation.numeroDos} — créé le {fmtDate(devis.createdAt)}
+                            </p>
+                        </div>
+                    </div>
 
-                {/* Gauche : retour + titre */}
-                <div className="flex items-center gap-3">
-                <button
-                    onClick={() => navigate(-1)}
-                    className="p-2 rounded-lg hover:bg-gray-200 text-gray-500 transition"
-                >
-                    ←
-                </button>
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-800">
-                        Devis {devis.reference}
-                    </h1>
-                    <p className="text-sm text-gray-400">
-                        {prospectionVisa.prestation.numeroDos} — créé le {fmtDate(devis.createdAt)}
-                    </p>
+                    {/* Droite : badge + actions */}
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <Badge label={devis.statut} />
+                        <div className="w-px h-8 bg-gray-300 shrink-0" />
+                            {/* PDF Direction */}
+                            <button
+                                onClick={handlePdfDirection}
+                                disabled={actionLoading === 'pdf-direction'}
+                                className="px-4 py-2 bg-slate-600 text-white text-sm rounded-lg hover:bg-slate-700 disabled:opacity-60 flex items-center gap-2"
+                            >
+                                {actionLoading === 'pdf-direction' ? (
+                                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                                    </svg>
+                                ) : '📄'}
+                                PDF Direction
+                            </button>
+
+                            {/* PDF Client */}
+                            <button
+                                onClick={handlePdfClient}
+                                disabled={actionLoading === 'pdf-client'}
+                                className="px-4 py-2 bg-teal-600 text-white text-sm rounded-lg hover:bg-teal-700 disabled:opacity-60 flex items-center gap-2"
+                                >
+                                {actionLoading === 'pdf-client' ? (
+                                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                                    </svg>
+                                ) : '📋'}
+                                PDF Client
+                            </button>
+
+                            {/* Séparateur */}
+                            <div className="w-px h-8 bg-gray-300 shrink-0" />
+                                <div className="flex items-center gap-2">
+                                    {/* Envoyer le devis */}
+                                    <button
+                                        onClick={devis.statut === 'CREER' ? handleEnvoyer : undefined}
+                                        disabled={devis.statut !== 'CREER' || actionLoading === 'envoyer'}
+                                        className={`px-4 py-2 text-sm rounded-lg font-semibold flex items-center gap-2 transition-all ${
+                                        devis.statut === 'CREER'
+                                            ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                                            : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                                        }`}
+                                    >
+                                        {actionLoading === 'envoyer' ? (
+                                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                                        </svg>
+                                        ) : <span className={devis.statut !== 'CREER' ? 'grayscale opacity-50' : ''}>📤</span>}
+                                        Envoyer le devis
+                                    </button>
+
+                                    <span className="text-gray-300">›</span>
+
+                                    {/* Approuver */}
+                                    <button
+                                        onClick={devis.statut === 'DEVIS_A_APPROUVER' ? handleApprouver : undefined}
+                                        disabled={devis.statut !== 'DEVIS_A_APPROUVER' || actionLoading === 'approuver'}
+                                        className={`px-4 py-2 text-sm rounded-lg font-semibold flex items-center gap-2 transition-all ${
+                                        devis.statut === 'DEVIS_A_APPROUVER'
+                                            ? 'bg-green-600 hover:bg-green-700 text-white'
+                                            : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                                        }`}
+                                    >
+                                        {actionLoading === 'approuver' ? (
+                                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                                        </svg>
+                                        ) : <span className={devis.statut !== 'DEVIS_A_APPROUVER' ? 'grayscale opacity-50' : ''}>✅</span>}
+                                        Approuver
+                                    </button>
+
+                                    <span className="text-gray-300">›</span>
+
+                                    {/* Créer le Visa */}
+                                    <button
+                                        onClick={devis.statut === 'DEVIS_APPROUVE' ? handleCreerVisa : undefined}
+                                        disabled={devis.statut !== 'DEVIS_APPROUVE' || actionLoading === 'visa'}
+                                        className={`px-4 py-2 text-sm rounded-lg font-semibold flex items-center gap-2 transition-all ${
+                                        devis.statut === 'DEVIS_APPROUVE'
+                                            ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                                            : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                                        }`}
+                                    >
+                                        {actionLoading === 'visa' ? (
+                                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                                        </svg>
+                                        ) : <span className={devis.statut !== 'DEVIS_APPROUVE' ? 'grayscale opacity-50' : ''}>🛂</span>}
+                                        Créer le Visa
+                                    </button>
+                                </div>
+                            </div>
                 </div>
-            </div>
-
-            {/* Droite : badge + actions */}
-            <div className="flex items-center gap-3 flex-wrap">
-                <Badge label={devis.statut} />
-
-                {/* Envoyer — visible si pas encore envoyé */}
-                {devis.statut === 'CREER' && (
-                <button
-                    onClick={handleEnvoyer}
-                    disabled={actionLoading === 'envoyer'}
-                    className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:opacity-60 flex items-center gap-2"
-                >
-                    {actionLoading === 'envoyer' ? (
-                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                    </svg>
-                    ) : '📤'}
-                    Envoyer le devis
-                </button>
-                )}
-
-                {/* Approuver — visible seulement si envoyé */}
-                {devis.statut === 'DEVIS_A_APPROUVER' && (
-                    <button
-                        onClick={handleApprouver}
-                        disabled={actionLoading === 'approuver'}
-                        className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-60 flex items-center gap-2"
-                    >
-                        {actionLoading === 'approuver' ? (
-                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                        </svg>
-                        ) : '✅'}
-                        Approuver
-                    </button>
-                )}
-
-                {/* Créer Visa — visible seulement si approuvé */}
-                {devis.statut === 'DEVIS_APPROUVE' && (
-                <button
-                    onClick={handleCreerVisa}
-                    disabled={actionLoading === 'visa'}
-                    className="px-4 py-2 bg-indigo-600 text-white text-sm rounded-lg hover:bg-indigo-700 disabled:opacity-60 flex items-center gap-2"
-                >
-                    {actionLoading === 'visa' ? (
-                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                    </svg>
-                    ) : '🛂'}
-                    Créer le Visa
-                </button>
-                )}
-            </div>
-            </div>
 
             {/* ── Feedback actions ── */}
             {actionSuccess && (
@@ -321,7 +410,9 @@ const PageDetailProspection = () => {
                         {/* Consulat */}
                         <div className="px-4 py-3 space-y-0.5">
                         <p className="text-xs text-gray-400 uppercase tracking-wide">Consulat</p>
-                        <p className="text-sm font-medium text-gray-800 capitalize">{ligne.consulat.nom}</p>
+                        <p className="text-sm font-medium text-gray-800 capitalize">
+                            {ligne.consulat?.nom ?? '—'}
+                        </p>
                         <p className="text-xs text-gray-500">
                             PU : {fmt(ligne.puConsulatDevise)} {ligne.devise} / {fmt(ligne.puConsulatAriary)} Ar
                         </p>

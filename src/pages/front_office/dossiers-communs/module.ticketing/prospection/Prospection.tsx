@@ -8,11 +8,13 @@ import axios from '../../../../../service/Axios';
 import { fetchDestinations } from '../../../../../app/front_office/parametre_ticketing/destinationSlice';
 import { fetchPays } from '../../../../../app/front_office/parametre_ticketing/paysSlice';
 import TabContainer from '../../../../../layouts/TabContainer';
-import { TicketingHeader } from '../../../../../components/TicketingBreadcrumb';
+// import { TicketingHeader } from '../../../../../components/TicketingBreadcrumb';
 import NewLineRow from './NewLigneProspection';
 import AddProspectionLigneModal from './AddProspectionLigneModal';
 import ProspectionModals from '../../../../../components/modals/ProspectionModals';
 import { createProspectionEntete, updateProspectionEntete, type ProspectionEntete } from '../../../../../app/front_office/prospectionsEntetesSlice';
+import { TicketingHeader } from '../ticketing.sous.module/components.billet/TicketingHeader';
+import { prospectionDetailItems, prospectionListeItems } from '../ticketing.sous.module/components.billet/utils/ticketingHeaderItems';
 
 export default function ProspectionDetail() {
     const { enteteId } = useParams<{ enteteId: string }>();
@@ -31,6 +33,8 @@ export default function ProspectionDetail() {
     ];
 
     const [activeTab, setActiveTab] = useState('prospection');
+
+    const [showPenalite, setShowPenalite] = useState(false);
 
     const { items: destinations, loading: loadingDest } = useSelector((state: RootState) => state.destination);
     const { items: pays, loading: loadingPays } = useSelector((state: RootState) => state.pays);
@@ -61,11 +65,11 @@ export default function ProspectionDetail() {
     const [collapsedGroups, setCollapsedGroups] = useState({
       infosVol: false,
       tarifsCieDevise: false,
-      tarifsCieAriary: true,   // replié par défaut
+      tarifsCieAriary: false,   // replié par défaut
       tarifsClientDevise: false,
-      tarifsClientAriary: true, // replié par défaut
+      tarifsClientAriary: false, // replié par défaut
       commissions: false,
-      services: false,
+      services: true,
     });
 
     const toggleGroup = (group: keyof typeof collapsedGroups) => {
@@ -369,6 +373,18 @@ export default function ProspectionDetail() {
     const handleAddNewLine = () => {
       if (newLine) return;
 
+      // Tout déplier quand NewLineRow s'affiche
+      setCollapsedGroups({
+        infosVol: false,
+        tarifsCieDevise: false,
+        tarifsCieAriary: false,
+        tarifsClientDevise: false,
+        tarifsClientAriary: false,
+        commissions: false,
+        services: false,
+      });
+      setShowPenalite(true);
+
       const initialServiceValues = servicesDisponibles.map((s) => ({
         serviceSpecifiqueId: s.id,
         valeur: '',
@@ -455,49 +471,11 @@ export default function ProspectionDetail() {
       return <div className="p-8 text-center text-red-600">ID en-tête manquant</div>;
     }
 
-    if (loading) {
-      return (
-        <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-slate-600">Chargement des données...</p>
-          </div>
-        </div>
-      );
-    }
-
-    if (errorLignes || errorServices) {
-      return (
-        <div className="p-8 text-center text-red-600 bg-red-50 rounded-xl border border-red-200">
-          {errorLignes}
-        </div>
-      );
-    }
-
-    if (!entete) {
-      return (
-        <div className="p-8 text-center text-amber-700 bg-amber-50 rounded-xl">
-          En-tête non trouvé dans le store. Veuillez recharger la liste des en-têtes.
-        </div>
-      );
-    }
-
-   
-
   return (
     <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange}>
       <div className="min-h-screen bg-[#F8FAFC]">
 
-          <TicketingHeader
-            items={[
-              {
-                label: "Liste Entete Prospection", 
-                path: `/dossiers-communs/ticketing/pages`, 
-                state: { targetTab: 'prospection' }
-              },
-              { label: "Prospection detail", isCurrent: true }
-            ]}
-          />
+        <TicketingHeader items={prospectionDetailItems(enteteId)} />
         <header className="mb-10">
           <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
             <div className="flex flex-row justify-between items-start mb-2">
@@ -514,7 +492,7 @@ export default function ProspectionDetail() {
                 <div className="mt-3 flex items-center gap-2">
                   <span className="text-xs text-slate-400 font-medium uppercase">Prestation :</span>
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
-                    {entete.prestation?.numeroDos || entete.prestationId || '—'}
+                    {entete?.prestation?.numeroDos || entete?.prestationId || '—'}
                   </span>
                 </div>
               </div>
@@ -533,7 +511,7 @@ export default function ProspectionDetail() {
               <div>
                 <label className="text-xs uppercase text-slate-500 font-semibold">Fournisseur</label>
                 <p className="font-medium mt-1">
-                  {entete.fournisseur?.libelle || entete.fournisseurId || '—'}
+                  {entete?.fournisseur?.libelle || entete?.fournisseurId || '—'}
                 </p>
               </div>
               <div>
@@ -706,28 +684,59 @@ export default function ProspectionDetail() {
               <button
                 key={key}
                 onClick={() => toggleGroup(key as keyof typeof collapsedGroups)}
+                disabled={!!newLine}
                 className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
-                  collapsedGroups[key as keyof typeof collapsedGroups]
-                    ? 'bg-white text-slate-400 border-slate-200 line-through'
-                    : 'bg-white text-slate-700 border-slate-300 hover:border-slate-400'
+                  newLine
+                    ? 'opacity-40 cursor-not-allowed'
+                    : collapsedGroups[key as keyof typeof collapsedGroups]
+                      ? 'bg-white text-slate-400 border-slate-200 line-through'
+                      : 'bg-white text-slate-700 border-slate-300 hover:border-slate-400'
                 }`}
               >
                 {label}
               </button>
             ))}
-            <button
-              onClick={() => setCollapsedGroups({ infosVol: true, tarifsCieDevise: true, tarifsCieAriary: true, tarifsClientDevise: true, tarifsClientAriary: true, commissions: true, services: true })}
-              className="ml-auto text-xs px-3 py-1.5 rounded-full border border-red-200 text-red-600 hover:bg-red-50 font-medium"
-            >
-              Tout replier
-            </button>
-            <button
-              onClick={() => setCollapsedGroups({ infosVol: false, tarifsCieDevise: false, tarifsCieAriary: false, tarifsClientDevise: false, tarifsClientAriary: false, commissions: false, services: false })}
-              className="text-xs px-3 py-1.5 rounded-full border border-blue-200 text-blue-600 hover:bg-blue-50 font-medium"
-            >
-              Tout déplier
-            </button>
-          </div>
+            {/* Bouton pénalités — s'applique à tous les groupes */}
+            <div className="w-px h-4 bg-slate-300 mx-1" />
+              <button
+                onClick={() => setShowPenalite(p => !p)}
+                disabled={!!newLine}
+                className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
+                  newLine
+                    ? 'opacity-40 cursor-not-allowed'
+                    : showPenalite
+                      ? 'bg-orange-100 text-orange-700 border-orange-300'
+                      : 'bg-white text-slate-400 border-slate-200 line-through'
+                }`}
+              >
+                🚫 Pénalités
+              </button>
+              {/* Tout replier — désactivé si tout est déjà replié */}
+              <button
+                disabled={!!newLine || Object.values(collapsedGroups).every(v => v === true)}
+                onClick={() => setCollapsedGroups({ infosVol: true, tarifsCieDevise: true, tarifsCieAriary: true, tarifsClientDevise: true, tarifsClientAriary: true, commissions: true, services: true })}
+                className={`ml-auto text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
+                  !!newLine || Object.values(collapsedGroups).every(v => v === true)
+                    ? 'opacity-40 cursor-not-allowed border-slate-200 text-slate-400'
+                    : 'border-red-200 text-red-600 hover:bg-red-50'
+                }`}
+              >
+                Tout replier
+              </button>
+
+              {/* Tout déplier — désactivé si tout est déjà déplié */}
+              <button
+                disabled={!!newLine || Object.values(collapsedGroups).every(v => v === false)}
+                onClick={() => setCollapsedGroups({ infosVol: false, tarifsCieDevise: false, tarifsCieAriary: false, tarifsClientDevise: false, tarifsClientAriary: false, commissions: false, services: false })}
+                className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
+                  !!newLine || Object.values(collapsedGroups).every(v => v === false)
+                    ? 'opacity-40 cursor-not-allowed border-slate-200 text-slate-400'
+                    : 'border-blue-200 text-blue-600 hover:bg-blue-50'
+                }`}
+              >
+                Tout déplier
+              </button>
+            </div>
 
           {loadingLignes ? (
             <div className="p-12 text-center text-slate-500 bg-slate-50 animate-pulse">
@@ -765,7 +774,7 @@ export default function ProspectionDetail() {
 
                     {/* Groupe : Tarifs Cie Devise */}
                     <th
-                      colSpan={collapsedGroups.tarifsCieDevise ? 1 : 6}
+                      colSpan={collapsedGroups.tarifsCieDevise ? 1 : (showPenalite ? 6 : 4)}
                       className="px-4 py-2 text-center text-xs font-bold text-white uppercase bg-emerald-700 border-x border-emerald-500 cursor-pointer hover:bg-emerald-600 transition-colors select-none"
                       onClick={() => toggleGroup('tarifsCieDevise')}
                     >
@@ -777,7 +786,7 @@ export default function ProspectionDetail() {
 
                     {/* Groupe : Tarifs Cie Ariary */}
                     <th
-                      colSpan={collapsedGroups.tarifsCieAriary ? 1 : 6}
+                      colSpan={collapsedGroups.tarifsCieAriary ? 1 : (showPenalite ? 6 : 4)}
                       className="px-4 py-2 text-center text-xs font-bold text-white uppercase bg-emerald-800 border-x border-emerald-600 cursor-pointer hover:bg-emerald-700 transition-colors select-none"
                       onClick={() => toggleGroup('tarifsCieAriary')}
                     >
@@ -789,7 +798,7 @@ export default function ProspectionDetail() {
 
                     {/* Groupe : Tarifs Client Devise */}
                     <th
-                      colSpan={collapsedGroups.tarifsClientDevise ? 1 : 3}
+                      colSpan={collapsedGroups.tarifsClientDevise ? 1 : (showPenalite ? 3 : 2)}
                       className="px-4 py-2 text-center text-xs font-bold text-white uppercase bg-blue-700 border-x border-blue-500 cursor-pointer hover:bg-blue-600 transition-colors select-none"
                       onClick={() => toggleGroup('tarifsClientDevise')}
                     >
@@ -801,7 +810,7 @@ export default function ProspectionDetail() {
 
                     {/* Groupe : Tarifs Client Ariary */}
                     <th
-                      colSpan={collapsedGroups.tarifsClientAriary ? 1 : 3}
+                      colSpan={collapsedGroups.tarifsClientAriary ? 1 : (showPenalite ? 3 : 2)}
                       className="px-4 py-2 text-center text-xs font-bold text-white uppercase bg-blue-800 border-x border-blue-600 cursor-pointer hover:bg-blue-700 transition-colors select-none"
                       onClick={() => toggleGroup('tarifsClientAriary')}
                     >
@@ -858,10 +867,10 @@ export default function ProspectionDetail() {
                       <>
                         <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[130px]">PU Billet</th>
                         <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[130px]">PU Service</th>
-                        <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[130px]">PU Pénalité</th>
+                        {showPenalite && <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[130px]">PU Pénalité</th>}
                         <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[140px]">Mt Billet</th>
                         <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[140px]">Mt Service</th>
-                        <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[140px]">Mt Pénalité</th>
+                        {showPenalite && <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[140px]">Mt Pénalité</th>}
                       </>
                     ) : (
                       <th className="px-4 py-2 text-center text-xs text-emerald-400 italic bg-emerald-50">— replié —</th>
@@ -872,10 +881,10 @@ export default function ProspectionDetail() {
                       <>
                         <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100 min-w-[130px]">PU Billet Ar</th>
                         <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100 min-w-[130px]">PU Service Ar</th>
-                        <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100 min-w-[130px]">PU Pénalité Ar</th>
+                        {showPenalite && <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100 min-w-[130px]">PU Pénalité Ar</th>}
                         <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100 min-w-[140px]">Mt Billet Ar</th>
                         <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100 min-w-[140px]">Mt Service Ar</th>
-                        <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100 min-w-[140px]">Mt Pénalité Ar</th>
+                        {showPenalite && <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100 min-w-[140px]">Mt Pénalité Ar</th>}
                       </>
                     ) : (
                       <th className="px-4 py-2 text-center text-xs text-emerald-500 italic bg-emerald-100">— replié —</th>
@@ -886,7 +895,7 @@ export default function ProspectionDetail() {
                       <>
                         <th className="px-4 py-2 text-right text-xs font-semibold text-blue-700 bg-blue-50 min-w-[140px]">Mt Billet</th>
                         <th className="px-4 py-2 text-right text-xs font-semibold text-blue-700 bg-blue-50 min-w-[140px]">Mt Service</th>
-                        <th className="px-4 py-2 text-right text-xs font-semibold text-blue-700 bg-blue-50 min-w-[140px]">Mt Pénalité</th>
+                        {showPenalite && <th className="px-4 py-2 text-right text-xs font-semibold text-blue-700 bg-blue-50 min-w-[140px]">Mt Pénalité</th>}
                       </>
                     ) : (
                       <th className="px-4 py-2 text-center text-xs text-blue-400 italic bg-blue-50">— replié —</th>
@@ -897,7 +906,7 @@ export default function ProspectionDetail() {
                       <>
                         <th className="px-4 py-2 text-right text-xs font-semibold text-blue-800 bg-blue-100 min-w-[140px]">Mt Billet Ar</th>
                         <th className="px-4 py-2 text-right text-xs font-semibold text-blue-800 bg-blue-100 min-w-[140px]">Mt Service Ar</th>
-                        <th className="px-4 py-2 text-right text-xs font-semibold text-blue-800 bg-blue-100 min-w-[140px]">Mt Pénalité Ar</th>
+                        {showPenalite && <th className="px-4 py-2 text-right text-xs font-semibold text-blue-800 bg-blue-100 min-w-[140px]">Mt Pénalité Ar</th>}
                       </>
                     ) : (
                       <th className="px-4 py-2 text-center text-xs text-blue-500 italic bg-blue-100">— replié —</th>
@@ -969,10 +978,10 @@ export default function ProspectionDetail() {
                           <>
                             <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{ligne.puBilletCompagnieDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>
                             <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{ligne.puServiceCompagnieDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{ligne.puPenaliteCompagnieDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>
+                            {showPenalite && <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{ligne.puPenaliteCompagnieDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>}
                             <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{ligne.montantBilletCompagnieDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>
                             <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{ligne.montantServiceCompagnieDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{ligne.montantPenaliteCompagnieDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>
+                            {showPenalite && <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{ligne.montantPenaliteCompagnieDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>}
                           </>
                         ) : (
                           <td className="px-4 py-4 text-center text-xs text-emerald-600 bg-emerald-50 font-semibold">
@@ -985,10 +994,10 @@ export default function ProspectionDetail() {
                           <>
                             <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{ligne.puBilletCompagnieAriary?.toLocaleString('fr-FR') || '—'}</td>
                             <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{ligne.puServiceCompagnieAriary?.toLocaleString('fr-FR') || '—'}</td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{ligne.puPenaliteCompagnieAriary?.toLocaleString('fr-FR') || '—'}</td>
+                            {showPenalite && <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{ligne.puPenaliteCompagnieAriary?.toLocaleString('fr-FR') || '—'}</td>}
                             <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{ligne.montantBilletCompagnieAriary?.toLocaleString('fr-FR') || '—'}</td>
                             <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{ligne.montantServiceCompagnieAriary?.toLocaleString('fr-FR') || '—'}</td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{ligne.montantPenaliteCompagnieAriary?.toLocaleString('fr-FR') || '—'}</td>
+                            {showPenalite && <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{ligne.montantPenaliteCompagnieAriary?.toLocaleString('fr-FR') || '—'}</td>}
                           </>
                         ) : (
                           <td className="px-4 py-4 text-center text-xs text-emerald-700 bg-emerald-100 font-semibold">
@@ -1001,7 +1010,7 @@ export default function ProspectionDetail() {
                           <>
                             <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-blue-700">{ligne.montantBilletClientDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>
                             <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-blue-700">{ligne.montantServiceClientDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-blue-700">{ligne.montantPenaliteClientDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>
+                            {showPenalite && <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-blue-700">{ligne.montantPenaliteClientDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>}
                           </>
                         ) : (
                           <td className="px-4 py-4 text-center text-xs text-blue-600 bg-blue-50 font-semibold">
@@ -1014,7 +1023,7 @@ export default function ProspectionDetail() {
                           <>
                             <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-blue-800">{ligne.montantBilletClientAriary?.toLocaleString('fr-FR') || '—'}</td>
                             <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-blue-800">{ligne.montantServiceClientAriary?.toLocaleString('fr-FR') || '—'}</td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-blue-800">{ligne.montantPenaliteClientAriary?.toLocaleString('fr-FR') || '—'}</td>
+                            {showPenalite && <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-blue-800">{ligne.montantPenaliteClientAriary?.toLocaleString('fr-FR') || '—'}</td>}
                           </>
                         ) : (
                           <td className="px-4 py-4 text-center text-xs text-blue-700 bg-blue-100 font-semibold">
@@ -1067,7 +1076,7 @@ export default function ProspectionDetail() {
                   {newLine && (
                     <NewLineRow
                       newLine={newLine}
-                      commissionPct={entete?.commissionAppliquer}
+                      commissionPct={entete?.commissionAppliquer || 0}
                       destinations={destinations}
                       servicesDisponibles={servicesDisponibles}
                       updateNewLineField={updateNewLineField}

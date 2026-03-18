@@ -40,6 +40,8 @@ export interface VisaProspectionEntete {
     };
   };
   visaProspectionLigne: VisaProspectionLigne[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface VisaProspectionEnteteState {
@@ -72,10 +74,17 @@ export const fetchProspectionEntetes = createAsyncThunk(
 
 export const createProspectionEntete = createAsyncThunk(
   'visaProspectionEntete/create',
-  async (prestationId: string, { rejectWithValue }) => {
+  async (
+    payload: { prestationId: string; consulatId: string }, // ← objet au lieu de string
+    { rejectWithValue }
+  ) => {
     try {
-      const res = await axios.post('/visa/prospection-entete', { prestationId });
-      return res.data.data as VisaProspectionEntete;
+      const res = await axios.post('/visa/prospection-entete', payload);
+      // S'assurer que visaProspectionLigne est toujours un tableau
+      return {
+        ...res.data.data,
+        visaProspectionLigne: res.data.data.visaProspectionLigne ?? [],
+      } as VisaProspectionEntete;
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.message || 'Erreur création prospection');
     }
@@ -91,11 +100,16 @@ const visaProspectionEnteteSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(fetchProspectionEntetes.pending,   (state) => { state.loading = true;  state.error = null; })
-      .addCase(fetchProspectionEntetes.fulfilled, (state, action) => { state.loading = false; state.data = action.payload; })
+      .addCase(fetchProspectionEntetes.fulfilled, (state, action) => {
+        state.loading = false;
+        state.data = Array.isArray(action.payload) ? action.payload : [];
+      })
       .addCase(fetchProspectionEntetes.rejected,  (state, action) => { state.loading = false; state.error = action.payload as string; })
 
       .addCase(createProspectionEntete.pending,   (state) => { state.creating = true;  state.error = null; })
-      .addCase(createProspectionEntete.fulfilled, (state, action) => { state.creating = false; state.data.unshift(action.payload); })
+      .addCase(createProspectionEntete.fulfilled, (state) => {
+        state.creating = false;
+      })
       .addCase(createProspectionEntete.rejected,  (state, action) => { state.creating = false; state.error = action.payload as string; });
   },
 });

@@ -20,7 +20,7 @@ const StatutBadge = ({ statut }: { statut: string }) => {
     DEVIS_REFUSE: 'Refusé',
   };
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${map[statut] ?? 'bg-gray-100 text-gray-600 border-gray-200'}`}>
+    <span className={`uppercase inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${map[statut] ?? 'bg-gray-100 text-gray-600 border-gray-200'}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${statut === 'DEVIS_APPROUVE' ? 'bg-green-500' : statut === 'DEVIS_EN_ATTENTE' ? 'bg-orange-400' : 'bg-red-500'}`} />
       {label[statut] ?? statut}
     </span>
@@ -125,14 +125,16 @@ export default function PageHotelDevis() {
   const { enteteId } = useParams<{ enteteId: string }>();
   const location = useLocation();
 
+  console.log(`le id tonga eto ${enteteId}`);
+
   const { data, actionLoading, actionError, transformed, pdfClientUrl, pdfDirectionUrl } = useSelector(
     (state: RootState) => state.hotelDevis
   );
 
-  const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'benchmarking');
+  const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'prospection');
 
   const tabs = [
-    { id: 'benchmarking', label: 'Listes des entête benchmarking' },
+    { id: 'prospection', label: 'Listes des entête benchmarking' },
     { id: 'hotel', label: 'Listes des reservation hotel' }
   ];
 
@@ -154,6 +156,10 @@ export default function PageHotelDevis() {
   const montantTotalClient = benchmarkings.reduce((acc, b) => acc + b.forfaitaireGlobal, 0);
   const tauxCommission = 10;
   const montantTotalCommission = Math.round(montantTotalClient * tauxCommission / 100);
+
+  useEffect(() => {
+    if (enteteId) dispatch(fetchHotelWithDevis(enteteId));
+  }, [enteteId, dispatch]);
 
   const handleEnvoyer = async () => {
     if (!data?.devis?.id) return;
@@ -205,18 +211,15 @@ export default function PageHotelDevis() {
   const urlPdfClient = pdfClientUrl || devis?.url1;
   const urlPdfDirection = pdfDirectionUrl || devis?.url2;
 
-  useEffect(() => {
-    if (enteteId) dispatch(fetchHotelWithDevis(enteteId));
-  }, [enteteId, dispatch]);
+  
 
   if (!data) return null;
 
   return (
     <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange}>
-      <div className="min-h-screen bg-gray-50 font-sans">
-        <div className="mb-5">
-          <HotelHeader numerohotel={prospection?.numeroEntete} navigate={navigate} isBenchmarking={true} isDetail={true} isDevis={true}/>
-        </div>
+      <div className="min-h-screen bg-neutral-50 pt-4 space-y-4">
+        <HotelHeader numerohotel={prospection?.numeroEntete} navigate={navigate} isBenchmarking={true} isDetail={true} isDevis={true}/>
+
         {/* ── Header ── */}
         <div className="bg-slate-100 px-8 pt-6 pb-0">
           {/* ── Bloc info principal ── */}
@@ -257,7 +260,7 @@ export default function PageHotelDevis() {
                     <div className="w-px h-8 bg-white/10" />
                     <div>
                       <p className="text-gray-500 text-xs uppercase tracking-wide mb-0.5">Statut</p>
-                      <StatutBadge statut={devis.statut} />
+                      <StatutBadge statut={devis.statut == "CREER" ? "Créé" : devis.statut} />
                       {/* {devis.statut} */}
                     </div>
                     <div className="w-px h-8 bg-white/10" />
@@ -342,7 +345,7 @@ export default function PageHotelDevis() {
               {/* Envoyer — disabled si statut avancé */}
               <button
                 onClick={handleEnvoyer}
-                disabled={actionLoading !== null || devis.statut === 'DEVIS_EN_ATTENTE' || devis.statut === 'DEVIS_APPROUVE'}
+                disabled={actionLoading !== null || devis.statut !== 'CREER'}
                 className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
               >
                 {actionLoading === 'envoi'
@@ -355,7 +358,7 @@ export default function PageHotelDevis() {
               {/* Approuver — disabled si pas en attente */}
               <button
                 onClick={handleApprouver}
-                disabled={actionLoading !== null || devis.statut !== 'DEVIS_EN_ATTENTE'}
+                disabled={actionLoading !== null || devis.statut !== 'DEVIS_A_APPROUVER'}
                 className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white text-sm font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
               >
                 {actionLoading === 'approbation'

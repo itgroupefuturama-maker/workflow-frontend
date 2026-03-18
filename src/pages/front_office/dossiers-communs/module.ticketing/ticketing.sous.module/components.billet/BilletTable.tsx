@@ -92,17 +92,17 @@ const BilletTable: React.FC<BilletTableProps> = ({
 
   const [collapsedGroups, setCollapsedGroups] = useState({
     infosVol:        false,
-    puCieDevise:     true,   // replié par défaut
-    puCieAriary:     true,
-    puClientDevise:  true,
-    puClientAriary:  true,
+    puCieDevise:     false,   // replié par défaut
+    puCieAriary:     false,
+    puClientDevise:  false,
+    puClientAriary:  false,
     mtCieDevise:     false,
-    mtCieAriary:     true,
+    mtCieAriary:     false,
     mtClientDevise:  false,
-    mtClientAriary:  true,
-    mtResa:          true,
+    mtClientAriary:  false,
+    mtResa:          false,
     commissions:     false,
-    annulation:      true,
+    annulation:      false,
     services:        false,
   });
 
@@ -127,12 +127,20 @@ const BilletTable: React.FC<BilletTableProps> = ({
             Lignes du billet
           </h2>
           <button
-              onClick={toggleSortOrigin}
-              className="bg-slate-100 p-4 rounded-2xl text-slate-500 hover:text-slate-700 transition-colors"
-              title="Trier par Origin Ligne (cliquer pour inverser)"
-            >
-              <FiFilter size={18} />
-            </button>
+            onClick={toggleSortOrigin}
+            className="flex items-center gap-2 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 rounded-xl border border-slate-200 transition-all text-xs font-semibold"
+            title="Trier par Origin Ligne"
+          >
+            <FiFilter size={14} />
+            <span>Origin Ligne</span>
+            <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
+              sortOriginAsc
+                ? 'bg-blue-100 text-blue-700'
+                : 'bg-amber-100 text-amber-700'
+            }`}>
+              {sortOriginAsc ? '▲ A→Z' : '▼ Z→A'}
+            </span>
+          </button>
         </div>
 
         {/* Dans le div header, après le titre */}
@@ -164,15 +172,29 @@ const BilletTable: React.FC<BilletTableProps> = ({
               {label}
             </button>
           ))}
+
+          {/* Tout replier — désactivé si tout est déjà replié */}
           <button
+            disabled={ Object.values(collapsedGroups).every(v => v === true)}
             onClick={() => setCollapsedGroups(prev => Object.fromEntries(Object.keys(prev).map(k => [k, true])) as any)}
-            className="ml-auto text-xs px-3 py-1 rounded-full border border-red-200 text-red-600 hover:bg-red-50 font-medium"
+            className={`ml-auto text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
+                Object.values(collapsedGroups).every(v => v === true)
+                ? 'opacity-40 cursor-not-allowed border-slate-200 text-slate-400'
+                : 'border-red-200 text-red-600 hover:bg-red-50'
+            }`}
           >
             Tout replier
           </button>
+
+          {/* Tout déplier — désactivé si tout est déjà déplié */}
           <button
+            disabled={ Object.values(collapsedGroups).every(v => v === false)}
             onClick={() => setCollapsedGroups(prev => Object.fromEntries(Object.keys(prev).map(k => [k, false])) as any)}
-            className="text-xs px-3 py-1 rounded-full border border-blue-200 text-blue-600 hover:bg-blue-50 font-medium"
+            className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
+                Object.values(collapsedGroups).every(v => v === false)
+                ? 'opacity-40 cursor-not-allowed border-slate-200 text-slate-400'
+                : 'border-blue-200 text-blue-600 hover:bg-blue-50'
+            }`}
           >
             Tout déplier
           </button>
@@ -502,7 +524,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                       <td className="px-4 py-3 font-medium text-slate-800">{fournisseurLibelle}</td>
                       <td className="px-4 py-3 text-xs text-slate-600">{ligne.reservation || '—'}</td>
                       <td className="px-4 py-3 text-right font-medium">{ligne.resaTauxEchange || '—'}</td>
-                      <td className="px-4 py-3 text-center text-xs">{ligne.statusLigne || '—'}</td>
+                      <td className="px-4 py-3 text-center text-xs">{ligne.statusLigne == 'ANNULER' ? 'ANNULÉ' : ligne.statusLigne == 'CLOTURER' ? 'CLÔTURÉ' : ligne.statusLigne == 'MODIFIER' ? 'MODIFIÉ' : ligne.statusLigne == 'CREER' ? 'CRÉÉ' : ligne.statusLigne || '—'}</td>
                       <td className="px-4 py-3 text-center font-medium">{ligne.prospectionLigne.nombre || '—'}</td>
 
                       {/* Infos Vol */}

@@ -1,32 +1,76 @@
-import { FiArrowRight } from "react-icons/fi";
+import { FiCheck } from "react-icons/fi";
 
-export const AttestationHeader = ({ numeroAttestation, navigate,  isDetail = false }) => (
-  <header className="flex items-center justify-between">
-    <div className="flex items-center gap-4">
-      {isDetail ? (
-        <>
-          {/* Bouton Retour (visible uniquement en mode détail) */}
-         <header className="flex items-center justify-between">
-             <div className="flex items-center text-sm">
-               <button
-                 onClick={() => navigate(`/dossiers-communs/attestation/pages`, { state: { targetTab: 'attestation' } })}
-                 className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-100 transition-all"
-               >
-                 <span className="font-semibold tracking-wide">Liste des Attestations</span>
-               </button>
-               <FiArrowRight className="text-slate-400 ml-2 mr-2" size={16} />
-               <div className="flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-400/90 text-white font-semibold shadow-sm">
-                 Attestation n° {numeroAttestation}
-               </div>
-             </div>
-           </header>
-        </>
-      ) : (
-        /* Titre pour la page Liste */
-        <div className="text-sm flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-400/90 text-white font-semibold shadow-sm">
-          <span className="font-semibold tracking-wide">Liste des Attestations</span>
-        </div>
-      )}
-    </div>
-  </header>
-);
+export const AttestationHeader = ({ numeroAttestation, navigate, isDetail = false }) => {
+
+  const steps = isDetail ? [
+    {
+      label: 'Liste des Attestations',
+      done: true,
+      onClick: () => navigate(`/dossiers-communs/attestation/pages`, {
+        state: { targetTab: 'prospection' }
+      }),
+    },
+    {
+      label: `Attestation n° ${numeroAttestation}`,
+      done: false,
+      onClick: undefined,
+    },
+  ] : [
+    {
+      label: 'Liste des Attestations',
+      done: false,
+      onClick: undefined,
+    }
+  ];
+
+  return (
+    <header>
+      <div className="flex items-center">
+        {steps.map((step, index) => {
+          const isLast      = index === steps.length - 1;
+          const isActive    = isLast && !step.done;
+          const isClickable = !!step.onClick;
+
+          return (
+            <div key={index} className="flex items-center">
+              <div
+                onClick={isClickable ? step.onClick : undefined}
+                className={`
+                  relative flex items-center gap-2 px-5 py-2.5 text-sm font-semibold
+                  transition-all select-none
+                  ${index === 0 ? 'rounded-l-lg' : ''}
+                  ${isLast ? 'rounded-r-lg' : ''}
+                  ${isActive
+                    ? 'bg-amber-400 text-white shadow-md cursor-default'
+                    : step.done
+                      ? 'bg-stone-200 text-stone-500 hover:bg-stone-300 cursor-pointer'
+                      : 'bg-stone-100 text-stone-400 cursor-default'
+                  }
+                `}
+                style={{
+                  clipPath: index === 0
+                    ? 'polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%)'
+                    : 'polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%, 10px 50%)',
+                  marginLeft: index === 0 ? 0 : '-1px',
+                }}
+              >
+                {step.done ? (
+                  <span className="h-5 w-5 rounded-full bg-stone-300 text-stone-500 flex items-center justify-center shrink-0">
+                    <FiCheck size={11} strokeWidth={3} />
+                  </span>
+                ) : (
+                  <span className={`h-5 w-5 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${
+                    isActive ? 'bg-white/30 text-white' : 'bg-stone-200 text-stone-400'
+                  }`}>
+                    {index + 1}
+                  </span>
+                )}
+                <span className="whitespace-nowrap">{step.label}</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </header>
+  );
+};

@@ -41,12 +41,17 @@ export interface VisaDevisDetail {
     puClientDevise: number;
     puConsulatAriary: number;
     puConsulatDevise: number;
+    commissionAriary: number;
+    montantTotalClientAriary: number;
+    montantTotalClientDevise: number;
+    montantTotalConsulatAriary: number;
+    montantTotalConsulatDevise: number;
     consulatId: string;
     visaParamsId: string;
     visaProspectionEnteteId: string;
     createdAt: string;
     updatedAt: string;
-    consulat: {
+    consulat: {                      // ← ajouté
       id: string;
       nom: string;
       createdAt: string;
@@ -159,6 +164,32 @@ export const creerVisaEntete = createAsyncThunk(
   }
 );
 
+// visaDevisSlice.ts
+
+export const genererPdfDirection = createAsyncThunk(
+  'visaDevis/genererPdfDirection',
+  async (visaProspectionEnteteId: string, { rejectWithValue }) => {
+    try {
+      const res = await axios.post(`/visa/devis-direction/${visaProspectionEnteteId}`);
+      return res.data.data as string; // retourne le chemin du PDF
+    } catch (err: any) {
+      return rejectWithValue(err.message || 'Erreur génération PDF direction');
+    }
+  }
+);
+
+export const genererPdfClient = createAsyncThunk(
+  'visaDevis/genererPdfClient',
+  async (visaProspectionEnteteId: string, { rejectWithValue }) => {
+    try {
+      const res = await axios.post(`/visa/devis-client/${visaProspectionEnteteId}`);
+      return res.data.data as string;
+    } catch (err: any) {
+      return rejectWithValue(err.message || 'Erreur génération PDF client');
+    }
+  }
+);
+
 // ── Slice ──────────────────────────────────────────────────────────────────
 
 const visaDevisSlice = createSlice({
@@ -186,7 +217,15 @@ const visaDevisSlice = createSlice({
       .addCase(creerVisaEntete.pending,   (state) => { state.loading = true;  state.error = null; })
       .addCase(creerVisaEntete.fulfilled, (state) => { state.loading = false; })
       .addCase(creerVisaEntete.rejected,  (state, action) => { state.loading = false; state.error = action.payload as string; })
-  },
+
+      .addCase(genererPdfDirection.pending,   (state) => { state.loading = true;  state.error = null; })
+      .addCase(genererPdfDirection.fulfilled, (state) => { state.loading = false; })
+      .addCase(genererPdfDirection.rejected,  (state, action) => { state.loading = false; state.error = action.payload as string; })
+
+      .addCase(genererPdfClient.pending,   (state) => { state.loading = true;  state.error = null; })
+      .addCase(genererPdfClient.fulfilled, (state) => { state.loading = false; })
+      .addCase(genererPdfClient.rejected,  (state, action) => { state.loading = false; state.error = action.payload as string; })
+        },
 });
 
 export const { clearVisaDevis } = visaDevisSlice.actions;

@@ -11,8 +11,9 @@ import HotelConfirmationModal from '../../components/HotelConfirmationModal';
 import { fetchRaisonsAnnulation } from '../../../../../../app/front_office/parametre_ticketing/raisonAnnulationSlice';
 import { HotelHeader } from '../../components/HotelHeader';
 import TabContainer from '../../../../../../layouts/TabContainer';
-import SuiviTabContent from '../../../module.attestation.voyage/SousMenuPrestation/SuiviTabContent';
+// import SuiviTabContent from '../../../module.attestation.voyage/SousMenuPrestation/SuiviTabContent';
 import ActionButton from '../../components/ActionButton';
+import SuiviTabSection from '../../../module.suivi/SuiviTabSection';
 
 const HotelReservationDetail = () => {
   const { enteteId } = useParams<{ enteteId: string }>();
@@ -38,7 +39,7 @@ const HotelReservationDetail = () => {
 
   // On extrait l'id de la prestation attestation
   const prestationId = dossierActif?.dossierCommunColab
-    ?.find(colab => colab.module?.nom?.toLowerCase() === "attestation")
+    ?.find(colab => colab.module?.nom?.toLowerCase() === "hotel")
     ?.prestation?.[0]?.id || '';
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -90,7 +91,7 @@ const HotelReservationDetail = () => {
   );
 
   const tabs = [
-    { id: 'benchmarking', label: 'Listes des entête benchmarking' },
+    { id: 'prospection', label: 'Listes des entête benchmarking' },
     { id: 'hotel', label: 'Listes des reservation hotel' }
   ];
 
@@ -131,10 +132,10 @@ const HotelReservationDetail = () => {
 
   // FONCTION DE NAVIGATION INTERCEPTÉE
   const handleTabChange = (id: string) => {
-    if (id === 'benchmarking') {
+    if (id === 'prospection') {
       // On remonte au parent (PageView) en passant le state pour l'onglet
       navigate(`/dossiers-communs/hotel/pages`, { 
-        state: { targetTab: 'benchmarking' }
+        state: { targetTab: 'prospection' }
       });
     } else {
       setActiveTab(id);
@@ -284,52 +285,52 @@ const HotelReservationDetail = () => {
 
   
 
-  if (detailLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-neutral-50">
-        <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-orange-500"></div>
-      </div>
-    );
-  }
+  // if (detailLoading) {
+  //   return (
+  //     <div className="min-h-screen flex items-center justify-center bg-neutral-50">
+  //       <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-orange-500"></div>
+  //     </div>
+  //   );
+  // }
 
-  if (detailError || !selectedDetail) {
-    return (
-      <div className="min-h-screen p-8 bg-neutral-50">
-        <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-lg max-w-4xl mx-auto">
-          <p className="text-red-700">{detailError || 'Réservation non trouvée'}</p>
-          <button
-            onClick={() => navigate(-1)}
-            className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
-          >
-            Retour
-          </button>
-        </div>
-      </div>
-    );
-  }
+  // if (detailError || !selectedDetail) {
+  //   return (
+  //     <div className="min-h-screen p-8 bg-neutral-50">
+  //       <div className="bg-red-50 border-l-4 border-red-500 p-6 rounded-lg max-w-4xl mx-auto">
+  //         <p className="text-red-700">{detailError || 'Réservation non trouvée'}</p>
+  //         <button
+  //           onClick={() => navigate(-1)}
+  //           className="mt-4 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+  //         >
+  //           Retour
+  //         </button>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   const entete = selectedDetail;
   // const beneficiaires = clientFactureData?.beneficiaires || [];
 
-  const hasNonRefundableLignes = entete.hotelLigne.some(
+  const hasNonRefundableLignes = entete?.hotelLigne.some(
     (l) => l.BenchmarkingLigne.isRefundable === false
   );
 
   return (
     <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange}>
-      <div className="min-h-screen bg-neutral-50">
+      <div className="min-h-screen bg-neutral-50 mt-5">
         {/* Header */}
         <div className="mb-5">
-          <HotelHeader numerohotel={entete.HotelProspectionEntete.numeroEntete} navigate={navigate} isDetail={true}/>
+          <HotelHeader numerohotel={entete?.HotelProspectionEntete.numeroEntete} navigate={navigate} isDetail={true}/>
         </div>
         {/* Header + boutons statut */}
         <div className="flex items-center justify-between mb-8 uppercase">
           <div>
             <h1 className="text-2xl font-bold text-neutral-800">
-              N° Rés. Hôtel : {entete.HotelProspectionEntete.numeroEntete}
+              N° Rés. Hôtel : {entete?.HotelProspectionEntete.numeroEntete}
             </h1>
             <p className="text-sm text-neutral-500 mt-1 ">
-              Statut : <span className="font-medium ">{entete.statut == 'CREER' ? 'Crée' : entete.statut}</span>
+              Statut : <span className="font-medium ">{entete?.statut == 'CREER' ? 'Crée' : entete?.statut}</span>
             </p>
           </div>
 
@@ -338,7 +339,7 @@ const HotelReservationDetail = () => {
           {/* BC à approuver */}
           <ActionButton
             label="BC Approuver"
-            enabled={entete.statut === 'CREER'}
+            enabled={entete?.statut === 'CREER'}
             variant="success"
             onClick={() => {
               const totalHotel = entete.hotelLigne.reduce((sum, l) => sum + (l.puResaMontantAriary || 0), 0);
@@ -356,13 +357,13 @@ const HotelReservationDetail = () => {
           {/* Émission Billet */}
           <ActionButton
             label="Émission Billet"
-            enabled={entete.statut === 'BC_CLIENT_A_APPROUVER'}
+            enabled={entete?.statut === 'BC_CLIENT_A_APPROUVER'}
             variant="primary"
             onClick={() => {
               setEmissionBilletForm({
                 referenceBcClient: '',
-                totalHotel: entete.hotelLigne.reduce((sum, l) => sum + (l.puResaMontantAriary || 0), 0),
-                totalCommission: entete.hotelLigne.reduce((sum, l) => sum + (l.commissionUnitaire || 0), 0),
+                totalHotel: entete?.hotelLigne.reduce((sum, l) => sum + (l.puResaMontantAriary || 0), 0) || 0,
+                totalCommission: entete?.hotelLigne.reduce((sum, l) => sum + (l.commissionUnitaire || 0), 0) || 0,
               });
               setShowEmissionBilletModal(true);
             }}
@@ -376,7 +377,7 @@ const HotelReservationDetail = () => {
           {/* Émission Facture */}
           <ActionButton
             label="Émission Facture"
-            enabled={entete.statut === 'BILLET_EMIS'}
+            enabled={entete?.statut === 'BILLET_EMIS'}
             variant="purple"
             onClick={() => {
               setEmissionFactureForm({ referenceFacClient: '' });
@@ -392,7 +393,7 @@ const HotelReservationDetail = () => {
           {/* Régler Facture */}
           <ActionButton
             label="Régler Facture"
-            enabled={entete.statut === 'FACTURE_EMISE'}
+            enabled={entete?.statut === 'FACTURE_EMISE'}
             variant="warning"
             onClick={() => setShowReglerModal(true)}
             icon={
@@ -405,7 +406,7 @@ const HotelReservationDetail = () => {
           {/* Annulation */}
           <ActionButton
             label="Annuler"
-            enabled={entete.statut !== 'ANNULER'}
+            enabled={entete?.statut !== 'ANNULER'}
             variant="danger"
             onClick={() => {
               setAnnulationForm({ rasionAnnulationId: '', conditionAnnul: '' });
@@ -426,22 +427,22 @@ const HotelReservationDetail = () => {
           <div className="bg-white p-5 rounded-lg border border-neutral-200 shadow-sm">
             <h3 className="text-sm font-semibold text-neutral-600 mb-2">Fournisseur</h3>
             <p className="text-lg font-medium">
-              {entete.HotelProspectionEntete.fournisseur.libelle}
+              {entete?.HotelProspectionEntete.fournisseur.libelle}
               <span className="text-neutral-500 ml-2 text-sm">
-                ({entete.HotelProspectionEntete.fournisseur.code})
+                ({entete?.HotelProspectionEntete.fournisseur.code})
               </span>
             </p>
           </div>
           <div className="bg-white p-5 rounded-lg border border-neutral-200 shadow-sm">
             <h3 className="text-sm font-semibold text-neutral-600 mb-2">Dossier / Prestation</h3>
             <p className="text-lg font-medium">
-              {entete.HotelProspectionEntete.prestation.numeroDos || '—'}
+              {entete?.HotelProspectionEntete.prestation.numeroDos || '—'}
             </p>
           </div>
           <div className="bg-white p-5 rounded-lg border border-neutral-200 shadow-sm">
             <h3 className="text-sm font-semibold text-neutral-600 mb-2">Créé le</h3>
             <p className="text-lg font-medium">
-              {new Date(entete.createdAt).toLocaleDateString('fr-FR', {
+              {new Date(entete?.createdAt).toLocaleDateString('fr-FR', {
                 day: '2-digit', month: 'long', year: 'numeric',
                 hour: '2-digit', minute: '2-digit',
               })}
@@ -485,7 +486,7 @@ const HotelReservationDetail = () => {
                 <div className="bg-white overflow-hidden">
                   <div className="p-5 border-b border-neutral-200">
                     <h2 className="text-lg font-semibold text-neutral-800">
-                      Lignes de réservation ({entete.hotelLigne.length})
+                      Lignes de réservation ({entete?.hotelLigne.length})
                     </h2>
                   </div>
 
@@ -520,7 +521,7 @@ const HotelReservationDetail = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-neutral-100 text-xs">
-                        {entete.hotelLigne.map((ligne) => (
+                        {entete?.hotelLigne.map((ligne) => (
                           <tr key={ligne.id} className="hover:bg-neutral-50">
                             <td className="px-6 py-4 font-medium">{ligne.referenceLine}</td>
                             <td className="px-6 py-4">{ligne.numeroResa}</td>
@@ -577,12 +578,8 @@ const HotelReservationDetail = () => {
 
               {/* ── Onglet Suivi ── */}
               {activeTabSousSection === 'suivi' && (
-                <SuiviTabContent
-                  selectedId={''}
-                  selectedDetail={selectedDetail}
-                  selectedSuivi={''}
+                <SuiviTabSection
                   prestationId={prestationId}
-                  loading={detailLoading}
                 />
               )}
             </div>{/* fin tab content */}
@@ -611,7 +608,7 @@ const HotelReservationDetail = () => {
               <div className="bg-gray-50 border-b border-gray-200 px-6 py-4 flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">BC à approuver</h3>
-                  <p className="text-sm text-gray-500 mt-0.5">En-tête : {entete.HotelProspectionEntete.numeroEntete}</p>
+                  <p className="text-sm text-gray-500 mt-0.5">En-tête : {entete?.HotelProspectionEntete.numeroEntete}</p>
                 </div>
                 <button onClick={() => setShowApprouverModal(false)} className="text-gray-400 hover:text-gray-600 p-1 hover:bg-gray-100 rounded">✕</button>
               </div>
@@ -623,7 +620,7 @@ const HotelReservationDetail = () => {
                     className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-green-500 focus:border-green-500" placeholder="0"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Calculé depuis les lignes : {entete.hotelLigne.reduce((sum, l) => sum + (l.puResaMontantAriary || 0), 0).toLocaleString('fr-FR')} Ar
+                    Calculé depuis les lignes : {entete?.hotelLigne.reduce((sum, l) => sum + (l.puResaMontantAriary || 0), 0).toLocaleString('fr-FR')} Ar
                   </p>
                 </div>
                 <div>
@@ -633,7 +630,7 @@ const HotelReservationDetail = () => {
                     className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-green-500 focus:border-green-500" placeholder="0"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Calculé depuis les lignes : {entete.hotelLigne.reduce((sum, l) => sum + (l.commissionUnitaire || 0), 0).toLocaleString('fr-FR')} Ar
+                    Calculé depuis les lignes : {entete?.hotelLigne.reduce((sum, l) => sum + (l.commissionUnitaire || 0), 0).toLocaleString('fr-FR')} Ar
                   </p>
                 </div>
                 <div className="bg-green-50 border border-green-200 rounded p-4 space-y-2">
@@ -667,7 +664,7 @@ const HotelReservationDetail = () => {
               <div className="bg-gray-50 border-b border-gray-200 px-6 py-4 flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">🎫 Émission Billet Hôtel</h3>
-                  <p className="text-sm text-gray-500 mt-0.5">{entete.HotelProspectionEntete.numeroEntete}</p>
+                  <p className="text-sm text-gray-500 mt-0.5">{entete?.HotelProspectionEntete.numeroEntete}</p>
                 </div>
                 <button onClick={() => setShowEmissionBilletModal(false)} className="text-gray-400 hover:text-gray-600 p-1 hover:bg-gray-100 rounded">✕</button>
               </div>
@@ -728,7 +725,7 @@ const HotelReservationDetail = () => {
               <div className="bg-gray-50 border-b border-gray-200 px-6 py-4 flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">🧾 Émission Facture Hôtel</h3>
-                  <p className="text-sm text-gray-500 mt-0.5">{entete.HotelProspectionEntete.numeroEntete}</p>
+                  <p className="text-sm text-gray-500 mt-0.5">{entete?.HotelProspectionEntete.numeroEntete}</p>
                 </div>
                 <button onClick={() => setShowEmissionFactureModal(false)} className="text-gray-400 hover:text-gray-600 p-1 hover:bg-gray-100 rounded">✕</button>
               </div>
@@ -767,7 +764,7 @@ const HotelReservationDetail = () => {
               <div className="bg-gray-50 border-b border-gray-200 px-6 py-4 flex items-center justify-between">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">💳 Régler la Facture</h3>
-                  <p className="text-sm text-gray-500 mt-0.5">{entete.HotelProspectionEntete.numeroEntete}</p>
+                  <p className="text-sm text-gray-500 mt-0.5">{entete?.HotelProspectionEntete.numeroEntete}</p>
                 </div>
                 <button onClick={() => setShowReglerModal(false)} className="text-gray-400 hover:text-gray-600 p-1 hover:bg-gray-100 rounded">✕</button>
               </div>
@@ -780,15 +777,15 @@ const HotelReservationDetail = () => {
                 <div className="bg-gray-50 border border-gray-200 rounded p-3 space-y-1">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500">En-tête</span>
-                    <span className="font-semibold">{entete.HotelProspectionEntete.numeroEntete}</span>
+                    <span className="font-semibold">{entete?.HotelProspectionEntete.numeroEntete}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500">Statut actuel</span>
-                    <span className="font-semibold">{entete.statut}</span>
+                    <span className="font-semibold">{entete?.statut}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-500">Fournisseur</span>
-                    <span className="font-semibold">{entete.HotelProspectionEntete.fournisseur.libelle}</span>
+                    <span className="font-semibold">{entete?.HotelProspectionEntete.fournisseur.libelle}</span>
                   </div>
                 </div>
                 <div className="bg-amber-50 border border-amber-200 rounded p-3 flex items-start gap-2">
@@ -817,7 +814,7 @@ const HotelReservationDetail = () => {
                 <div>
                   <h3 className="text-lg font-semibold text-red-800">Annulation de réservation</h3>
                   <p className="text-sm text-red-600 mt-0.5">
-                    {entete.HotelProspectionEntete.numeroEntete} — {entete.HotelProspectionEntete.fournisseur.libelle}
+                    {entete?.HotelProspectionEntete.numeroEntete} — {entete?.HotelProspectionEntete.fournisseur.libelle}
                   </p>
                 </div>
                 <button onClick={() => setShowAnnulationModal(false)} className="text-red-400 hover:text-red-600 p-1 hover:bg-red-100 rounded">✕</button>

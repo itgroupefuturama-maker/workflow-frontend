@@ -1,2 +1,6 @@
 @import "tailwindcss";
 
+/* index.css */
+html, body, #root {
+  @apply bg-slate-700 min-h-full;
+}

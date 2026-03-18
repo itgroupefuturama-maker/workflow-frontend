@@ -117,8 +117,8 @@ export default function ParametreLayout() {
     // return () => clearInterval(interval);
   }, [dispatch, token, navigate]);
   return (
-    <div className="flex flex-col h-screen bg-gray-100">
-      <AppBar />
+    <div className="flex flex-col h-screen bg-slate-200">
+      <AppBar isBackOffice={true} />
       <main className="flex-1 overflow-auto">
         <Outlet />
       </main>

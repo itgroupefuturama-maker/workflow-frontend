@@ -7,6 +7,7 @@ import ProtectedRoute from "./pages/ProtectedRoute";
 import ParametreLayout from "./layouts/ListeParametreLayout";
 import { parametresRoutes } from "./routes/Parametres.routes";
 import { frontOfficeRoutes } from "./routes/FrontOffice.routes"; // Nouveau import
+import FrontOfficeLayout from "./layouts/FrontOfficeLayout";
 
 
 export function App() {
@@ -29,8 +30,8 @@ export function App() {
 
         {/* FRONT OFFICE : Ajoute "index" ou assure-toi que les routes internes sont bien mappées */}
         <Route path="/" element={<ProtectedRoute adminOnly={false} />}>
-          <Route element={<ParametreLayout />}>
-            {frontOfficeRoutes()} 
+          <Route element={<FrontOfficeLayout />}>
+            {frontOfficeRoutes()}
           </Route>
         </Route>
 

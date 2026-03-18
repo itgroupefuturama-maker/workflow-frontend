@@ -274,10 +274,15 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
                           >
                             <option value="">Sélectionner un document</option>
                             {infosList
-                              .filter((info) => info.clientType === ligne.prospectionLigne?.typePassager)
+                              .filter((info) =>
+                                !ligne.prospectionLigne?.typePassager ||   // pas de filtre si typePassager absent
+                                info.clientType === null ||                 // affiche si clientType null
+                                info.clientType === ligne.prospectionLigne?.typePassager
+                              )
                               .map((info) => (
                                 <option key={info.id} value={info.id}>
-                                  {info.prenom} {info.nom} • {info.typeDoc} {info.referenceDoc} ({info.clientType})
+                                  {info.prenom} {info.nom} • {info.typeDoc} {info.referenceDoc}
+                                  {info.clientType ? ` (${info.clientType})` : ''}
                                 </option>
                               ))
                             }
@@ -300,9 +305,9 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
                             </div>
                           </div>
                           <div>
-                            <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Type</div>
+                            <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Type passager</div>
                             <div className="text-xs font-medium text-gray-700 bg-gray-200 rounded px-2 py-0.5 inline-block">
-                              {selectedInfoDetails.clientType}
+                              {selectedInfoDetails.clientType ?? '—'}   {/* ← null géré */}
                             </div>
                           </div>
                           <div>
@@ -310,43 +315,47 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
                             <div className="text-sm text-gray-900">{selectedInfoDetails.nationalite}</div>
                           </div>
                           <div>
-                            <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Document</div>
+                            <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Type document</div>
                             <div className="text-xs font-medium text-gray-700 bg-gray-200 rounded px-2 py-0.5 inline-block">
                               {selectedInfoDetails.typeDoc}
                             </div>
-                            <div className="text-xs text-gray-500 font-mono mt-0.5">{selectedInfoDetails.referenceDoc}</div>
+                          </div>
+                          <div>
+                            <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Référence doc</div>
+                            <div className="text-xs font-mono text-gray-900">{selectedInfoDetails.referenceDoc}</div>
                           </div>
                           <div>
                             <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Validité</div>
                             <div className={`text-xs font-medium ${
-                              new Date(selectedInfoDetails.dateValiditeDoc) < new Date() 
-                                ? 'text-red-600' 
+                              new Date(selectedInfoDetails.dateValiditeDoc) < new Date()
+                                ? 'text-red-600'
                                 : 'text-gray-900'
                             }`}>
                               {new Date(selectedInfoDetails.dateValiditeDoc).toLocaleDateString('fr-FR')}
                             </div>
-                            <div className="text-xs text-gray-500">Del: {selectedInfoDetails.dateDelivranceDoc}</div>
-                          </div>
-                          <div>
-                            <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">CIN</div>
-                            <div className="text-xs font-medium text-gray-700 bg-gray-200 rounded px-2 py-0.5 inline-block">
-                              {selectedInfoDetails.cin}
+                            <div className="text-xs text-gray-500">
+                              Del: {new Date(selectedInfoDetails.dateDelivranceDoc).toLocaleDateString('fr-FR')}
                             </div>
-                            <div className="text-xs text-gray-500 font-mono mt-0.5">{selectedInfoDetails.referenceCin}</div>
                           </div>
-                          <div>
-                            <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Validité CIN</div>
-                            <div className="text-xs text-gray-900">{selectedInfoDetails.dateValiditeCin}</div>
-                            <div className="text-xs text-gray-500">Del: {selectedInfoDetails.dateDelivranceCin}</div>
-                          </div>
-                          <div>
-                            <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">WhatsApp</div>
-                            <div className="text-xs font-mono text-gray-900">{selectedInfoDetails.whatsapp}</div>
-                          </div>
-                          <div>
-                            <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Téléphone</div>
-                            <div className="text-xs font-mono text-gray-900">{selectedInfoDetails.tel}</div>
-                          </div>
+                          {/* CIN — affiché seulement si présent */}
+                          {selectedInfoDetails.referenceCin && (
+                            <div>
+                              <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">CIN</div>
+                              <div className="text-xs font-mono text-gray-900">{selectedInfoDetails.referenceCin}</div>
+                            </div>
+                          )}
+                          {selectedInfoDetails.tel && (
+                            <div>
+                              <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Téléphone</div>
+                              <div className="text-xs font-mono text-gray-900">{selectedInfoDetails.tel}</div>
+                            </div>
+                          )}
+                          {selectedInfoDetails.whatsapp && (
+                            <div>
+                              <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">WhatsApp</div>
+                              <div className="text-xs font-mono text-gray-900">{selectedInfoDetails.whatsapp}</div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )}

@@ -93,7 +93,7 @@ export interface HotelDevisData {
     entityId: string;
     createdAt: string;
     updatedAt: string;
-    data: DevisData; // ← nouveau champ imbriqué
+    data: DevisData;
   } | null;
 }
 
@@ -126,7 +126,10 @@ export const fetchHotelWithDevis = createAsyncThunk(
     try {
       const response = await axios.get(`/hotel/prospection/${id}/with-devis`);
       if (!response.data?.success) return rejectWithValue(response.data?.message || 'Réponse invalide');
-      return response.data.data as HotelDevisData;
+
+      // ← Le serveur retourne response.data.data = l'objet devis directement
+      // On le wrappe pour correspondre à HotelDevisData
+      return { devis: response.data.data } as HotelDevisData;
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.message || err.message || 'Erreur de chargement');
     }

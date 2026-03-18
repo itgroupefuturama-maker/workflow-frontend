@@ -95,7 +95,7 @@ const ParametreViewHotel = () => {
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 p-6">
       <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab}>
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">Paramètres Hôtel</h1>
+        <h1 className="text-2xl font-bold text-gray-800 mb-6 mt-5">Paramètres Hôtel</h1>
 
         <div className="space-y-8">
           {activeTab === 'plateformes' && (

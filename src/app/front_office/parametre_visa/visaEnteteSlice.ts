@@ -53,6 +53,19 @@ export interface SoumissionLigne {
   updatedAt: string;
 }
 
+export interface Visa {
+  id: string;
+  visaLigneId: string;
+  passagerAbstractId: string;
+  statusVisa: string;
+  referenceDossier: string;
+  motif: string;
+  dateSoummission: string;
+  resultat: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface VisaLigne {
   id: string;
   numeroDossier: string | null;
@@ -78,8 +91,8 @@ export interface VisaLigne {
   RaisonAnnulation: null;
   accesPortail?: AccesPortail[];
   soumissionLigne?: SoumissionLigne[];
-  passagers?: Passager[];          // ← champ réel retourné par le serveur
-  visa?: any[];
+  passagers?: Passager[];
+  visa?: Visa[];
   visaProspectionLigne: {
     id: string;
     nombre: number;
@@ -121,6 +134,8 @@ export interface VisaLigne {
   };
 }
 
+// visaEnteteSlice.ts
+
 export interface VisaEntete {
   id: string;
   visaProspectionEnteteId: string;
@@ -134,6 +149,13 @@ export interface VisaEntete {
   visaProspectionEntete: {
     id: string;
     prestationId: string;
+    consulatId: string;          // ← ajouté
+    consulat: {                  // ← ajouté
+      id: string;
+      nom: string;
+      createdAt: string;
+      updatedAt: string;
+    };
     prestation: {
       id: string;
       numeroDos: string;
@@ -182,7 +204,10 @@ const visaEnteteSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(fetchVisaEntetes.pending,   (state) => { state.loading = true;  state.error = null; })
-      .addCase(fetchVisaEntetes.fulfilled, (state, action) => { state.loading = false; state.data = action.payload; })
+      .addCase(fetchVisaEntetes.fulfilled, (state, action) => {
+        state.loading = false;
+        state.data = Array.isArray(action.payload) ? action.payload : [];
+      })
       .addCase(fetchVisaEntetes.rejected,  (state, action) => { state.loading = false; state.error = action.payload as string; });
   },
 });

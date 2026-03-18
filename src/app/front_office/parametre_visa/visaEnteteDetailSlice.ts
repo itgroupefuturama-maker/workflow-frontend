@@ -40,6 +40,83 @@ export const generateAccesPortail = createAsyncThunk(
   }
 );
 
+export const submitVisaLigne = createAsyncThunk(
+  'visaEnteteDetail/submitLigne',
+  async (
+    payload: {
+      id: string;
+      soummissionTauxChange: number;
+      soummissionPuConsilatAriary: number;
+      soummissionPuClientAriary: number;
+      soummissionCommissionAriary: number;
+      limiteSoummision: string;
+      referenceSoummision: string;
+      limitePaiement: string;
+    },
+    { rejectWithValue }
+  ) => {
+    try {
+      const { id, ...body } = payload;
+      const res = await axios.post(`/visa/ligne/${id}/submit`, body);
+      return unwrapApiResponse(res.data, 'Erreur soumission ligne');
+    } catch (err: any) {
+      return rejectWithValue(err.response?.data?.message || 'Erreur soumission ligne');
+    }
+  }
+);
+
+export const sendVisa = createAsyncThunk(
+  'visaEnteteDetail/send',
+  async (
+    payload: { id: string; referenceDossier: string; dateSoummission: string },
+    { rejectWithValue }
+  ) => {
+    try {
+      const { id, ...body } = payload;
+      // console.log(payload);
+      
+      const res = await axios.post(`/visa/${id}/send`, body);
+      console.log(`tonga eto ${res}`);
+      
+      return unwrapApiResponse(res.data, 'Erreur envoi visa');
+    } catch (err: any) {
+      return rejectWithValue(err.response?.data?.message || 'Erreur envoi visa');
+    }
+  }
+);
+
+export const payVisa = createAsyncThunk(
+  'visaEnteteDetail/pay',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      const res = await axios.post(`/visa/${id}/pay`);
+      return unwrapApiResponse(res.data, 'Erreur paiement visa');
+    } catch (err: any) {
+      return rejectWithValue(err.response?.data?.message || 'Erreur paiement visa');
+    }
+  }
+);
+
+export const decisionVisa = createAsyncThunk(
+  'visaEnteteDetail/decision',
+  async (
+    payload: { id: string; type: string; motif: string },
+    { rejectWithValue }
+  ) => {
+    try {
+      const { id, ...body } = payload;
+      const res = await axios.post(`/visa/${id}/decision`, body);
+      console.log(`id envoyer ${id}`);
+      
+      console.log('Réponse serveur:', res.data); // ← voir le JSON exact
+      return unwrapApiResponse(res.data, 'Erreur décision visa');
+    } catch (err: any) {
+      // unwrapApiResponse throw une Error normale, pas une erreur Axios
+      return rejectWithValue(err.message || 'Erreur décision visa');
+    }
+  }
+);
+
 const visaEnteteDetailSlice = createSlice({
   name: 'visaEnteteDetail',
   initialState,
@@ -54,6 +131,20 @@ const visaEnteteDetailSlice = createSlice({
       .addCase(generateAccesPortail.pending,   (state) => { state.loading = true;  state.error = null; })
       .addCase(generateAccesPortail.fulfilled, (state) => { state.loading = false; })
       .addCase(generateAccesPortail.rejected,  (state, action) => { state.loading = false; state.error = action.payload as string; })
+      .addCase(submitVisaLigne.pending,   (state) => { state.loading = true;  state.error = null; })
+      .addCase(submitVisaLigne.fulfilled, (state) => { state.loading = false; })
+      .addCase(submitVisaLigne.rejected,  (state, action) => { state.loading = false; state.error = action.payload as string; })
+      .addCase(sendVisa.pending,     (state) => { state.error = null; })
+      .addCase(sendVisa.fulfilled,   (state) => { state.loading = false; })
+      .addCase(sendVisa.rejected,    (state, action) => { state.error = action.payload as string; })
+
+      .addCase(payVisa.pending,      (state) => { state.error = null; })
+      .addCase(payVisa.fulfilled,    (state) => { state.loading = false; })
+      .addCase(payVisa.rejected,     (state, action) => { state.error = action.payload as string; })
+
+      .addCase(decisionVisa.pending,   (state) => { state.error = null; })
+      .addCase(decisionVisa.fulfilled, (state) => { state.loading = false; })
+      .addCase(decisionVisa.rejected,  (state, action) => { state.error = action.payload as string; })
   },
 });
 

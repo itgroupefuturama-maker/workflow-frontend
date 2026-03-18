@@ -36,8 +36,8 @@ export default function Sidebar({ module }: SidebarProps) {
   });
 
   const [openMenus, setOpenMenus] = useState<{ [key: string]: boolean }>({
-    Accueil: true,
-    Paramètres: true,
+    Accueil: false,
+    Paramètres: false,
   });
 
   useEffect(() => {
@@ -95,18 +95,21 @@ export default function Sidebar({ module }: SidebarProps) {
           ]
         : module === 'visa'
         ? [
-            { label: 'Type de Visa',         path: 'parametres', icon: <FiLayers size={15} />, tab: 'type'          },
-            { label: 'Durée de Visa',        path: 'parametres', icon: <FiMap    size={15} />, tab: 'duree'           },
-            { label: 'Visa Entrée',          path: 'parametres', icon: <FiMap    size={15} />, tab: 'entree'               },
-            { label: 'Paramétre de Visa',    path: 'parametres', icon: <FiMap    size={15} />, tab: 'params'               },
-            { label: 'Document Visa',        path: 'parametres', icon: <FiMap    size={15} />, tab: 'docs'               },
-            { label: 'Visa Consulat',        path: 'parametres', icon: <FiMap    size={15} />, tab: 'consulat'               },
-            { label: 'Raison Annulation',    path: 'parametres', icon: <FiMap    size={15} />, tab: 'listeRaisonAnnulation' },
+            { label: 'Type de Visa',              path: 'parametres', icon: <FiLayers size={15} />, tab: 'type'          },
+            { label: 'Durée de Visa',             path: 'parametres', icon: <FiMap    size={15} />, tab: 'duree'           },
+            { label: 'Visa Entrée',               path: 'parametres', icon: <FiMap    size={15} />, tab: 'entree'               },
+            { label: 'Paramétre de Visa',         path: 'parametres', icon: <FiMap    size={15} />, tab: 'params'               },
+            { label: 'Paramétre de Document',     path: 'parametres', icon: <FiMap    size={15} />, tab: 'docsparams'               },
+            { label: 'Document Visa',             path: 'parametres', icon: <FiMap    size={15} />, tab: 'docs'               },
+            { label: 'Visa Consulat',             path: 'parametres', icon: <FiMap    size={15} />, tab: 'consulat'               },
+            { label: 'Raison Annulation',         path: 'parametres', icon: <FiMap    size={15} />, tab: 'listeRaisonAnnulation' },
           ]
         : module === 'assurance'
         ? [
-            { label: 'Service & spécifique', path: 'parametres', icon: <FiLayers size={15} />, tab: 'listeService'          },
-            { label: 'Exigence de voyage',   path: 'parametres', icon: <FiMap    size={15} />, tab: 'listeExigence'         },
+            { label: 'Assurance Parametre', path: 'parametres', icon: <FiLayers size={15} />, tab: 'params'          },
+            { label: 'Assurance Document',   path: 'parametres', icon: <FiMap    size={15} />, tab: 'docs'         },
+            { label: 'Tarif Plein',   path: 'parametres', icon: <FiMap    size={15} />, tab: 'tarifPlein'         },
+            { label: 'Tarif Réduit',   path: 'parametres', icon: <FiMap    size={15} />, tab: 'tarifReduit'         },
             { label: 'Raison Annulation',    path: 'parametres', icon: <FiMap    size={15} />, tab: 'listeRaisonAnnulation' },
           ]
         : [
@@ -125,12 +128,12 @@ export default function Sidebar({ module }: SidebarProps) {
         ]
       : module === 'hotel'
       ? [
-          { label: 'Liste Benchmarking', path: '/dossiers-communs/hotel/pages',       icon: <FiPlusSquare size={14} />, tab: 'benchmarking' },
+          { label: 'Liste Benchmarking', path: '/dossiers-communs/hotel/pages',       icon: <FiPlusSquare size={14} />, tab: 'prospection' },
           { label: 'Liste Reservation',  path: '/dossiers-communs/hotel/pages',       icon: <FiList       size={14} />, tab: 'hotel'        },
         ]
       : module === 'attestation'
       ? [
-          { label: 'Entête Attestation', path: '/dossiers-communs/attestation/pages', icon: <FiPlusSquare size={14} />, tab: 'attestation'  },
+          { label: 'Entête Attestation', path: '/dossiers-communs/attestation/pages', icon: <FiPlusSquare size={14} />, tab: 'prospection'  },
         ]
       : module === 'visa'
       ? [
@@ -147,9 +150,10 @@ export default function Sidebar({ module }: SidebarProps) {
   const handleDossierSelect = async (dossier: DossierCommun) => {
     await dispatch(setCurrentClientFactureId(dossier));
     if (module === 'ticketing')   navigate('/dossiers-communs/ticketing/pages',   { state: { targetTab: 'prospection'  } });
-    if (module === 'attestation') navigate('/dossiers-communs/attestation/pages', { state: { targetTab: 'attestation'  } });
-    if (module === 'hotel')       navigate('/dossiers-communs/hotel/pages',       { state: { targetTab: 'benchmarking' } });
+    if (module === 'attestation') navigate('/dossiers-communs/attestation/pages', { state: { targetTab: 'prospection'  } });
+    if (module === 'hotel')       navigate('/dossiers-communs/hotel/pages',       { state: { targetTab: 'prospection' } });
     if (module === 'visa')        navigate('/dossiers-communs/visa/pages',        { state: { targetTab: 'prospection'        } });
+    if (module === 'assurance')        navigate('/dossiers-communs/assurance/pages',        { state: { targetTab: 'prospection'        } });
   };
 
   const handleSubPageClick = (path: string, tab: string) => {
@@ -162,7 +166,7 @@ export default function Sidebar({ module }: SidebarProps) {
     attestation: { label: 'Attestation',      icon: <FiFolder size={15} />, gradient: 'from-rose-400 to-pink-500',     iconBg: 'bg-rose-500',    activeBg: 'bg-rose-500',    activeText: 'text-rose-600',    border: 'border-rose-200',    dotColor: 'bg-rose-400'    },
     hotel:       { label: 'Hôtel',            icon: <FiHome   size={15} />, gradient: 'from-orange-400 to-red-500',    iconBg: 'bg-orange-500',  activeBg: 'bg-orange-500',  activeText: 'text-orange-600',  border: 'border-orange-200',  dotColor: 'bg-orange-400'  },
     visa:        { label: 'Visa',             icon: <FiMap    size={15} />, gradient: 'from-blue-400 to-indigo-500',   iconBg: 'bg-blue-500',    activeBg: 'bg-blue-500',    activeText: 'text-blue-600',    border: 'border-blue-200',    dotColor: 'bg-blue-400'    },
-    assurance:   { label: 'Assurance',        icon: <FiMap    size={15} />, gradient: 'from-green-400 to-green-500',   iconBg: 'bg-green-500',    activeBg: 'bg-green-500',    activeText: 'text-green-600',    border: 'border-green-200',    dotColor: 'bg-green-400'    },
+    assurance:   { label: 'Assurance',        icon: <FiMap    size={15} />, gradient: 'from-green-600 to-green-500',   iconBg: 'bg-green-500',    activeBg: 'bg-green-500',    activeText: 'text-green-600',    border: 'border-green-200',    dotColor: 'bg-green-400'    },
   };
 
   const current = module
@@ -176,7 +180,7 @@ export default function Sidebar({ module }: SidebarProps) {
 
   return (
     <aside
-      className={`h-full sticky top-0 flex flex-col bg-white border-r border-slate-200/80 transition-all duration-300 ease-in-out shadow-sm ${
+      className={`h-full sticky top-0 flex flex-col bg-slate-700 border-r border-slate-200/80 transition-all duration-300 ease-in-out shadow-sm ${
         collapsed ? 'w-[60px]' : 'w-64'
       }`}
     >
@@ -201,7 +205,7 @@ export default function Sidebar({ module }: SidebarProps) {
             {/* Bouton collapse */}
             <button
               onClick={() => setCollapsed(true)}
-              className="p-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0"
+              className="p-2 rounded-lg text-white hover:text-slate-100 hover:bg-slate-600 transition-colors shrink-0"
               title="Réduire"
             >
               <FiChevronsLeft size={16} />
@@ -216,7 +220,7 @@ export default function Sidebar({ module }: SidebarProps) {
             {/* Bouton expand */}
             <button
               onClick={() => setCollapsed(false)}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+              className="p-1.5 rounded-lg text-white hover:text-white hover:bg-slate-600 transition-colors"
               title="Agrandir"
             >
               <FiChevronsRight size={15} />
@@ -226,7 +230,7 @@ export default function Sidebar({ module }: SidebarProps) {
       </div>
 
       {/* Séparateur */}
-      <div className="mx-3 h-px bg-linear-to-r from-transparent via-slate-200 to-transparent shrink-0" />
+      <div className="mx-3 h-px bg-linear-to-r from-transparent via-slate-600 to-transparent shrink-0" />
 
       {/* ══ NAV ══ */}
       <nav className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent py-2">
@@ -246,7 +250,7 @@ export default function Sidebar({ module }: SidebarProps) {
                       className={`w-full flex items-center justify-center p-2.5 rounded-lg transition-all duration-200 ${
                         active
                           ? `bg-linear-to-br ${current.gradient} text-white shadow-sm`
-                          : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700'
+                          : 'text-white hover:bg-slate-600 hover:text-white'
                       }`}
                     >
                       {item.icon}
@@ -264,7 +268,7 @@ export default function Sidebar({ module }: SidebarProps) {
             </div>
 
             {/* Séparateur Dossiers */}
-            <div className="w-7 h-px bg-slate-200 my-2" />
+            <div className="w-7 h-px bg-white my-2" />
 
             {/* Dossiers */}
             {dossiersTicketing.map((dossier) => {
@@ -276,7 +280,7 @@ export default function Sidebar({ module }: SidebarProps) {
                     className={`w-full flex items-center justify-center p-2.5 rounded-lg transition-all duration-200 ${
                       isActive
                         ? `bg-linear-to-br ${current.gradient} text-white shadow-sm`
-                        : 'text-slate-400 hover:bg-slate-100 hover:text-slate-700'
+                        : 'text-white hover:bg-slate-600 hover:text-white'
                     }`}
                   >
                     <FiFolder size={15} />
@@ -284,7 +288,7 @@ export default function Sidebar({ module }: SidebarProps) {
                   <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 z-50 pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-200">
                     <div className="bg-slate-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-lg whitespace-nowrap shadow-lg">
                       {dossier.numero}
-                      <span className="block text-slate-400 text-[10px] mt-0.5">
+                      <span className="block text-white text-[10px] mt-0.5">
                         {dossier.clientfacture?.libelle || 'Client...'}
                       </span>
                       <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-900" />
@@ -327,8 +331,8 @@ export default function Sidebar({ module }: SidebarProps) {
             {/* ── Paramètres Globaux ── */}
             <div className="mb-1">
               <div className="flex items-center gap-1.5 px-2 py-1.5 mb-1">
-                <FiGlobe size={11} className="text-slate-400" />
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                <FiGlobe size={11} className="text-white" />
+                <span className="text-[10px] font-bold text-white uppercase tracking-widest">
                   Navigation
                 </span>
               </div>
@@ -339,13 +343,13 @@ export default function Sidebar({ module }: SidebarProps) {
                   <div key={menu.title} className="mb-1">
                     <button
                       onClick={() => toggleMenu(menu.title)}
-                      className="w-full flex items-center justify-between px-2.5 py-2 text-slate-600 hover:bg-slate-50 rounded-lg transition-colors group"
+                      className="w-full flex items-center justify-between px-2.5 py-2 text-white hover:bg-slate-600 hover:text-white rounded-lg transition-colors group"
                     >
                       <div className="flex items-center gap-2">
-                        <span className="text-slate-400 group-hover:text-slate-600 transition-colors">{menu.icon}</span>
-                        <span className="text-sm font-semibold text-slate-700">{menu.title}</span>
+                        <span className="text-white group-hover:text-white transition-colors">{menu.icon}</span>
+                        <span className="text-sm font-semibold text-white">{menu.title}</span>
                       </div>
-                      <span className="text-slate-300">
+                      <span className="text-white">
                         {isOpen
                           ? <FiChevronDown  size={14} />
                           : <FiChevronRight size={14} />
@@ -354,7 +358,7 @@ export default function Sidebar({ module }: SidebarProps) {
                     </button>
 
                     {isOpen && (
-                      <div className="ml-2 mt-0.5 pl-4 border-l-2 border-slate-100 space-y-0.5">
+                      <div className="ml-2 mt-0.5 pl-4 border-l-2 border-slate-600 space-y-0.5">
                         {menu.links.map((link) => {
                           const active = isTabActive(link.tab);
                           return (
@@ -364,10 +368,10 @@ export default function Sidebar({ module }: SidebarProps) {
                               className={`w-full flex items-center gap-2.5 px-2.5 py-2 text-sm rounded-lg transition-all duration-200 ${
                                 active
                                   ? `bg-linear-to-r ${current.gradient} text-white shadow-sm font-medium`
-                                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                                  : 'text-slate-300 hover:bg-slate-600 hover:text-white'
                               }`}
                             >
-                              <span className={active ? 'text-white/80' : 'text-slate-400'}>{link.icon}</span>
+                              <span className={active ? 'text-white/80' : 'text-slate-200'}>{link.icon}</span>
                               {link.label}
                             </button>
                           );
@@ -380,14 +384,14 @@ export default function Sidebar({ module }: SidebarProps) {
             </div>
 
             {/* Séparateur */}
-            <div className="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent my-2" />
+            <div className="h-px bg-linear-to-r from-transparent via-slate-600 to-transparent my-2" />
 
             {/* ── Dossiers ── */}
             <div>
               {/* Lien retour */}
               <button
                 onClick={() => navigate(`/dossiers-communs/liste-by-module/${module}`)}
-                className="w-full flex items-center gap-2 px-2.5 py-1.5 mb-2 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-all group"
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 mb-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-600 transition-all group"
               >
                 <FiArrowLeft size={13} className="group-hover:-translate-x-0.5 transition-transform" />
                 <span className="text-[10px] font-bold uppercase tracking-widest">
@@ -397,12 +401,12 @@ export default function Sidebar({ module }: SidebarProps) {
 
               {/* Titre section */}
               <div className="flex items-center gap-1.5 px-2 py-1.5 mb-2">
-                <FiFolder size={11} className="text-slate-400" />
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                <FiFolder size={11} className="text-white" />
+                <span className="text-[10px] font-bold text-white uppercase tracking-widest">
                   Dossiers {module}
                 </span>
                 {dossiersTicketing.length > 0 && (
-                  <span className="ml-auto text-[10px] font-semibold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full">
+                  <span className="ml-auto text-[10px] font-semibold text-white bg-slate-600 px-1.5 py-0.5 rounded-full">
                     {dossiersTicketing.length}
                   </span>
                 )}
@@ -412,7 +416,7 @@ export default function Sidebar({ module }: SidebarProps) {
               <div className="space-y-1.5">
                 {loadingDossiers ? (
                   <div className="py-8 flex flex-col items-center gap-2">
-                    <div className={`w-8 h-8 bg-gradient-to-br ${current.gradient} rounded-full flex items-center justify-center`}>
+                    <div className={`w-8 h-8 bg-linear-to-br ${current.gradient} rounded-full flex items-center justify-center`}>
                       <FiLoader className="animate-spin text-white" size={16} />
                     </div>
                     <span className="text-xs text-slate-400">Chargement...</span>
@@ -434,16 +438,16 @@ export default function Sidebar({ module }: SidebarProps) {
                           className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-all duration-200 ${
                             isActive
                               ? `bg-linear-to-r ${current.gradient} text-white shadow-md`
-                              : 'bg-slate-50 border border-slate-100 text-slate-700 hover:border-slate-200 hover:shadow-sm hover:bg-white'
+                              : 'bg-slate-600 border border-slate-600 text-white hover:border-slate-400 hover:shadow-sm hover:bg-slate-500'
                           }`}
                         >
                           {/* Point indicateur */}
                           <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${isActive ? 'bg-white/60' : current.dotColor}`} />
                           <div className="flex-1 min-w-0 text-left">
-                            <p className={`text-xs font-bold truncate ${isActive ? 'text-white' : 'text-slate-800'}`}>
+                            <p className={`text-xs font-bold truncate ${isActive ? 'text-white' : 'text-white'}`}>
                               {dossier.numero}
                             </p>
-                            <p className={`text-[10px] truncate mt-0.5 ${isActive ? 'text-white/70' : 'text-slate-400'}`}>
+                            <p className={`text-[10px] truncate mt-0.5 ${isActive ? 'text-white' : 'text-white'}`}>
                               {dossier.clientfacture?.libelle || 'Client...'}
                             </p>
                           </div>
@@ -454,7 +458,7 @@ export default function Sidebar({ module }: SidebarProps) {
 
                         {/* Sous-liens du dossier actif */}
                         {isActive && subLinks.length > 0 && (
-                          <div className="mt-1 ml-4 pl-3 border-l-2 border-slate-200 space-y-0.5">
+                          <div className="mt-1 ml-4 pl-3 border-l-2 border-slate-600 space-y-0.5">
                             {subLinks.map((link) => {
                               const active = isTabActive(link.tab);
                               return (
@@ -463,11 +467,11 @@ export default function Sidebar({ module }: SidebarProps) {
                                   onClick={() => handleSubPageClick(link.path, link.tab)}
                                   className={`w-full flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg transition-all duration-200 ${
                                     active
-                                      ? 'bg-slate-100 text-slate-900 font-semibold'
-                                      : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                                      ? 'bg-slate-500 text-white font-semibold'
+                                      : 'text-slate-300 hover:bg-slate-600 hover:text-white'
                                   }`}
                                 >
-                                  <span className={active ? 'text-slate-600' : 'text-slate-300'}>{link.icon}</span>
+                                  <span className={active ? 'text-white' : 'text-slate-300'}>{link.icon}</span>
                                   {link.label}
                                 </button>
                               );
@@ -485,7 +489,7 @@ export default function Sidebar({ module }: SidebarProps) {
       </nav>
 
       {/* ══ FOOTER ══ */}
-      <div className={`shrink-0 border-t border-slate-100 ${collapsed ? 'p-2' : 'px-4 py-3'}`}>
+      <div className={`shrink-0 border-t border-slate-600 ${collapsed ? 'p-2' : 'px-4 py-3'}`}>
         {collapsed ? (
           <div className="flex justify-center">
             <span className="text-[9px] font-bold text-slate-300 tracking-widest">v1.2</span>
@@ -496,7 +500,7 @@ export default function Sidebar({ module }: SidebarProps) {
               <div className={`w-2 h-2 rounded-full ${current.dotColor} animate-pulse`} />
               <span className="text-[10px] text-slate-400 font-medium">Système opérationnel</span>
             </div>
-            <span className="text-[10px] text-slate-300 font-semibold">v1.2.0</span>
+            <span className="text-[10px] text-slate-300 font-semibold">v1.4.0</span>
           </div>
         )}
       </div>

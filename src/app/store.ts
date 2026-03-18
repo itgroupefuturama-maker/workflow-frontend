@@ -67,6 +67,11 @@ import visaDevisReducer from './front_office/parametre_visa/visaDevisSlice';
 import visaEnteteReducer from './front_office/parametre_visa/visaEnteteSlice';
 import visaEnteteDetailReducer from './front_office/parametre_visa/visaEnteteDetailSlice';
 import passagerDetailReducer from './front_office/parametre_visa/passagerDetailSlice';
+import assuranceParamsReducer from './front_office/parametre_assurance/assuranceParamsSlice';
+import assuranceProspectionReducer from './front_office/parametre_assurance/assuranceProspectionSlice';
+import assuranceEnteteReducer from './front_office/parametre_assurance/assuranceEnteteSlice';
+import assuranceEnteteDetailReducer from './front_office/parametre_assurance/assuranceEnteteDetailSlice';
+import clientBeneficiaireDetailReducer from './front_office/parametre_baseDonnee/clientBeneficiaireDetailSlice';
 
 import {
   FLUSH,
@@ -142,6 +147,14 @@ const appReducer = combineReducers({
   visaEntete: visaEnteteReducer,
   visaEnteteDetail: visaEnteteDetailReducer,
   passagerDetail: passagerDetailReducer,
+
+
+  assuranceParams: assuranceParamsReducer,
+  assuranceProspection: assuranceProspectionReducer,
+  assuranceEntete: assuranceEnteteReducer,
+  assuranceEnteteDetail: assuranceEnteteDetailReducer,
+
+  clientBeneficiaireDetail: clientBeneficiaireDetailReducer,
 
   // Portail-client
   clientBeneficiaireInfos: clientBeneficiaireInfosReducer,

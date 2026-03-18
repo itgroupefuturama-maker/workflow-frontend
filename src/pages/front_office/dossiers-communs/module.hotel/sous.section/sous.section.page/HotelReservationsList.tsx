@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState, AppDispatch } from '../../../../../../app/store';
 import { fetchHotelReservations } from '../../../../../../app/front_office/parametre_hotel/hotelReservationEnteteSlice';
@@ -14,6 +14,8 @@ interface Props {
 const HotelReservationsList = ({ prestationId, dossierNumero }: Props) => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
+
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
 
   const {
     items: reservations = [],
@@ -47,17 +49,32 @@ const HotelReservationsList = ({ prestationId, dossierNumero }: Props) => {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 space-y-4">
+    <div className="min-h-screen bg-neutral-50 space-y-4 mt-5">
 
       <HotelHeader numerohotel={dossierNumero} navigate={navigate} isBenchmarking={false} />
 
       <DossierActifCard gradient="from-orange-400 via-red-400 to-orange-500" />
 
-      <div className="mb-6">
-        <h2 className="text-xl font-bold text-neutral-800">Réservations Hôtel</h2>
-        <p className="text-sm text-neutral-500 mt-1">
-          Liste des en-têtes de réservation hôtel associées
-        </p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-xl font-bold text-neutral-800">Réservations Hôtel</h2>
+          <p className="text-sm text-neutral-500 mt-1">
+            Liste des en-têtes de réservation hôtel associées
+          </p>
+        </div>
+
+        <button
+          onClick={() => setSortOrder(o => o === 'desc' ? 'asc' : 'desc')}
+          className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-all"
+        >
+          <svg
+            width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+            className={`transition-transform duration-200 ${sortOrder === 'asc' ? 'rotate-180' : ''}`}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h13M3 8h9M3 12h5m10-4v12m0 0l-4-4m4 4l4-4" />
+          </svg>
+          {sortOrder === 'desc' ? 'Plus récent' : 'Plus ancien'}
+        </button>
       </div>
 
       {/* ── États ── */}
@@ -97,7 +114,13 @@ const HotelReservationsList = ({ prestationId, dossierNumero }: Props) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-neutral-100 bg-white">
-              {reservations.map((entete) => {
+              {[...reservations]
+                .sort((a, b) => {
+                  const dateA = new Date(a.createdAt).getTime();
+                  const dateB = new Date(b.createdAt).getTime();
+                  return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+                })
+                .map((entete) => {
                 const montantTotal = entete.hotelLigne.reduce((sum, l) => sum + (l.puResaMontantAriary || 0), 0);
                 const commission = entete.hotelLigne.reduce((sum, l) => sum + (l.commissionUnitaire || 0), 0);
 

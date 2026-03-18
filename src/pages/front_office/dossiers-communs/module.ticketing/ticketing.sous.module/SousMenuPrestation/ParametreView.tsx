@@ -87,20 +87,6 @@ export default function ParametreView() {
   const detailsLoading = useSelector((state: RootState) => state.pays.detailsLoading);
   const detailsError = useSelector((state: RootState) => state.pays.error);
 
-  
-
-  // useEffect(() => {
-  //   if (activeTab === 'listeService' && serviceState.items.length === 0) {
-  //     dispatch(fetchServiceSpecifiques());
-  //   }
-  //   if (activeTab === 'listeExigence') {
-  //     if (assocState.items.length === 0) dispatch(fetchAssociationsPaysVoyage());
-  //     if (activeSubTab === 'exigence' && exigenceState.items.length === 0) dispatch(fetchExigences());
-  //     if (activeSubTab === 'pays' && paysState.items.length === 0) dispatch(fetchPays());
-  //     if (activeSubTab === 'destination' && destinationState.items.length === 0) dispatch(fetchDestinations());
-  //   }
-  // }, [dispatch, activeTab, activeSubTab]);
-
   useEffect(() => {
     if (activeSubTab === 'pays' && selectedPaysId) {
       dispatch(fetchPaysDetails(selectedPaysId));
@@ -187,7 +173,7 @@ export default function ParametreView() {
         setActiveTab={setActiveTab}
       >
         {/* ══ PAGE HEADER ══ */}
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mt-5 mb-6 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-slate-800 capitalize">
               Paramétrage — {module}
@@ -466,7 +452,7 @@ export default function ParametreView() {
                           </thead>
                           <tbody className="divide-y divide-slate-100">
                             {activePaysTab === 'destinations'
-                              ? paysDetails.DestinationVoyage?.map((dest: { id: number; code: string; ville: string }) => (
+                              ? paysDetails.DestinationVoyage?.map((dest: { id: string; code: string; ville: string }) => (
                                   <tr key={dest.id} className="hover:bg-slate-50/80 transition-colors">
                                     <td className="px-4 py-3 text-sm font-mono font-bold text-indigo-600">{dest.code}</td>
                                     <td className="px-4 py-3 text-sm text-slate-700">{dest.ville}</td>

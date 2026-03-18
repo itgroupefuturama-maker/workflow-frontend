@@ -114,8 +114,8 @@ const AccueilView = () => {
   };
 
   const tabs = [
-    { id: 'dashboard', label: <span className="flex items-center gap-2"><FiTrendingUp size={14} /> Tableau de bord</span> },
-    { id: 'etat',      label: <span className="flex items-center gap-2"><FiFileText size={14} /> État des ventes</span> },
+    { id: 'dashboard', label: <span className="flex items-center gap-2">Tableau de bord</span> },
+    { id: 'etat',      label: <span className="flex items-center gap-2">État des ventes</span> },
   ];
 
   const dataCurrent = [
@@ -136,7 +136,7 @@ const AccueilView = () => {
           ONGLET DASHBOARD
       ══════════════════════════════════════════════════════════ */}
       {activeTab === 'dashboard' && (
-        <div className="space-y-6">
+        <div className="space-y-6 mt-5">
 
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -243,7 +243,18 @@ const AccueilView = () => {
           ONGLET ÉTAT DES VENTES
       ══════════════════════════════════════════════════════════ */}
       {activeTab === 'etat' && (
-        <div className="space-y-6">
+        <div className="space-y-6 mt-5">
+
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">État des ventes</h2>
+              <p className="text-sm text-gray-400 mt-0.5">Analyse comparative des performances par destination</p>
+            </div>
+            <span className="inline-flex items-center text-xs font-semibold text-gray-500 bg-gray-100 border border-gray-200 px-3 py-1.5 rounded-lg">
+              Période : 2025 — 2026
+            </span>
+          </div>
 
           {/* ── Filtres ── */}
           <div className="bg-white border border-gray-200 rounded-xl p-5">

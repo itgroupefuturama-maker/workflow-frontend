@@ -37,7 +37,7 @@ function useClickOutside(ref: React.RefObject<HTMLElement | null>, onClose: () =
   }, [ref, onClose]);
 }
 
-export default function AppBar() {
+export default function AppBar( { isBackOffice = false }: { isBackOffice?: boolean }) {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -134,7 +134,7 @@ export default function AppBar() {
 
   return (
     <>
-      <header className="stick p-1 top-0 z-50 bg-white border-b border-gray-100 px-4 sm:px-10">
+      <header className={`stick p-1 top-0 z-50  px-4 sm:px-10 bg-slate-700 border-b border-slate-600`}>
         <div className="h-14 flex items-center justify-between gap-4">
 
           {/* ── Gauche : Logo + Accueil ── */}
@@ -143,17 +143,17 @@ export default function AppBar() {
               <div className="h-8 w-8 rounded-lg overflow-hidden border border-gray-100 shadow-sm">
                 <img src={logo} alt="Logo" className="h-full w-full object-cover" />
               </div>
-              <span className="font-bold text-gray-800 text-sm tracking-tight hidden sm:block">
+              <span className="font-bold text-slate-100 text-sm tracking-tight hidden sm:block">
                 AL BOURAQ
               </span>
             </Link>
 
-            {paths.length > 0 && (
+            {!isBackOffice && paths.length > 0 && (
               <nav className="ml-17 hidden md:flex items-center text-sm font-medium">
-                <div className="h-4 w-px bg-gray-200 mx-2" />
+                <div className="h-4 w-px bg-slate-600 mx-2" />
                 <button
                   onClick={() => navigate("/")}
-                  className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-gray-700 py-2 px-5 ml-4 rounded-2xl transition-colors cursor-pointer"
+                  className="flex items-center gap-2 bg-slate-600 hover:bg-slate-500 text-slate-100 py-2 px-5 ml-4 rounded-2xl transition-colors cursor-pointer"
                 >
                   <FiHome size={20} />
                   <span className="text-sm font-semibold">Accueil</span>
@@ -166,7 +166,7 @@ export default function AppBar() {
           <div className="flex items-center gap-1.5">
 
             {/* Aide */}
-            <button className="p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all">
+            <button className="p-2 text-slate-100 hover:text-slate-100 hover:bg-slate-500 rounded-lg transition-all">
               <FiHelpCircle size={17} />
             </button>
 
@@ -177,7 +177,7 @@ export default function AppBar() {
                   setOpenNotifications((prev) => !prev);
                   fetchNotifications();
                 }}
-                className="relative p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all"
+                className="relative p-2 text-slate-100 hover:text-slate-100 hover:bg-slate-500 rounded-lg transition-all"
               >
                 <FiBell size={17} />
                 {unreadCount > 0 && (
@@ -275,23 +275,23 @@ export default function AppBar() {
               )}
             </div>
 
-            <div className="w-px h-5 bg-gray-200 mx-1" />
+            <div className="w-px h-5 bg-slate-600 mx-1" />
 
             {/* ── Menu utilisateur ── */}
             <div className="relative" ref={userMenuRef}>
               <button
                 onClick={() => setOpenUserMenu((prev) => !prev)}
-                className="flex items-center gap-2 px-2 py-1.5 hover:bg-gray-100 rounded-lg transition-all"
+                className="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-500 rounded-lg transition-all"
               >
                 {/* Avatar */}
-                <div className="h-7 w-7 bg-gray-900 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0">
+                <div className="h-7 w-7 bg-slate-900 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0">
                   {user?.prenom?.[0]?.toUpperCase() ?? 'A'}
                 </div>
                 <div className="hidden lg:flex flex-col items-start leading-none">
-                  <span className="text-xs font-semibold text-gray-800">
+                  <span className="text-xs font-semibold text-slate-100">
                     {user ? `${user.prenom} ${user.nom}` : 'Administrateur'}
                   </span>
-                  <span className="text-[10px] text-gray-400 mt-0.5 font-medium">En ligne</span>
+                  <span className="text-[10px] text-slate-400 mt-0.5 font-medium">En ligne</span>
                 </div>
                 <FiChevronDown
                   size={13}

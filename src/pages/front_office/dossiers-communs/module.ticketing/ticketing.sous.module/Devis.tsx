@@ -7,9 +7,11 @@ import { approuverDirectionDevis, fetchDevisByEntete, updateApprouverDevisStatut
 import { annulerDevis } from '../../../../../app/front_office/devisSlice';
 import axios from '../../../../../service/Axios';
 import TabContainer from '../../../../../layouts/TabContainer';
-import { TicketingHeader } from '../../../../../components/TicketingBreadcrumb';
+// import { TicketingHeader } from '../../../../../components/TicketingBreadcrumb';
 import AnnulationDevisModal from '../../../../../components/modals/AnnulationDevisModal';
 import { API_URL } from '../../../../../service/env';
+import { TicketingHeader } from './components.billet/TicketingHeader';
+import { devisListeItems, prospectionDetailItems } from './components.billet/utils/ticketingHeaderItems';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -204,20 +206,7 @@ export default function Devis () {
     <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange}>
       <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900">
 
-        <TicketingHeader 
-          items={[
-            { 
-              label: "Liste Entete Prospection", 
-              path: `/dossiers-communs/ticketing/pages`, 
-              state: { targetTab: 'prospection' } 
-            },
-            { 
-              label: "Prospection detail",
-              path: `/dossiers-communs/ticketing/pages/prospection/${enteteId}`
-            },
-            { label: "Liste Devis", isCurrent: true }
-          ]}
-        />
+        <TicketingHeader items={devisListeItems(enteteId)} />
         {/* Header */}
         <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 gap-4">
           <h1 className="text-xl font-bold text-slate-800">
