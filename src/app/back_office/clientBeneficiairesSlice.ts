@@ -31,6 +31,7 @@ export interface ClientBeneficiaire {
   dateApplication: string;
   dateCreation: string;
   updatedAt: string;
+  typeClient: string;
   factures: factures[]; // À typer plus tard si besoin
 }
 
@@ -72,7 +73,7 @@ export const fetchClientBeneficiaires = createAsyncThunk<
 // Créer un client bénéficiaire
 export const createClientBeneficiaire = createAsyncThunk<
   { success: boolean; data: ClientBeneficiaire },
-  { libelle: string; statut: string; dateApplication: string },
+  { libelle: string; statut: string; typeClient: string; dateApplication: string },
   { state: { auth: { token: string } } }
 >('clientBeneficiaires/createClientBeneficiaire', async (payload, { getState, rejectWithValue, dispatch }) => {
   try {
@@ -99,7 +100,7 @@ export const createClientBeneficiaire = createAsyncThunk<
 // Update (PATCH)
 export const updateClientBeneficiaire = createAsyncThunk<
   { success: boolean; data: ClientBeneficiaire },
-  { id: string; libelle: string; statut: string },
+  { id: string; libelle: string; statut: string; typeClient: string },
   { state: { auth: { token: string } } }
 >('clientBeneficiaires/updateClientBeneficiaire', async (payload, { getState, rejectWithValue, dispatch }) => {
   try {
@@ -109,6 +110,8 @@ export const updateClientBeneficiaire = createAsyncThunk<
     const response = await axiosInstance.patch(`/client-beneficiaires/${payload.id}`, {
       libelle: payload.libelle,
       statut: payload.statut,
+      typeClient: payload.typeClient,           // ← NOUVEAU
+      dateApplication: new Date().toISOString(), // ← NOUVEAU
     }, {
       headers: {
         Authorization: `Bearer ${auth.token}`,

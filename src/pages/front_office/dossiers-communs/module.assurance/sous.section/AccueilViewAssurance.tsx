@@ -130,7 +130,7 @@ const AccueilViewAssurance = () => {
   ];
 
   return (
-    <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} color="bg-blue-400" >
+    <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab}>
 
       {/* ══════════════════════════════════════════════════════════
           ONGLET DASHBOARD

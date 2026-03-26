@@ -6,6 +6,7 @@ import type { AppDispatch, RootState } from '../../app/store';
 import { fetchClientBeneficiaireInfos } from '../../app/portail_client/clientBeneficiaireInfosSlice';
 import type { BilletLigne, ServiceSpecifique } from '../../app/front_office/billetSlice';
 import { fetchRaisonsAnnulation } from '../../app/front_office/parametre_ticketing/raisonAnnulationSlice';
+import type { ServicePreference } from '../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
 
 type ModifType = 'SIMPLE' | 'COM' | 'PEN' | 'COM_PEN';
 
@@ -39,6 +40,11 @@ export default function ReprogrammationModal({
   const { items: raisons, loading: raisonsLoading } = useSelector(
     (state: RootState) => state.raisonAnnulation
   );
+
+  const servicesStore = useSelector((state: RootState) => state.serviceSpecifique.items);
+
+  // Après les autres useState existants :
+  const [prefParPassager, setPrefParPassager] = useState<Record<string, string[]>>({});
 
   // ─── État multi-passagers ─────────────────────────────────
   const [selectedPassagers, setSelectedPassagers] = useState<
@@ -173,26 +179,25 @@ export default function ReprogrammationModal({
 
     const beneficiaire = beneficiaires.find((b) => b.clientBeneficiaireId === currentBeneficiaireId);
     const info = infosList.find((i) => i.id === currentInfoId);
-
     if (!beneficiaire || !info) return;
-
-    const nomComplet = `${info.prenom || ''} ${info.nom || ''}`.trim() || beneficiaire.clientBeneficiaire.libelle;
 
     if (selectedPassagers.some((p) => p.infoId === currentInfoId)) {
       alert('Ce document est déjà sélectionné');
       return;
     }
 
-    setSelectedPassagers((prev) => [
-      ...prev,
-      {
-        beneficiaireId: currentBeneficiaireId,
-        infoId: currentInfoId,
-        nomComplet,
-        typeDoc: info.typeDoc,
-        referenceDoc: info.referenceDoc,
-      },
-    ]);
+    const nomComplet = `${info.prenom || ''} ${info.nom || ''}`.trim() || beneficiaire.clientBeneficiaire.libelle;
+
+    setSelectedPassagers((prev) => [...prev, {
+      beneficiaireId: currentBeneficiaireId,
+      infoId: currentInfoId,
+      nomComplet,
+      typeDoc: info.typeDoc,
+      referenceDoc: info.referenceDoc,
+    }]);
+
+    // ← Initialiser les prefs pour ce passager
+    setPrefParPassager((prev) => ({ ...prev, [currentInfoId]: [] }));
 
     setCurrentBeneficiaireId('');
     setCurrentInfoId('');
@@ -200,6 +205,11 @@ export default function ReprogrammationModal({
 
   const removePassager = (infoId: string) => {
     setSelectedPassagers((prev) => prev.filter((p) => p.infoId !== infoId));
+    setPrefParPassager((prev) => {
+      const next = { ...prev };
+      delete next[infoId];
+      return next;
+    });
   };
 
   // ─── Construction payload (format exact demandé) ──────────
@@ -239,15 +249,20 @@ export default function ReprogrammationModal({
       conditionAnnul: typeModif !== 'PEN' ? conditionModif.trim() || null : null,
       conditionModif: typeModif !== 'PEN' ? conditionModif.trim() || null : null,
       resaTauxEchange: Number(tauxChange),
-      passagerIds: selectedPassagers.map((p) => p.infoId),
+      // ← Remplacer passagerIds par passagers
+      passagers: selectedPassagers.map((p) => ({
+        clientbeneficiaireInfoId: p.infoId,
+        clientBeneficiaireId: p.beneficiaireId,
+        servicePreferenceIds: prefParPassager[p.infoId] || [],
+      })),
       dateHeureDepart: finalDepart,
       dateHeureArrive: finalArrive,
-      puResaBilletCompagnieDevise: ligne.puResaBilletCompagnieDevise || 0,
-      puResaServiceCompagnieDevise: ligne.puResaServiceCompagnieDevise || 0,
-      puResaPenaliteCompagnieDevise: penalitePu || 0,
-      puResaMontantPenaliteCompagnieDevise: penaliteMontant || 0,
-      puResaMontantBilletCompagnieDevise: ligne.puResaMontantBilletCompagnieDevise || 0,
-      puResaMontantServiceCompagnieDevise: ligne.puResaMontantServiceCompagnieDevise || 0,
+      puResaBilletCompagnieDevise: puBilletDevise,
+      puResaServiceCompagnieDevise: puServiceDevise,
+      puResaPenaliteCompagnieDevise: puPenaliteDevise,
+      puResaMontantPenaliteCompagnieDevise: puMontantPenalite,
+      puResaMontantBilletCompagnieDevise: puMontantBilletAriary,
+      puResaMontantServiceCompagnieDevise: puMontantServiceAriary,
       resaCommissionEnDevise: resaCommDevise || 0,
       resaCommissionEnAriary: resaCommAriary || 0,
       devise: ligne.devise || 'EUR',
@@ -603,6 +618,101 @@ export default function ReprogrammationModal({
                     )}
                   </div>
                 </div>
+
+                {/* ── Préférences de services par passager ── */}
+                {selectedPassagers.length > 0 && (() => {
+                  const servicesActifs = (ligne?.prospectionLigne?.serviceProspectionLigne || []).filter(
+                    (s: any) => s.valeur && s.valeur !== 'false' && s.valeur !== ''
+                  );
+
+                  if (servicesActifs.length === 0) return null;
+
+                  return (
+                    <div className="mt-5 pt-5 border-t border-gray-200">
+                      <h4 className="text-sm font-bold text-gray-900 mb-4">
+                        Préférences de services
+                        <span className="ml-2 text-xs font-normal text-gray-500">
+                          (par passager)
+                        </span>
+                      </h4>
+
+                      <div className="space-y-4">
+                        {selectedPassagers.map((passager) => {
+                          const prefsPassager = prefParPassager[passager.infoId] || [];
+
+                          return (
+                            <div key={passager.infoId} className="border border-gray-200 rounded-lg overflow-hidden">
+                              {/* Header passager */}
+                              <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200 flex items-center gap-2">
+                                <div className="w-6 h-6 bg-gray-900 text-white rounded-full flex items-center justify-center text-xs font-bold shrink-0">
+                                  {selectedPassagers.indexOf(passager) + 1}
+                                </div>
+                                <span className="text-sm font-semibold text-gray-800">{passager.nomComplet}</span>
+                                {prefsPassager.length > 0 && (
+                                  <span className="ml-auto text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">
+                                    {prefsPassager.length} préf.
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="p-4 space-y-3">
+                                {servicesActifs.map((serviceActif: any) => {
+                                  const serviceStore = servicesStore.find(
+                                    (s) => s.id === serviceActif.serviceSpecifiqueId
+                                  );
+                                  const prefsDisponibles: ServicePreference[] = serviceStore?.servicePreference || [];
+
+                                  if (prefsDisponibles.length === 0) return null;
+
+                                  return (
+                                    <div key={serviceActif.id}>
+                                      <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">
+                                        {serviceStore?.libelle || serviceActif.serviceSpecifique?.libelle || '—'}
+                                        <span className="ml-2 text-gray-400 font-normal normal-case">
+                                          ({serviceActif.valeur})
+                                        </span>
+                                      </p>
+                                      <div className="flex flex-wrap gap-2">
+                                        {prefsDisponibles.map((pref) => {
+                                          const isSelected = prefsPassager.includes(pref.id);
+                                          return (
+                                            <button
+                                              key={pref.id}
+                                              type="button"
+                                              onClick={() => {
+                                                setPrefParPassager((prev) => {
+                                                  const current = prev[passager.infoId] || [];
+                                                  return {
+                                                    ...prev,
+                                                    [passager.infoId]: isSelected
+                                                      ? current.filter((id) => id !== pref.id)
+                                                      : [...current, pref.id],
+                                                  };
+                                                });
+                                              }}
+                                              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                                                isSelected
+                                                  ? 'bg-indigo-600 text-white border-indigo-600'
+                                                  : 'bg-white text-gray-700 border-gray-300 hover:border-indigo-400 hover:text-indigo-600'
+                                              }`}
+                                            >
+                                              {isSelected && <span className="mr-1">✓</span>}
+                                              {pref.preference}
+                                            </button>
+                                          );
+                                        })}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             )}
 

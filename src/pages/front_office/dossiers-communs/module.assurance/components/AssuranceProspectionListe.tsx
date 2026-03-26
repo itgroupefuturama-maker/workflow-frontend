@@ -227,7 +227,7 @@ const AssuranceProspectionListe = () => {
   if (error) return <InfoMessage title={error} icon="info" />;
 
   return (
-    <div className="min-h-screen bg-neutral-50">
+    <div className="min-h-screen pl-5 pr-5">
       <AssuranceHeader
         numeroassurance={prestationId}
         nomPassager={''}

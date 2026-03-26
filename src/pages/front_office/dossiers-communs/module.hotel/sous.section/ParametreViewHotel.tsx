@@ -4,18 +4,18 @@ import TableParametre from '../components/TableParametre';
 import { createPlateforme, fetchPlateformes } from '../../../../../app/front_office/parametre_hotel/plateformeSlice';
 import TabContainer from '../../../../../layouts/TabContainer';
 import type { AppDispatch } from '../../../../../app/store';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { createTypeChambre, fetchTypesChambre } from '../../../../../app/front_office/parametre_hotel/typeChambreSlice';
-import { createServiceHotel, fetchServicesHotel } from '../../../../../app/front_office/parametre_hotel/serviceHotelSlice';
+// import { createServiceHotel, fetchServicesHotel } from '../../../../../app/front_office/parametre_hotel/serviceHotelSlice';
 import ModalFormParametre from '../components/ModalFormParametre';
 import RaisonAnnulationListe from '../../module.ticketing/ticketing.sous.module/SousMenuPrestation/RaisonAnnulationListe';
-import { fetchRaisonsAnnulation } from '../../../../../app/front_office/parametre_ticketing/raisonAnnulationSlice';
-
+import ServiceSpecifiqueListe from '../../module.parametre/ServiceSpecifique/ServiceSpecifiqueListe';
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
 const ParametreViewHotel = () => {
   const location = useLocation();
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
 
   // Pour l'instant on n'a que les plateformes
   const {
@@ -30,11 +30,11 @@ const ParametreViewHotel = () => {
     error: errorTypes,
   } = useSelector((state: any) => state.typeChambre);
 
-  const {
-    items: services,
-    loading: loadingServices,
-    error: errorServices,
-  } = useSelector((state: any) => state.serviceHotel);
+  // const {
+  //   items: services,
+  //   loading: loadingServices,
+  //   error: errorServices,
+  // } = useSelector((state: any) => state.serviceHotel);
 
   // const raisonState = useSelector((state: RootState) => state.raisonAnnulation);
 
@@ -50,13 +50,6 @@ const ParametreViewHotel = () => {
   const [showAddPlateforme, setShowAddPlateforme] = useState(false);
   const [showAddTypeChambre, setShowAddTypeChambre] = useState(false);
   const [showAddService, setShowAddService] = useState(false);
-
-  useEffect(() => {
-    dispatch(fetchPlateformes());
-    dispatch(fetchTypesChambre());
-    dispatch(fetchServicesHotel());
-    dispatch(fetchRaisonsAnnulation());
-  }, [dispatch]);
 
   useEffect(() => {
     if (location.state?.targetTab) {
@@ -85,103 +78,101 @@ const ParametreViewHotel = () => {
     });
   };
 
-  const handleCreateService = (data: any) => {
-    dispatch(createServiceHotel(data)).then(() => {
-      setShowAddService(false);
-      dispatch(fetchServicesHotel());
+  // const handleCreateService = (data: any) => {
+  //   dispatch(createServiceHotel(data)).then(() => {
+  //     setShowAddService(false);
+  //     dispatch(fetchServicesHotel());
+  //   });
+  // };
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    // ← Réécrit location.state sans changer l'URL
+    navigate(location.pathname, {
+      replace: true,
+      state: { ...location.state, targetTab: tab },
     });
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900 p-6">
-      <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab}>
-        <h1 className="text-2xl font-bold text-gray-800 mb-6 mt-5">Paramètres Hôtel</h1>
+    <div className="h-full flex flex-col min-h-0">
+      <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange}>
+        <div className="py-2 px-4">
+          <h1 className="text-2xl font-bold text-gray-800 mb-6 mt-5">Paramètres Hôtel</h1>
 
-        <div className="space-y-8">
-          {activeTab === 'plateformes' && (
-            <>
-              <div className="flex justify-end mb-4">
-                <button
-                  onClick={() => setShowAddPlateforme(true)}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
-                >
-                  + Ajouter une plateforme
-                </button>
-              </div>
-              <TableParametre
-                title="Plateformes"
-                items={plateformes}
-                loading={loadingPlateforme}
-                error={errorPlateforme}
-                columns={[
-                  { key: 'code', label: 'Code' },
-                  { key: 'nom', label: 'Nom' },
-                  {
-                    key: 'status',
-                    label: 'Statut',
-                    render: (status: string) => (
-                      <span
-                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          status === 'CREER' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
-                        }`}
-                      >
-                        {status}
-                      </span>
-                    ),
-                  },
-                ]}
-              />
-            </>
-          )}
+          <div className="space-y-8">
+            {activeTab === 'plateformes' && (
+              <>
+                <div className="flex justify-between mb-4">
+                  <p className="text-xl font-bold text-gray-800">Gestion des plateformes</p>
+                  <button
+                    onClick={() => setShowAddPlateforme(true)}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+                  >
+                    + Ajouter une plateforme
+                  </button>
+                </div>
+                <TableParametre
+                  title="Plateformes"
+                  items={plateformes}
+                  loading={loadingPlateforme}
+                  error={errorPlateforme}
+                  columns={[
+                    { key: 'code', label: 'Code' },
+                    { key: 'nom', label: 'Nom' },
+                    {
+                      key: 'status',
+                      label: 'Statut',
+                      render: (status: string) => (
+                        <span
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            status === 'CREER' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
+                          }`}
+                        >
+                          {status}
+                        </span>
+                      ),
+                    },
+                  ]}
+                />
+              </>
+            )}
 
-          {activeTab === 'typeChambre' && (
-            <>
-              <div className="flex justify-end mb-4">
-                <button
-                  onClick={() => setShowAddTypeChambre(true)}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
-                >
-                  + Ajouter un type de chambre
-                </button>
-              </div>
-              <TableParametre
-                title="Types de chambre"
-                items={typesChambre}
-                loading={loadingTypes}
-                error={errorTypes}
-                columns={[
-                  { key: 'type', label: 'Type' },
-                  { key: 'capacite', label: 'Capacité (personnes)' },
-                ]}
-              />
-            </>
-          )}
+            {activeTab === 'typeChambre' && (
+              <>
+                <div className="flex justify-between mb-4">
+                  <p className="text-xl font-bold text-gray-800">Gestion des types de chambre</p>
+                  
+                  <button
+                    onClick={() => setShowAddTypeChambre(true)}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
+                  >
+                    + Ajouter un type de chambre
+                  </button>
+                </div>
+                <TableParametre
+                  title="Types de chambre"
+                  items={typesChambre}
+                  loading={loadingTypes}
+                  error={errorTypes}
+                  columns={[
+                    { key: 'type', label: 'Type' },
+                    { key: 'capacite', label: 'Capacité (personnes)' },
+                  ]}
+                />
+              </>
+            )}
 
-          {activeTab === 'listeRaisonAnnulation' && (
-            <>
-              <RaisonAnnulationListe />
-            </>
-          )}
+            {activeTab === 'listeRaisonAnnulation' && (
+              <>
+                <RaisonAnnulationListe />
+              </>
+            )}
 
-          {activeTab === 'service' && (
-            <>
-              <div className="flex justify-end mb-4">
-                <button
-                  onClick={() => setShowAddService(true)}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center gap-2"
-                >
-                  + Ajouter un service
-                </button>
-              </div>
-              <TableParametre
-                title="Services hôtel"
-                items={services}
-                loading={loadingServices}
-                error={errorServices}
-                columns={[{ key: 'service', label: 'Service' }]}
-              />
-            </>
-          )}
+            {activeTab === 'service' && (
+              <ServiceSpecifiqueListe typeService="HOTEL" />
+            )}
+          </div>
         </div>
       </TabContainer>
 
@@ -210,14 +201,14 @@ const ParametreViewHotel = () => {
         loading={loadingTypes}
       />
 
-      <ModalFormParametre
+      {/* <ModalFormParametre
         isOpen={showAddService}
         onClose={() => setShowAddService(false)}
         onSubmit={handleCreateService}
         title="Nouveau service"
         fields={[{ name: 'service', label: 'Nom du service', type: 'text', required: true }]}
         loading={loadingServices}
-      />
+      /> */}
     </div>
   );
 };

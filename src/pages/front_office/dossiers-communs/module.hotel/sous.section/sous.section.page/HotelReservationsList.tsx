@@ -49,7 +49,7 @@ const HotelReservationsList = ({ prestationId, dossierNumero }: Props) => {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50 space-y-4 mt-5">
+    <div className="py-2 px-4">
 
       <HotelHeader numerohotel={dossierNumero} navigate={navigate} isBenchmarking={false} />
 

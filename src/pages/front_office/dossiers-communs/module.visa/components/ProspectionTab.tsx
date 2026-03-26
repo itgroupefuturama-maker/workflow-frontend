@@ -61,7 +61,7 @@ const ProspectionTab = ({ prestationId }: Props) => {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen pt-5">
+    <div className="py-2 px-4">
 
       <VisaHeader
         numerovisa={prestationId}

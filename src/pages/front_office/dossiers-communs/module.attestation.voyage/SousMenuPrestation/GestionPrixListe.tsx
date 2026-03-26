@@ -1,21 +1,15 @@
 // src/components/parametre/GestionPrixListe.tsx
-import { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import type { AppDispatch, RootState } from '../../../../../app/store';
-import { fetchAttestationParams } from '../../../../../app/front_office/parametre_attestation/attestationParamsSlice';
+import { useState } from 'react';
+import { useSelector } from 'react-redux';
+import type { RootState } from '../../../../../app/store';
 import AttestationParamModal from '../../../../../components/modals/Attestation/AttestationParamModal';
 
 export default function GestionPrixListe() {
-  const dispatch = useDispatch<AppDispatch>();
   const { items, loading, error } = useSelector(
     (state: RootState) => state.attestationParams
   );
 
   const [modalOpen, setModalOpen] = useState(false); // ← AJOUT
-
-  useEffect(() => {
-    if (items.length === 0) dispatch(fetchAttestationParams());
-  }, [dispatch]);
 
   if (loading) {
     return (

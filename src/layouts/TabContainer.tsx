@@ -1,9 +1,9 @@
 export default function TabContainer({ tabs, activeTab, setActiveTab, children, color }: any) {
-  const activeColor = color ?? "bg-yellow-500";
   return (
-    <div className="w-full">
-      {/* Container des onglets */}
-      <div className="flex items-end -space-x-1">
+    <div className="flex flex-col h-full w-full overflow-hidden bg-white border-b-2 border-gray-200 rounded-lg">
+
+      {/* Onglets — hauteur fixe */}
+      <div className="inline-flex items-center gap-0.5rounded-[10px] p-1">
         {tabs.map((tab: any) => {
           const isActive = activeTab === tab.id;
           return (
@@ -11,35 +11,28 @@ export default function TabContainer({ tabs, activeTab, setActiveTab, children, 
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`
-                relative px-10 py-2 text-xs font-bold uppercase transition-all duration-300
-                rounded-tl-xl rounded-tr-xl
-                
-                ${isActive 
-                  ? `${activeColor} text-white z-20 scale-y-105 origin-bottom` 
-                  : 'text-gray-500 hover:from-[#ffffff] hover:to-[#eeeeee] z-10'
+                px-5 py-2 text-[11px] font-medium uppercase tracking-widest mx-1
+                transition-all duration-200 whitespace-nowrap
+                border-b-3
+                ${isActive
+                  ? 'border-blue-400 text-blue-400 bg-white'
+                  : 'border-gray-200 text-gray-400 hover:text-blue-400 hover:border-blue-200'
                 }
-                
-                border border-slate-200 border-b-0
               `}
             >
-              {/* Petit effet de reflet blanc sur le dessus pour le look "glossy" */}
-              {/* <div className="absolute inset-0 bg-linear-to-b from-white/30 to-transparent rounded-tl-xl rounded-tr-xl pointer-events-none"></div> */}
-              
-              <span className={isActive ? 'drop-shadow-sm' : ''}>
-                {tab.label}
-              </span>
+              {tab.label}
             </button>
           );
         })}
       </div>
 
-      {/* Le corps du menu (la grande zone blanche) */}
-      <div className="relative z-30  border-t border-slate-200 rounded-b-lg ">
-        {/* Contenu interne */}
-        <div className="animate-fadeIn">
+      {/* Corps — ✅ flex-1 + overflow-auto : prend l'espace restant et scroll si besoin */}
+      <div className="relative z-30 flex-1 min-h-0 rounded-b-lg overflow-auto">
+        <div className="animate-fadeIn h-full">
           {children}
         </div>
       </div>
+
     </div>
   );
 }

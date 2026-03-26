@@ -49,7 +49,6 @@ import raisonAnnulationReducer from './front_office/parametre_ticketing/raisonAn
 import attestationEnteteReducer from './front_office/parametre_attestation/attestationEnteteSlice';
 import plateformeReducer from './front_office/parametre_hotel/plateformeSlice';
 import typeChambreReducer from './front_office/parametre_hotel/typeChambreSlice';
-import serviceHotelReducer from './front_office/parametre_hotel/serviceHotelSlice';
 import hotelProspectionReducer from './front_office/parametre_hotel/hotelProspectionEnteteSlice';
 import hotelReservationEnteteReducer from './front_office/parametre_hotel/hotelReservationEnteteSlice';
 import fournisseurCommentaireReducer from './front_office/fournisseurCommentaire/fournisseurCommentaireSlice';
@@ -128,7 +127,6 @@ const appReducer = combineReducers({
   attestationEntete: attestationEnteteReducer,
   plateforme: plateformeReducer,
   typeChambre: typeChambreReducer,
-  serviceHotel: serviceHotelReducer,
   hotelProspectionEntete: hotelProspectionReducer,
   hotelReservationEntete: hotelReservationEnteteReducer,
   fournisseurCommentaire: fournisseurCommentaireReducer,

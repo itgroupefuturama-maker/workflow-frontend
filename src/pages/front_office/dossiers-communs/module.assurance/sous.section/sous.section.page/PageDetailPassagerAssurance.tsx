@@ -418,8 +418,8 @@ const PageDetailPassager = () => {
 
   /* ── rendu ── */
   return (
-    <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange} color="bg-blue-400" >
-      <div className="min-h-screen bg-neutral-50 space-y-4">
+    <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange}>
+      <div className="min-h-screen bg-white space-y-4">
         <AssuranceHeader
           numeroassurance={detail?.assurance?.zoneDestination}
           nomPassager={nomPassager}

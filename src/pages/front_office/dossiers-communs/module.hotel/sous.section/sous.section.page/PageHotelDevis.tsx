@@ -216,213 +216,215 @@ export default function PageHotelDevis() {
   if (!data) return null;
 
   return (
-    <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange}>
-      <div className="min-h-screen bg-neutral-50 pt-4 space-y-4">
-        <HotelHeader numerohotel={prospection?.numeroEntete} navigate={navigate} isBenchmarking={true} isDetail={true} isDevis={true}/>
+    <div className="h-full flex flex-col min-h-0">
+      <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange}>
+        <div className="py-2 px-4">
+          <HotelHeader numerohotel={prospection?.numeroEntete} navigate={navigate} isBenchmarking={true} isDetail={true} isDevis={true}/>
 
-        {/* ── Header ── */}
-        <div className="bg-slate-100 px-8 pt-6 pb-0">
-          {/* ── Bloc info principal ── */}
-          <div className="flex items-end justify-between gap-8 pb-6 border-b border-white/10">
+          {/* ── Header ── */}
+          <div className="bg-slate-100 px-8 pt-6 pb-0">
+            {/* ── Bloc info principal ── */}
+            <div className="flex items-end justify-between gap-8 pb-6 border-b border-white/10">
 
-            {/* Colonne gauche : identité */}
-            <div className="flex-1 min-w-0">
-              <p className="text-gray-500 text-xs uppercase tracking-widest mb-2">Devis Hôtel</p>
-              <h1 className="text-slate-600 font-bold text-3xl tracking-tight mb-3">
-                {prospection?.numeroEntete}
-              </h1>
+              {/* Colonne gauche : identité */}
+              <div className="flex-1 min-w-0">
+                <p className="text-gray-500 text-xs uppercase tracking-widest mb-2">Devis Hôtel</p>
+                <h1 className="text-slate-600 font-bold text-3xl tracking-tight mb-3">
+                  {prospection?.numeroEntete}
+                </h1>
 
-              {/* Méta-infos en ligne */}
-              <div className="flex items-center gap-6 flex-wrap">
-                <div>
-                  <p className="text-gray-500 text-xs uppercase tracking-wide mb-0.5">Fournisseur</p>
-                  <p className="text-slate-600 text-sm font-medium">
-                    {prospection?.fournisseur.code} — {prospection?.fournisseur.libelle}
-                  </p>
+                {/* Méta-infos en ligne */}
+                <div className="flex items-center gap-6 flex-wrap">
+                  <div>
+                    <p className="text-gray-500 text-xs uppercase tracking-wide mb-0.5">Fournisseur</p>
+                    <p className="text-slate-600 text-sm font-medium">
+                      {prospection?.fournisseur.code} — {prospection?.fournisseur.libelle}
+                    </p>
+                  </div>
+                  <div className="w-px h-8 bg-white/10" />
+                  <div>
+                    <p className="text-gray-500 text-xs uppercase tracking-wide mb-0.5">Dossier</p>
+                    <p className="text-slate-600 text-sm font-medium">{prospection?.prestation.numeroDos}</p>
+                  </div>
+                  {devis && (
+                    <>
+                      <div className="w-px h-8 bg-white/10" />
+                      <div>
+                        <p className="text-gray-500 text-xs uppercase tracking-wide mb-0.5">Référence</p>
+                        <p className="text-slate-600 text-sm font-medium">{devis.reference}</p>
+                      </div>
+                      <div className="w-px h-8 bg-white/10" />
+                      <div>
+                        <p className="text-gray-500 text-xs uppercase tracking-wide mb-0.5">Total</p>
+                        <p className="text-slate-600 text-sm font-bold">{devis.totalGeneral.toLocaleString('fr-FR')} Ar</p>
+                      </div>
+                      <div className="w-px h-8 bg-white/10" />
+                      <div>
+                        <p className="text-gray-500 text-xs uppercase tracking-wide mb-0.5">Statut</p>
+                        <StatutBadge statut={devis.statut == "CREER" ? "Créé" : devis.statut} />
+                        {/* {devis.statut} */}
+                      </div>
+                      <div className="w-px h-8 bg-white/10" />
+                      <div>
+                        <p className="text-gray-500 text-xs uppercase tracking-wide mb-0.5">Mis à jour</p>
+                        <p className="text-gray-400 text-sm">
+                          {new Date(devis.updatedAt).toLocaleDateString('fr-FR', { dateStyle: 'medium' })}
+                        </p>
+                      </div>
+                    </>
+                  )}
                 </div>
-                <div className="w-px h-8 bg-white/10" />
-                <div>
-                  <p className="text-gray-500 text-xs uppercase tracking-wide mb-0.5">Dossier</p>
-                  <p className="text-slate-600 text-sm font-medium">{prospection?.prestation.numeroDos}</p>
-                </div>
-                {devis && (
-                  <>
-                    <div className="w-px h-8 bg-white/10" />
-                    <div>
-                      <p className="text-gray-500 text-xs uppercase tracking-wide mb-0.5">Référence</p>
-                      <p className="text-slate-600 text-sm font-medium">{devis.reference}</p>
-                    </div>
-                    <div className="w-px h-8 bg-white/10" />
-                    <div>
-                      <p className="text-gray-500 text-xs uppercase tracking-wide mb-0.5">Total</p>
-                      <p className="text-slate-600 text-sm font-bold">{devis.totalGeneral.toLocaleString('fr-FR')} Ar</p>
-                    </div>
-                    <div className="w-px h-8 bg-white/10" />
-                    <div>
-                      <p className="text-gray-500 text-xs uppercase tracking-wide mb-0.5">Statut</p>
-                      <StatutBadge statut={devis.statut == "CREER" ? "Créé" : devis.statut} />
-                      {/* {devis.statut} */}
-                    </div>
-                    <div className="w-px h-8 bg-white/10" />
-                    <div>
-                      <p className="text-gray-500 text-xs uppercase tracking-wide mb-0.5">Mis à jour</p>
-                      <p className="text-gray-400 text-sm">
-                        {new Date(devis.updatedAt).toLocaleDateString('fr-FR', { dateStyle: 'medium' })}
-                      </p>
-                    </div>
-                  </>
-                )}
               </div>
             </div>
+
+            {/* ── Erreur action ── */}
+            {actionError && (
+              <div className="mt-4 flex items-center gap-2 bg-red-900/30 border border-red-800 text-red-400 text-xs px-4 py-2.5 rounded-lg">
+                <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {actionError}
+              </div>
+            )}
+
+            {/* ── Barre de boutons horizontale ── */}
+            {devis && (
+              <div className="flex items-center gap-2 py-4 flex-wrap">
+
+                {/* PDF Direction — voir */}
+                <button
+                  onClick={() => urlPdfDirection && window.open(`${API_URL}/${urlPdfDirection}`, '_blank')}
+                  disabled={!urlPdfDirection || actionLoading === 'pdfDirection'}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300 transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
+                >
+                  {actionLoading === 'pdfDirection' ? (
+                    <>
+                      <span className="animate-spin h-3.5 w-3.5 border-2 border-gray-400 border-t-gray-600 rounded-full" />
+                      Génération...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      PDF Direction
+                    </>
+                  )}
+                </button>
+
+                {/* Séparateur */}
+                <div className="w-px h-6 bg-gray-300 mx-1" />
+
+                {/* PDF Client — voir */}
+                <button
+                  onClick={() => urlPdfClient && window.open(`${API_URL}/${urlPdfClient}`, '_blank')}
+                  disabled={!urlPdfClient || actionLoading === 'pdfClient'}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300 transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
+                >
+                  {actionLoading === 'pdfClient' ? (
+                    <>
+                      <span className="animate-spin h-3.5 w-3.5 border-2 border-gray-400 border-t-gray-600 rounded-full" />
+                      Génération...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      PDF Client
+                    </>
+                  )}
+                </button>
+
+                {/* ── Section PDF — boutons Voir uniquement ── */}
+
+                {/* Séparateur */}
+                <div className="w-px h-6 bg-gray-300 mx-1" />
+
+                {/* Envoyer — disabled si statut avancé */}
+                <button
+                  onClick={handleEnvoyer}
+                  disabled={actionLoading !== null || devis.statut !== 'CREER'}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
+                >
+                  {actionLoading === 'envoi'
+                    ? <span className="animate-spin h-3.5 w-3.5 border-2 border-gray-400 border-t-gray-600 rounded-full" />
+                    : <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+                  }
+                  {actionLoading === 'envoi' ? 'Envoi...' : 'Envoyer'}
+                </button>
+
+                {/* Approuver — disabled si pas en attente */}
+                <button
+                  onClick={handleApprouver}
+                  disabled={actionLoading !== null || devis.statut !== 'DEVIS_A_APPROUVER'}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white text-sm font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
+                >
+                  {actionLoading === 'approbation'
+                    ? <span className="animate-spin h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full" />
+                    : <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                  }
+                  {actionLoading === 'approbation' ? 'Approbation...' : 'Approuver'}
+                </button>
+
+                {/* Transformer — disabled si pas approuvé ou déjà transformé */}
+                <button
+                  onClick={handleTransformer}
+                  // disabled={actionLoading !== null || devis.statut !== 'DEVIS_APPROUVE' || transformed}
+                  disabled={devis.statut !== 'DEVIS_APPROUVE'}
+                  className="flex items-center gap-2 px-4 py-2 bg-indigo-500 text-white text-sm font-medium rounded-lg hover:bg-indigo-600 transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
+                >
+                  {actionLoading === 'transformation'
+                    ? <span className="animate-spin h-3.5 w-3.5 border-2 border-gray-400 border-t-gray-600 rounded-full" />
+                    : transformed
+                      ? <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                      : <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
+                  }
+                  {actionLoading === 'transformation' ? 'Transformation...' : transformed ? 'Transformer' : 'Transformer en hôtel'}
+                </button>
+
+                {/* Récap commission */}
+                <div className="ml-auto flex items-center gap-4 text-xs text-gray-500 border-l border-gray-300 pl-4">
+                  <span>Total : <strong className="text-gray-700">{montantTotalClient.toLocaleString('fr-FR')} Ar</strong></span>
+                  <span>Commission {tauxCommission}% : <strong className="text-gray-700">{montantTotalCommission.toLocaleString('fr-FR')} Ar</strong></span>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* ── Erreur action ── */}
-          {actionError && (
-            <div className="mt-4 flex items-center gap-2 bg-red-900/30 border border-red-800 text-red-400 text-xs px-4 py-2.5 rounded-lg">
-              <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              {actionError}
+          {/* ── Body ── */}
+          <div className="py-6 space-y-4">
+            <div className="grid grid-cols-3 gap-4 mb-2">
+              {[
+                { label: 'Benchmarkings', value: benchmarkings.length },
+                { label: 'Lignes totales', value: benchmarkings.reduce((acc, b) => acc + (b.ligneClient ? 1 : 0), 0) },
+                { label: 'Nuits totales', value: benchmarkings.reduce((acc, b) => acc + b.nuite, 0) },
+              ].map(({ label, value }) => (
+                <div key={label} className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-4">
+                  <p className="text-xs text-gray-400 uppercase tracking-wide">{label}</p>
+                  <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
+                </div>
+              ))}
             </div>
-          )}
 
-          {/* ── Barre de boutons horizontale ── */}
-          {devis && (
-            <div className="flex items-center gap-2 py-4 flex-wrap">
+            <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest pt-2">
+              Détail par benchmarking
+            </h2>
 
-              {/* PDF Direction — voir */}
-              <button
-                onClick={() => urlPdfDirection && window.open(`${API_URL}/${urlPdfDirection}`, '_blank')}
-                disabled={!urlPdfDirection || actionLoading === 'pdfDirection'}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300 transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
-              >
-                {actionLoading === 'pdfDirection' ? (
-                  <>
-                    <span className="animate-spin h-3.5 w-3.5 border-2 border-gray-400 border-t-gray-600 rounded-full" />
-                    Génération...
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                    PDF Direction
-                  </>
-                )}
-              </button>
-
-              {/* Séparateur */}
-              <div className="w-px h-6 bg-gray-300 mx-1" />
-
-              {/* PDF Client — voir */}
-              <button
-                onClick={() => urlPdfClient && window.open(`${API_URL}/${urlPdfClient}`, '_blank')}
-                disabled={!urlPdfClient || actionLoading === 'pdfClient'}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-300 transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
-              >
-                {actionLoading === 'pdfClient' ? (
-                  <>
-                    <span className="animate-spin h-3.5 w-3.5 border-2 border-gray-400 border-t-gray-600 rounded-full" />
-                    Génération...
-                  </>
-                ) : (
-                  <>
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                    </svg>
-                    PDF Client
-                  </>
-                )}
-              </button>
-
-              {/* ── Section PDF — boutons Voir uniquement ── */}
-
-              {/* Séparateur */}
-              <div className="w-px h-6 bg-gray-300 mx-1" />
-
-              {/* Envoyer — disabled si statut avancé */}
-              <button
-                onClick={handleEnvoyer}
-                disabled={actionLoading !== null || devis.statut !== 'CREER'}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
-              >
-                {actionLoading === 'envoi'
-                  ? <span className="animate-spin h-3.5 w-3.5 border-2 border-gray-400 border-t-gray-600 rounded-full" />
-                  : <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-                }
-                {actionLoading === 'envoi' ? 'Envoi...' : 'Envoyer'}
-              </button>
-
-              {/* Approuver — disabled si pas en attente */}
-              <button
-                onClick={handleApprouver}
-                disabled={actionLoading !== null || devis.statut !== 'DEVIS_A_APPROUVER'}
-                className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white text-sm font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
-              >
-                {actionLoading === 'approbation'
-                  ? <span className="animate-spin h-3.5 w-3.5 border-2 border-white border-t-transparent rounded-full" />
-                  : <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                }
-                {actionLoading === 'approbation' ? 'Approbation...' : 'Approuver'}
-              </button>
-
-              {/* Transformer — disabled si pas approuvé ou déjà transformé */}
-              <button
-                onClick={handleTransformer}
-                // disabled={actionLoading !== null || devis.statut !== 'DEVIS_APPROUVE' || transformed}
-                disabled={devis.statut !== 'DEVIS_APPROUVE'}
-                className="flex items-center gap-2 px-4 py-2 bg-indigo-500 text-white text-sm font-medium rounded-lg hover:bg-indigo-600 transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
-              >
-                {actionLoading === 'transformation'
-                  ? <span className="animate-spin h-3.5 w-3.5 border-2 border-gray-400 border-t-gray-600 rounded-full" />
-                  : transformed
-                    ? <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    : <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
-                }
-                {actionLoading === 'transformation' ? 'Transformation...' : transformed ? 'Transformer' : 'Transformer en hôtel'}
-              </button>
-
-              {/* Récap commission */}
-              <div className="ml-auto flex items-center gap-4 text-xs text-gray-500 border-l border-gray-300 pl-4">
-                <span>Total : <strong className="text-gray-700">{montantTotalClient.toLocaleString('fr-FR')} Ar</strong></span>
-                <span>Commission {tauxCommission}% : <strong className="text-gray-700">{montantTotalCommission.toLocaleString('fr-FR')} Ar</strong></span>
+            {benchmarkings.length === 0 ? (
+              <div className="bg-white rounded-xl border border-gray-200 p-10 text-center text-gray-400 text-sm italic">
+                Aucun benchmarking trouvé
               </div>
-            </div>
-          )}
-        </div>
-
-        {/* ── Body ── */}
-        <div className="py-6 space-y-4">
-          <div className="grid grid-cols-3 gap-4 mb-2">
-            {[
-              { label: 'Benchmarkings', value: benchmarkings.length },
-              { label: 'Lignes totales', value: benchmarkings.reduce((acc, b) => acc + (b.ligneClient ? 1 : 0), 0) },
-              { label: 'Nuits totales', value: benchmarkings.reduce((acc, b) => acc + b.nuite, 0) },
-            ].map(({ label, value }) => (
-              <div key={label} className="bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-4">
-                <p className="text-xs text-gray-400 uppercase tracking-wide">{label}</p>
-                <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
-              </div>
-            ))}
+            ) : (
+              benchmarkings.map((bench) => (
+                <BenchmarkingCard key={bench.id} bench={bench} />
+              ))
+            )}
           </div>
-
-          <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-widest pt-2">
-            Détail par benchmarking
-          </h2>
-
-          {benchmarkings.length === 0 ? (
-            <div className="bg-white rounded-xl border border-gray-200 p-10 text-center text-gray-400 text-sm italic">
-              Aucun benchmarking trouvé
-            </div>
-          ) : (
-            benchmarkings.map((bench) => (
-              <BenchmarkingCard key={bench.id} bench={bench} />
-            ))
-          )}
         </div>
-      </div>
-    </TabContainer>
+      </TabContainer>
+    </div>
   );
 }

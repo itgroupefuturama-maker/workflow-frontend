@@ -26,6 +26,7 @@ export interface AttestationSuivi {
 export interface CreateAttestationEnteteDto {
   prestationId: string;
   fournisseurId: string;
+  puAriary: number; 
 }
 
 export interface FournisseurMini {
@@ -86,6 +87,7 @@ export interface AttestationEntete {
   numeroEntete: string;
   fournisseurId: string;
   totalCommission: number;
+  puAriary: number;
   createdAt: string;
   updatedAt: string;
   prestation: PrestationMini;
@@ -212,7 +214,7 @@ export const createAttestationLigne = createAsyncThunk<
     dateHeureArrive: string;
     dureeVol: string;
     dureeEscale: string;
-    puAriary: number;
+    // puAriary: number;
     numeroReservation: string;
     passagerIds: string[];
   },

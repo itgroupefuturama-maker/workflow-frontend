@@ -11,6 +11,7 @@ export interface BeneficiaireLink {
     code: string;
     libelle: string;
     statut: string;
+    typeClient: string;
   };
 }
 
@@ -44,18 +45,47 @@ export interface ClientFactureDetail extends ClientFacture {
   beneficiaires: BeneficiaireLink[];
 }
 
+export interface PreferenceItem {
+  id: string;
+  service: {
+    id: string;
+    code: string;
+    libelle: string;
+    type: string;
+    typeService: string;
+    createdAt: string;
+    updatedAt: string;
+  };
+  preference: string;
+  count: number;
+}
+
 export interface ClientFacturesState {
   data: ClientFacture[];
   current: ClientFactureDetail | null;
+  currentDetail: ClientFactureDetail | null;  
   loading: boolean;
+  loadingDetail: boolean;                  
   error: string | null;
+  errorDetail: string | null;        
+  preferences: PreferenceItem[];
+  loadingPreferences: boolean;
+  errorPreferences: string | null;
+  preferencesClientId: string | null; 
 }
 
 const initialState: ClientFacturesState = {
   data: [],
   current: null,
+  currentDetail: null,
   loading: false,
+  loadingDetail: false,
   error: null,
+  errorDetail: null,
+  preferences: [],
+  loadingPreferences: false,
+  errorPreferences: null,
+  preferencesClientId: null,
 };
 
 // Fetch tous les clients factures
@@ -351,10 +381,34 @@ export const fetchClientFactureById = createAsyncThunk<
   }
 );
 
+export const fetchPreferencesBeneficiaire = createAsyncThunk<
+  PreferenceItem[],
+  string // clientBeneficiaireId
+>(
+  'clientFactures/fetchPreferences',
+  async (clientBeneficiaireId, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.get(
+        `/service-specifique/preferences/${clientBeneficiaireId}`
+      );
+      if (!res.data.success) throw new Error('Erreur lors du chargement des préférences');
+      return res.data.data as PreferenceItem[];
+    } catch (err: any) {
+      return rejectWithValue(err.message ?? 'Erreur inconnue');
+    }
+  }
+);
+
 const clientFacturesSlice = createSlice({
   name: 'clientFactures',
   initialState,
-  reducers: {},
+  reducers: {
+    clearPreferences: (state) => {
+      state.preferences = [];
+      state.preferencesClientId = null;
+      state.errorPreferences = null;
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(fetchClientFactures.pending, (state) => { state.loading = true; state.error = null; })
@@ -399,19 +453,34 @@ const clientFacturesSlice = createSlice({
       })
       // fetchClientFactureById
       .addCase(fetchClientFactureById.pending, (state) => {
-        state.loading = true;
-        state.error = null;
+        state.loadingDetail = true;
+        state.errorDetail = null;
       })
       .addCase(fetchClientFactureById.fulfilled, (state, action) => {
-        state.loading = false;
+        state.loadingDetail = false;
+        state.currentDetail = action.payload;   // ← currentDetail
         state.current = action.payload;
       })
       .addCase(fetchClientFactureById.rejected, (state, action) => {
-        state.loading = false;
-        state.error = action.payload as string;
-        state.current = null;
+        state.loadingDetail = false;
+        state.errorDetail = action.payload as string;
+        state.currentDetail = null;
+      })
+      .addCase(fetchPreferencesBeneficiaire.pending, (state, action) => {
+        state.loadingPreferences = true;
+        state.errorPreferences = null;
+        state.preferencesClientId = action.meta.arg;
+      })
+      .addCase(fetchPreferencesBeneficiaire.fulfilled, (state, action) => {
+        state.loadingPreferences = false;
+        state.preferences = action.payload;
+      })
+      .addCase(fetchPreferencesBeneficiaire.rejected, (state, action) => {
+        state.loadingPreferences = false;
+        state.errorPreferences = action.payload as string;
       });
   },
 });
 
+export const { clearPreferences } = clientFacturesSlice.actions;
 export default clientFacturesSlice.reducer;

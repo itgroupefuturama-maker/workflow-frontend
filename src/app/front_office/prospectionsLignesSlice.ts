@@ -10,6 +10,8 @@ export interface ServiceSpecifique {
   updatedAt: string;
 }
 
+export type ModePaiement = 'COMPTANT' | 'CREDIT' | 'CHEQUE' | 'VIREMENT';
+
 export interface ServiceProspectionLigne {
   id: string;
   prospectionLigneId: string;
@@ -36,6 +38,7 @@ export interface ProspectionLigne {
   classe: string;                          // ex: "ECONOMIE"
   typePassager: string;                    // ex: "ENFANT", "ADULTE"
   nombre: number;
+  modePaiement: ModePaiement;
   dateHeureDepart: string;                 // ISO string
   dateHeureArrive: string | null;
   dureeVol: string | null;                 // ex: "11h30"
@@ -149,6 +152,7 @@ export interface CreateProspectionLignePayload {
   commissionEnDevise: number;
   commissionEnAriary: number;
   nombre: number;
+  modePaiement: ModePaiement;
   services: { serviceSpecifiqueId: string; valeur: string }[];
 }
 

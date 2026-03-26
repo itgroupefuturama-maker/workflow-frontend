@@ -157,50 +157,30 @@ const HomePageTicketing = () => {
   };
 
   return (
-    <div className="flex flex-1 h-full min-h-0 bg-[#F8FAFC] overflow-hidden">
+    <div className="flex h-full min-h-0 overflow-hidden">
       {/* La Sidebar prendra automatiquement 100% de la hauteur grâce à h-screen */}
       <Sidebar module="ticketing"/>
+      <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden py-2 px-2">
 
-      {/* Le contenu principal */}
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
-        {/* Header fixe en haut du contenu */}
-        {/* <div className="p-5 border-b border-slate-100 bg-white shrink-0">
-          <header className="flex items-center justify-between">
-            <button
-              onClick={() => navigate(`/`)}
-              className="flex items-center gap-2 text-slate-600 hover:text-slate-900 transition-colors"
-            >
-              <FiArrowLeft size={20} />
-              <span className="text-xs font-bold uppercase tracking-widest">Retour à la page d'accueil</span>
-            </button>
-          </header>
-        </div> */}
+        {/* Système de routage interne */}
+        <Outlet context={contextValue} />
 
-        {/* Zone de contenu scrollable indépendamment de la sidebar */}
-        <div className="flex-1 overflow-y-auto p-8">
-          <div className=" mx-auto w-full">
-
-            {/* Système de routage interne */}
-            <Outlet context={contextValue} />
-
-            <ProspectionModals
-              selectedEntete={selectedEntete}
-              modalCommission={modalCommission}
-              setModalCommission={setModalCommission}
-              isSaving={isSaving}
-              onCloseEdit={closeModal}
-              onSaveEdit={handleSaveModal}
-              showCreateModal={showCreateModal}
-              newEntete={newEntete}
-              setNewEntete={setNewEntete}
-              isCreating={isCreating}
-              fournisseurs={fournisseurs}
-              fournisseursLoading={fournisseursLoading}
-              onCloseCreate={closeCreateModal}
-              onConfirmCreate={handleCreateEntete}
-            />
-          </div>
-        </div>
+        <ProspectionModals
+          selectedEntete={selectedEntete}
+          modalCommission={modalCommission}
+          setModalCommission={setModalCommission}
+          isSaving={isSaving}
+          onCloseEdit={closeModal}
+          onSaveEdit={handleSaveModal}
+          showCreateModal={showCreateModal}
+          newEntete={newEntete}
+          setNewEntete={setNewEntete}
+          isCreating={isCreating}
+          fournisseurs={fournisseurs}
+          fournisseursLoading={fournisseursLoading}
+          onCloseCreate={closeCreateModal}
+          onConfirmCreate={handleCreateEntete}
+        />
       </div>
     </div>
   );

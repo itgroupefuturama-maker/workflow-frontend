@@ -24,7 +24,7 @@ export const AttestationHeader = ({ numeroAttestation, navigate, isDetail = fals
   ];
 
   return (
-    <header>
+    <header className="mb-2">
       <div className="flex items-center">
         {steps.map((step, index) => {
           const isLast      = index === steps.length - 1;

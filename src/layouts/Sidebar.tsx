@@ -4,10 +4,11 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
   FiHome, FiSettings, FiChevronDown, FiChevronRight,
   FiBarChart2, FiActivity, FiLayers, FiMap, FiList, FiPlusSquare,
-  FiFolder, FiLoader, FiGlobe, FiArrowLeft, FiChevronsLeft, FiChevronsRight
+  FiFolder, FiLoader, FiGlobe, FiArrowLeft, FiChevronsLeft, FiChevronsRight,
+  FiUsers
 } from 'react-icons/fi';
 import type { AppDispatch, RootState } from '../app/store';
-import { fetchDossiersCommuns, setCurrentClientFactureId, type DossierCommun } from '../app/front_office/dossierCommunSlice';
+import { setCurrentClientFactureId, type DossierCommun } from '../app/front_office/dossierCommunSlice';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -19,6 +20,7 @@ export default function Sidebar({ module }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { pathname } = location;
+  
   const dispatch = useAppDispatch();
 
   const [collapsed, setCollapsed] = useState(false);
@@ -39,10 +41,6 @@ export default function Sidebar({ module }: SidebarProps) {
     Accueil: false,
     Paramètres: false,
   });
-
-  useEffect(() => {
-    dispatch(fetchDossiersCommuns());
-  }, [dispatch]);
 
   useEffect(() => {
     if (loadingDossiers || dossiersTicketing.length === 0) return;
@@ -125,25 +123,30 @@ export default function Sidebar({ module }: SidebarProps) {
       ? [
           { label: 'Entête Prospection', path: '/dossiers-communs/ticketing/pages',   icon: <FiPlusSquare size={14} />, tab: 'prospection' },
           { label: 'Liste Billets',      path: '/dossiers-communs/ticketing/pages',   icon: <FiList       size={14} />, tab: 'billet'      },
+          { label: 'Liste Bénéficiaire', path: '/dossiers-communs/ticketing/pages',   icon: <FiUsers      size={14} />, tab: 'beneficiaire'},
         ]
       : module === 'hotel'
       ? [
           { label: 'Liste Benchmarking', path: '/dossiers-communs/hotel/pages',       icon: <FiPlusSquare size={14} />, tab: 'prospection' },
           { label: 'Liste Reservation',  path: '/dossiers-communs/hotel/pages',       icon: <FiList       size={14} />, tab: 'hotel'        },
+          { label: 'Liste Bénéficiaire', path: '/dossiers-communs/hotel/pages',       icon: <FiUsers      size={14} />, tab: 'beneficiaire'},
         ]
       : module === 'attestation'
       ? [
           { label: 'Entête Attestation', path: '/dossiers-communs/attestation/pages', icon: <FiPlusSquare size={14} />, tab: 'prospection'  },
+          { label: 'Liste Bénéficiaire', path: '/dossiers-communs/attestation/pages', icon: <FiUsers      size={14} />, tab: 'beneficiaire'},
         ]
       : module === 'visa'
       ? [
           { label: 'Liste Prospection', path: '/dossiers-communs/visa/pages',       icon: <FiPlusSquare size={14} />, tab: 'prospection' },
           { label: 'Liste Reservation',  path: '/dossiers-communs/visa/pages',       icon: <FiList       size={14} />, tab: 'visa'        },
+          { label: 'Liste Bénéficiaire', path: '/dossiers-communs/visa/pages',   icon: <FiUsers      size={14} />, tab: 'beneficiaire'},
         ]
       : module === 'assurance'
       ? [
           { label: 'Liste Prospection', path: '/dossiers-communs/assurance/pages',       icon: <FiPlusSquare size={14} />, tab: 'prospection' },
           { label: 'Liste Reservation',  path: '/dossiers-communs/assurance/pages',       icon: <FiList       size={14} />, tab: 'assurance'        },
+          { label: 'Liste Bénéficiaire', path: '/dossiers-communs/assurance/pages',   icon: <FiUsers      size={14} />, tab: 'beneficiaire'},
         ]
       : [];
 
@@ -152,8 +155,8 @@ export default function Sidebar({ module }: SidebarProps) {
     if (module === 'ticketing')   navigate('/dossiers-communs/ticketing/pages',   { state: { targetTab: 'prospection'  } });
     if (module === 'attestation') navigate('/dossiers-communs/attestation/pages', { state: { targetTab: 'prospection'  } });
     if (module === 'hotel')       navigate('/dossiers-communs/hotel/pages',       { state: { targetTab: 'prospection' } });
-    if (module === 'visa')        navigate('/dossiers-communs/visa/pages',        { state: { targetTab: 'prospection'        } });
-    if (module === 'assurance')        navigate('/dossiers-communs/assurance/pages',        { state: { targetTab: 'prospection'        } });
+    if (module === 'visa')        navigate('/dossiers-communs/visa/pages',        { state: { targetTab: 'prospection' } });
+    if (module === 'assurance')   navigate('/dossiers-communs/assurance/pages',   { state: { targetTab: 'prospection' } });
   };
 
   const handleSubPageClick = (path: string, tab: string) => {

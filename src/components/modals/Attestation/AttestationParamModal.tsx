@@ -38,10 +38,6 @@ export default function AttestationParamModal({ isOpen, onClose }: Props) {
       setFormError('Veuillez entrer un prix valide');
       return;
     }
-    // if (!form.date_activation) {
-    //   setFormError("Veuillez choisir une date d'activation");
-    //   return;
-    // }
 
     setFormError(null);
 
@@ -49,7 +45,6 @@ export default function AttestationParamModal({ isOpen, onClose }: Props) {
       await dispatch(
         createAttestationParam({
           prix: Number(form.prix),
-          // date_activation: new Date(form.date_activation).toISOString(),
         })
       ).unwrap();
 

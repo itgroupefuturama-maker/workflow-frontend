@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from '../../service/Axios';
+import type { ModePaiement } from './prospectionsLignesSlice';
 
 export interface AnnulationBilletPayload {
   tauxChange: number;
@@ -40,27 +41,23 @@ export interface ServiceSpecifique {
 // Interfaces
 // ────────────────────────────────────────────────
 export interface ReservationPayload {
+  passagers: Array<{
+    clientbeneficiaireInfoId: string;
+    clientBeneficiaireId: string;
+    servicePreferenceIds: string[];
+  }>;
   nombre: number;
-  clientbeneficiaireInfoId: string;                    // ← NOUVEAU et obligatoire
   reservation: string;
   puResaBilletCompagnieDevise: number;
   puResaServiceCompagnieDevise: number;
   puResaPenaliteCompagnieDevise: number;
   devise: string;
   resaTauxEchange: number;
-  puResaMontantBilletCompagnieDevise: number;         // calculé ou saisi
+  puResaMontantBilletCompagnieDevise: number;
   puResaMontantServiceCompagnieDevise: number;
   puResaMontantPenaliteCompagnieDevise: number;
-  // Optionnels / calculés côté front ou back selon besoin
-  puResaBilletClientDevise?: number;
-  puResaServiceClientDevise?: number;
-  puResaPenaliteClientDevise?: number;
-  puResaMontantBilletClientDevise?: number;
-  puResaMontantServiceClientDevise?: number;
-  puResaMontantPenaliteClientDevise?: number;
   conditionModif?: string | null;
   conditionAnnul?: string | null;
-  raisonAnnul?: string | null;
 }
 
 export interface Fournisseur {
@@ -145,6 +142,7 @@ export interface ProspectionLigne {
   devisId: string;
   createdAt: string;
   updatedAt: string;
+  modePaiement: ModePaiement;
   serviceProspectionLigne: ServiceProspectionLigne[];
 }
 
@@ -224,6 +222,7 @@ export interface BilletLigne {
     clientbeneficiaireInfoId: string;
     billetLigneId: string;
     pjBillet: string | null;
+    servicePreference: string[];
     numeroBillet: string | null;
     createdAt: string;
     updatedAt: string;

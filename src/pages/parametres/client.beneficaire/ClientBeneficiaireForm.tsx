@@ -45,6 +45,8 @@ const ClientBeneficiaireFormPage = () => {
   const scrollAssocRef = useRef<HTMLDivElement>(null);
   const scrollAvailRef = useRef<HTMLDivElement>(null);
 
+  
+
   const currentBeneficiaire = beneficiaires.find(b => b.id === id);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -55,6 +57,10 @@ const ClientBeneficiaireFormPage = () => {
 
   const [statut, setStatut] = useState<'ACTIF' | 'INACTIF'>(
     (currentBeneficiaire?.statut as 'ACTIF' | 'INACTIF') ?? 'ACTIF'
+  );
+
+  const [typeClient, setTypeClient] = useState<'SIMPLE' | 'GOLD'| 'SILVER' | 'BRONZE' | 'VIP' >(
+    (currentBeneficiaire?.typeClient as 'SIMPLE' | 'GOLD'| 'SILVER' | 'BRONZE' | 'VIP') ?? 'SIMPLE'
   );
 
   const isFormInvalid = !libelle.trim();
@@ -68,7 +74,8 @@ const ClientBeneficiaireFormPage = () => {
     const result = await dispatch(updateClientBeneficiaire({
       id: currentBeneficiaire.id,
       libelle,
-      statut
+      statut,
+      typeClient, 
     }));
 
     if (updateClientBeneficiaire.fulfilled.match(result)) {
@@ -121,8 +128,12 @@ const ClientBeneficiaireFormPage = () => {
 
   const hasChanges = useMemo(() => {
     if (!currentBeneficiaire) return false;
-    return libelle !== currentBeneficiaire.libelle || statut !== currentBeneficiaire.statut;
-  }, [libelle, statut, currentBeneficiaire]);
+    return (
+      libelle !== currentBeneficiaire.libelle ||
+      statut !== currentBeneficiaire.statut ||
+      typeClient !== currentBeneficiaire.typeClient // ← NOUVEAU
+    );
+  }, [libelle, statut, typeClient, currentBeneficiaire]);
 
   const availableClientFactures = useMemo(() => {
     const linkedIds = currentBeneficiaire?.factures.map(f => f.clientFacture.id) || [];
@@ -220,6 +231,23 @@ const ClientBeneficiaireFormPage = () => {
                   >
                     <option value="ACTIF text-emerald-600">● ACTIF</option>
                     <option value="INACTIF text-gray-400">○ INACTIF</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-2 uppercase">
+                    Type de client
+                  </label>
+                  <select
+                    value={typeClient}
+                    onChange={(e) => setTypeClient(e.target.value as 'SIMPLE' | 'GOLD'| 'SILVER' | 'BRONZE' | 'VIP')}
+                    className="w-full px-4 py-3 bg-gray-50/50 border border-gray-200 rounded-lg font-bold text-sm focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
+                  >
+                    <option value="SIMPLE">SIMPLE</option>
+                    <option value="GOLD">GOLD</option>
+                    <option value="SILVER">SILVER</option>
+                    <option value="BRONZE">BRONZE</option>
+                    <option value="VIP">VIP</option>
                   </select>
                 </div>
               </div>

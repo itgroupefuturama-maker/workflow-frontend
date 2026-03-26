@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { FiSave, FiX } from "react-icons/fi";
 
 interface NewLineRowProps {
@@ -9,6 +10,13 @@ interface NewLineRowProps {
   updateServiceValue: (index: number, value: string) => void;
   handleSaveNewLine: () => void;
   handleCancelNewLine: () => void;
+  onSearchTrigger?: (params: {         // ← nouveau callback
+    numeroVol: string;
+    dateHeureDepart: string;
+    classe: string;
+    typePassager: string;
+    anchorRef: React.RefObject<HTMLTableCellElement | null>;
+  }) => void;
 }
 
 function NewLineRow({
@@ -20,21 +28,10 @@ function NewLineRow({
   updateServiceValue,
   handleSaveNewLine,
   handleCancelNewLine,
+  onSearchTrigger,
 }: NewLineRowProps) {
   const inputClassName = "w-full min-w-[120px] px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white";
   const numberInputClassName = "w-full min-w-[140px] px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-right font-medium bg-white";
-
-  // function calculerDureeVol(dateDepart: string, dateArrive: string): string {
-  //   if (!dateDepart || !dateArrive) return '';
-  //   const depart = new Date(dateDepart);
-  //   const arrive = new Date(dateArrive);
-  //   const diffMs = arrive.getTime() - depart.getTime();
-  //   if (diffMs <= 0) return '';
-  //   const totalMinutes = Math.floor(diffMs / 60000);
-  //   const heures = Math.floor(totalMinutes / 60);
-  //   const minutes = totalMinutes % 60;
-  //   return `${heures}h${String(minutes).padStart(2, '0')}`;
-  // }
 
   // ─── Calculs dérivés corrigés ───
   const taux   = newLine.tauxEchange || 0;
@@ -81,30 +78,131 @@ function NewLineRow({
   const autoReadonlyCls = "w-full min-w-[140px] px-3 py-2 border border-slate-200 rounded-lg text-sm text-right font-medium bg-slate-100 text-slate-600 cursor-not-allowed";
   const commissionCls   = "w-full min-w-[140px] px-3 py-2 border border-green-300 rounded-lg text-sm text-right font-bold bg-green-50 text-green-700 cursor-not-allowed";
 
+  const numeroVolCellRef = useRef<HTMLTableCellElement>(null);
+
   return (
     <tr className="bg-linear-to-r from-blue-50 to-blue-100/50 border-t-4 border-blue-400">
       <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
       <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
-      {/* <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td> */}
       <td className="px-4 py-3">
         <input
           type="number"
           step="1"
-          value={newLine.nombre}
+          value={newLine.nombre ?? ''}
           onChange={(e) => updateNewLineField('nombre', Number(e.target.value))}
           className={numberInputClassName + " text-emerald-700"}
           placeholder="1"
         />
       </td>
-      <td className="px-4 py-3">
+      <td className="px-4 py-3 relative" ref={numeroVolCellRef}>
         <input
           type="text"
           value={newLine.numeroVol}
-          onChange={(e) => updateNewLineField('numeroVol', e.target.value)}
+          onChange={(e) => {
+            updateNewLineField('numeroVol', e.target.value);
+            // Déclencher la recherche seulement si les 4 champs sont remplis
+            if (
+              e.target.value.trim() &&
+              newLine.dateHeureDepart &&
+              newLine.classe &&
+              newLine.typePassager
+            ) {
+              onSearchTrigger?.({
+                numeroVol: e.target.value.trim(),
+                dateHeureDepart: newLine.dateHeureDepart,
+                classe: newLine.classe,
+                typePassager: newLine.typePassager,
+                anchorRef: numeroVolCellRef,
+              });
+            }
+          }}
           className={inputClassName}
           placeholder="MD-003"
           required
         />
+      </td>
+
+      {/* Date Départ */}
+      <td className="px-4 py-3">
+        <input
+          type="datetime-local"
+          value={newLine.dateHeureDepart}
+          onChange={(e) => {
+            updateNewLineField('dateHeureDepart', e.target.value);
+            if (newLine.numeroVol?.trim() && newLine.classe && newLine.typePassager) {
+              onSearchTrigger?.({
+                numeroVol: newLine.numeroVol.trim(),
+                dateHeureDepart: e.target.value,
+                classe: newLine.classe,
+                typePassager: newLine.typePassager,
+                anchorRef: numeroVolCellRef,
+              });
+            }
+          }}
+          className={inputClassName}
+          required
+        />
+      </td>
+
+      {/* Date Arrivée */}
+      <td className="px-4 py-3">
+        <input
+          type="datetime-local"
+          value={newLine.dateHeureArrive}
+          onChange={(e) => {
+            updateNewLineField('dateHeureArrive', e.target.value);
+            // const duree = calculerDureeVol(newLine.dateHeureDepart, e.target.value);
+            // if (duree) updateNewLineField('dureeVol', duree);
+          }}
+          className={inputClassName}
+        />
+      </td>
+
+      <td className="px-4 py-3">
+        <select
+          value={newLine.classe}
+          onChange={(e) => {
+            updateNewLineField('classe', e.target.value);
+            if (newLine.numeroVol?.trim() && newLine.dateHeureDepart && newLine.typePassager) {
+              onSearchTrigger?.({
+                numeroVol: newLine.numeroVol.trim(),
+                dateHeureDepart: newLine.dateHeureDepart,
+                classe: e.target.value,
+                typePassager: newLine.typePassager,
+                anchorRef: numeroVolCellRef,
+              });
+            }
+          }}
+          className={inputClassName}
+        >
+          <option value="ECONOMIE">Économie</option>
+          <option value="BUSINESS">Business</option>
+          <option value="PREMIUM">Premium</option>
+          <option value="PREMIERE">Première</option>
+        </select>
+      </td>
+
+      <td className="px-4 py-3">
+        <select
+          value={newLine.typePassager}
+          onChange={(e) => {
+            updateNewLineField('typePassager', e.target.value);
+            if (newLine.numeroVol?.trim() && newLine.dateHeureDepart && newLine.classe) {
+              onSearchTrigger?.({
+                numeroVol: newLine.numeroVol.trim(),
+                dateHeureDepart: newLine.dateHeureDepart,
+                classe: newLine.classe,
+                typePassager: e.target.value,
+                anchorRef: numeroVolCellRef,
+              });
+            }
+          }}
+          className={inputClassName}
+        >
+          <option value="ADULTE">Adulte</option>
+          <option value="ENFANT">Enfant</option>
+          <option value="BEBE">Bébé</option>
+        </select>
       </td>
 
       <td className="px-4 py-3">
@@ -167,60 +265,6 @@ function NewLineRow({
             <span className="text-slate-400">?</span>
           )}
         </div>
-      </td>
-
-      <td className="px-4 py-3">
-        <select
-          value={newLine.classe}
-          onChange={(e) => updateNewLineField('classe', e.target.value)}
-          className={inputClassName}
-        >
-          <option value="ECONOMIE">Économie</option>
-          <option value="BUSINESS">Business</option>
-          <option value="PREMIUM">Premium</option>
-          <option value="PREMIERE">Première</option>
-        </select>
-      </td>
-
-      <td className="px-4 py-3">
-        <select
-          value={newLine.typePassager}
-          onChange={(e) => updateNewLineField('typePassager', e.target.value)}
-          className={inputClassName}
-        >
-          <option value="ADULTE">Adulte</option>
-          <option value="ENFANT">Enfant</option>
-          <option value="BEBE">Bébé</option>
-        </select>
-      </td>
-
-      {/* Date Départ */}
-      <td className="px-4 py-3">
-        <input
-          type="datetime-local"
-          value={newLine.dateHeureDepart}
-          onChange={(e) => {
-            updateNewLineField('dateHeureDepart', e.target.value);
-                // const duree = calculerDureeVol(e.target.value, newLine.dateHeureArrive);
-                // if (duree) updateNewLineField('dureeVol', duree);
-          }}
-          className={inputClassName}
-          required
-        />
-      </td>
-
-      {/* Date Arrivée */}
-      <td className="px-4 py-3">
-        <input
-          type="datetime-local"
-          value={newLine.dateHeureArrive}
-          onChange={(e) => {
-            updateNewLineField('dateHeureArrive', e.target.value);
-            // const duree = calculerDureeVol(newLine.dateHeureDepart, e.target.value);
-            // if (duree) updateNewLineField('dureeVol', duree);
-          }}
-          className={inputClassName}
-        />
       </td>
 
       {/* Durée Vol - readonly, calculé automatiquement */}
@@ -439,6 +483,19 @@ function NewLineRow({
           value={commissionEnAriary.toLocaleString('fr-FR')}
           className={commissionCls}
         />
+      </td>
+
+      <td className="px-4 py-3">
+        <select
+          value={newLine.modePaiement}
+          onChange={(e) => updateNewLineField('modePaiement', e.target.value)}
+          className={inputClassName}
+        >
+          <option value="COMPTANT">Comptant</option>
+          <option value="CREDIT">Crédit</option>
+          <option value="CHEQUE">Chèque</option>
+          <option value="VIREMENT">Virement</option>
+        </select>
       </td>
 
       <td className="px-4 py-4">

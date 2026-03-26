@@ -321,7 +321,7 @@ const PageDetailAssurance = () => {
   const isConforme  = detail.statut === 'CONFORME';
 
   return (
-    <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange} color="bg-blue-400" >
+    <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange} >
       <div className="min-h-screen bg-neutral-50 space-y-4">
 
         <AssuranceHeader

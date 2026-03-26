@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { BilletLigne, ServiceProspectionLigne, ServiceSpecifique } from '../../../../../../app/front_office/billetSlice';
 import { FiFilter, FiX } from 'react-icons/fi';
+import { API_URL } from '../../../../../../service/env';
 
 // --- Sous-composant pour les cellules de prix (évite la répétition et les erreurs de rendu) ---
 const PriceCell = ({ value, isCurrency = false, className = "" }: { value: number, isCurrency?: boolean, className?: string }) => (
@@ -20,6 +21,170 @@ interface BilletTableProps {
   handleRemove: (ligne: BilletLigne) => void;
   serviceById: Map<string, ServiceSpecifique>;
 }
+
+const PassagersCell = ({ billets }: { billets: BilletLigne['billet'] }) => {
+  const [expanded, setExpanded] = useState(false);
+
+  const handleDownloadPdf = async (pjBillet: string, nomFichier: string) => {
+    try {
+      const url = `${API_URL}/${pjBillet}`;
+      const response = await fetch(url);
+      
+      if (!response.ok) throw new Error('Fichier introuvable');
+      
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.download = nomFichier || 'billet.pdf';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Libérer la mémoire
+      URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      alert('Impossible de télécharger le fichier');
+    }
+  };
+
+  if (!billets || billets.length === 0) {
+    return <span className="text-slate-400 text-xs italic">Aucun passager</span>;
+  }
+
+  return (
+    <div className="space-y-2 min-w-[280px]">
+      {billets.map((b, idx) => {
+        const info = b.clientbeneficiaireInfo;
+        const nomComplet = `${info.prenom || ''} ${info.nom || ''}`.trim();
+        const docExpire = info.dateValiditeDoc
+          ? new Date(info.dateValiditeDoc) < new Date()
+          : false;
+
+        return (
+          <div
+            key={b.id}
+            className="border border-slate-200 rounded-lg overflow-hidden bg-white shadow-sm"
+          >
+            {/* Header passager */}
+            <button
+              type="button"
+              onClick={() => setExpanded((prev) => !prev)}
+              className="w-full px-3 py-2 flex items-center gap-2 bg-slate-50 hover:bg-slate-100 transition-colors text-left"
+            >
+              <div className="w-5 h-5 bg-slate-700 text-white rounded-full flex items-center justify-center text-[10px] font-bold shrink-0">
+                {idx + 1}
+              </div>
+              <span className="text-xs font-semibold text-slate-800 flex-1 truncate">
+                {nomComplet || 'Passager inconnu'}
+              </span>
+              {/* Billet émis */}
+              {b.numeroBillet && (
+                <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-mono shrink-0">
+                  {b.numeroBillet}
+                </span>
+              )}
+              <span className="text-slate-400 text-[10px]">{expanded ? '▲' : '▼'}</span>
+            </button>
+
+            {/* Préférences (toujours visibles) */}
+            {b.servicePreference && b.servicePreference.length > 0 && (
+              <div className="px-3 py-1.5 flex flex-wrap gap-1 border-t border-slate-100 bg-indigo-50/50">
+                {b.servicePreference.map((pref, i) => (
+                  <span
+                    key={i}
+                    className="px-2 py-0.5 bg-indigo-100 text-indigo-700 border border-indigo-200 rounded text-[10px] font-medium"
+                  >
+                    ✓ {pref}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {/* Détails (expandable) */}
+            {expanded && (
+              <div className="px-3 py-2.5 border-t border-slate-100 space-y-1.5 text-[11px] text-slate-600">
+                {/* Document */}
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                  <div>
+                    <span className="text-slate-400 uppercase tracking-wide text-[9px] font-bold">Type</span>
+                    <p className="font-semibold text-slate-700">{info.typeDoc || '—'}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 uppercase tracking-wide text-[9px] font-bold">Référence</span>
+                    <p className="font-mono font-semibold text-slate-700">{info.referenceDoc || '—'}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 uppercase tracking-wide text-[9px] font-bold">Nationalité</span>
+                    <p className="font-semibold text-slate-700">{info.nationalite || '—'}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 uppercase tracking-wide text-[9px] font-bold">Type passager</span>
+                    <p className="font-semibold text-slate-700">{info.clientType || '—'}</p>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 uppercase tracking-wide text-[9px] font-bold">Validité doc</span>
+                    <p className={`font-semibold ${docExpire ? 'text-red-600' : 'text-emerald-700'}`}>
+                      {info.dateValiditeDoc
+                        ? new Date(info.dateValiditeDoc).toLocaleDateString('fr-FR')
+                        : '—'}
+                      {docExpire && ' ⚠️'}
+                    </p>
+                  </div>
+                  {info.tel && (
+                    <div>
+                      <span className="text-slate-400 uppercase tracking-wide text-[9px] font-bold">Tél</span>
+                      <p className="font-mono text-slate-700">{info.tel}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* PJ Billet */}
+                {b.pjBillet ? (
+                  <div className='space-x-2'>
+                    <a
+                      href={`${API_URL}/${b.pjBillet}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-[11px] font-medium hover:bg-blue-100 transition-colors mt-1"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Voir Billet
+                    </a>
+                    <button
+                      type="button"
+                      onClick={() => handleDownloadPdf(
+                        b.pjBillet!,
+                        b.numeroBillet ? `billet-${b.numeroBillet}.pdf` : 'billet.pdf'
+                      )}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-[11px] font-medium hover:bg-blue-100 transition-colors mt-1"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Télécharger
+                    </button>
+
+                  </div>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-slate-400 text-[10px] italic mt-1">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Pas de PJ billet
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
 // ────────────────────────────────────────────────
 // Sous-composant pour afficher les services spécifiques
@@ -359,7 +524,11 @@ const BilletTable: React.FC<BilletTableProps> = ({
                 </th>
 
                 {/* Services + Actions fixes */}
+                <th rowSpan={2} className="px-4 py-3 text-left font-semibold text-slate-700 uppercase bg-slate-100">Mode de paiement</th>
                 <th rowSpan={2} className="px-4 py-3 text-left font-semibold text-slate-700 uppercase bg-slate-100">Services</th>
+                <th rowSpan={2} className="px-4 py-3 text-left font-semibold text-slate-700 uppercase bg-slate-100 min-w-[300px]">
+                  Passagers & Billets
+                </th>
                 <th rowSpan={2} className="px-4 py-3 text-center font-semibold text-slate-700 uppercase bg-slate-100 min-w-[220px]">Actions</th>
               </tr>
 
@@ -693,10 +862,18 @@ const BilletTable: React.FC<BilletTableProps> = ({
                       )}
 
                       <td className="px-4 py-3">
+                        {ligne.prospectionLigne?.modePaiement}
+                      </td>
+
+                      <td className="px-4 py-3">
                         <ServicesSpecifiquesCell 
                           services={ligne.prospectionLigne?.serviceProspectionLigne} 
                           serviceById={serviceById} 
                         />
+                      </td>
+
+                      <td className="px-4 py-3 align-top">
+                        <PassagersCell billets={ligne.billet} />
                       </td>
 
                       <td className="px-4 py-3 text-center min-w-[220px]">

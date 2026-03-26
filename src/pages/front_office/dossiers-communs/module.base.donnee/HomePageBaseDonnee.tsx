@@ -177,6 +177,7 @@ const HomePageBaseDonnee = () => {
                 {[
                   { label: 'Code bénéficiaire', icon: true },
                   { label: 'Libellé bénéficiaire', icon: true },
+                  { label: 'Type Client' },
                   { label: 'Code facturé' },
                   { label: 'Libellé facturé' },
                   { label: 'Date application', icon: true },
@@ -233,6 +234,9 @@ const HomePageBaseDonnee = () => {
                       </div>
                       <span className="text-sm font-semibold text-gray-800">{client.libelle}</span>
                     </div>
+                  </td>
+                  <td className="px-5 py-3.5">
+                    <span className="text-sm font-semibold text-gray-800">{client.typeClient}</span>
                   </td>
                   <td className="px-5 py-3.5">
                     <div className="flex flex-wrap gap-1.5">

@@ -45,6 +45,7 @@ export default function AddProspectionLigneModal({
     montantBilletClientDevise: 0,
     montantServiceClientDevise: 0,
     montantPenaliteClientDevise: 0,
+    modePaiement: 'COMPTANT' as 'COMPTANT' | 'CREDIT' | 'CHEQUE' | 'VIREMENT', 
   });
 
   // Init services
@@ -79,6 +80,7 @@ export default function AddProspectionLigneModal({
         montantBilletClientDevise: 0,
         montantServiceClientDevise: 0,
         montantPenaliteClientDevise: 0,
+        modePaiement: 'COMPTANT',
       });
       setServiceValues(servicesDisponibles.map((s) => ({ serviceSpecifiqueId: s.id, valeur: '' })));
       setIsSaving(false);
@@ -222,6 +224,8 @@ export default function AddProspectionLigneModal({
     commissionEnDevise,
     commissionEnAriary,
 
+    modePaiement: form.modePaiement,
+
     services: serviceValues.map((s) => ({
       serviceSpecifiqueId: s.serviceSpecifiqueId,
       valeur: s.valeur.trim() || 'false',
@@ -291,6 +295,22 @@ export default function AddProspectionLigneModal({
                   <option value="ADULTE">Adulte</option>
                   <option value="ENFANT">Enfant</option>
                   <option value="BEBE">Bébé</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">
+                  Mode de paiement
+                </label>
+                <select
+                  value={form.modePaiement}
+                  onChange={(e) => set('modePaiement', e.target.value)}
+                  className={inputCls}
+                >
+                  <option value="COMPTANT">Comptant</option>
+                  <option value="CREDIT">Crédit</option>
+                  <option value="CHEQUE">Chèque</option>
+                  <option value="VIREMENT">Virement</option>
                 </select>
               </div>
 

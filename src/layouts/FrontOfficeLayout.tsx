@@ -3,25 +3,8 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import io, { Socket } from 'socket.io-client';
 import AppBar from '../components/AppBar'; // ton AppBar actuelle
-import { fetchDossiersCommuns } from '../app/front_office/dossierCommunSlice';
-import { fetchPrivileges } from '../app/back_office/privilegesSlice';
-import { fetchProfiles } from '../app/back_office/profilesSlice';
-import { fetchAutorisations } from '../app/back_office/autorisationsSlice';
-import { fetchUsers } from '../app/back_office/usersSlice';
-import { fetchTransactionTypes } from '../app/back_office/transactionTypesSlice';
-import { fetchTransactions } from '../app/back_office/transactionsSlice';
-import { fetchModules } from '../app/back_office/modulesSlice';
-import { fetchModeles} from '../app/back_office/modelesSlice';
-import { fetchCommissions } from '../app/back_office/commissionsSlice';
-import { fetchDossiers } from '../app/back_office/numerotationSlice';
-import { fetchMiles } from '../app/back_office/milesSlice';
-import { fetchPieces } from '../app/back_office/piecesSlice';
-import { fetchClientBeneficiaires } from '../app/back_office/clientBeneficiairesSlice';
-import { fetchDevisTransactions } from '../app/back_office/devisTransactionsSlice';
-import { fetchClientFactures } from '../app/back_office/clientFacturesSlice';
-import { fetchArticles } from '../app/back_office/articlesSlice';
-import { fetchFournisseurs } from '../app/back_office/fournisseursSlice';
 import type { RootState, AppDispatch } from '../app/store';
+import AppLoader from './AppLoader';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -29,6 +12,10 @@ export default function FrontOfficeLayout() {
     const dispatch = useAppDispatch();
     const navigate = useNavigate();
     const { token, user } = useSelector((state: RootState) => state.auth);
+
+  useEffect(() => {
+    if (!token) navigate('/login');
+  }, [token, navigate]);
 
   // Gestion du socket global
   useEffect(() => {
@@ -68,52 +55,14 @@ export default function FrontOfficeLayout() {
     };
   }, [token, user?.id, dispatch]);
 
-  useEffect(() => {
-      if (!token) {
-        navigate('/login');
-        return;
-      }
-  
-      // Chargement conditionnel (seulement si pas déjà chargé)
-      const loadGlobalData = () => {
-        if (!token) return;
-  
-        dispatch(fetchDossiersCommuns());
-  
-        // Exemples : charge seulement si vide
-        dispatch(fetchPrivileges());
-        dispatch(fetchProfiles());
-        dispatch(fetchAutorisations());
-        dispatch(fetchUsers());
-        dispatch(fetchTransactionTypes());
-        dispatch(fetchTransactions());
-        dispatch(fetchModules());
-        dispatch(fetchModeles());
-        dispatch(fetchCommissions());
-        dispatch(fetchDossiers()); // numerotation
-        dispatch(fetchMiles());
-        dispatch(fetchPieces());
-        dispatch(fetchClientBeneficiaires());
-        dispatch(fetchDevisTransactions());
-        dispatch(fetchClientFactures());
-        dispatch(fetchArticles());
-        dispatch(fetchFournisseurs());
-      };
-  
-      loadGlobalData();
-  
-      // Optionnel : refresh toutes les X minutes
-      // const interval = setInterval(loadGlobalData, 5 * 60 * 1000); // 5 min
-  
-      // return () => clearInterval(interval);
-    }, [dispatch, token, navigate]);
-
   return (
-    <div className="flex flex-col h-screen bg-slate-200">
-      <AppBar isBackOffice={false} />
-      <main className="flex-1 overflow-auto">
-        <Outlet />
-      </main>
-    </div>
+    <AppLoader>
+      <div className="flex flex-col h-screen bg-slate-200">
+        <AppBar isBackOffice={false} />
+        <main className="flex-1 overflow-auto">
+          <Outlet />
+        </main>
+      </div>
+    </AppLoader>
   );
 }

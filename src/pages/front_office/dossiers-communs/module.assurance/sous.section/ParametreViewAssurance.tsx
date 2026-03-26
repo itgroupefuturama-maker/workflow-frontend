@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import TabContainer from '../../../../../layouts/TabContainer';
 import type { AppDispatch, RootState } from '../../../../../app/store';
 import RaisonAnnulationListe from '../../module.ticketing/ticketing.sous.module/SousMenuPrestation/RaisonAnnulationListe';
-import { fetchRaisonsAnnulation } from '../../../../../app/front_office/parametre_ticketing/raisonAnnulationSlice';
 import {
   fetchAssuranceParams, fetchAssuranceDocs, fetchAssuranceTarifsPlein, fetchAssuranceTarifsReduit,
   createAssuranceParams, createAssuranceDoc, createAssuranceTarifPlein, createAssuranceTarifReduit,
@@ -699,7 +698,7 @@ const TarifsReduitListe = () => {
 
 const ParametreViewVisa = () => {
   const location = useLocation();
-  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'params');
 
   const tabs = [
@@ -711,25 +710,25 @@ const ParametreViewVisa = () => {
   ];
 
   useEffect(() => {
-    dispatch(fetchRaisonsAnnulation());
-    dispatch(fetchAssuranceParams());
-    dispatch(fetchAssuranceDocs());
-    dispatch(fetchAssuranceTarifsPlein());
-    dispatch(fetchAssuranceTarifsReduit());
-  }, [dispatch]);
-
-  useEffect(() => {
     if (location.state?.targetTab) {
       const t = setTimeout(() => setActiveTab(location.state.targetTab), 0);
       return () => clearTimeout(t);
     }
   }, [location.state?.targetTab]);
 
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    // ← Réécrit location.state sans changer l'URL
+    navigate(location.pathname, {
+      replace: true,
+      state: { ...location.state, targetTab: tab },
+    });
+  };
+
   return (
-    <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900">
-      <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={setActiveTab} color="bg-blue-400" >
-        <h1 className="text-2xl font-bold text-gray-800 mb-6 mt-5">Paramètres Assurance</h1>
-        <div className="space-y-8">
+    <div className="h-full flex flex-col min-h-0">
+      <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange} >
+        <div className="space-y-8 py-2 px-4">
           {activeTab === 'params'                && <ParamsListe />}
           {activeTab === 'docs'                  && <DocsListe />}
           {activeTab === 'tarifPlein'            && <TarifsPleinListe />}

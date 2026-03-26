@@ -1,34 +1,32 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../../../../../app/store';
-import { fetchServiceSpecifiques } from '../../../../../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
-import { fetchExigences } from '../../../../../../app/front_office/parametre_ticketing/exigenceSlice';
-import { fetchDestinations } from '../../../../../../app/front_office/parametre_ticketing/destinationSlice';
-import { fetchPays, fetchPaysDetails, clearSelectedPays } from '../../../../../../app/front_office/parametre_ticketing/paysSlice';
+import { fetchPaysDetails, clearSelectedPays } from '../../../../../../app/front_office/parametre_ticketing/paysSlice';
 import ServiceSpecifiqueModal from '../../../../../../components/modals/ServiceSpecifiqueModal';
 import ExigenceModal from '../../../../../../components/modals/ExigenceModal';
 import PaysModal from '../../../../../../components/modals/PaysModal';
 import DestinationModal from '../../../../../../components/modals/DestinationModal';
 import AssociationModal from '../../../../../../components/modals/AssociationModal';
 import TabContainer from '../../../../../../layouts/TabContainer';
-import { useLocation, useParams } from 'react-router-dom';
-import { fetchRaisonsAnnulation } from '../../../../../../app/front_office/parametre_ticketing/raisonAnnulationSlice';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+// import { fetchRaisonsAnnulation } from '../../../../../../app/front_office/parametre_ticketing/raisonAnnulationSlice';
 import RaisonAnnulationListe from './RaisonAnnulationListe';
 // import RaisonAnnulationModal from '../../../../../../components/modals/RaisonAnnulationModal';
 import GestionPrixListe from '../../../module.attestation.voyage/SousMenuPrestation/GestionPrixListe';
+import ServiceSpecifiqueListe from '../../../module.parametre/ServiceSpecifique/ServiceSpecifiqueListe';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
 export default function ParametreView() {
   const location = useLocation();
   const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   const { module } = useParams<{ module: string}>();
 
   // console.log(module);
-  
 
   const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'listeRaisonAnnulation');
-  const raisonState = useSelector((state: RootState) => state.raisonAnnulation);
+  // const raisonState = useSelector((state: RootState) => state.raisonAnnulation);
 
   const tabsTicketing = [
     { id: 'listeRaisonAnnulation', label: 'Raison Annulation' },
@@ -43,20 +41,6 @@ export default function ParametreView() {
   ];
 
   useEffect(() => {
-    if (activeTab === 'listeService' && serviceState.items.length === 0) {
-      dispatch(fetchServiceSpecifiques());
-    }
-    if (activeTab === 'listeExigence') {
-      if (activeSubTab === 'exigence' && exigenceState.items.length === 0) dispatch(fetchExigences());
-      if (activeSubTab === 'pays' && paysState.items.length === 0) dispatch(fetchPays());
-      if (activeSubTab === 'destination' && destinationState.items.length === 0) dispatch(fetchDestinations());
-    }
-   if (activeTab === 'listeRaisonAnnulation' && raisonState.items.length === 0) {
-    dispatch(fetchRaisonsAnnulation());
-    }
-  }, [dispatch, activeTab]);   // ← activeSubTab reste pour l'onglet Exigence
-
-  useEffect(() => {
     if (location.state?.targetTab) {
       const timer = setTimeout(() => {
         setActiveTab(location.state.targetTab);
@@ -64,6 +48,15 @@ export default function ParametreView() {
       return () => clearTimeout(timer);
     }
   }, [location.state?.targetTab]);
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab);
+    // ← Réécrit location.state sans changer l'URL
+    navigate(location.pathname, {
+      replace: true,
+      state: { ...location.state, targetTab: tab },
+    });
+  };
 
   const [activeSubTab, setActiveSubTab] = useState<'exigence' | 'pays' | 'destination'>('exigence');
   const [selectedPaysId, setSelectedPaysId] = useState<string | null>(null);
@@ -166,315 +159,265 @@ export default function ParametreView() {
   const tableConfig = getTableConfig();
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-900">
+    <div className="h-full flex flex-col min-h-0">
       <TabContainer
         tabs={module === 'ticketing' ? tabsTicketing : tabsAttestation}
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleTabChange}
       >
-        {/* ══ PAGE HEADER ══ */}
-        <div className="mt-5 mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-slate-800 capitalize">
-              Paramétrage — {module}
-            </h1>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Gérez les paramètres du module {module}
-            </p>
+        <div className="py-2 px-4">
+          {/* ══ PAGE HEADER ══ */}
+          <div className=" mb-6 flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-bold text-slate-800 capitalize">
+                Paramétrage — {module}
+              </h1>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Gérez les paramètres du module {module}
+              </p>
+            </div>
           </div>
-        </div>
 
-        <div className="mt-2">
+          <div className="mt-2">
 
-          {/* ══════════════════════════════════════
-              TAB : SERVICES
-          ══════════════════════════════════════ */}
-          {activeTab === 'listeService' && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
+            {/* ══════════════════════════════════════
+                TAB : SERVICES
+            ══════════════════════════════════════ */}
+            {activeTab === 'listeService' && (
+              <ServiceSpecifiqueListe typeService="TICKET" />
+            )}
+
+            {/* ══════════════════════════════════════
+                TAB : RAISON ANNULATION
+            ══════════════════════════════════════ */}
+            {activeTab === 'listeRaisonAnnulation' && (
+              <RaisonAnnulationListe />
+            )}
+
+            {/* ══════════════════════════════════════
+                TAB : GESTION PRIX
+            ══════════════════════════════════════ */}
+            {activeTab === 'gestionPrix' && (
+              <div className="space-y-4">
                 <div>
-                  <h2 className="text-base font-bold text-slate-800">Services & Spécifiques</h2>
-                  <p className="text-xs text-slate-400 mt-0.5">{currentItems.length} service{currentItems.length > 1 ? 's' : ''} enregistré{currentItems.length > 1 ? 's' : ''}</p>
+                  <h2 className="text-base font-bold text-slate-800">Gestion de prix</h2>
+                  <p className="text-xs text-slate-400 mt-0.5">Configurez les grilles tarifaires</p>
                 </div>
-                <button
-                  onClick={() => setModalServiceOpen(true)}
-                  className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-xl shadow-sm hover:shadow-md transition-all duration-200"
-                >
-                  <span className="text-lg leading-none">+</span>
-                  Nouveau service
-                </button>
+                <GestionPrixListe />
               </div>
+            )}
 
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                {loading ? (
-                  <div className="py-16 flex flex-col items-center gap-3">
-                    <div className="w-8 h-8 border-2 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
-                    <span className="text-xs text-slate-400">Chargement des services...</span>
-                  </div>
-                ) : currentItems.length === 0 ? (
-                  <div className="py-16 flex flex-col items-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
-                      <span className="text-2xl">📋</span>
-                    </div>
-                    <p className="text-sm font-semibold text-slate-500">Aucun service enregistré</p>
-                  </div>
-                ) : (
-                  <>
-                    <table className="min-w-full">
-                      <thead>
-                        <tr className="border-b border-slate-100 bg-slate-50/70">
-                          {tableConfig.headers.map(h => (
-                            <th key={h} className="px-6 py-3.5 text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider">{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {currentItems.map((item, index) => (
-                          <tr key={item.id} className="group hover:bg-slate-50/80 transition-colors duration-150">
-                            {tableConfig.renderRow(item, index)}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                    <div className="px-6 py-3 bg-slate-50/50 border-t border-slate-100">
-                      <span className="text-[11px] text-slate-400">{currentItems.length} résultat{currentItems.length > 1 ? 's' : ''}</span>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
+            {/* ══════════════════════════════════════
+                TAB : EXIGENCES
+            ══════════════════════════════════════ */}
+            {activeTab === 'listeExigence' && (
+              <div className="space-y-5">
 
-          {/* ══════════════════════════════════════
-              TAB : RAISON ANNULATION
-          ══════════════════════════════════════ */}
-          {activeTab === 'listeRaisonAnnulation' && (
-            <RaisonAnnulationListe />
-          )}
-
-          {/* ══════════════════════════════════════
-              TAB : GESTION PRIX
-          ══════════════════════════════════════ */}
-          {activeTab === 'gestionPrix' && (
-            <div className="space-y-4">
-              <div>
-                <h2 className="text-base font-bold text-slate-800">Gestion de prix</h2>
-                <p className="text-xs text-slate-400 mt-0.5">Configurez les grilles tarifaires</p>
-              </div>
-              <GestionPrixListe />
-            </div>
-          )}
-
-          {/* ══════════════════════════════════════
-              TAB : EXIGENCES
-          ══════════════════════════════════════ */}
-          {activeTab === 'listeExigence' && (
-            <div className="space-y-5">
-
-              {/* Header + bouton */}
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-base font-bold text-slate-800">Exigences de voyage</h2>
-                  <p className="text-xs text-slate-400 mt-0.5">Gérez les exigences, pays et destinations</p>
-                </div>
-                <button
-                  onClick={() => {
-                    if (activeSubTab === 'exigence') setModalExigenceOpen(true);
-                    else if (activeSubTab === 'destination') setModalDestinationOpen(true);
-                    else if (activeSubTab === 'pays') setModalPaysOpen(true);
-                  }}
-                  className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-xl shadow-sm hover:shadow-md transition-all duration-200"
-                >
-                  <span className="text-lg leading-none">+</span>
-                  {activeSubTab === 'exigence' ? 'Nouvelle exigence' : activeSubTab === 'pays' ? 'Nouveau pays' : 'Nouvelle destination'}
-                </button>
-              </div>
-
-              {/* Synthèse associations */}
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
-                <div className="flex items-center justify-between mb-4">
+                {/* Header + bouton */}
+                <div className="flex items-center justify-between">
                   <div>
-                    <h3 className="text-sm font-bold text-slate-800">Synthèse des associations</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">{assocState.items.length} association{assocState.items.length > 1 ? 's' : ''} configurée{assocState.items.length > 1 ? 's' : ''}</p>
+                    <h2 className="text-base font-bold text-slate-800">Exigences de voyage</h2>
+                    <p className="text-xs text-slate-400 mt-0.5">Gérez les exigences, pays et destinations</p>
                   </div>
                   <button
-                    onClick={() => setModalAssociationOpen(true)}
-                    className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg shadow-sm transition-all duration-200"
+                    onClick={() => {
+                      if (activeSubTab === 'exigence') setModalExigenceOpen(true);
+                      else if (activeSubTab === 'destination') setModalDestinationOpen(true);
+                      else if (activeSubTab === 'pays') setModalPaysOpen(true);
+                    }}
+                    className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-xl shadow-sm hover:shadow-md transition-all duration-200"
                   >
-                    <span className="text-sm leading-none">+</span>
-                    Nouvelle association
+                    <span className="text-lg leading-none">+</span>
+                    {activeSubTab === 'exigence' ? 'Nouvelle exigence' : activeSubTab === 'pays' ? 'Nouveau pays' : 'Nouvelle destination'}
                   </button>
                 </div>
 
-                {assocState.items.length === 0 ? (
-                  <div className="py-6 text-center">
-                    <p className="text-xs text-slate-400">Aucune association configurée</p>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {assocState.items.slice(0, 3).map(assoc => (
-                      <div key={assoc.id} className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/30 transition-all">
-                        <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center shrink-0">
-                          <span className="text-indigo-600 text-xs font-bold">✈</span>
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-xs font-semibold text-slate-800 truncate">{assoc.exigenceVoyage.type}</p>
-                          <p className="text-[10px] text-slate-400 mt-0.5 truncate">→ {assoc.pays.pays}</p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Sous-navigation */}
-              <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
-                {(['exigence', 'pays', 'destination'] as const).map((sub) => (
-                  <button
-                    key={sub}
-                    onClick={() => { setActiveSubTab(sub); setSelectedPaysId(null); }}
-                    className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 capitalize ${
-                      activeSubTab === sub
-                        ? 'bg-white text-slate-800 shadow-sm'
-                        : 'text-slate-500 hover:text-slate-700'
-                    }`}
-                  >
-                    {sub === 'exigence' ? 'Exigences' : sub === 'pays' ? 'Pays' : 'Destinations'}
-                  </button>
-                ))}
-              </div>
-
-              {/* Table ou détail pays */}
-              {!selectedPaysId ? (
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                  {loading ? (
-                    <div className="py-16 flex flex-col items-center gap-3">
-                      <div className="w-8 h-8 border-2 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
-                      <span className="text-xs text-slate-400">Chargement...</span>
+                {/* Synthèse associations */}
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <h3 className="text-sm font-bold text-slate-800">Synthèse des associations</h3>
+                      <p className="text-xs text-slate-400 mt-0.5">{assocState.items.length} association{assocState.items.length > 1 ? 's' : ''} configurée{assocState.items.length > 1 ? 's' : ''}</p>
                     </div>
-                  ) : currentItems.length === 0 ? (
-                    <div className="py-16 flex flex-col items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
-                        <span className="text-2xl">🌍</span>
-                      </div>
-                      <p className="text-sm font-semibold text-slate-500">Aucun élément trouvé</p>
+                    <button
+                      onClick={() => setModalAssociationOpen(true)}
+                      className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg shadow-sm transition-all duration-200"
+                    >
+                      <span className="text-sm leading-none">+</span>
+                      Nouvelle association
+                    </button>
+                  </div>
+
+                  {assocState.items.length === 0 ? (
+                    <div className="py-6 text-center">
+                      <p className="text-xs text-slate-400">Aucune association configurée</p>
                     </div>
                   ) : (
-                    <>
-                      <table className="min-w-full">
-                        <thead>
-                          <tr className="border-b border-slate-100 bg-slate-50/70">
-                            {tableConfig.headers.map(h => (
-                              <th key={h} className="px-6 py-3.5 text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider">{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {currentItems.map((item, index) => (
-                            <tr key={item.id} className="group hover:bg-slate-50/80 transition-colors duration-150">
-                              {tableConfig.renderRow(item, index)}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                      <div className="px-6 py-3 bg-slate-50/50 border-t border-slate-100">
-                        <span className="text-[11px] text-slate-400">{currentItems.length} résultat{currentItems.length > 1 ? 's' : ''}</span>
-                      </div>
-                    </>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {assocState.items.slice(0, 3).map(assoc => (
+                        <div key={assoc.id} className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/30 transition-all">
+                          <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center shrink-0">
+                            <span className="text-indigo-600 text-xs font-bold">✈</span>
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold text-slate-800 truncate">{assoc.exigenceVoyage.type}</p>
+                            <p className="text-[10px] text-slate-400 mt-0.5 truncate">→ {assoc.pays.pays}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
-              ) : (
-                /* ── Détail Pays ── */
-                <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                  {detailsLoading ? (
-                    <div className="py-16 flex flex-col items-center gap-3">
-                      <div className="w-8 h-8 border-2 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
-                      <span className="text-xs text-slate-400">Chargement des détails...</span>
-                    </div>
-                  ) : detailsError ? (
-                    <div className="m-6 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
-                      Erreur : {detailsError}
-                    </div>
-                  ) : paysDetails ? (
-                    <>
-                      {/* Header pays */}
-                      <div className="px-6 py-5 border-b border-slate-100 flex items-center gap-4">
-                        {paysDetails.photo && (
-                          <img
-                            src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:6060/'}${paysDetails.photo}`}
-                            alt={paysDetails.pays}
-                            className="h-12 w-16 object-cover rounded-xl shadow-sm"
-                          />
-                        )}
-                        <div>
-                          <h3 className="text-base font-bold text-slate-800">{paysDetails.pays}</h3>
-                          <p className="text-xs text-slate-400 mt-0.5">
-                            {paysDetails.DestinationVoyage?.length || 0} destination{(paysDetails.DestinationVoyage?.length || 0) > 1 ? 's' : ''} · {paysDetails.paysVoyage?.length || 0} exigence{(paysDetails.paysVoyage?.length || 0) > 1 ? 's' : ''}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => setSelectedPaysId(null)}
-                          className="ml-auto inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg transition-all"
-                        >
-                          ← Retour
-                        </button>
-                      </div>
 
-                      {/* Sous-tabs pays */}
-                      <div className="px-6 pt-4">
-                        <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
-                          {['destinations', 'exigences'].map((tab) => (
-                            <button
-                              key={tab}
-                              onClick={() => setActivePaysTab(tab)}
-                              className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 capitalize ${
-                                activePaysTab === tab
-                                  ? 'bg-white text-slate-800 shadow-sm'
-                                  : 'text-slate-500 hover:text-slate-700'
-                              }`}
-                            >
-                              {tab} ({tab === 'destinations' ? paysDetails.DestinationVoyage?.length : paysDetails.paysVoyage?.length || 0})
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+                {/* Sous-navigation */}
+                <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
+                  {(['exigence', 'pays', 'destination'] as const).map((sub) => (
+                    <button
+                      key={sub}
+                      onClick={() => { setActiveSubTab(sub); setSelectedPaysId(null); }}
+                      className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 capitalize ${
+                        activeSubTab === sub
+                          ? 'bg-white text-slate-800 shadow-sm'
+                          : 'text-slate-500 hover:text-slate-700'
+                      }`}
+                    >
+                      {sub === 'exigence' ? 'Exigences' : sub === 'pays' ? 'Pays' : 'Destinations'}
+                    </button>
+                  ))}
+                </div>
 
-                      {/* Contenu sous-tab */}
-                      <div className="p-6">
+                {/* Table ou détail pays */}
+                {!selectedPaysId ? (
+                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    {loading ? (
+                      <div className="py-16 flex flex-col items-center gap-3">
+                        <div className="w-8 h-8 border-2 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
+                        <span className="text-xs text-slate-400">Chargement...</span>
+                      </div>
+                    ) : currentItems.length === 0 ? (
+                      <div className="py-16 flex flex-col items-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
+                          <span className="text-2xl">🌍</span>
+                        </div>
+                        <p className="text-sm font-semibold text-slate-500">Aucun élément trouvé</p>
+                      </div>
+                    ) : (
+                      <>
                         <table className="min-w-full">
                           <thead>
                             <tr className="border-b border-slate-100 bg-slate-50/70">
-                              {activePaysTab === 'destinations'
-                                ? ['Code', 'Ville'].map(h => <th key={h} className="px-4 py-3 text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider">{h}</th>)
-                                : ['Type', 'Description'].map(h => <th key={h} className="px-4 py-3 text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider">{h}</th>)
-                              }
+                              {tableConfig.headers.map(h => (
+                                <th key={h} className="px-6 py-3.5 text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider">{h}</th>
+                              ))}
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-100">
-                            {activePaysTab === 'destinations'
-                              ? paysDetails.DestinationVoyage?.map((dest: { id: string; code: string; ville: string }) => (
-                                  <tr key={dest.id} className="hover:bg-slate-50/80 transition-colors">
-                                    <td className="px-4 py-3 text-sm font-mono font-bold text-indigo-600">{dest.code}</td>
-                                    <td className="px-4 py-3 text-sm text-slate-700">{dest.ville}</td>
-                                  </tr>
-                                ))
-                              : paysDetails.paysVoyage?.map((assoc: any) => (
-                                  <tr key={assoc.id} className="hover:bg-slate-50/80 transition-colors">
-                                    <td className="px-4 py-3 text-sm font-semibold text-slate-800">{assoc.exigenceVoyage.type}</td>
-                                    <td className="px-4 py-3 text-sm text-slate-500">{assoc.exigenceVoyage.description}</td>
-                                  </tr>
-                                ))
-                            }
+                            {currentItems.map((item, index) => (
+                              <tr key={item.id} className="group hover:bg-slate-50/80 transition-colors duration-150">
+                                {tableConfig.renderRow(item, index)}
+                              </tr>
+                            ))}
                           </tbody>
                         </table>
+                        <div className="px-6 py-3 bg-slate-50/50 border-t border-slate-100">
+                          <span className="text-[11px] text-slate-400">{currentItems.length} résultat{currentItems.length > 1 ? 's' : ''}</span>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  /* ── Détail Pays ── */
+                  <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    {detailsLoading ? (
+                      <div className="py-16 flex flex-col items-center gap-3">
+                        <div className="w-8 h-8 border-2 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
+                        <span className="text-xs text-slate-400">Chargement des détails...</span>
                       </div>
-                    </>
-                  ) : null}
-                </div>
-              )}
-            </div>
-          )}
+                    ) : detailsError ? (
+                      <div className="m-6 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-600">
+                        Erreur : {detailsError}
+                      </div>
+                    ) : paysDetails ? (
+                      <>
+                        {/* Header pays */}
+                        <div className="px-6 py-5 border-b border-slate-100 flex items-center gap-4">
+                          {paysDetails.photo && (
+                            <img
+                              src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:6060/'}${paysDetails.photo}`}
+                              alt={paysDetails.pays}
+                              className="h-12 w-16 object-cover rounded-xl shadow-sm"
+                            />
+                          )}
+                          <div>
+                            <h3 className="text-base font-bold text-slate-800">{paysDetails.pays}</h3>
+                            <p className="text-xs text-slate-400 mt-0.5">
+                              {paysDetails.DestinationVoyage?.length || 0} destination{(paysDetails.DestinationVoyage?.length || 0) > 1 ? 's' : ''} · {paysDetails.paysVoyage?.length || 0} exigence{(paysDetails.paysVoyage?.length || 0) > 1 ? 's' : ''}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => setSelectedPaysId(null)}
+                            className="ml-auto inline-flex items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-lg transition-all"
+                          >
+                            ← Retour
+                          </button>
+                        </div>
 
+                        {/* Sous-tabs pays */}
+                        <div className="px-6 pt-4">
+                          <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-fit">
+                            {['destinations', 'exigences'].map((tab) => (
+                              <button
+                                key={tab}
+                                onClick={() => setActivePaysTab(tab)}
+                                className={`px-4 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 capitalize ${
+                                  activePaysTab === tab
+                                    ? 'bg-white text-slate-800 shadow-sm'
+                                    : 'text-slate-500 hover:text-slate-700'
+                                }`}
+                              >
+                                {tab} ({tab === 'destinations' ? paysDetails.DestinationVoyage?.length : paysDetails.paysVoyage?.length || 0})
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Contenu sous-tab */}
+                        <div className="p-6">
+                          <table className="min-w-full">
+                            <thead>
+                              <tr className="border-b border-slate-100 bg-slate-50/70">
+                                {activePaysTab === 'destinations'
+                                  ? ['Code', 'Ville'].map(h => <th key={h} className="px-4 py-3 text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider">{h}</th>)
+                                  : ['Type', 'Description'].map(h => <th key={h} className="px-4 py-3 text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider">{h}</th>)
+                                }
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                              {activePaysTab === 'destinations'
+                                ? paysDetails.DestinationVoyage?.map((dest: { id: string; code: string; ville: string }) => (
+                                    <tr key={dest.id} className="hover:bg-slate-50/80 transition-colors">
+                                      <td className="px-4 py-3 text-sm font-mono font-bold text-indigo-600">{dest.code}</td>
+                                      <td className="px-4 py-3 text-sm text-slate-700">{dest.ville}</td>
+                                    </tr>
+                                  ))
+                                : paysDetails.paysVoyage?.map((assoc: any) => (
+                                    <tr key={assoc.id} className="hover:bg-slate-50/80 transition-colors">
+                                      <td className="px-4 py-3 text-sm font-semibold text-slate-800">{assoc.exigenceVoyage.type}</td>
+                                      <td className="px-4 py-3 text-sm text-slate-500">{assoc.exigenceVoyage.description}</td>
+                                    </tr>
+                                  ))
+                              }
+                            </tbody>
+                          </table>
+                        </div>
+                      </>
+                    ) : null}
+                  </div>
+                )}
+              </div>
+            )}
+
+          </div>
         </div>
       </TabContainer>
 

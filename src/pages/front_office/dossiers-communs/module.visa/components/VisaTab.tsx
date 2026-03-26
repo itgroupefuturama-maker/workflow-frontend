@@ -28,7 +28,7 @@ const VisaTab = () => {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-neutral-50 pt-5 space-y-4">
+    <div className="py-2 px-4 space-y-4">
 
       <VisaHeader
         numerovisa=''

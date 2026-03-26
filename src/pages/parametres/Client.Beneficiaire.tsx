@@ -36,6 +36,8 @@ const ClientBeneficiairePage = () => {
   const [libelle, setLibelle] = useState('');
   const [statut, setStatut] = useState<'ACTIF' | 'INACTIF'>('ACTIF');
 
+  const [typeClient, setTypeClient] = useState<'SIMPLE' | 'GOLD'| 'SILVER' | 'BRONZE' | 'VIP' >('SIMPLE');
+
   // Gestion des Clients Factures liés
   // const [setSearchFacture] = useState('');
 
@@ -62,6 +64,7 @@ const ClientBeneficiairePage = () => {
     setEditingClient(null);
     setLibelle('');
     setStatut('ACTIF');
+    setTypeClient('SIMPLE');
     // setSearchFacture('');
     setMessage({ text: '', isError: false });
   };
@@ -79,7 +82,7 @@ const ClientBeneficiairePage = () => {
     const dateApplication = new Date().toISOString();
 
     if (editingClient) {
-      const result = await dispatch(updateClientBeneficiaire({ id: editingClient.id, libelle, statut }));
+      const result = await dispatch(updateClientBeneficiaire({ id: editingClient.id, libelle, statut, typeClient }));
       if (updateClientBeneficiaire.fulfilled.match(result)) {
         setMessage({ text: 'Client bénéficiaire mis à jour !', isError: false });
         setTimeout(closeModals, 1500);
@@ -87,7 +90,7 @@ const ClientBeneficiairePage = () => {
         setMessage({ text: 'Une erreur est survenue.', isError: true });
       }
     } else {
-      const result = await dispatch(createClientBeneficiaire({ libelle, statut, dateApplication }));
+      const result = await dispatch(createClientBeneficiaire({ libelle, statut, typeClient, dateApplication }))
       if (createClientBeneficiaire.fulfilled.match(result)) {
         setMessage({ text: 'Client bénéficiaire créé !', isError: false });
         setTimeout(closeModals, 1500);
@@ -205,6 +208,7 @@ const ClientBeneficiairePage = () => {
               <th className="px-6 py-5 text-left">Libellé client Bénéficiaire</th>
               <th className="px-6 py-5 text-left">Code Client Facturé</th>
               <th className="px-6 py-5 text-left">Libellé Client Facturé</th>
+              <th className="px-6 py-5 text-left">Type Client</th>
               <th className="px-6 py-5 text-left">Statut</th>
               <th className="px-6 py-5 text-left">Date Application</th>
               <th className="px-6 py-5 text-right">Actions</th>
@@ -245,6 +249,15 @@ const ClientBeneficiairePage = () => {
                     ))}
                     {client.factures.length === 0 && <span className="text-gray-400 italic text-xs">Aucun</span>}
                   </div>
+                </td>
+                <td className="px-6 py-4">
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase ${
+                    client.typeClient === 'SIMPLE' 
+                      ? 'bg-indigo-50 text-indigo-700' 
+                      : 'bg-emerald-50 text-emerald-700'
+                  }`}>
+                    {client.typeClient ?? '—'}
+                  </span>
                 </td>
                 <td className="px-6 py-4">
                   <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase ${
@@ -344,6 +357,23 @@ const ClientBeneficiairePage = () => {
                   >
                     <option value="ACTIF">ACTIF</option>
                     <option value="INACTIF">INACTIF</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
+                    Type de client
+                  </label>
+                  <select
+                    value={typeClient}
+                    onChange={(e) => setTypeClient(e.target.value as 'SIMPLE' | 'GOLD' | 'SILVER' | 'BRONZE' | 'VIP')}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-bold outline-none"
+                  >
+                    <option value="SIMPLE">SIMPLE</option>
+                    <option value="GOLD">GOLD</option>
+                    <option value="SILVER">SILVER</option>
+                    <option value="BRONZE">BRONZE</option>
+                    <option value="VIP">VIP</option>
                   </select>
                 </div>
               </div>

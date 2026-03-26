@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { FiHelpCircle, FiBell, FiUser, FiChevronDown, FiLogOut, FiX, FiTrash2, FiHome, FiCheck } from "react-icons/fi";
+import { FiHelpCircle, FiBell, FiUser, FiChevronDown, FiLogOut, FiX, FiTrash2, FiHome, FiCheck, FiUsers } from "react-icons/fi";
 import { useState, useRef, useEffect } from "react";
 import { logout } from '../app/authSlice';
 import { useDispatch, useSelector } from 'react-redux';
@@ -164,6 +164,11 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
 
           {/* ── Droite : Actions ── */}
           <div className="flex items-center gap-1.5">
+
+            {/* <button className="flex items-center gap-2 p-2 text-slate-100 bg-slate-600 hover:text-slate-100 hover:bg-slate-500 rounded-lg transition-all">
+              <FiUsers size={17} />
+              <span className="text-sm font-semibold">Bénéficiaire</span>
+            </button> */}
 
             {/* Aide */}
             <button className="p-2 text-slate-100 hover:text-slate-100 hover:bg-slate-500 rounded-lg transition-all">

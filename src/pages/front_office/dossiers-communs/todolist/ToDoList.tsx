@@ -2,7 +2,8 @@ import { useEffect, useState, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   FiCheckCircle, FiCalendar, FiArrowLeft, FiSearch,
-  FiGrid, FiList, FiArrowRight, FiX
+  FiGrid, FiList, FiArrowRight, FiX,
+  FiAlertCircle
 } from 'react-icons/fi';
 import { fetchTodos, markAsDone, updateTodo } from '../../../../app/front_office/todosSlice';
 import { useNavigate } from 'react-router-dom';
@@ -30,6 +31,9 @@ export default function ToDoList() {
   const [rangeStart, setRangeStart] = useState('');
   const [rangeEnd, setRangeEnd] = useState('');
 
+  const [showOlder, setShowOlder]   = useState(false);
+  const [showUpcoming, setShowUpcoming] = useState(false);
+
   // const [activeCategory, setActiveCategory] = useState<string>('');
 
   useEffect(() => {
@@ -37,8 +41,7 @@ export default function ToDoList() {
   }, [dispatch]);
 
   const activeTodos = todos.filter(todo => todo.rappel?.status !== 'SUPPRIMER');
-
-  
+  const [showFinished, setShowFinished] = useState(false);
 
   // ── Filtrage combiné ─────────────────────────────────────────
   const filteredTodos = useMemo(() => {
@@ -79,12 +82,6 @@ export default function ToDoList() {
       .then(() => setEditingId(null));
   };
 
-  const clearDateFilter = () => {
-    setSingleDate('');
-    setRangeStart('');
-    setRangeEnd('');
-  };
-
   // Badge filtre date actif
   const hasDateFilter = singleDate || (rangeStart && rangeEnd);
 
@@ -96,36 +93,54 @@ export default function ToDoList() {
     yesterday.setDate(today.getDate() - 1);
     const weekAgo = new Date(today);
     weekAgo.setDate(today.getDate() - 7);
+    const weekEnd = new Date(today);
+    weekEnd.setDate(today.getDate() + 7);
 
-    const categories: { label: string; emoji: string; color: string; items: typeof filteredTodos }[] = [
-      { label: "Aujourd'hui",    emoji: '', color: 'indigo', items: [] },
-      { label: 'Hier',           emoji: '', color: 'amber',  items: [] },
-      { label: 'Cette semaine',  emoji: '', color: 'blue',   items: [] },
-      { label: 'Plus anciens',   emoji: '', color: 'slate',  items: [] },
-      { label: 'À venir',        emoji: '', color: 'emerald',items: [] },
-    ];
+    const buckets: Record<string, typeof filteredTodos> = {
+      "Aujourd'hui": [],
+      'Hier':        [],
+      'Cette semaine': [],
+      '__older':     [],   // jamais affiché comme onglet direct
+      '__upcoming':  [],   // jamais affiché comme onglet direct
+    };
 
     todos.forEach((todo) => {
       const d = new Date(todo.rappel?.moment);
       d.setHours(0, 0, 0, 0);
 
-      if (d.getTime() === today.getTime()) {
-        categories[0].items.push(todo);
-      } else if (d.getTime() === yesterday.getTime()) {
-        categories[1].items.push(todo);
-      } else if (d >= weekAgo && d < yesterday) {
-        categories[2].items.push(todo);
-      } else if (d < weekAgo) {
-        categories[3].items.push(todo);
-      } else {
-        categories[4].items.push(todo);
-      }
+      if      (d.getTime() === today.getTime())     buckets["Aujourd'hui"].push(todo);
+      else if (d.getTime() === yesterday.getTime()) buckets['Hier'].push(todo);
+      else if (d >= weekAgo && d < yesterday)       buckets['Cette semaine'].push(todo);
+      else if (d < weekAgo)                         buckets['__older'].push(todo);
+      else                                          buckets['__upcoming'].push(todo);
     });
 
-    return categories.filter(c => c.items.length > 0);
+    // Injection conditionnelle dans les catégories visibles
+    if (showOlder)    buckets["Aujourd'hui"].push(...buckets['__older']);
+    if (showUpcoming) buckets['Cette semaine'].push(...buckets['__upcoming']);
+
+    const categories = [
+      { label: "Aujourd'hui", color: 'indigo',  items: buckets["Aujourd'hui"] },
+      { label: 'Hier',        color: 'emerald', items: buckets['Hier']        },
+      { label: 'Cette semaine', color: 'emerald', items: buckets['Cette semaine'] },
+    ];
+
+    // Compte brut pour les badges des boutons (indépendant de showOlder/showUpcoming)
+    const olderCount   = buckets['__older'].length;
+    const upcomingCount = buckets['__upcoming'].length;
+
+    return {
+      categories: categories.filter(c => c.items.length > 0),
+      olderCount,
+      upcomingCount,
+    };
   };
 
-  const categorizedTodos = categorizeTodos(filteredTodos);
+  const { categories: categorizedTodos, olderCount, upcomingCount } = categorizeTodos(
+    showFinished
+      ? filteredTodos
+      : filteredTodos.filter(todo => todo.rappel?.status !== 'FAIT')
+  );
 
   const colorMap: Record<string, { bg: string; text: string; border: string; badge: string; accent: string }> = {
     indigo:  { bg: 'bg-blue-50',  text: 'text-blue-500',  border: 'border-blue-200',  badge: 'bg-blue-100 text-blue-400',  accent: 'bg-blue-500'  },
@@ -174,7 +189,7 @@ export default function ToDoList() {
   );
 
   return (
-    <div className="flex flex-col bg-slate-50 font-sans text-slate-900 h-full overflow-hidden">
+    <div className="flex flex-col font-sans text-slate-900 h-full overflow-hidden">
       <header className="shrink-0 bg-white border-b border-slate-200 px-8 py-4 z-10">
         <div className="max-w-[1600px] mx-auto flex items-center justify-between gap-8">
 
@@ -240,7 +255,9 @@ export default function ToDoList() {
       <main className="flex-1 overflow-hidden flex flex-col p-8">
         <div className="max-w-[1600px] w-full mx-auto flex-1 overflow-hidden flex flex-col">
           {/* ── Onglets catégories ── */}
-          <div className="flex items-end gap-1 border-b border-slate-200 mb-6 overflow-x-auto shrink-0">
+          <div className="flex items-end gap-1 border-b border-slate-100 mb-6 overflow-x-auto shrink-0">
+
+            {/* Onglets normaux */}
             {categorizedTodos.map((cat) => {
               const c = colorMap[cat.color];
               const isActive = activeCategory === cat.label;
@@ -251,10 +268,9 @@ export default function ToDoList() {
                   className={`flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-t-xl border-t border-l border-r transition-all whitespace-nowrap ${
                     isActive
                       ? `${c.bg} ${c.text} ${c.border} border-b-white -mb-px`
-                      : 'bg-white text-slate-400 border-transparent hover:text-slate-600 hover:bg-blue-100'
+                      : 'bg-white text-slate-400 border-transparent hover:text-slate-600 hover:border-slate-300'
                   }`}
                 >
-                  <span>{cat.emoji}</span>
                   <span className="uppercase tracking-wider">{cat.label}</span>
                   <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
                     isActive ? c.badge : 'bg-slate-100 text-slate-400'
@@ -264,6 +280,65 @@ export default function ToDoList() {
                 </button>
               );
             })}
+
+            {/* Bouton terminés — reste tout à droite */}
+            <div className="ml-auto space-x-2 pb-1 shrink-0 flex">
+              <div className="flex items-center text-xs">
+                <p className="text-xs font-semibold text-slate-400">Afficher :</p>
+              </div>
+              {/* Bouton Plus anciens */}
+              {olderCount > 0 && activeCategory === "Aujourd'hui" && (
+                <button
+                  onClick={() => setShowOlder(prev => !prev)}
+                  className={`flex items-center gap-1.5 px-3 py-2  rounded-lg text-xs font-semibold border transition-all shrink-0 ${
+                    showOlder
+                      ? 'bg-slate-800 text-white border-slate-700'
+                      : 'bg-white text-slate-400 border-slate-200 hover:text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  Plus anciens
+                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                    showOlder ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400'
+                  }`}>
+                    {olderCount}
+                  </span>
+                </button>
+              )}
+
+              {/* Bouton À venir */}
+              {upcomingCount > 0 && activeCategory === 'Cette semaine' && (
+                <button
+                  onClick={() => setShowUpcoming(prev => !prev)}
+                  className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold border transition-all shrink-0 ${
+                    showUpcoming
+                      ? 'bg-indigo-600 text-white border-indigo-500'
+                      : 'bg-white text-slate-400 border-slate-200 hover:text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  À venir
+                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${
+                    showUpcoming ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400'
+                  }`}>
+                    {upcomingCount}
+                  </span>
+                </button>
+              )}
+
+              {/* Séparateur */}
+              <div className="w-px h-6 bg-white self-center shrink-0" />
+
+              <button
+                onClick={() => setShowFinished(prev => !prev)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold border transition-all ${
+                  showFinished
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
+                    : 'bg-white text-slate-400 border-slate-200 hover:text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                <FiCheckCircle size={13} />
+                {showFinished ? 'Masquer terminés' : 'Afficher terminés'}
+              </button>
+            </div>
           </div>
 
           {/* ── Contenu de l'onglet actif ── */}
@@ -296,15 +371,46 @@ export default function ToDoList() {
                             }`}
                           >
                             {/* Barre colorée en haut selon urgence */}
-                            {!isFinished && (() => {
-                              const u = getTimeUrgency(dateObj, cat.label);
-                              const barColor =
-                                u?.level === 'passed'   ? 'bg-slate-700' :
-                                u?.level === 'critical' ? 'bg-red-500' :
-                                u?.level === 'warning'  ? 'bg-amber-400' :
-                                c.accent;
-                              return <div className={`h-1 w-full ${barColor}`} />;
-                            })()}
+                            {(() => {
+                            const u = isFinished ? null : getTimeUrgency(dateObj, cat.label);
+                            const barColor =
+                              isFinished          ? 'bg-emerald-500' :
+                              u?.level === 'passed'   ? 'bg-slate-700' :
+                              u?.level === 'critical' ? 'bg-red-500' :
+                              u?.level === 'warning'  ? 'bg-amber-400' :
+                              c.accent;
+
+                            const icon =
+                              isFinished          ? <FiCheckCircle size={11} className="text-white/90" /> :
+                              u?.level === 'passed'   ? <FiAlertCircle size={11} className="text-white/80" /> :
+                              u?.level === 'critical' ? <FiArrowRight size={11} className="text-white animate-pulse" /> :
+                              u?.level === 'warning'  ? <FiCalendar   size={11} className="text-amber-900/70" /> :
+                              null;
+
+                            const label =
+                              isFinished              ? 'Terminé' :
+                              u?.level === 'passed'   ? 'Dépassé' :
+                              u?.level === 'critical' ? 'Urgent' :
+                              u?.level === 'warning'  ? 'Bientôt' :
+                              cat.label;
+
+                            return (
+                              <div className={`h-6 w-full ${barColor} flex items-center justify-between px-3`}>
+                                <div className="flex items-center gap-1.5">
+                                  <span className={`text-[9px] font-bold uppercase tracking-widest ${
+                                    u?.level === 'warning' ? 'text-amber-900/70' : 'text-white/80'
+                                  }`}>
+                                    {label}
+                                  </span>
+                                </div>
+                                <span className={`text-[9px] font-mono font-bold ${
+                                  u?.level === 'warning' ? 'text-amber-900/60' : 'text-white/60'
+                                }`}>
+                                  {icon}
+                                </span>
+                              </div>
+                            );
+                          })()}
 
                             <div className="p-5 flex flex-col flex-1">
                               <div className="flex justify-between items-start mb-5">

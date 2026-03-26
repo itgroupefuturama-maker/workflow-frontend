@@ -1,22 +1,16 @@
-import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
-import { fetchDossiersCommuns } from '../../app/front_office/dossierCommunSlice';
-import type { RootState, AppDispatch } from '../../app/store';
 import { FiFolder, FiCheckCircle, FiTag, FiFileText, FiLock, FiSettings, FiHome, FiArrowRight, FiMapPin, FiShield, FiDatabase } from 'react-icons/fi';
 
-const useAppDispatch = () => useDispatch<AppDispatch>();
-
 const ALL_MODULES = [
-  { label: 'Dossier',            desc: 'Accédez à vos fichiers partagés',        path: '/dossiers-communs',              icon: FiFolder,      color: 'blue',   locked: false },
-  { label: 'To Do List',         desc: 'Gérez vos tâches quotidiennes',           path: '/dossiers-communs/todolist',    icon: FiCheckCircle, color: 'teal',  locked: false },
-  { label: 'Ticketing',          desc: 'Suivez vos demandes et tickets',          path: '/dossiers-communs/ticketing/pages',   icon: FiTag,         color: 'amber',  locked: false },
-  { label: 'Attestation Voyage', desc: 'Générez vos attestations',                path: '/dossiers-communs/attestation/pages', icon: FiFileText,    color: 'rose',   locked: false },
-  { label: 'Paramètre',          desc: 'Commentaires et configurations',          path: '/dossiers-communs/parametre',   icon: FiSettings,    color: 'violet', locked: false },
-  { label: 'Hôtel',              desc: 'Gestion des réservations',                path: '/dossiers-communs/hotel/pages',       icon: FiHome,        color: 'orange', locked: false },
-  { label: 'Assurance',          desc: 'Contrats et garanties',                   path: '/dossiers-communs/assurance/pages',   icon: FiShield,        color: 'green',   locked: false  },
-  { label: 'Visa',               desc: 'Gestion des visas',                       path: '/dossiers-communs/visa/pages',        icon: FiMapPin,      color: 'indigo',   locked: false  },
-  { label: 'Base de Données',     desc: 'Consultation information',               path: '/dossiers-communs/base-donnee', icon: FiDatabase,      color: 'cyan',   locked: false  },
+  { label: 'Dossier',            desc: 'Accédez à vos fichiers partagés',        path: '/dossiers-communs',                     defaultTab: null ,            icon: FiFolder,      color: 'blue',   locked: false },
+  { label: 'To Do List',         desc: 'Gérez vos tâches quotidiennes',           path: '/dossiers-communs/todolist',           defaultTab: null ,            icon: FiCheckCircle, color: 'teal',  locked: false },
+  { label: 'Ticketing',          desc: 'Suivez vos demandes et tickets',          path: '/dossiers-communs/ticketing/pages',    defaultTab: 'prospection' ,   icon: FiTag,         color: 'amber',  locked: false },
+  { label: 'Attestation Voyage', desc: 'Générez vos attestations',                path: '/dossiers-communs/attestation/pages',  defaultTab: 'prospection' ,   icon: FiFileText,    color: 'rose',   locked: false },
+  { label: 'Paramètre',          desc: 'Commentaires et configurations',          path: '/dossiers-communs/parametre',          defaultTab: null ,            icon: FiSettings,    color: 'violet', locked: false },
+  { label: 'Hôtel',              desc: 'Gestion des réservations',                path: '/dossiers-communs/hotel/pages',        defaultTab: 'prospection' ,   icon: FiHome,        color: 'orange', locked: false },
+  { label: 'Assurance',          desc: 'Contrats et garanties',                   path: '/dossiers-communs/assurance/pages',    defaultTab: 'prospection' ,   icon: FiShield,        color: 'green',   locked: false  },
+  { label: 'Visa',               desc: 'Gestion des visas',                       path: '/dossiers-communs/visa/pages',         defaultTab: 'prospection' ,   icon: FiMapPin,      color: 'indigo',   locked: false  },
+  { label: 'Base de Données',     desc: 'Consultation information',               path: '/dossiers-communs/base-donnee',        defaultTab: null ,            icon: FiDatabase,      color: 'cyan',   locked: false  },
   // { label: 'Location',           desc: 'Véhicules et matériel',                   path: '',                              icon: FiLock,        color: 'gray',   locked: true  },
   // { label: 'Activité',           desc: 'Excursions et loisirs',                   path: '',                              icon: FiLock,        color: 'gray',   locked: true  },
   // { label: 'Guidage',            desc: 'Planning des guides',                     path: '',                              icon: FiLock,        color: 'gray',   locked: true  },
@@ -100,14 +94,7 @@ const COLOR_MAP: Record<string, {
 const ACTIVE_COUNT = ALL_MODULES.filter(m => !m.locked).length;
 
 function HomePage() {
-  const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { token } = useSelector((state: RootState) => state.auth);
-
-  useEffect(() => {
-    if (!token) { navigate('/login'); return; }
-    dispatch(fetchDossiersCommuns());
-  }, [dispatch, token, navigate]);
 
   return (
     <div className="min-h-screen relative overflow-hidden bg-slate-50">
@@ -189,7 +176,7 @@ function HomePage() {
               return (
                 <div
                   key={mod.label}
-                  className="relative bg-white/60 backdrop-blur-sm rounded-2xl p-5 sm:p-6 border border-gray-100 cursor-not-allowed overflow-hidden"
+                  className="relative shadow-lg bg-white/60 backdrop-blur-sm rounded-2xl p-5 sm:p-6 border border-gray-100 cursor-not-allowed overflow-hidden"
                 >
                   <span className="absolute top-3 right-3 text-[10px] font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
                     En cours
@@ -207,9 +194,11 @@ function HomePage() {
             return (
               <div
                 key={mod.path}
-                onClick={() => navigate(mod.path)}
+                onClick={() => navigate(mod.path, { 
+                  state: mod.defaultTab ? { targetTab: mod.defaultTab } : undefined 
+                })}
                 className={`
-                  group relative bg-white/80 backdrop-blur-sm rounded-2xl p-5 sm:p-6
+                  group relative shadow-lg bg-white/80 backdrop-blur-sm rounded-2xl p-5 sm:p-6
                   cursor-pointer border ${c.border}
                   transition-all duration-300
                   hover:shadow-xl ${c.glow} hover:-translate-y-1.5

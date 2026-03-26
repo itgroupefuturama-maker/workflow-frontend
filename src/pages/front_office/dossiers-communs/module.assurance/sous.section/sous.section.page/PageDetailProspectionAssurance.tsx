@@ -186,7 +186,7 @@ const PageDetailProspectionAssurance = () => {
   const canApprouver = devis.statut === 'ENVOYE';
 
   return (
-    <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange} color="bg-blue-400" >
+    <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange}>
       <div className="min-h-screen bg-neutral-50 space-y-4">
 
         <AssuranceHeader numeroassurance={devis.reference} nomPassager= {''} navigate={navigate} isDetail={true} isProspection={true}/>

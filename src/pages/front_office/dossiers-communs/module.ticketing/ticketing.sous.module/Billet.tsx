@@ -151,6 +151,9 @@ const Billet = () => {
   const [selectedBenefName] = useState<string>('');
   const [selectedBenefId] = useState<string | null>(null);
 
+  console.log(`l entete ici ${enteteId}`);
+  
+
   useEffect(() => {
     if (enteteId) dispatch(fetchBilletById(enteteId));
   }, [enteteId, dispatch]);
@@ -375,9 +378,9 @@ const Billet = () => {
   }
 
   return (
-    <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange}>
-      <div className="flex h-screen bg-[#F8FAFC] overflow-hidden">
-        <div className="flex-1 overflow-y-auto ">
+    <div className="h-full flex flex-col min-h-0">
+      <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange}>
+        <div className="py-2 px-4">
           <div className='flex justify-between'>
             <TicketingHeader items={billetDetailItems(billet?.numeroBillet)} />
 
@@ -616,8 +619,8 @@ const Billet = () => {
             />
           )}
         </div>
-      </div>
-    </TabContainer>
+      </TabContainer>
+    </div>
   );
 };
 

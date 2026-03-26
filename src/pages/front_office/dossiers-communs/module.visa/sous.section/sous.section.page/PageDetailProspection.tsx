@@ -4,7 +4,6 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import type { AppDispatch, RootState } from '../../../../../../app/store';
 import { approuverDevis, clearVisaDevis, creerVisaEntete, envoyerDevis, fetchVisaDevis, genererPdfClient, genererPdfDirection } from '../../../../../../app/front_office/parametre_visa/visaDevisSlice';
 import TabContainer from '../../../../../../layouts/TabContainer';
-import { HotelHeader } from '../../../module.hotel/components/HotelHeader';
 import { VisaHeader } from '../../components/VisaHeader';
 import { API_URL } from '../../../../../../service/env';
 
@@ -219,274 +218,276 @@ const PageDetailProspection = () => {
     const { devis, prospectionVisa, visaProspectionLignes, suivi } = detail;
 
     return (
-        <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange}>
-            <div className="min-h-screen bg-neutral-50 pt-4 space-y-4">
-                <div className="">
-                    <VisaHeader numerovisa={devis.reference} nomPassager= {''} navigate={navigate} isDetail={true} isProspection={true}/>
-                </div>
-
-                {/* ── Topbar ── */}
-                <div className="bg-white p-4 flex items-center justify-between flex-wrap gap-3">
-                    {/* Gauche : retour + titre */}
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={() => navigate(-1)}
-                            className="p-2 rounded-lg hover:bg-gray-200 text-gray-500 transition"
-                        >
-                            ←
-                        </button>
-                        <div>
-                            <h1 className="text-2xl font-bold text-gray-800">
-                                Devis {devis.reference}
-                            </h1>
-                            <p className="text-sm text-gray-400">
-                                {prospectionVisa.prestation.numeroDos} — créé le {fmtDate(devis.createdAt)}
-                            </p>
-                        </div>
+        <div className="h-full flex flex-col min-h-0">
+            <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange}>
+                <div className="py-2 px-4 space-y-4">
+                    <div className="">
+                        <VisaHeader numerovisa={devis.reference} nomPassager= {''} navigate={navigate} isDetail={true} isProspection={true}/>
                     </div>
 
-                    {/* Droite : badge + actions */}
-                    <div className="flex items-center gap-3 flex-wrap">
-                        <Badge label={devis.statut} />
-                        <div className="w-px h-8 bg-gray-300 shrink-0" />
-                            {/* PDF Direction */}
-                            <button
-                                onClick={handlePdfDirection}
-                                disabled={actionLoading === 'pdf-direction'}
-                                className="px-4 py-2 bg-slate-600 text-white text-sm rounded-lg hover:bg-slate-700 disabled:opacity-60 flex items-center gap-2"
-                            >
-                                {actionLoading === 'pdf-direction' ? (
-                                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                                    </svg>
-                                ) : '📄'}
-                                PDF Direction
-                            </button>
-
-                            {/* PDF Client */}
-                            <button
-                                onClick={handlePdfClient}
-                                disabled={actionLoading === 'pdf-client'}
-                                className="px-4 py-2 bg-teal-600 text-white text-sm rounded-lg hover:bg-teal-700 disabled:opacity-60 flex items-center gap-2"
-                                >
-                                {actionLoading === 'pdf-client' ? (
-                                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                                    </svg>
-                                ) : '📋'}
-                                PDF Client
-                            </button>
-
-                            {/* Séparateur */}
-                            <div className="w-px h-8 bg-gray-300 shrink-0" />
-                                <div className="flex items-center gap-2">
-                                    {/* Envoyer le devis */}
-                                    <button
-                                        onClick={devis.statut === 'CREER' ? handleEnvoyer : undefined}
-                                        disabled={devis.statut !== 'CREER' || actionLoading === 'envoyer'}
-                                        className={`px-4 py-2 text-sm rounded-lg font-semibold flex items-center gap-2 transition-all ${
-                                        devis.statut === 'CREER'
-                                            ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                                            : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
-                                        }`}
-                                    >
-                                        {actionLoading === 'envoyer' ? (
-                                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                                        </svg>
-                                        ) : <span className={devis.statut !== 'CREER' ? 'grayscale opacity-50' : ''}>📤</span>}
-                                        Envoyer le devis
-                                    </button>
-
-                                    <span className="text-gray-300">›</span>
-
-                                    {/* Approuver */}
-                                    <button
-                                        onClick={devis.statut === 'DEVIS_A_APPROUVER' ? handleApprouver : undefined}
-                                        disabled={devis.statut !== 'DEVIS_A_APPROUVER' || actionLoading === 'approuver'}
-                                        className={`px-4 py-2 text-sm rounded-lg font-semibold flex items-center gap-2 transition-all ${
-                                        devis.statut === 'DEVIS_A_APPROUVER'
-                                            ? 'bg-green-600 hover:bg-green-700 text-white'
-                                            : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
-                                        }`}
-                                    >
-                                        {actionLoading === 'approuver' ? (
-                                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                                        </svg>
-                                        ) : <span className={devis.statut !== 'DEVIS_A_APPROUVER' ? 'grayscale opacity-50' : ''}>✅</span>}
-                                        Approuver
-                                    </button>
-
-                                    <span className="text-gray-300">›</span>
-
-                                    {/* Créer le Visa */}
-                                    <button
-                                        onClick={devis.statut === 'DEVIS_APPROUVE' ? handleCreerVisa : undefined}
-                                        disabled={devis.statut !== 'DEVIS_APPROUVE' || actionLoading === 'visa'}
-                                        className={`px-4 py-2 text-sm rounded-lg font-semibold flex items-center gap-2 transition-all ${
-                                        devis.statut === 'DEVIS_APPROUVE'
-                                            ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
-                                            : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
-                                        }`}
-                                    >
-                                        {actionLoading === 'visa' ? (
-                                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                                        </svg>
-                                        ) : <span className={devis.statut !== 'DEVIS_APPROUVE' ? 'grayscale opacity-50' : ''}>🛂</span>}
-                                        Créer le Visa
-                                    </button>
-                                </div>
-                            </div>
-                </div>
-
-            {/* ── Feedback actions ── */}
-            {actionSuccess && (
-            <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg px-4 py-3 flex items-center gap-2">
-                ✓ {actionSuccess}
-            </div>
-            )}
-            {actionError && (
-            <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg px-4 py-3 flex items-center gap-2">
-                ⚠️ {actionError}
-            </div>
-            )}
-
-            {/* ── Résumé devis ── */}
-            <Card title="Résumé du devis">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12">
-                <Row label="Référence"      value={devis.reference} />
-                <Row label="Statut"         value={<Badge label={devis.statut} />} />
-                <Row label="Total général"  value={<span className="text-indigo-700 font-bold text-base">{fmt(devis.totalGeneral)} Ar</span>} />
-                <Row label="Dernière MAJ"   value={fmtDate(devis.updatedAt)} />
-                </div>
-            </Card>
-
-            {/* ── Lignes de prospection ── */}
-            <Card title={`Lignes de prospection (${visaProspectionLignes.length})`}>
-                <div className="space-y-4">
-                {visaProspectionLignes.map((ligne, idx) => (
-                    <div key={ligne.id} className="rounded-xl border border-gray-100 overflow-hidden">
-
-                    {/* Header ligne */}
-                    <div className="flex items-center justify-between px-4 py-2.5 bg-indigo-50">
+                    {/* ── Topbar ── */}
+                    <div className="bg-white p-4 flex items-center justify-between flex-wrap gap-3">
+                        {/* Gauche : retour + titre */}
                         <div className="flex items-center gap-3">
-                        <span className="text-xs font-bold text-indigo-400">#{idx + 1}</span>
-                        <span className="font-semibold text-gray-800 text-sm">
-                            {ligne.visaParams.pays.pays}
-                            <span className="ml-2 text-xs text-gray-400 font-normal">
-                            {ligne.visaParams.code} — {ligne.visaParams.visaType.nom}
+                            <button
+                                onClick={() => navigate(-1)}
+                                className="p-2 rounded-lg hover:bg-gray-200 text-gray-500 transition"
+                            >
+                                ←
+                            </button>
+                            <div>
+                                <h1 className="text-2xl font-bold text-gray-800">
+                                    Devis {devis.reference}
+                                </h1>
+                                <p className="text-sm text-gray-400">
+                                    {prospectionVisa.prestation.numeroDos} — créé le {fmtDate(devis.createdAt)}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Droite : badge + actions */}
+                        <div className="flex items-center gap-3 flex-wrap">
+                            <Badge label={devis.statut} />
+                            <div className="w-px h-8 bg-gray-300 shrink-0" />
+                                {/* PDF Direction */}
+                                <button
+                                    onClick={handlePdfDirection}
+                                    disabled={actionLoading === 'pdf-direction'}
+                                    className="px-4 py-2 bg-slate-600 text-white text-sm rounded-lg hover:bg-slate-700 disabled:opacity-60 flex items-center gap-2"
+                                >
+                                    {actionLoading === 'pdf-direction' ? (
+                                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                                        </svg>
+                                    ) : '📄'}
+                                    PDF Direction
+                                </button>
+
+                                {/* PDF Client */}
+                                <button
+                                    onClick={handlePdfClient}
+                                    disabled={actionLoading === 'pdf-client'}
+                                    className="px-4 py-2 bg-teal-600 text-white text-sm rounded-lg hover:bg-teal-700 disabled:opacity-60 flex items-center gap-2"
+                                    >
+                                    {actionLoading === 'pdf-client' ? (
+                                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                                        </svg>
+                                    ) : '📋'}
+                                    PDF Client
+                                </button>
+
+                                {/* Séparateur */}
+                                <div className="w-px h-8 bg-gray-300 shrink-0" />
+                                    <div className="flex items-center gap-2">
+                                        {/* Envoyer le devis */}
+                                        <button
+                                            onClick={devis.statut === 'CREER' ? handleEnvoyer : undefined}
+                                            disabled={devis.statut !== 'CREER' || actionLoading === 'envoyer'}
+                                            className={`px-4 py-2 text-sm rounded-lg font-semibold flex items-center gap-2 transition-all ${
+                                            devis.statut === 'CREER'
+                                                ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                                                : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                                            }`}
+                                        >
+                                            {actionLoading === 'envoyer' ? (
+                                            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                                            </svg>
+                                            ) : <span className={devis.statut !== 'CREER' ? 'grayscale opacity-50' : ''}>📤</span>}
+                                            Envoyer le devis
+                                        </button>
+
+                                        <span className="text-gray-300">›</span>
+
+                                        {/* Approuver */}
+                                        <button
+                                            onClick={devis.statut === 'DEVIS_A_APPROUVER' ? handleApprouver : undefined}
+                                            disabled={devis.statut !== 'DEVIS_A_APPROUVER' || actionLoading === 'approuver'}
+                                            className={`px-4 py-2 text-sm rounded-lg font-semibold flex items-center gap-2 transition-all ${
+                                            devis.statut === 'DEVIS_A_APPROUVER'
+                                                ? 'bg-green-600 hover:bg-green-700 text-white'
+                                                : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                                            }`}
+                                        >
+                                            {actionLoading === 'approuver' ? (
+                                            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                                            </svg>
+                                            ) : <span className={devis.statut !== 'DEVIS_A_APPROUVER' ? 'grayscale opacity-50' : ''}>✅</span>}
+                                            Approuver
+                                        </button>
+
+                                        <span className="text-gray-300">›</span>
+
+                                        {/* Créer le Visa */}
+                                        <button
+                                            onClick={devis.statut === 'DEVIS_APPROUVE' ? handleCreerVisa : undefined}
+                                            disabled={devis.statut !== 'DEVIS_APPROUVE' || actionLoading === 'visa'}
+                                            className={`px-4 py-2 text-sm rounded-lg font-semibold flex items-center gap-2 transition-all ${
+                                            devis.statut === 'DEVIS_APPROUVE'
+                                                ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                                                : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                                            }`}
+                                        >
+                                            {actionLoading === 'visa' ? (
+                                            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                                            </svg>
+                                            ) : <span className={devis.statut !== 'DEVIS_APPROUVE' ? 'grayscale opacity-50' : ''}>🛂</span>}
+                                            Créer le Visa
+                                        </button>
+                                    </div>
+                                </div>
+                    </div>
+
+                {/* ── Feedback actions ── */}
+                {actionSuccess && (
+                <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg px-4 py-3 flex items-center gap-2">
+                    ✓ {actionSuccess}
+                </div>
+                )}
+                {actionError && (
+                <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg px-4 py-3 flex items-center gap-2">
+                    ⚠️ {actionError}
+                </div>
+                )}
+
+                {/* ── Résumé devis ── */}
+                <Card title="Résumé du devis">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12">
+                    <Row label="Référence"      value={devis.reference} />
+                    <Row label="Statut"         value={<Badge label={devis.statut} />} />
+                    <Row label="Total général"  value={<span className="text-indigo-700 font-bold text-base">{fmt(devis.totalGeneral)} Ar</span>} />
+                    <Row label="Dernière MAJ"   value={fmtDate(devis.updatedAt)} />
+                    </div>
+                </Card>
+
+                {/* ── Lignes de prospection ── */}
+                <Card title={`Lignes de prospection (${visaProspectionLignes.length})`}>
+                    <div className="space-y-4">
+                    {visaProspectionLignes.map((ligne, idx) => (
+                        <div key={ligne.id} className="rounded-xl border border-gray-100 overflow-hidden">
+
+                        {/* Header ligne */}
+                        <div className="flex items-center justify-between px-4 py-2.5 bg-indigo-50">
+                            <div className="flex items-center gap-3">
+                            <span className="text-xs font-bold text-indigo-400">#{idx + 1}</span>
+                            <span className="font-semibold text-gray-800 text-sm">
+                                {ligne.visaParams.pays.pays}
+                                <span className="ml-2 text-xs text-gray-400 font-normal">
+                                {ligne.visaParams.code} — {ligne.visaParams.visaType.nom}
+                                </span>
                             </span>
-                        </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                            <Badge label={ligne.etatVisa} />
+                            <span className={`text-xs font-semibold ${ligne.etatPiece ? 'text-green-600' : 'text-orange-500'}`}>
+                                {ligne.etatPiece ? '✓ Pièces OK' : '✗ Pièces incomplètes'}
+                            </span>
+                            </div>
                         </div>
-                        <div className="flex items-center gap-2">
-                        <Badge label={ligne.etatVisa} />
-                        <span className={`text-xs font-semibold ${ligne.etatPiece ? 'text-green-600' : 'text-orange-500'}`}>
-                            {ligne.etatPiece ? '✓ Pièces OK' : '✗ Pièces incomplètes'}
-                        </span>
+
+                        {/* Body ligne — grille infos */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-0 divide-x divide-y divide-gray-50">
+
+                            {/* Séjour */}
+                            <div className="px-4 py-3 space-y-0.5">
+                            <p className="text-xs text-gray-400 uppercase tracking-wide">Séjour</p>
+                            <p className="text-sm font-medium text-gray-800">
+                                {fmtDate(ligne.dateDepart)} → {fmtDate(ligne.dateRetour)}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                                {ligne.visaParams.visaDuree.duree} j · {ligne.visaParams.visaEntree.entree} · {ligne.nombre} pers.
+                            </p>
+                            </div>
+
+                            {/* Consulat */}
+                            <div className="px-4 py-3 space-y-0.5">
+                            <p className="text-xs text-gray-400 uppercase tracking-wide">Consulat</p>
+                            <p className="text-sm font-medium text-gray-800 capitalize">
+                                {ligne.consulat?.nom ?? '—'}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                                PU : {fmt(ligne.puConsulatDevise)} {ligne.devise} / {fmt(ligne.puConsulatAriary)} Ar
+                            </p>
+                            </div>
+
+                            {/* Tarif client */}
+                            <div className="px-4 py-3 space-y-0.5">
+                            <p className="text-xs text-gray-400 uppercase tracking-wide">Tarif client</p>
+                            <p className="text-sm font-bold text-indigo-700">
+                                {fmt(ligne.puClientAriary * ligne.nombre)} Ar
+                            </p>
+                            <p className="text-xs text-gray-500">
+                                {fmt(ligne.puClientDevise)} {ligne.devise} × {ligne.nombre} pers.
+                            </p>
+                            </div>
+
+                            {/* Devise */}
+                            <div className="px-4 py-3 space-y-0.5">
+                            <p className="text-xs text-gray-400 uppercase tracking-wide">Change</p>
+                            <p className="text-sm font-medium text-gray-800">
+                                1 {ligne.devise} = {fmt(ligne.tauxEchange)} Ar
+                            </p>
+                            <p className="text-xs text-gray-500">
+                                Traitement : {ligne.visaParams.dureeTraitement} j
+                            </p>
+                            </div>
+
                         </div>
+                        </div>
+                    ))}
                     </div>
+                </Card>
 
-                    {/* Body ligne — grille infos */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-0 divide-x divide-y divide-gray-50">
+                {/* ── Suivi / Timeline ── */}
+                <Card title="Suivi du dossier">
+                    <div className="flex items-start gap-0 overflow-x-auto pb-2">
+                    {suivi && TIMELINE_STEPS.map((step, idx) => {
+                        const date   = suivi[step.key] as string | null;
+                        const isDone = !!date || true;
+                        const isLast = idx === TIMELINE_STEPS.length - 1;
 
-                        {/* Séjour */}
-                        <div className="px-4 py-3 space-y-0.5">
-                        <p className="text-xs text-gray-400 uppercase tracking-wide">Séjour</p>
-                        <p className="text-sm font-medium text-gray-800">
-                            {fmtDate(ligne.dateDepart)} → {fmtDate(ligne.dateRetour)}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                            {ligne.visaParams.visaDuree.duree} j · {ligne.visaParams.visaEntree.entree} · {ligne.nombre} pers.
-                        </p>
+                        return (
+                        <div key={step.key} className="flex items-center shrink-0">
+                            {/* Étape */}
+                            <div className="flex flex-col items-center gap-1 w-32">
+                            <div className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all ${
+                                isDone
+                                ? 'bg-green-500 border-green-500 text-white'
+                                : 'bg-white border-gray-200 text-gray-300'
+                            }`}>
+                                {isDone ? '✓' : idx + 1}
+                            </div>
+                            <p className={`text-xs text-center font-medium ${isDone ? 'text-gray-700' : 'text-gray-300'}`}>
+                                {step.label}
+                            </p>
+                            <p className="text-xs text-gray-400 text-center">{fmtDate(date)}</p>
+                            </div>
+
+                            {/* Connecteur */}
+                            {!isLast && (
+                            <div className={`h-0.5 w-8 mb-6 ${
+                                isDone && !!(suivi[TIMELINE_STEPS[idx + 1].key] as string | null)
+                                ? 'bg-green-400'
+                                : 'bg-gray-200'
+                            }`} />
+                            )}
                         </div>
-
-                        {/* Consulat */}
-                        <div className="px-4 py-3 space-y-0.5">
-                        <p className="text-xs text-gray-400 uppercase tracking-wide">Consulat</p>
-                        <p className="text-sm font-medium text-gray-800 capitalize">
-                            {ligne.consulat?.nom ?? '—'}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                            PU : {fmt(ligne.puConsulatDevise)} {ligne.devise} / {fmt(ligne.puConsulatAriary)} Ar
-                        </p>
-                        </div>
-
-                        {/* Tarif client */}
-                        <div className="px-4 py-3 space-y-0.5">
-                        <p className="text-xs text-gray-400 uppercase tracking-wide">Tarif client</p>
-                        <p className="text-sm font-bold text-indigo-700">
-                            {fmt(ligne.puClientAriary * ligne.nombre)} Ar
-                        </p>
-                        <p className="text-xs text-gray-500">
-                            {fmt(ligne.puClientDevise)} {ligne.devise} × {ligne.nombre} pers.
-                        </p>
-                        </div>
-
-                        {/* Devise */}
-                        <div className="px-4 py-3 space-y-0.5">
-                        <p className="text-xs text-gray-400 uppercase tracking-wide">Change</p>
-                        <p className="text-sm font-medium text-gray-800">
-                            1 {ligne.devise} = {fmt(ligne.tauxEchange)} Ar
-                        </p>
-                        <p className="text-xs text-gray-500">
-                            Traitement : {ligne.visaParams.dureeTraitement} j
-                        </p>
-                        </div>
-
+                        );
+                    })}
                     </div>
-                    </div>
-                ))}
+                </Card>         
+
                 </div>
-            </Card>
-
-            {/* ── Suivi / Timeline ── */}
-            <Card title="Suivi du dossier">
-                <div className="flex items-start gap-0 overflow-x-auto pb-2">
-                {TIMELINE_STEPS.map((step, idx) => {
-                    const date     = suivi[step.key] as string | null;
-                    const isDone   = !!date;
-                    const isLast   = idx === TIMELINE_STEPS.length - 1;
-
-                    return (
-                    <div key={step.key} className="flex items-center shrink-0">
-                        {/* Étape */}
-                        <div className="flex flex-col items-center gap-1 w-32">
-                        <div className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all ${
-                            isDone
-                            ? 'bg-green-500 border-green-500 text-white'
-                            : 'bg-white border-gray-200 text-gray-300'
-                        }`}>
-                            {isDone ? '✓' : idx + 1}
-                        </div>
-                        <p className={`text-xs text-center font-medium ${isDone ? 'text-gray-700' : 'text-gray-300'}`}>
-                            {step.label}
-                        </p>
-                        <p className="text-xs text-gray-400 text-center">{fmtDate(date)}</p>
-                        </div>
-
-                        {/* Connecteur */}
-                        {!isLast && (
-                        <div className={`h-0.5 w-8 mb-6 ${
-                            isDone && !!(suivi[TIMELINE_STEPS[idx + 1].key] as string | null)
-                            ? 'bg-green-400'
-                            : 'bg-gray-200'
-                        }`} />
-                        )}
-                    </div>
-                    );
-                })}
-                </div>
-            </Card>         
-
-            </div>
-        </TabContainer>
+            </TabContainer>
+        </div>
     );
 };
 

@@ -43,7 +43,7 @@ const AddLigneModal = ({
 
   const [selectedBeneficiaireIds, setSelectedBeneficiaireIds] = useState<string[]>([]);
   const [selectedPassagerIds, setSelectedPassagerIds] = useState<string[]>([]);
-  const [beneficiairePassagers, setBeneficiairePassagers] = useState<Record<string, any[]>>({});
+  // const [beneficiairePassagers, setBeneficiairePassagers] = useState<Record<string, any[]>>({});
 
   const [formData, setFormData] = useState({
     numeroVol: '',
@@ -92,12 +92,27 @@ const AddLigneModal = ({
     }
   }, [formData.departId, formData.destinationId, destinations]);
 
+  // Remplacez le useState de beneficiairePassagers par deux states
+  const [beneficiairePassagers, setBeneficiairePassagers] = useState<Record<string, any[]>>({});
+  const [loadingBeneficiaires, setLoadingBeneficiaires] = useState<Record<string, boolean>>({});
+
+  // Remplacez le useEffect du fetch passagers
   useEffect(() => {
     selectedBeneficiaireIds.forEach((id) => {
+      // Ne re-fetche pas si déjà chargé
+      if (beneficiairePassagers[id] !== undefined) return;
+
+      // Marque comme en chargement
+      setLoadingBeneficiaires(prev => ({ ...prev, [id]: true }));
+
       dispatch(fetchClientBeneficiaireInfos(id)).then((action) => {
-        if (action.meta.requestStatus === 'fulfilled') {
-          setBeneficiairePassagers((prev) => ({ ...prev, [id]: action.payload || [] }));
-        }
+        setBeneficiairePassagers(prev => ({
+          ...prev,
+          [id]: action.meta.requestStatus === 'fulfilled'
+            ? (action.payload || [])
+            : [], // tableau vide même en cas d'erreur
+        }));
+        setLoadingBeneficiaires(prev => ({ ...prev, [id]: false }));
       });
     });
   }, [selectedBeneficiaireIds, dispatch]);
@@ -137,7 +152,7 @@ const AddLigneModal = ({
         ...formData,
         dateHeureDepart: formData.dateHeureDepart ? new Date(formData.dateHeureDepart).toISOString() : '',
         dateHeureArrive: formData.dateHeureArrive ? new Date(formData.dateHeureArrive).toISOString() : '',
-        puAriary: Number(formData.puAriary) || 0,
+        // puAriary: Number(formData.puAriary) || 0,
         passagerIds: selectedPassagerIds,
       })).unwrap();
       onLigneCreated();
@@ -151,7 +166,7 @@ const AddLigneModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-9999 p-4">
+    <div className="fixed inset-0 top-16 bg-black/50 backdrop-blur-sm flex items-center justify-center z-9999 p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl max-h-[94vh] overflow-hidden flex flex-col">
 
         {/* ── Header ── */}
@@ -227,7 +242,7 @@ const AddLigneModal = ({
           {/* ── Section 2 : Passagers ── */}
           {selectedBeneficiaireIds.length > 0 && (
             <section className="bg-white rounded-xl border border-blue-400 shadow-sm overflow-hidden">
-              <div className="px-5 py-3.5 border-b border-blue-100 bg-blue-50 flex items-center gap-2">
+              <div className="px-5 py-3 border-b border-blue-100 bg-blue-50 flex items-center gap-2">
                 <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold shrink-0">2</span>
                 <h3 className="text-sm font-semibold text-blue-800">Sélection des passagers</h3>
                 {selectedPassagerIds.length > 0 && (
@@ -237,88 +252,111 @@ const AddLigneModal = ({
                 )}
               </div>
 
-              <div className="p-4 space-y-3">
+              <div className="divide-y divide-slate-100">
                 {selectedBeneficiaireIds.map((benId) => {
-                  const ben = beneficiaires.find((b) => b.clientBeneficiaire.id === benId)?.clientBeneficiaire;
+                  const ben = beneficiaires.find(b => b.clientBeneficiaire.id === benId)?.clientBeneficiaire;
                   const passagers = beneficiairePassagers[benId] || [];
-                  const isLoading = !beneficiairePassagers[benId];
+                  const isLoading = loadingBeneficiaires[benId] === true;
+                  const initials = ben?.libelle?.split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase() ?? '?';
 
                   return (
-                    <div key={benId} className="border border-gray-200 rounded-xl overflow-hidden">
-                      <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200">
-                        <h4 className="text-sm font-semibold text-gray-700">{ben?.libelle || '—'}</h4>
+                    <div key={benId} className="p-4">
+
+                      {/* ── En-tête bénéficiaire ── */}
+                      <div className="flex items-center gap-2.5 mb-3">
+                        <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center shrink-0">
+                          {initials}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-slate-800">{ben?.libelle || '—'}</p>
+                          <p className="text-[11px] text-slate-400">{passagers.length} passager{passagers.length > 1 ? 's' : ''} enregistré{passagers.length > 1 ? 's' : ''}</p>
+                        </div>
                       </div>
-                      <div className="p-3">
-                        {isLoading ? (
-                          <div className="flex items-center gap-2 py-3 text-sm text-gray-400">
-                            <div className="animate-spin h-4 w-4 border-2 border-gray-300 border-t-gray-600 rounded-full" />
-                            Chargement...
-                          </div>
-                        ) : passagers.length === 0 ? (
-                          <p className="text-sm text-gray-400 italic py-2">Aucun passager enregistré</p>
-                        ) : (
-                          <div className="space-y-2">
-                            {passagers.map((info: any) => {
-                              const isChecked = selectedPassagerIds.includes(info.id);
-                              const docExpired = new Date(info.dateValiditeDoc) < new Date();
-                              return (
-                                <label
-                                  key={info.id}
-                                  className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
-                                    isChecked
-                                      ? 'bg-blue-50 border-blue-500 text-blue-900'
-                                      : 'bg-white border-gray-200 hover:border-blue-300 text-gray-800'
-                                  }`}
-                                >
+
+                      {/* ── États ── */}
+                      {isLoading ? (
+                        <div className="flex items-center gap-2 py-3 text-sm text-slate-400">
+                          <div className="animate-spin h-4 w-4 border-2 border-slate-200 border-t-slate-500 rounded-full" />
+                          Chargement...
+                        </div>
+                      ) : passagers.length === 0 ? (
+                        <p className="text-sm text-slate-400 italic py-2">Aucun passager enregistré</p>
+                      ) : (
+                        /* ── Grille 3 colonnes ── */
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                          {passagers.map((info: any) => {
+                            const isChecked = selectedPassagerIds.includes(info.id);
+                            const docExpired = new Date(info.dateValiditeDoc) < new Date();
+                            const paxInitials = `${info.prenom?.[0] ?? ''}${info.nom?.[0] ?? ''}`.toUpperCase();
+
+                            return (
+                              <div
+                                key={info.id}
+                                onClick={() => togglePassager(info.id)}
+                                className={`rounded-xl border cursor-pointer transition-all overflow-hidden ${
+                                  isChecked
+                                    ? 'border-blue-400 bg-blue-50'
+                                    : 'border-slate-200 bg-white hover:border-blue-300 hover:bg-slate-50'
+                                }`}
+                              >
+                                {/* Top : avatar + nom + checkbox */}
+                                <div className="flex items-start gap-2.5 px-3 pt-3 pb-2">
+                                  <div className={`w-8 h-8 rounded-full text-xs font-bold flex items-center justify-center shrink-0 ${
+                                    isChecked ? 'bg-blue-200 text-blue-800' : 'bg-slate-100 text-slate-600'
+                                  }`}>
+                                    {paxInitials}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-semibold text-slate-800 truncate">{info.prenom} {info.nom}</p>
+                                    <p className="text-[10px] text-slate-400">{info.clientType}</p>
+                                  </div>
                                   <input
                                     type="checkbox"
                                     checked={isChecked}
                                     onChange={() => togglePassager(info.id)}
-                                    className="mt-1 h-4 w-4 rounded border-gray-300 accent-blue-600"
+                                    onClick={e => e.stopPropagation()}
+                                    className="mt-0.5 h-4 w-4 accent-blue-600 shrink-0"
                                   />
-                                  <div className="flex-1 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-x-4 gap-y-2.5">
+                                </div>
 
-                                    {/* Nom */}
-                                    <div className="col-span-2">
-                                      <div className="text-xs uppercase tracking-wide mb-0.5 text-gray-400">Passager</div>
-                                      <div className="text-sm font-semibold">{info.prenom} {info.nom}</div>
+                                {/* Body : infos en grille 2 col */}
+                                <div className="grid grid-cols-2 gap-x-3 gap-y-2 px-3 pb-2.5">
+                                  {[
+                                    { label: 'Nationalité', value: info.nationalite },
+                                    { label: 'CIN', value: <span className="font-mono text-[10px]">{info.cin}</span> },
+                                    {
+                                      label: 'Validité doc',
+                                      value: (
+                                        <span className={`text-[10px] font-medium ${docExpired ? 'text-red-500' : 'text-emerald-600'}`}>
+                                          {new Date(info.dateValiditeDoc).toLocaleDateString('fr-FR')}
+                                        </span>
+                                      )
+                                    },
+                                    { label: 'WhatsApp', value: <span className="font-mono text-[10px]">{info.whatsapp}</span> },
+                                  ].map(({ label, value }) => (
+                                    <div key={label}>
+                                      <p className="text-[9px] uppercase tracking-wide text-slate-400 font-medium mb-0.5">{label}</p>
+                                      <div className="text-xs text-slate-700">{value}</div>
                                     </div>
+                                  ))}
+                                </div>
 
-                                    {[
-                                      { label: 'Type', value: info.clientType },
-                                      { label: 'Nationalité', value: info.nationalite },
-                                      {
-                                        label: 'Document',
-                                        value: (
-                                          <div>
-                                            <span className={`text-xs font-medium px-2 py-0.5 rounded ${isChecked ? 'bg-blue-100 text-blue-700' : 'bg-gray-100'}`}>{info.typeDoc}</span>
-                                            <div className="text-xs font-mono mt-0.5 text-gray-500">{info.referenceDoc}</div>
-                                          </div>
-                                        )
-                                      },
-                                      {
-                                        label: 'Validité doc',
-                                        value: (
-                                          <span className={`text-xs font-medium ${docExpired ? 'text-red-500' : ''}`}>
-                                            {new Date(info.dateValiditeDoc).toLocaleDateString('fr-FR')}
-                                          </span>
-                                        )
-                                      },
-                                      { label: 'CIN', value: <span className="text-xs font-mono text-gray-600">{info.cin} — {info.referenceCin}</span> },
-                                      { label: 'WhatsApp', value: <span className="text-xs font-mono">{info.whatsapp}</span> },
-                                    ].map(({ label, value }) => (
-                                      <div key={label}>
-                                        <div className="text-xs uppercase tracking-wide mb-0.5 text-gray-400">{label}</div>
-                                        <div className="text-sm">{value}</div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </label>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
+                                {/* Footer : badge type document */}
+                                <div className={`px-3 py-2 border-t flex items-center gap-2 ${
+                                  isChecked ? 'border-blue-200' : 'border-slate-100'
+                                }`}>
+                                  <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${
+                                    isChecked ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'
+                                  }`}>
+                                    {info.typeDoc}
+                                  </span>
+                                  <span className="font-mono text-[10px] text-slate-400">{info.referenceDoc}</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
@@ -446,7 +484,7 @@ const AddLigneModal = ({
               </div>
 
               {/* PU Ariary */}
-              <div>
+              {/* <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">
                   PU Ariary
                   {prixActif && (
@@ -469,7 +507,7 @@ const AddLigneModal = ({
                     Ar
                   </span>
                 </div>
-              </div>
+              </div> */}
             </div>
           </section>
         </div>
