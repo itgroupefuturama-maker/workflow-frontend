@@ -286,7 +286,7 @@ export default function ReprogrammationModal({
   const nombrePassagers = selectedPassagers.length;
 
   return (
-    <div className="fixed inset-0 top-16 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="bg-white border-gray-100 border-b-2 px-6 py-4 flex justify-between items-center">

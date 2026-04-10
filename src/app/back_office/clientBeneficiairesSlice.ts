@@ -32,7 +32,7 @@ export interface ClientBeneficiaire {
   dateCreation: string;
   updatedAt: string;
   typeClient: string;
-  factures: factures[]; // À typer plus tard si besoin
+  factures: factures[];
 }
 
 export interface ClientBeneficiairesState {

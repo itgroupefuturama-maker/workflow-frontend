@@ -55,11 +55,11 @@ const ModalHeader = ({
 }) => (
   <div className="relative overflow-hidden">
     {/* Barre gradient en haut */}
-    <div className={`h-1 bg-gradient-to-r ${gradient}`} />
+    <div className={`h-1 bg-linear-to-r ${gradient}`} />
 
     <div className="flex items-center justify-between px-6 py-4">
       <div className="flex items-center gap-3">
-        <div className={`w-9 h-9 bg-gradient-to-br ${gradient} rounded-xl flex items-center justify-center shadow-sm`}>
+        <div className={`w-9 h-9 bg-linear-to-br ${gradient} rounded-xl flex items-center justify-center shadow-sm`}>
           <span className="text-white">{icon}</span>
         </div>
         <div>
@@ -77,7 +77,7 @@ const ModalHeader = ({
     </div>
 
     {/* Séparateur */}
-    <div className="mx-6 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+    <div className="mx-6 h-px bg-linear-to-r from-transparent via-slate-200 to-transparent" />
   </div>
 );
 

@@ -8,6 +8,8 @@ import ParametreLayout from "./layouts/ListeParametreLayout";
 import { parametresRoutes } from "./routes/Parametres.routes";
 import { frontOfficeRoutes } from "./routes/FrontOffice.routes"; // Nouveau import
 import FrontOfficeLayout from "./layouts/FrontOfficeLayout";
+import SuccesCreateCompte from "./pages/front_office/dossiers-communs/module.calendar/succesCreateCompte";
+import SpecificationClientForClient from "./pages/front_office/dossiers-communs/module.dossier.commun/specification.client/specificationClientForClient";
 
 
 export function App() {
@@ -19,6 +21,8 @@ export function App() {
       <Routes>
         {/* LOGIN : Ne redirige pas vers "/" ici, laisse le composant LoginPage gérer le succès */}
         <Route path="/login" element={<LoginPage />} />
+
+        <Route path="formulaire/:id" element={<SpecificationClientForClient />} />
 
         {/* BACK OFFICE : Toujours en premier */}
         <Route path="/parametre" element={<ProtectedRoute adminOnly={true} />}>
@@ -34,6 +38,8 @@ export function App() {
             {frontOfficeRoutes()}
           </Route>
         </Route>
+
+        <Route path="settings/google" element={<SuccesCreateCompte />}/>
 
         {/* FALLBACK */}
         <Route path="*" element={<Navigate to="/" replace />} />

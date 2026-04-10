@@ -1,6 +1,12 @@
 import { configureStore} from '@reduxjs/toolkit'; 
 import type { ThunkDispatch, Action }from '@reduxjs/toolkit'; 
 import authReducer from './authSlice';
+
+// UI
+import uiReducer from './uiSlice';
+import demandeClientReducer from './front_office/parametre_specification/demandeClientSlice';
+import demandeClientAttributReducer from './front_office/parametre_specification/demandeClientAttributSlice';
+
 import privilegesReducer from './back_office/privilegesSlice';
 import { combineReducers } from 'redux';
 import { persistStore, persistReducer } from 'redux-persist';
@@ -71,6 +77,9 @@ import assuranceProspectionReducer from './front_office/parametre_assurance/assu
 import assuranceEnteteReducer from './front_office/parametre_assurance/assuranceEnteteSlice';
 import assuranceEnteteDetailReducer from './front_office/parametre_assurance/assuranceEnteteDetailSlice';
 import clientBeneficiaireDetailReducer from './front_office/parametre_baseDonnee/clientBeneficiaireDetailSlice';
+import userReducer from './front_office/parametre_utilisateur/userSlice';
+import deviseReducer from './front_office/parametre-global/deviseSlice';
+import clientFormReducer from './portail_client/clientFormSlice';
 
 import {
   FLUSH,
@@ -83,6 +92,12 @@ import {
 
 const appReducer = combineReducers({
   auth: authReducer,
+
+  ui: uiReducer,
+  demandeClient: demandeClientReducer,
+  demandeClientAttribut: demandeClientAttributReducer,
+
+  user: userReducer,
 
   // Back-Office
   privileges: privilegesReducer,
@@ -153,9 +168,11 @@ const appReducer = combineReducers({
   assuranceEnteteDetail: assuranceEnteteDetailReducer,
 
   clientBeneficiaireDetail: clientBeneficiaireDetailReducer,
+  devise: deviseReducer,
 
   // Portail-client
   clientBeneficiaireInfos: clientBeneficiaireInfosReducer,
+  clientForm: clientFormReducer,
 });
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

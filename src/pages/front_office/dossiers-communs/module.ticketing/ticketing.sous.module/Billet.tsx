@@ -95,11 +95,11 @@ const Billet = () => {
   );
 
   const serviceById = useMemo(() => {
-  const map = new Map<string, ServiceSpecifique>();
-    services.forEach((svc) => {
-      map.set(svc.id, svc);
-    });
-    return map;
+    const map = new Map<string, ServiceSpecifique>();
+      services.forEach((svc) => {
+        map.set(svc.id, svc);
+      });
+      return map;
   }, [services]);
 
   // Charger les suivis (une seule fois ou quand l'entête change)
@@ -214,7 +214,6 @@ const Billet = () => {
       if (enteteId) dispatch(fetchBilletById(enteteId));
       setEmissionModalOpen(false);
       setSelectedLigneForEmission(null);
-      alert('Émission effectuée avec succès');
     } catch (err: any) {
       alert('Erreur lors de l\'émission : ' + (err.message || '—'));
     }
@@ -247,13 +246,10 @@ const Billet = () => {
   const handleReglerFacture = async () => {
     if (!billet?.id) return;
 
-    if (!confirm("Confirmez-vous que la facture a été réglée ? ")) return;
-
     try {
       await dispatch(reglerFactureClient(billet.id)).unwrap();
 
       if (enteteId) dispatch(fetchBilletById(enteteId));
-      alert("Facture marquée comme réglée !");
     } catch (err: any) {
       alert("Erreur : " + (err.message || "Échec règlement facture"));
     }
@@ -380,244 +376,248 @@ const Billet = () => {
   return (
     <div className="h-full flex flex-col min-h-0">
       <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange}>
-        <div className="py-2 px-4">
-          <div className='flex justify-between'>
-            <TicketingHeader items={billetDetailItems(billet?.numeroBillet)} />
+        <div className="flex h-full min-h-0 overflow-hidden">
+          {/* ── Colonne principale ── */}
+          <div className="flex-1 min-w-0 flex flex-col min-h-0">
+            <div className="shrink-0 px-4 pt-2 bg-white">
+              <div className='flex items-center justify-between'>
+                <TicketingHeader items={billetDetailItems(billet?.numeroBillet)} />
 
-            <BilletActions
-              billet={billet}
-              allLinesEmission={allLinesEmission}
-              allLinesReservation={allLinesReservation}
-              onShowFacture={() => setShowFactureModal(true)}
-              onRegler={handleReglerFacture}
-              onApprouver={() => handleMarkAsReserved(billet.id)}
-              onShowEmission={() => setShowEmissionModal(true)}
-              onAnnulerReservation={() => {
-                setAnnulType('reservation');
-                setShowAnnulModal(true);
-              }}
-              onAnnulerEmission={() => {
-                setAnnulType('emission');
-                setShowAnnulModal(true);
-              }}
-            />
-          </div>
-
-          {/* Infos principales */}
-          <BilletInfoCards
-            billet={billet}
-            clientFacture={clientFacture}
-            dossier={dossier}
-          />
-
-          {/* Tableau groupé avec Sous-Onglets */}
-          <div className="mt-5 rounded-t-lg flex space-x-1">
-            {innerTabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setInnerTab(tab.id)}
-                className={`
-                  px-6 py-2 text-sm font-semibold rounded-t-lg transition-all
-                  ${innerTab === tab.id 
-                    ? 'bg-[#4A77BE] text-white shadow-sm'
-                    : 'bg-[#ffffff] text-[#1E3A8A] hover:bg-[#f2f7fe] border-t border-l border-r border-slate-200'}
-                `}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-
-          <div className="overflow-hidden">
-            {/* CONTENU : BILLET */}
-            {innerTab === 'billet' && (
-              <BilletTable
-                lignes={lignes}
-                groups={groups}
-                billet={billet}
-                billetLignes={billet?.billetLigne || []}
-                handleOpenReservation={handleOpenReservation}
-                handleOpenEmission={handleOpenEmission}
-                handleReprogrammer={handleReprogrammer}
-                handleRemove={handleAnnulerLigne}
-                serviceById={serviceById}   // ← AJOUT ICI
-              />
-            )}
-
-            {/* Onglet SERVICES */}
-            {innerTab === 'services' && (
-              <ServiceTable
-                lignes={lignes}
-                groups={groups}
-                serviceById={serviceById}
-                typeFilter="SERVICE"
-              />
-            )}
-
-            {/* Onglet SPÉCIFIQUE */}
-            {innerTab === 'specifique' && (
-              <ServiceTable
-                lignes={lignes}
-                groups={groups}
-                serviceById={serviceById}
-                typeFilter="SPECIFIQUE"
-              />
-            )}
-
-            {/* CONTENU : SUIVI (Déplacé ici pour correspondre à l'image) */}
-            {innerTab === 'suivi' && (
-              <SuiviTabSection
-                  prestationId={enteteId || ''}
+                <BilletActions
+                  billet={billet}
+                  allLinesEmission={allLinesEmission}
+                  allLinesReservation={allLinesReservation}
+                  onShowFacture={() => setShowFactureModal(true)}
+                  onRegler={handleReglerFacture}
+                  onApprouver={() => handleMarkAsReserved(billet.id)}
+                  onShowEmission={() => setShowEmissionModal(true)}
+                  onAnnulerReservation={() => {
+                    setAnnulType('reservation');
+                    setShowAnnulModal(true);
+                  }}
+                  onAnnulerEmission={() => {
+                    setAnnulType('emission');
+                    setShowAnnulModal(true);
+                  }}
                 />
-            )}
-          </div>
+              </div>
+            </div>
 
-          <FactureClientModal
-            isOpen={showFactureModal}
-            onClose={() => {
-              setShowFactureModal(false);
-              setFactureReference('');
-            }}
-            onConfirm={async (reference) => {
-              await dispatch(
-                emettreFactureClient({
-                  billetId: billet!.id,
-                  referenceFacClient: reference,
-                })
-              ).unwrap();
-              dispatch(fetchBilletById(enteteId!));
-              alert('Facture émise avec succès');
-            }}
-          />
+            <div className='px-4 border-b border-neutral-50'>
+              {/* Infos principales */}
+              <BilletInfoCards
+                billet={billet}
+                clientFacture={clientFacture}
+                dossier={dossier}
+              />
 
-          <EmissionBilletModal
-            isOpen={showEmissionModal}
-            onClose={() => {
-              setShowEmissionModal(false);
-              setEmissionReference('');
-            }}
-            onConfirm={async (reference) => {
-              await dispatch(
-                updateBilletEnteteStatut({
-                  billetId: billet!.id,
-                  referenceFacClient: reference,     // ← attention : le nom du champ est peut-être trompeur
-                })
-              ).unwrap();
-              dispatch(fetchBilletById(enteteId!));
-              alert('Billet marqué comme émis avec succès');
-            }}
-          />
+              {/* Tableau groupé avec Sous-Onglets */}
+              <div className="mt-5 rounded-t-lg flex space-x-1">
+                {innerTabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setInnerTab(tab.id)}
+                    className={`
+                      px-6 py-2 text-sm font-semibold rounded-t-lg transition-all
+                      ${innerTab === tab.id 
+                        ? 'bg-[#4A77BE] text-white shadow-sm'
+                        : 'bg-[#ffffff] text-[#1E3A8A] hover:bg-[#f2f7fe] border-t border-l border-r border-slate-200'}
+                    `}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-          {showReprogModal && (
-          <>
-            {console.log('Modal Reprogrammation rendu avec ligne :', selectedLigneForReprog)}
-            { selectedLigneForReprog && (
-              <ReprogrammationModal
-                isOpen={showReprogModal}
-                onClose={() => {
-                  setShowReprogModal(false);
-                  setSelectedLigneForReprog(null);
-                }}
-                onSubmit={async (payload) => {
-                if (!billet?.id || !selectedLigneForReprog) return;
+           
 
-                try {
-                  await dispatch(
-                    reprogrammerLigne({
-                      billetId: billet.id,                    // ← ID ENTÊTE ici (dans l'URL)
-                      payload,
-                    })
-                  ).unwrap();
+            <div className="flex-1 min-h-0 overflow-y-auto pb-4 px-4">
+              {/* CONTENU : BILLET */}
+              {innerTab === 'billet' && (
+                <BilletTable
+                  lignes={lignes}
+                  groups={groups}
+                  billet={billet}
+                  billetLignes={billet?.billetLigne || []}
+                  handleOpenReservation={handleOpenReservation}
+                  handleOpenEmission={handleOpenEmission}
+                  handleReprogrammer={handleReprogrammer}
+                  handleRemove={handleAnnulerLigne}
+                  serviceById={serviceById}   // ← AJOUT ICI
+                />
+              )}
 
-                  alert('Reprogrammation effectuée');
-                  dispatch(fetchBilletById(enteteId!));
-                } catch (err: any) {
-                  alert(err?.message || 'Erreur lors de la reprogrammation');
-                } finally {
-                  setShowReprogModal(false);
-                  setSelectedLigneForReprog(null);
-                }
+              {/* Onglet SERVICES */}
+              {innerTab === 'services' && (
+                <ServiceTable
+                  lignes={lignes}
+                  groups={groups}
+                  serviceById={serviceById}
+                  typeFilter="SERVICE"
+                />
+              )}
+
+              {/* Onglet SPÉCIFIQUE */}
+              {innerTab === 'specifique' && (
+                <ServiceTable
+                  lignes={lignes}
+                  groups={groups}
+                  serviceById={serviceById}
+                  typeFilter="SPECIFIQUE"
+                />
+              )}
+
+              {/* CONTENU : SUIVI (Déplacé ici pour correspondre à l'image) */}
+              {innerTab === 'suivi' && (
+                <SuiviTabSection
+                    prestationId={enteteId || ''}
+                  />
+              )}
+            </div>
+
+            <FactureClientModal
+              isOpen={showFactureModal}
+              onClose={() => {
+                setShowFactureModal(false);
+                setFactureReference('');
               }}
-                ligne={selectedLigneForReprog}
-                loading={false} // à connecter si tu as un loading spécifique
-                serviceById={serviceById}
+              onConfirm={async (reference) => {
+                await dispatch(
+                  emettreFactureClient({
+                    billetId: billet!.id,
+                    referenceFacClient: reference,
+                  })
+                ).unwrap();
+                dispatch(fetchBilletById(enteteId!));
+              }}
+            />
+
+            <EmissionBilletModal
+              isOpen={showEmissionModal}
+              onClose={() => {
+                setShowEmissionModal(false);
+                setEmissionReference('');
+              }}
+              onConfirm={async (reference) => {
+                await dispatch(
+                  updateBilletEnteteStatut({
+                    billetId: billet!.id,
+                    referenceFacClient: reference,     // ← attention : le nom du champ est peut-être trompeur
+                  })
+                ).unwrap();
+                dispatch(fetchBilletById(enteteId!));
+              }}
+            />
+
+            {showReprogModal && (
+            <>
+              {console.log('Modal Reprogrammation rendu avec ligne :', selectedLigneForReprog)}
+              { selectedLigneForReprog && (
+                <ReprogrammationModal
+                  isOpen={showReprogModal}
+                  onClose={() => {
+                    setShowReprogModal(false);
+                    setSelectedLigneForReprog(null);
+                  }}
+                  onSubmit={async (payload) => {
+                  if (!billet?.id || !selectedLigneForReprog) return;
+
+                  try {
+                    await dispatch(
+                      reprogrammerLigne({
+                        billetId: billet.id,                    // ← ID ENTÊTE ici (dans l'URL)
+                        payload,
+                      })
+                    ).unwrap();
+
+                    dispatch(fetchBilletById(enteteId!));
+                  } catch (err: any) {
+                    alert(err?.message || 'Erreur lors de la reprogrammation');
+                  } finally {
+                    setShowReprogModal(false);
+                    setSelectedLigneForReprog(null);
+                  }
+                }}
+                  ligne={selectedLigneForReprog}
+                  loading={false} // à connecter si tu as un loading spécifique
+                  serviceById={serviceById}
+                />
+              )}
+              </>
+            )}
+
+            {/* Modals */}
+            {selectedLigne && (
+              <ReservationModal
+                isOpen={modalOpen}
+                onClose={() => setModalOpen(false)}
+                onSubmit={handleSubmitReservation}
+                ligne={selectedLigne}
               />
             )}
-            </>
-          )}
 
-          {/* Modals */}
-          {selectedLigne && (
-            <ReservationModal
-              isOpen={modalOpen}
-              onClose={() => setModalOpen(false)}
-              onSubmit={handleSubmitReservation}
-              ligne={selectedLigne}
-            />
-          )}
+            {selectedLigneForEmission && (
+              <EmissionModal
+                isOpen={emissionModalOpen}
+                onClose={() => setEmissionModalOpen(false)}
+                onSubmit={handleSubmitEmission}
+                ligne={selectedLigneForEmission}
+                numeroBillet={billet?.numeroBillet || ''}
+              />
+            )}
 
-          {selectedLigneForEmission && (
-            <EmissionModal
-              isOpen={emissionModalOpen}
-              onClose={() => setEmissionModalOpen(false)}
-              onSubmit={handleSubmitEmission}
-              ligne={selectedLigneForEmission}
-              numeroBillet={billet?.numeroBillet || ''}
-            />
-          )}
+            {selectedBenefId && (
+              <BeneficiaireInfosModal
+                isOpen={infosModalOpen}
+                onClose={() => setInfosModalOpen(false)}
+                infos={beneficiaireInfosList}
+                beneficiaireName={selectedBenefName}
+                loading={infosLoading}
+                error={infosError}
+              />
+            )}
 
-          {selectedBenefId && (
-            <BeneficiaireInfosModal
-              isOpen={infosModalOpen}
-              onClose={() => setInfosModalOpen(false)}
-              infos={beneficiaireInfosList}
-              beneficiaireName={selectedBenefName}
-              loading={infosLoading}
-              error={infosError}
-            />
-          )}
-
-          {showAnnulModal && billet && (
-            <AnnulationBilletModal
-              isOpen={showAnnulModal}
-              onClose={() => {
-                setShowAnnulModal(false);
-                setLigneToAnnul(null);
-                setAnnulType(null);
-              }}
-              onSubmit={async (payload: AnnulationBilletPayload) => {
-                if (!billet?.id) return;
-                setAnnulLoading(true);
-                try {
-                  // Si une seule ligne est sélectionnée → on peut filtrer ou adapter le payload
-                  const adaptedPayload = ligneToAnnul
-                    ? { ...payload, ligneIds: [ligneToAnnul.id] } // ← À adapter selon ton API !
-                    : payload;
-
-                  await dispatch(
-                    annulerBillet({
-                      billetId: billet.id,
-                      payload: adaptedPayload,
-                    })
-                  ).unwrap();
-
-                  alert('Annulation effectuée');
-                  dispatch(fetchBilletById(enteteId!));
-                } catch (err: any) {
-                  alert(err?.message || "Erreur lors de l'annulation");
-                } finally {
-                  setAnnulLoading(false);
+            {showAnnulModal && billet && (
+              <AnnulationBilletModal
+                isOpen={showAnnulModal}
+                onClose={() => {
                   setShowAnnulModal(false);
                   setLigneToAnnul(null);
                   setAnnulType(null);
-                }
-              }}
-              lignes={ligneToAnnul ? [ligneToAnnul] : billet?.billetLigne ?? []}
-              type={annulType ?? 'reservation'}
-              loading={annulLoading}
-              enteteId={billet?.id ?? ''}
-            />
-          )}
+                }}
+                onSubmit={async (payload: AnnulationBilletPayload) => {
+                  if (!billet?.id) return;
+                  setAnnulLoading(true);
+                  try {
+                    // Si une seule ligne est sélectionnée → on peut filtrer ou adapter le payload
+                    const adaptedPayload = ligneToAnnul
+                      ? { ...payload, ligneIds: [ligneToAnnul.id] } // ← À adapter selon ton API !
+                      : payload;
+
+                    await dispatch(
+                      annulerBillet({
+                        billetId: billet.id,
+                        payload: adaptedPayload,
+                      })
+                    ).unwrap();
+                    dispatch(fetchBilletById(enteteId!));
+                  } catch (err: any) {
+                    alert(err?.message || "Erreur lors de l'annulation");
+                  } finally {
+                    setAnnulLoading(false);
+                    setShowAnnulModal(false);
+                    setLigneToAnnul(null);
+                    setAnnulType(null);
+                  }
+                }}
+                lignes={ligneToAnnul ? [ligneToAnnul] : billet?.billetLigne ?? []}
+                type={annulType ?? 'reservation'}
+                loading={annulLoading}
+                enteteId={billet?.id ?? ''}
+              />
+            )}
+          </div>
         </div>
       </TabContainer>
     </div>

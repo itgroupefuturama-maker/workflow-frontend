@@ -485,7 +485,7 @@ function NewLineRow({
         />
       </td>
 
-      <td className="px-4 py-3">
+      {/* <td className="px-4 py-3">
         <select
           value={newLine.modePaiement}
           onChange={(e) => updateNewLineField('modePaiement', e.target.value)}
@@ -496,7 +496,7 @@ function NewLineRow({
           <option value="CHEQUE">Chèque</option>
           <option value="VIREMENT">Virement</option>
         </select>
-      </td>
+      </td> */}
 
       <td className="px-4 py-4">
         {servicesDisponibles.length === 0 ? (

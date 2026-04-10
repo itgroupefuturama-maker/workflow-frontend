@@ -1,9 +1,11 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
-  FiCheckCircle, FiCalendar, FiArrowLeft, FiSearch,
+  FiCheckCircle, FiArrowLeft, FiSearch,
   FiGrid, FiList, FiArrowRight, FiX,
-  FiAlertCircle
+  FiAlertCircle,
+  FiClock,
+  FiAlertTriangle
 } from 'react-icons/fi';
 import { fetchTodos, markAsDone, updateTodo } from '../../../../app/front_office/todosSlice';
 import { useNavigate } from 'react-router-dom';
@@ -27,9 +29,9 @@ export default function ToDoList() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
 
   const [calendarMode] = useState<CalendarMode>('single');
-  const [singleDate, setSingleDate] = useState('');
-  const [rangeStart, setRangeStart] = useState('');
-  const [rangeEnd, setRangeEnd] = useState('');
+  const [singleDate] = useState('');
+  const [rangeStart] = useState('');
+  const [rangeEnd] = useState('');
 
   const [showOlder, setShowOlder]   = useState(false);
   const [showUpcoming, setShowUpcoming] = useState(false);
@@ -86,53 +88,55 @@ export default function ToDoList() {
   const hasDateFilter = singleDate || (rangeStart && rangeEnd);
 
   // ── Catégorisation par date ──────────────────────────────────
+  // ── Catégorisation par date ──────────────────────────────────────────────────
   const categorizeTodos = (todos: typeof filteredTodos) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const yesterday = new Date(today);
-    yesterday.setDate(today.getDate() - 1);
-    const weekAgo = new Date(today);
-    weekAgo.setDate(today.getDate() - 7);
+
     const weekEnd = new Date(today);
-    weekEnd.setDate(today.getDate() + 7);
+    weekEnd.setDate(today.getDate() + 7);    // dans 7 jours (exclus)
+
+    const weekAgo = new Date(today);
+    weekAgo.setDate(today.getDate() - 7);    // il y a 7 jours
 
     const buckets: Record<string, typeof filteredTodos> = {
       "Aujourd'hui": [],
-      'Hier':        [],
       'Cette semaine': [],
-      '__older':     [],   // jamais affiché comme onglet direct
-      '__upcoming':  [],   // jamais affiché comme onglet direct
+      '__older':    [],   // avant hier inclus
+      '__upcoming': [],   // au-delà de 7 jours
     };
 
     todos.forEach((todo) => {
       const d = new Date(todo.rappel?.moment);
       d.setHours(0, 0, 0, 0);
 
-      if      (d.getTime() === today.getTime())     buckets["Aujourd'hui"].push(todo);
-      else if (d.getTime() === yesterday.getTime()) buckets['Hier'].push(todo);
-      else if (d >= weekAgo && d < yesterday)       buckets['Cette semaine'].push(todo);
-      else if (d < weekAgo)                         buckets['__older'].push(todo);
-      else                                          buckets['__upcoming'].push(todo);
+      if (d.getTime() === today.getTime()) {
+        // ── Aujourd'hui ──
+        buckets["Aujourd'hui"].push(todo);
+      } else if (d > today && d < weekEnd) {
+        // ── Demain → dans 6 jours → "Cette semaine" ──
+        buckets['Cette semaine'].push(todo);
+      } else if (d >= weekEnd) {
+        // ── Dans 7 jours et au-delà ──
+        buckets['__upcoming'].push(todo);
+      } else {
+        // ── Hier et avant ──
+        buckets['__older'].push(todo);
+      }
     });
 
-    // Injection conditionnelle dans les catégories visibles
     if (showOlder)    buckets["Aujourd'hui"].push(...buckets['__older']);
     if (showUpcoming) buckets['Cette semaine'].push(...buckets['__upcoming']);
 
     const categories = [
-      { label: "Aujourd'hui", color: 'indigo',  items: buckets["Aujourd'hui"] },
-      { label: 'Hier',        color: 'emerald', items: buckets['Hier']        },
+      { label: "Aujourd'hui", color: 'indigo',  items: buckets["Aujourd'hui"]   },
       { label: 'Cette semaine', color: 'emerald', items: buckets['Cette semaine'] },
     ];
 
-    // Compte brut pour les badges des boutons (indépendant de showOlder/showUpcoming)
-    const olderCount   = buckets['__older'].length;
-    const upcomingCount = buckets['__upcoming'].length;
-
     return {
-      categories: categories.filter(c => c.items.length > 0),
-      olderCount,
-      upcomingCount,
+      categories, // ← Ne pas filtrer avec .filter(c => c.items.length > 0)
+      olderCount:    buckets['__older'].length,
+      upcomingCount: buckets['__upcoming'].length,
     };
   };
 
@@ -167,6 +171,18 @@ export default function ToDoList() {
     const diffMs = dateObj.getTime() - now.getTime();
     const diffHours = diffMs / (1000 * 60 * 60);
 
+    // ── Nouveau : si la date n'est pas aujourd'hui, pas d'urgence colorée ──
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+    const isActuallyToday = dateObj >= todayStart && dateObj <= todayEnd;
+
+    if (diffMs < 0 && !isActuallyToday) {
+      // Tâche ancienne injectée via showOlder → pas de niveau d'urgence coloré
+      return null;
+    }
+
     if (diffMs < 0) {
       return { level: 'passed', label: 'dépassé' };
     } else if (diffHours <= 2) {
@@ -181,6 +197,58 @@ export default function ToDoList() {
 
     return null;
   };
+
+  // ── Palettes post-it ─────────────────────────────────────────────────────────
+
+  // ── Palette selon urgence ou index ──────────────────────────────────────────
+
+  const urgentPalettes = {
+    critical: { bg: '#F4C0D1', text: '#4B1528', tape: '#ED93B1', line: '#993556', moduleBg: 'rgba(75,21,40,.1)'  },
+    warning:  { bg: '#FAD177', text: '#412402', tape: '#EF9F27', line: '#854F0B', moduleBg: 'rgba(65,36,2,.1)'   },
+    passed:   { bg: '#B5D4F4', text: '#042C53', tape: '#85B7EB', line: '#185FA5', moduleBg: 'rgba(4,44,83,.1)'  },
+    
+  };
+
+  const neutralPalettes = [
+    { bg: '#FFFFFF', text: '#042C53', tape: '#85B7EB', line: '#185FA5', moduleBg: 'rgba(4,44,83,.1)'  },
+    { bg: '#FFFFFF', text: '#412402', tape: '#EF9F27', line: '#854F0B', moduleBg: 'rgba(65,36,2,.1)'  },
+    { bg: '#FFFFFF', text: '#26215C', tape: '#AFA9EC', line: '#534AB7', moduleBg: 'rgba(38,33,92,.1)' },
+    { bg: '#FFFFFF', text: '#4A1B0C', tape: '#F0997B', line: '#993C1D', moduleBg: 'rgba(74,27,12,.1)' },
+  ];
+
+  const postitRotations = ['-rotate-1', 'rotate-1', '-rotate-[0.5deg]', 'rotate-[1.5deg]', 'rotate-0', '-rotate-[1.2deg]'];
+
+  const getPalette = (
+    urgencyLevel: string | undefined,
+    categoryLabel: string,
+    index: number,
+    dateObj?: Date   // ← paramètre optionnel ajouté
+  ) => {
+    if (
+      categoryLabel === "Aujourd'hui" &&
+      urgencyLevel !== undefined &&
+      urgencyLevel in urgentPalettes
+    ) {
+      // Garde supplémentaire : la date doit être réellement aujourd'hui
+      if (dateObj) {
+        const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
+        const todayEnd   = new Date(); todayEnd.setHours(23, 59, 59, 999);
+        if (dateObj < todayStart || dateObj > todayEnd) {
+          return neutralPalettes[index % neutralPalettes.length];
+        }
+      }
+      return urgentPalettes[urgencyLevel as keyof typeof urgentPalettes];
+    }
+    return neutralPalettes[index % neutralPalettes.length];
+  };
+
+  const getUrgencyBadge = (level?: string) => {
+    if (level === 'critical') return { label: 'Urgent',  style: 'bg-red-500 text-white'       };
+    if (level === 'warning')  return { label: 'Bientôt', style: 'bg-amber-400 text-amber-900' };
+    if (level === 'passed')   return { label: 'Dépassé', style: 'bg-slate-800 text-slate-100' };
+    return                           { label: 'Normal',  style: 'bg-black/10 text-inherit'    };
+  };
+
 
   if (loadingTodos) return (
     <div className="h-screen flex items-center justify-center bg-slate-50 text-slate-500 font-medium">
@@ -345,170 +413,149 @@ export default function ToDoList() {
           {categorizedTodos
             .filter((cat) => cat.label === activeCategory)
             .map((cat) => {
-              const c = colorMap[cat.color];
+              // const c = colorMap[cat.color];
               return (
                 <div key={cat.label} className="flex-1 overflow-y-auto pr-2">
                   {viewMode === 'grid' ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 pb-20">
-                      {cat.items.map((todo) => {
-                        const isEditing = editingId === todo.rappel?.id;
-                        const isFinished = todo.rappel?.status === 'FAIT';
-                        const dateObj = new Date(todo.rappel?.moment);
+                      {cat.items.map((todo, index) => {
+                        const isEditing   = editingId === todo.rappel?.id;
+                        const isFinished  = todo.rappel?.status === 'FAIT';
+                        const dateObj     = new Date(todo.rappel?.moment);
+                        const rotation    = postitRotations[index % postitRotations.length];
+
+                        const urgency = getTimeUrgency(dateObj, cat.label);
+                        const palette = getPalette(urgency?.level, cat.label, index, dateObj); // ← dateObj ajouté
+                        const badge   = getUrgencyBadge(urgency?.level);
 
                         return (
                           <div
                             key={todo.id}
-                            className={`group bg-white border rounded-2xl transition-all duration-300 hover:shadow-xl flex flex-col relative overflow-hidden ${
-                              isFinished ? 'opacity-70 border-slate-200' :
-                              (() => {
-                                const u = getTimeUrgency(dateObj, cat.label);
-                                if (!u) return 'border-slate-200';
-                                if (u.level === 'passed') return 'border-slate-300';
-                                if (u.level === 'critical') return 'border-red-200';
-                                if (u.level === 'warning') return 'border-amber-200';
-                                return 'border-slate-200';
-                              })()
-                            }`}
+                            className={`flex flex-col rounded-sm transition-transform duration-150 hover:scale-[1.03] hover:z-10 relative ${rotation} ${isFinished ? 'opacity-50' : ''}`}
+                            style={{ background: palette.bg, color: palette.text }}
                           >
-                            {/* Barre colorée en haut selon urgence */}
-                            {(() => {
-                            const u = isFinished ? null : getTimeUrgency(dateObj, cat.label);
-                            const barColor =
-                              isFinished          ? 'bg-emerald-500' :
-                              u?.level === 'passed'   ? 'bg-slate-700' :
-                              u?.level === 'critical' ? 'bg-red-500' :
-                              u?.level === 'warning'  ? 'bg-amber-400' :
-                              c.accent;
+                            {/* Scotch */}
+                            <div
+                              className="w-12 h-3.5 mx-auto rounded-sm opacity-50"
+                              style={{ background: palette.tape }}
+                            />
 
-                            const icon =
-                              isFinished          ? <FiCheckCircle size={11} className="text-white/90" /> :
-                              u?.level === 'passed'   ? <FiAlertCircle size={11} className="text-white/80" /> :
-                              u?.level === 'critical' ? <FiArrowRight size={11} className="text-white animate-pulse" /> :
-                              u?.level === 'warning'  ? <FiCalendar   size={11} className="text-amber-900/70" /> :
-                              null;
-
-                            const label =
-                              isFinished              ? 'Terminé' :
-                              u?.level === 'passed'   ? 'Dépassé' :
-                              u?.level === 'critical' ? 'Urgent' :
-                              u?.level === 'warning'  ? 'Bientôt' :
-                              cat.label;
-
-                            return (
-                              <div className={`h-6 w-full ${barColor} flex items-center justify-between px-3`}>
-                                <div className="flex items-center gap-1.5">
-                                  <span className={`text-[9px] font-bold uppercase tracking-widest ${
-                                    u?.level === 'warning' ? 'text-amber-900/70' : 'text-white/80'
-                                  }`}>
-                                    {label}
-                                  </span>
-                                </div>
-                                <span className={`text-[9px] font-mono font-bold ${
-                                  u?.level === 'warning' ? 'text-amber-900/60' : 'text-white/60'
-                                }`}>
-                                  {icon}
-                                </span>
+                            {!isFinished && urgency?.level === 'critical' && (
+                              <div className="absolute top-5 right-2.5 flex items-center gap-1 bg-red-500 text-white text-[9px] font-bold px-2 py-0.5 rounded-full">
+                                <FiAlertCircle size={13} className="animate-pulse" />
+                                Urgent
                               </div>
-                            );
-                          })()}
-
-                            <div className="p-5 flex flex-col flex-1">
-                              <div className="flex justify-between items-start mb-5">
-                                <div className="flex flex-col">
-                                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                    {dateObj.toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' })}
-                                  </span>
-                                  <span className="text-sm font-bold text-slate-800 capitalize">
-                                    {dateObj.toLocaleDateString('fr-FR', { weekday: 'long' })}
-                                  </span>
-                                </div>
-
-                                {/* Badge heure + pill urgence */}
-                                {(() => {
-                                  const u = getTimeUrgency(dateObj, cat.label);
-                                  return (
-                                    <div className="flex flex-col items-end gap-1.5">
-                                      <div className={`px-2.5 py-1 rounded-lg text-[11px] font-bold font-mono ${
-                                        u?.level === 'passed'   ? 'bg-slate-800 text-slate-100' :
-                                        u?.level === 'critical' ? 'bg-red-500 text-white' :
-                                        u?.level === 'warning'  ? 'bg-amber-400 text-amber-900' :
-                                        'bg-slate-900 text-white'
-                                      }`}>
-                                        {dateObj.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                                      </div>
-                                      {u && (
-                                        <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-semibold ${
-                                          u.level === 'passed'   ? 'bg-slate-100 border-slate-300 text-slate-600' :
-                                          u.level === 'critical' ? 'bg-red-50 border-red-200 text-red-700' :
-                                          'bg-amber-50 border-amber-200 text-amber-700'
-                                        }`}>
-                                          <div className={`w-1.5 h-1.5 rounded-full ${
-                                            u.level === 'passed' ? 'bg-slate-500' :
-                                            u.level === 'critical' ? 'bg-red-500' : 'bg-amber-400'
-                                          }`} />
-                                          {u.level === 'passed' ? 'dépassé' : `dans ${u.label}`}
-                                        </div>
-                                      )}
-                                    </div>
-                                  );
-                                })()}
+                            )}
+                            {!isFinished && urgency?.level === 'warning' && (
+                              <div className="absolute top-5 right-2.5 flex items-center gap-1 bg-amber-400 text-white p-1 rounded-full">
+                                <FiClock size={13} />
                               </div>
+                            )}
+                            {!isFinished && urgency?.level === 'passed' && (
+                              <div className="absolute top-5 right-2.5 flex items-center gap-1 text-slate-100 px-2 py-0.5 rounded-full">
+                                <FiAlertTriangle size={13} />
+                              </div>
+                            )}
 
-                              {isEditing ? (
-                                <div className="space-y-3">
+                            <div className="px-4 pt-3 pb-4 flex flex-col gap-2.5 flex-1">
+
+                              {/* Date */}
+                              <p className="text-[10px] font-medium uppercase tracking-wide opacity-60">
+                                {dateObj.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'short' })}
+                              </p>
+
+                              {/* Titre */}
+                              <h4 className={`text-sm font-medium leading-snug ${isFinished ? 'line-through' : ''}`}>
+                                {isEditing ? (
                                   <input
                                     value={editForm.objet}
                                     onChange={(e) => setEditForm({ ...editForm, objet: e.target.value })}
-                                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none"
+                                    className="w-full bg-white/40 rounded px-2 py-1 text-sm outline-none"
+                                    style={{ color: palette.text }}
                                   />
-                                  <input
-                                    type="datetime-local"
-                                    value={editForm.moment}
-                                    onChange={(e) => setEditForm({ ...editForm, moment: e.target.value })}
-                                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs outline-none"
-                                  />
-                                  <div className="flex gap-2">
-                                    <button onClick={() => handleSaveEdit(todo.rappel.id)} className="flex-1 py-2 bg-indigo-600 text-white rounded-xl text-xs font-bold hover:bg-indigo-700">
-                                      Sauvegarder
+                                ) : todo.rappel?.objet}
+                              </h4>
+
+                              {/* Lignes déco */}
+                              <div className="flex flex-col gap-1.5 my-1">
+                                {[0,1,2].map(i => (
+                                  <div key={i} className="h-px opacity-20 rounded" style={{ background: palette.line }} />
+                                ))}
+                              </div>
+
+                              {/* Module */}
+                              <span
+                                className="text-[10px] font-medium px-2 py-1 rounded-sm w-fit"
+                                style={{ background: palette.moduleBg }}
+                              >
+                                {todo.prestation?.dossierCommunColab?.module?.nom}
+                              </span>
+
+                              {/* Footer */}
+                              <div
+                                className="flex items-center justify-between mt-auto pt-2.5"
+                                style={{ borderTop: `1px solid rgba(0,0,0,.1)` }}
+                              >
+                                {isEditing ? (
+                                  <div className="flex gap-2 w-full">
+                                    <input
+                                      type="datetime-local"
+                                      value={editForm.moment}
+                                      onChange={(e) => setEditForm({ ...editForm, moment: e.target.value })}
+                                      className="flex-1 bg-white/40 rounded px-2 py-1 text-[10px] outline-none"
+                                      style={{ color: palette.text }}
+                                    />
+                                    <button
+                                      onClick={() => handleSaveEdit(todo.rappel.id)}
+                                      className="px-2 py-1 bg-black/15 rounded text-[10px] font-medium hover:bg-black/25"
+                                    >
+                                      Ok
                                     </button>
-                                    <button onClick={() => setEditingId(null)} className="px-3 bg-slate-100 text-slate-500 rounded-xl text-xs font-bold hover:bg-slate-200">
-                                      <FiX />
+                                    <button
+                                      onClick={() => setEditingId(null)}
+                                      className="px-2 py-1 bg-black/10 rounded text-[10px] hover:bg-black/20"
+                                    >
+                                      <FiX size={10} />
                                     </button>
                                   </div>
-                                </div>
-                              ) : (
-                                <>
-                                  <h4 className={`text-sm font-bold leading-snug mb-3 ${isFinished ? 'line-through text-slate-400' : 'text-slate-800'}`}>
-                                    {todo.rappel?.objet}
-                                  </h4>
-                                  <div className="flex items-center gap-2 mb-4">
-                                    <span className="text-[10px] px-2 py-1 bg-slate-100 text-slate-500 rounded font-mono">
-                                      {todo.prestation?.dossierCommunColab?.module?.nom}
+                                ) : (
+                                  <>
+                                    <span className="text-[11px] font-mono font-medium opacity-70">
+                                      {dateObj.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
                                     </span>
-                                  </div>
-                                  <div className="mt-auto pt-3 border-t border-slate-100 flex items-center justify-between">
-                                    <div className="flex items-center gap-1">
+                                    <span className={`text-[9px] font-medium px-2 py-1 rounded-full uppercase tracking-wide ${badge.style}`}>
+                                      {badge.label == 'Urgent' ? 'A faire d\'ici 2h' : badge.label == 'Bientôt' ? 'A faire d\'ici 4h' : badge.label}
+                                    </span>
+                                    <div className="flex items-center gap-1.5">
                                       {!isFinished && (
                                         <button
                                           onClick={() => dispatch(markAsDone(todo.rappel.id))}
-                                          className="p-2 text-slate-400 hover:text-emerald-600 transition-colors"
-                                          title="Terminer"
+                                          className="w-5 h-5 rounded-full border border-black/20 flex items-center justify-center hover:bg-black/10 transition-colors"
                                         >
-                                          <FiCheckCircle size={18} />
+                                          <FiCheckCircle size={11} />
                                         </button>
                                       )}
+                                      {/* <button
+                                        onClick={() => {
+                                          setEditingId(todo.rappel.id);
+                                          setEditForm({ objet: todo.rappel.objet, moment: todo.rappel.moment?.slice(0, 16) });
+                                        }}
+                                        className="w-5 h-5 rounded-full border border-black/20 flex items-center justify-center hover:bg-black/10 transition-colors"
+                                      >
+                                        <FiEdit2 size={10} />
+                                      </button> */}
+                                      <button
+                                        onClick={() => navigate(`/dossiers-communs/${todo.prestation?.dossierCommunColab?.module?.nom.toLowerCase()}/pages`, {
+                                          state: { targetTab: 'prospection' }
+                                        })}
+                                        className="flex items-center gap-1 px-2 py-1 rounded-sm bg-black/10 hover:bg-black/20 transition-colors text-[9px] font-medium"
+                                      >
+                                        Dossier <FiArrowRight size={9} />
+                                      </button>
                                     </div>
-                                    <button
-                                      onClick={() => navigate(`/dossiers-communs/${todo.prestation?.dossierCommunColab?.module?.nom.toLowerCase()}/pages`, {
-                                        state: { targetTab: 'prospection' }
-                                      })}
-                                      className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 text-slate-500 hover:bg-slate-900 hover:text-white rounded-lg transition-all text-[10px] font-bold"
-                                    >
-                                      DOSSIER <FiArrowRight size={14} />
-                                    </button>
-                                  </div>
-                                </>
-                              )}
+                                  </>
+                                )}
+                              </div>
                             </div>
                           </div>
                         );

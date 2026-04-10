@@ -10,7 +10,7 @@ import AssociationModal from '../../../../../../components/modals/AssociationMod
 import TabContainer from '../../../../../../layouts/TabContainer';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 // import { fetchRaisonsAnnulation } from '../../../../../../app/front_office/parametre_ticketing/raisonAnnulationSlice';
-import RaisonAnnulationListe from './RaisonAnnulationListe';
+import RaisonAnnulationListe from '../../../module.parametre/RaisonAnnulation/RaisonAnnulationListe';
 // import RaisonAnnulationModal from '../../../../../../components/modals/RaisonAnnulationModal';
 import GestionPrixListe from '../../../module.attestation.voyage/SousMenuPrestation/GestionPrixListe';
 import ServiceSpecifiqueListe from '../../../module.parametre/ServiceSpecifique/ServiceSpecifiqueListe';
@@ -166,20 +166,7 @@ export default function ParametreView() {
         setActiveTab={handleTabChange}
       >
         <div className="py-2 px-4">
-          {/* ══ PAGE HEADER ══ */}
-          <div className=" mb-6 flex items-center justify-between">
-            <div>
-              <h1 className="text-xl font-bold text-slate-800 capitalize">
-                Paramétrage — {module}
-              </h1>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Gérez les paramètres du module {module}
-              </p>
-            </div>
-          </div>
-
           <div className="mt-2">
-
             {/* ══════════════════════════════════════
                 TAB : SERVICES
             ══════════════════════════════════════ */}

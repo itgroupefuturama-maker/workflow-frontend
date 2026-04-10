@@ -210,325 +210,327 @@ const PageDetailPassager = () => {
   );
   /* ── rendu ── */
   return (
-    <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange}>
-      <div className="min-h-screen bg-neutral-50 pt-4 space-y-4">
-        <div className="flex flex-row justify-between">
-            <VisaHeader numerovisa={numeroDos} nomPassager={nomPassager} navigate={navigate} isDetail={true} isPassager={true}/>
+    <div className="h-full flex flex-col min-h-0">
+      <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange}>
+        <div className="py-2 px-4 space-y-4">
+          <div className="flex flex-row justify-between">
+              <VisaHeader numerovisa={numeroDos} nomPassager={nomPassager} navigate={navigate} isDetail={true} isPassager={true}/>
 
-            <button
-              onClick={handleSync}
-              disabled={syncLoading}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white text-xs font-semibold transition"
-            >
-              {syncLoading ? <Spinner size={3} /> : syncDone ? '✓' : '⚡'}
-              {syncDone ? 'Synchronisé' : 'Synchroniser'}
-            </button>
-        </div>
+              <button
+                onClick={handleSync}
+                disabled={syncLoading}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white text-xs font-semibold transition"
+              >
+                {syncLoading ? <Spinner size={3} /> : syncDone ? '✓' : '⚡'}
+                {syncDone ? 'Synchronisé' : 'Synchroniser'}
+              </button>
+          </div>
 
-        {/* ══ Content ══ */}
-        <div className="space-y-4">
+          {/* ══ Content ══ */}
+          <div className="space-y-4">
 
-          {/* feedbacks */}
-          {actionSuccess && (
-            <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl px-4 py-3">
-              ✓ {actionSuccess}
-            </div>
-          )}
-          {actionError && (
-            <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-3">
-              ⚠️ {actionError}
-            </div>
-          )}
+            {/* feedbacks */}
+            {actionSuccess && (
+              <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl px-4 py-3">
+                ✓ {actionSuccess}
+              </div>
+            )}
+            {actionError && (
+              <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-3">
+                ⚠️ {actionError}
+              </div>
+            )}
 
-          {detail && (
-            <>
-              {/* ══ Layout 2 colonnes ══ */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+            {detail && (
+              <>
+                {/* ══ Layout 2 colonnes ══ */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
 
-                {/* ── Colonne gauche (2/3) ── */}
-                <div className="lg:col-span-2 space-y-6">
+                  {/* ── Colonne gauche (2/3) ── */}
+                  <div className="lg:col-span-2 space-y-6">
 
-                  {/* ══════════════════════════════════
-                      SECTION — Documents
-                  ══════════════════════════════════ */}
-                  {detail.userDocument.length > 0 && (
-                    <section>
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="flex items-center gap-2">
-                          <h2 className="text-base font-bold text-gray-900">Documents</h2>
-                          <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">
-                            {detail.userDocument.length}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {detail.userDocument.map((doc) => (
-                          <div
-                            key={doc.id}
-                            className="bg-white border border-gray-200 rounded-xl px-4 py-3.5 flex items-center justify-between gap-3 shadow-sm hover:shadow-md hover:border-indigo-100 transition-all"
-                          >
-                            {/* icône + infos */}
-                            <div className="flex items-center gap-3 min-w-0">
-                              <div className="h-10 w-10 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0 text-lg">
-                                📄
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-sm font-semibold text-gray-900 truncate">{doc.nomDoc}</p>
-                                <div className="flex items-center gap-2 mt-2 mb-2 flex-wrap">
-                                  <span className="text-xs text-gray-400">{fmtDate(doc.createdAt)}</span>
-                                </div>
-                                <Badge status={doc.status} />
-                              </div>
-                            </div>
-                            {/* actions */}
-                            <div className="flex flex-col items-end gap-1.5 shrink-0">
-                              <a
-                                href={`${API_URL_PORTAIL}${doc.pj}`}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="inline-flex items-center gap-1 px-2.5 py-1 border border-gray-200 text-indigo-600 text-xs font-semibold rounded-lg hover:bg-indigo-50 transition"
-                              >
-                                Voir
-                              </a>
-                              <ActionButton
-                                onClick={() => handleValidateDoc(doc.id)}
-                                loading={docLoading[doc.id] ?? false}
-                                statut={doc.status}
-                                done={docDone[doc.id] ?? doc.status === 'VALIDE'}
-                                label="Valider"
-                                doneLabel="Validé"
-                                color="green"
-                              />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </section>
-                  )}
-
-                  {/* ══════════════════════════════════
-                      SECTION — Formulaires
-                  ══════════════════════════════════ */}
-                  {detail.clientBeneficiaireForms.length === 0 ? (
-                    <div className="bg-white border border-dashed border-gray-200 rounded-xl px-5 py-10 text-center text-sm text-gray-400 italic">
-                      Aucun formulaire rempli pour ce passager.
-                    </div>
-                  ) : (
-                    detail.clientBeneficiaireForms.map((form, fIdx) => (
-                      <section key={form.id}>
-
-                        {/* ── Titre de section formulaire ── */}
+                    {/* ══════════════════════════════════
+                        SECTION — Documents
+                    ══════════════════════════════════ */}
+                    {detail.userDocument.length > 0 && (
+                      <section>
                         <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-2.5">
-                            <h2 className="text-base font-bold text-gray-900">{form.prenom} {form.nom}</h2>
-                            <span className="text-xs text-gray-400 font-medium">Formulaire #{fIdx + 1}</span>
-                            <Badge status={form.status} />
+                          <div className="flex items-center gap-2">
+                            <h2 className="text-base font-bold text-gray-900">Documents</h2>
+                            <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">
+                              {detail.userDocument.length}
+                            </span>
                           </div>
-                          <ActionButton
-                            onClick={() => handleValidateForm(form.id)}
-                            loading={formLoading[form.id] ?? false}
-                            statut={form.status}
-                            done={formDone[form.id] ?? form.status === 'VALIDE'}
-                            label="Confirmer"
-                            doneLabel="Confirmé"
-                            color="green"
-                          />
                         </div>
 
-                        {/* ── Card principale ── */}
-                        <div className="overflow-hidden space-y-4">
-
-                          {/* ── Identité ── */}
-                          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                            <div className="flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 bg-gray-50/80">
-                              <div className="w-6 h-6 rounded-lg bg-indigo-100 flex items-center justify-center shrink-0">
-                                <User size={12} className="text-indigo-600" />
-                              </div>
-                              <p className="text-[11px] font-black uppercase tracking-widest text-gray-600">Identité</p>
-                            </div>
-                            <div className="p-4 grid grid-cols-2 md:grid-cols-3 gap-2">
-                              <Field label="Nom"            value={form.nom} />
-                              <Field label="Prénom"         value={form.prenom} />
-                              <Field label="Sexe"           value={form.sexe} />
-                              <Field label="Date naissance" value={fmtDate(form.dateNaissance)} />
-                              <Field label="Lieu naissance" value={form.lieuNaissance} />
-                              <Field label="Nationalité"    value={form.nationalite} />
-                              <Field label="État civil"     value={form.etatCivil} />
-                              <Field label="Adresse"        value={form.adresse} />
-                              <Field label="Pays résidence" value={form.paysResidence} />
-                            </div>
-                          </div>
-
-                          {/* ── Contact + Contact d'urgence ── */}
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                              <div className="flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 bg-gray-50/80">
-                                <div className="w-6 h-6 rounded-lg bg-rose-100 flex items-center justify-center shrink-0">
-                                  <Phone size={12} className="text-rose-500" />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {detail.userDocument.map((doc) => (
+                            <div
+                              key={doc.id}
+                              className="bg-white border border-gray-200 rounded-xl px-4 py-3.5 flex items-center justify-between gap-3 shadow-sm hover:shadow-md hover:border-indigo-100 transition-all"
+                            >
+                              {/* icône + infos */}
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="h-10 w-10 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0 text-lg">
+                                  📄
                                 </div>
-                                <p className="text-[11px] font-black uppercase tracking-widest text-gray-600">Contact d'urgence</p>
-                              </div>
-                              <div className="p-4 grid grid-cols-1 gap-2">
-                                <Field label="Nom"       value={`${form.prenomContactUrgence} ${form.nomContactUrgence}`} />
-                                <Field label="Téléphone" value={form.numeroContactUrgence} />
-                                <Field label="Email"     value={form.emailContactUrgence} />
-                              </div>
-                            </div>
-
-                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                              <div className="flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 bg-gray-50/80">
-                                <div className="w-6 h-6 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
-                                  <Phone size={12} className="text-emerald-600" />
-                                </div>
-                                <p className="text-[11px] font-black uppercase tracking-widest text-gray-600">Contact</p>
-                              </div>
-                              <div className="p-4 grid grid-cols-1 gap-2">
-                                <Field label="Téléphone" value={form.numero} />
-                                <Field label="Email"     value={form.email} />
-                              </div>
-                            </div>
-
-                          </div>
-
-                          {/* ── Profession ── */}
-                          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                            <div className="flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 bg-gray-50/80">
-                              <div className="w-6 h-6 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
-                                <Briefcase size={12} className="text-amber-600" />
-                              </div>
-                              <p className="text-[11px] font-black uppercase tracking-widest text-gray-600">Profession</p>
-                            </div>
-                            <div className="p-4 grid grid-cols-2 md:grid-cols-3 gap-2">
-                              <Field label="Profession"    value={form.professionActuelle} />
-                              <Field label="Employeur"     value={form.nomEmployeur} />
-                              <Field label="Tél. pro"      value={form.numeroTelephone} />
-                              <Field label="Email pro"     value={form.emailProfessionnel} />
-                              <Field label="Adresse pro"   value={form.adresseProfessionnel} />
-                              <Field label="Établissement" value={form.etablissement} />
-                              <Field label="Diplôme"       value={form.diplome} />
-                            </div>
-                          </div>
-
-                          {/* ── Document d'identité ── */}
-                          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                            <div className="flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 bg-gray-50/80">
-                              <div className="w-6 h-6 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
-                                <FileText size={12} className="text-blue-600" />
-                              </div>
-                              <p className="text-[11px] font-black uppercase tracking-widest text-gray-600">Document d'identité</p>
-                            </div>
-                            <div className="p-4 grid grid-cols-2 md:grid-cols-3 gap-2">
-                              <Field label="Type"       value={form.typeDoc} />
-                              <Field label="Référence"  value={form.referenceDoc} />
-                              <Field label="Délivrance" value={fmtDate(form.dateDelivranceDoc)} />
-                              <Field label="Validité"   value={fmtDate(form.dateValiditeDoc)} />
-                            </div>
-                          </div>
-
-                          {/* ── Personnes liées ── */}
-                          {form.clientBeneficiairePerson.length > 0 && (
-                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                              <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/80">
-                                <div className="flex items-center gap-2.5">
-                                  <div className="w-6 h-6 rounded-lg bg-violet-100 flex items-center justify-center shrink-0">
-                                    <Users size={12} className="text-violet-600" />
+                                <div className="min-w-0">
+                                  <p className="text-sm font-semibold text-gray-900 truncate">{doc.nomDoc}</p>
+                                  <div className="flex items-center gap-2 mt-2 mb-2 flex-wrap">
+                                    <span className="text-xs text-gray-400">{fmtDate(doc.createdAt)}</span>
                                   </div>
-                                  <p className="text-[11px] font-black uppercase tracking-widest text-gray-600">Personnes liées</p>
+                                  <Badge status={doc.status} />
                                 </div>
-                                <span className="text-[10px] font-bold bg-violet-100 text-violet-600 px-2 py-0.5 rounded-full">
-                                  {form.clientBeneficiairePerson.length}
-                                </span>
                               </div>
-
-                              <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                {form.clientBeneficiairePerson.map((person) => (
-                                  <div
-                                    key={person.id}
-                                    className="rounded-xl border border-gray-100 overflow-hidden hover:border-violet-100 hover:shadow-sm transition-all"
-                                  >
-                                    {/* Header personne */}
-                                    <div className="flex items-center justify-between px-3 py-2.5 bg-linear-gradient-to-r from-violet-50 to-indigo-50 border-b border-gray-100">
-                                      <div className="flex items-center gap-2.5">
-                                        <div className="h-7 w-7 rounded-full bg-violet-100 border border-violet-200 flex items-center justify-center text-violet-600 text-[11px] font-black shrink-0">
-                                          {person.prenom?.[0]}{person.nom?.[0]}
-                                        </div>
-                                        <p className="text-sm font-bold text-gray-900">
-                                          {person.prenom} {person.nom}
-                                        </p>
-                                      </div>
-                                      <span className="text-[10px] bg-white border border-violet-100 text-violet-600 px-2 py-0.5 rounded-full font-bold shadow-sm">
-                                        {person.typePerson}
-                                      </span>
-                                    </div>
-
-                                    {/* Body personne */}
-                                    <div className="p-3 grid grid-cols-2 gap-1.5 bg-white">
-                                      <Field label="Sexe"           value={person.sexe} />
-                                      <Field label="Né(e) le"       value={fmtDate(person.dateNaissance)} />
-                                      <Field label="Lieu"           value={person.lieuNaissance} />
-                                      <Field label="Nationalité"    value={person.nationalite} />
-                                      <Field label="État civil"     value={person.etatCivil} />
-                                      <Field label="Pays résidence" value={person.paysResidence} />
-                                      <Field label="Email"          value={person.email} />
-                                      <Field label="Téléphone"      value={person.numero} />
-                                    </div>
-                                  </div>
-                                ))}
+                              {/* actions */}
+                              <div className="flex flex-col items-end gap-1.5 shrink-0">
+                                <a
+                                  href={`${API_URL_PORTAIL}${doc.pj}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 border border-gray-200 text-indigo-600 text-xs font-semibold rounded-lg hover:bg-indigo-50 transition"
+                                >
+                                  Voir
+                                </a>
+                                <ActionButton
+                                  onClick={() => handleValidateDoc(doc.id)}
+                                  loading={docLoading[doc.id] ?? false}
+                                  statut={doc.status}
+                                  done={docDone[doc.id] ?? doc.status === 'VALIDE'}
+                                  label="Valider"
+                                  doneLabel="Validé"
+                                  color="green"
+                                />
                               </div>
                             </div>
-                          )}
-
+                          ))}
                         </div>
                       </section>
-                    ))
-                  )}
-                </div>
+                    )}
 
-                {/* ── Colonne droite (1/3) ── */}
-                <div className="space-y-4">
+                    {/* ══════════════════════════════════
+                        SECTION — Formulaires
+                    ══════════════════════════════════ */}
+                    {detail.clientBeneficiaireForms.length === 0 ? (
+                      <div className="bg-white border border-dashed border-gray-200 rounded-xl px-5 py-10 text-center text-sm text-gray-400 italic">
+                        Aucun formulaire rempli pour ce passager.
+                      </div>
+                    ) : (
+                      detail.clientBeneficiaireForms.map((form, fIdx) => (
+                        <section key={form.id}>
 
-                  {/* Statut du compte */}
-                  <Card title="Résumé du compte">
-                    <DataRow label="Statut"     value={<Badge status={detail.actif ? 'ACTIF' : 'INACTIF'} />} />
-                    <DataRow label="Validation" value={<Badge status={detail.isValidate ? 'VALIDE' : 'EN_ATTENTE'} />} />
-                    <DataRow label="Créé le"    value={fmtDate(detail.createdAt)} />
-                  </Card>
+                          {/* ── Titre de section formulaire ── */}
+                          <div className="flex items-center justify-between mb-3">
+                            <div className="flex items-center gap-2.5">
+                              <h2 className="text-base font-bold text-gray-900">{form.prenom} {form.nom}</h2>
+                              <span className="text-xs text-gray-400 font-medium">Formulaire #{fIdx + 1}</span>
+                              <Badge status={form.status} />
+                            </div>
+                            <ActionButton
+                              onClick={() => handleValidateForm(form.id)}
+                              loading={formLoading[form.id] ?? false}
+                              statut={form.status}
+                              done={formDone[form.id] ?? form.status === 'VALIDE'}
+                              label="Confirmer"
+                              doneLabel="Confirmé"
+                              color="green"
+                            />
+                          </div>
 
-                  {/* Récap documents */}
-                  {detail.userDocument.length > 0 && (
-                    <Card title="Récap documents">
-                      {detail.userDocument.map((doc) => (
-                        <DataRow
-                          key={doc.id}
-                          label={doc.nomDoc}
-                          value={<Badge status={doc.status} />}
-                        />
-                      ))}
+                          {/* ── Card principale ── */}
+                          <div className="overflow-hidden space-y-4">
+
+                            {/* ── Identité ── */}
+                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                              <div className="flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 bg-gray-50/80">
+                                <div className="w-6 h-6 rounded-lg bg-indigo-100 flex items-center justify-center shrink-0">
+                                  <User size={12} className="text-indigo-600" />
+                                </div>
+                                <p className="text-[11px] font-black uppercase tracking-widest text-gray-600">Identité</p>
+                              </div>
+                              <div className="p-4 grid grid-cols-2 md:grid-cols-3 gap-2">
+                                <Field label="Nom"            value={form.nom} />
+                                <Field label="Prénom"         value={form.prenom} />
+                                <Field label="Sexe"           value={form.sexe} />
+                                <Field label="Date naissance" value={fmtDate(form.dateNaissance)} />
+                                <Field label="Lieu naissance" value={form.lieuNaissance} />
+                                <Field label="Nationalité"    value={form.nationalite} />
+                                <Field label="État civil"     value={form.etatCivil} />
+                                <Field label="Adresse"        value={form.adresse} />
+                                <Field label="Pays résidence" value={form.paysResidence} />
+                              </div>
+                            </div>
+
+                            {/* ── Contact + Contact d'urgence ── */}
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                                <div className="flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 bg-gray-50/80">
+                                  <div className="w-6 h-6 rounded-lg bg-rose-100 flex items-center justify-center shrink-0">
+                                    <Phone size={12} className="text-rose-500" />
+                                  </div>
+                                  <p className="text-[11px] font-black uppercase tracking-widest text-gray-600">Contact d'urgence</p>
+                                </div>
+                                <div className="p-4 grid grid-cols-1 gap-2">
+                                  <Field label="Nom"       value={`${form.prenomContactUrgence} ${form.nomContactUrgence}`} />
+                                  <Field label="Téléphone" value={form.numeroContactUrgence} />
+                                  <Field label="Email"     value={form.emailContactUrgence} />
+                                </div>
+                              </div>
+
+                              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                                <div className="flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 bg-gray-50/80">
+                                  <div className="w-6 h-6 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
+                                    <Phone size={12} className="text-emerald-600" />
+                                  </div>
+                                  <p className="text-[11px] font-black uppercase tracking-widest text-gray-600">Contact</p>
+                                </div>
+                                <div className="p-4 grid grid-cols-1 gap-2">
+                                  <Field label="Téléphone" value={form.numero} />
+                                  <Field label="Email"     value={form.email} />
+                                </div>
+                              </div>
+
+                            </div>
+
+                            {/* ── Profession ── */}
+                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                              <div className="flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 bg-gray-50/80">
+                                <div className="w-6 h-6 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+                                  <Briefcase size={12} className="text-amber-600" />
+                                </div>
+                                <p className="text-[11px] font-black uppercase tracking-widest text-gray-600">Profession</p>
+                              </div>
+                              <div className="p-4 grid grid-cols-2 md:grid-cols-3 gap-2">
+                                <Field label="Profession"    value={form.professionActuelle} />
+                                <Field label="Employeur"     value={form.nomEmployeur} />
+                                <Field label="Tél. pro"      value={form.numeroTelephone} />
+                                <Field label="Email pro"     value={form.emailProfessionnel} />
+                                <Field label="Adresse pro"   value={form.adresseProfessionnel} />
+                                <Field label="Établissement" value={form.etablissement} />
+                                <Field label="Diplôme"       value={form.diplome} />
+                              </div>
+                            </div>
+
+                            {/* ── Document d'identité ── */}
+                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                              <div className="flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 bg-gray-50/80">
+                                <div className="w-6 h-6 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+                                  <FileText size={12} className="text-blue-600" />
+                                </div>
+                                <p className="text-[11px] font-black uppercase tracking-widest text-gray-600">Document d'identité</p>
+                              </div>
+                              <div className="p-4 grid grid-cols-2 md:grid-cols-3 gap-2">
+                                <Field label="Type"       value={form.typeDoc} />
+                                <Field label="Référence"  value={form.referenceDoc} />
+                                <Field label="Délivrance" value={fmtDate(form.dateDelivranceDoc)} />
+                                <Field label="Validité"   value={fmtDate(form.dateValiditeDoc)} />
+                              </div>
+                            </div>
+
+                            {/* ── Personnes liées ── */}
+                            {form.clientBeneficiairePerson.length > 0 && (
+                              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/80">
+                                  <div className="flex items-center gap-2.5">
+                                    <div className="w-6 h-6 rounded-lg bg-violet-100 flex items-center justify-center shrink-0">
+                                      <Users size={12} className="text-violet-600" />
+                                    </div>
+                                    <p className="text-[11px] font-black uppercase tracking-widest text-gray-600">Personnes liées</p>
+                                  </div>
+                                  <span className="text-[10px] font-bold bg-violet-100 text-violet-600 px-2 py-0.5 rounded-full">
+                                    {form.clientBeneficiairePerson.length}
+                                  </span>
+                                </div>
+
+                                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                  {form.clientBeneficiairePerson.map((person) => (
+                                    <div
+                                      key={person.id}
+                                      className="rounded-xl border border-gray-100 overflow-hidden hover:border-violet-100 hover:shadow-sm transition-all"
+                                    >
+                                      {/* Header personne */}
+                                      <div className="flex items-center justify-between px-3 py-2.5 bg-linear-gradient-to-r from-violet-50 to-indigo-50 border-b border-gray-100">
+                                        <div className="flex items-center gap-2.5">
+                                          <div className="h-7 w-7 rounded-full bg-violet-100 border border-violet-200 flex items-center justify-center text-violet-600 text-[11px] font-black shrink-0">
+                                            {person.prenom?.[0]}{person.nom?.[0]}
+                                          </div>
+                                          <p className="text-sm font-bold text-gray-900">
+                                            {person.prenom} {person.nom}
+                                          </p>
+                                        </div>
+                                        <span className="text-[10px] bg-white border border-violet-100 text-violet-600 px-2 py-0.5 rounded-full font-bold shadow-sm">
+                                          {person.typePerson}
+                                        </span>
+                                      </div>
+
+                                      {/* Body personne */}
+                                      <div className="p-3 grid grid-cols-2 gap-1.5 bg-white">
+                                        <Field label="Sexe"           value={person.sexe} />
+                                        <Field label="Né(e) le"       value={fmtDate(person.dateNaissance)} />
+                                        <Field label="Lieu"           value={person.lieuNaissance} />
+                                        <Field label="Nationalité"    value={person.nationalite} />
+                                        <Field label="État civil"     value={person.etatCivil} />
+                                        <Field label="Pays résidence" value={person.paysResidence} />
+                                        <Field label="Email"          value={person.email} />
+                                        <Field label="Téléphone"      value={person.numero} />
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                          </div>
+                        </section>
+                      ))
+                    )}
+                  </div>
+
+                  {/* ── Colonne droite (1/3) ── */}
+                  <div className="space-y-4">
+
+                    {/* Statut du compte */}
+                    <Card title="Résumé du compte">
+                      <DataRow label="Statut"     value={<Badge status={detail.actif ? 'ACTIF' : 'INACTIF'} />} />
+                      <DataRow label="Validation" value={<Badge status={detail.isValidate ? 'VALIDE' : 'EN_ATTENTE'} />} />
+                      <DataRow label="Créé le"    value={fmtDate(detail.createdAt)} />
                     </Card>
-                  )}
 
-                  {/* Récap formulaires */}
-                  {detail.clientBeneficiaireForms.length > 0 && (
-                    <Card title="Récap formulaires">
-                      {detail.clientBeneficiaireForms.map((form, i) => (
-                        <DataRow
-                          key={form.id}
-                          label={`Formulaire #${i + 1} — ${form.prenom} ${form.nom}`}
-                          value={<Badge status={form.status} />}
-                        />
-                      ))}
-                    </Card>
-                  )}
+                    {/* Récap documents */}
+                    {detail.userDocument.length > 0 && (
+                      <Card title="Récap documents">
+                        {detail.userDocument.map((doc) => (
+                          <DataRow
+                            key={doc.id}
+                            label={doc.nomDoc}
+                            value={<Badge status={doc.status} />}
+                          />
+                        ))}
+                      </Card>
+                    )}
 
+                    {/* Récap formulaires */}
+                    {detail.clientBeneficiaireForms.length > 0 && (
+                      <Card title="Récap formulaires">
+                        {detail.clientBeneficiaireForms.map((form, i) => (
+                          <DataRow
+                            key={form.id}
+                            label={`Formulaire #${i + 1} — ${form.prenom} ${form.nom}`}
+                            value={<Badge status={form.status} />}
+                          />
+                        ))}
+                      </Card>
+                    )}
+
+                  </div>
                 </div>
-              </div>
-            </>
-          )}
+              </>
+            )}
+          </div>
         </div>
-      </div>
-    </TabContainer>
+      </TabContainer>
+    </div>
   );
 };
 

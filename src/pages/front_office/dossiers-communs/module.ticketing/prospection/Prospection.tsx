@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
 import { FiPlus, FiCheckSquare, FiX, FiFileText, FiLayout } from 'react-icons/fi';
@@ -14,14 +14,24 @@ import ProspectionModals from '../../../../../components/modals/ProspectionModal
 import { createProspectionEntete, updateProspectionEntete, type ProspectionEntete } from '../../../../../app/front_office/prospectionsEntetesSlice';
 import { TicketingHeader } from '../ticketing.sous.module/components.billet/TicketingHeader';
 import { prospectionDetailItems } from '../ticketing.sous.module/components.billet/utils/ticketingHeaderItems';
-import { fetchServicesByType } from '../../../../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
 import axios from '../../../../../service/Axios';
 import { createPortal } from 'react-dom';
+import SuiviTabSection from '../../module.suivi/SuiviTabSection';
+import { ChevronDown } from 'lucide-react';
 
 export default function ProspectionDetail() {
   const { enteteId } = useParams<{ enteteId: string }>();
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
+
+  const dossierActif = useSelector((state: RootState) => state.dossierCommun.currentClientFactureId);
+
+  const prestationId = useMemo(() => 
+    dossierActif?.dossierCommunColab
+      ?.find((colab) => colab.module?.nom?.toLowerCase() === 'ticketing')
+      ?.prestation?.[0]?.id || '',
+    [dossierActif]
+  );
 
   const entete = useSelector((state: RootState) =>
       state.prospectionsEntetes.items.find(e => e.id === enteteId)
@@ -35,6 +45,8 @@ export default function ProspectionDetail() {
   ];
 
   const [activeTab, setActiveTab] = useState('prospection');
+
+  const [activeTabSousSection, setActiveTabSousSection] = useState('lignes');
 
   const [showPenalite, setShowPenalite] = useState(false);
 
@@ -86,10 +98,6 @@ export default function ProspectionDetail() {
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    dispatch(fetchServicesByType('TICKET'));
-  }, [dispatch]);
-
-  useEffect(() => {
     if (enteteId) {
       dispatch(fetchProspectionLignes(enteteId));
     }
@@ -111,6 +119,22 @@ export default function ProspectionDetail() {
     } else {
       setActiveTab(id);
     }
+  };
+
+  // ── État collapse ────────────────────────────────────────────────
+  // 1. useState avec lecture initiale depuis localStorage
+  const [isOpen, setIsOpen] = useState<boolean>(() => {
+    const saved = localStorage.getItem('dossierActifCard_isOpen');
+    return saved !== null ? saved === 'true' : true;
+  });
+
+  // 2. Handler qui sauvegarde à chaque clic
+  const handleToggle = () => {
+    setIsOpen(prev => {
+      const next = !prev;
+      localStorage.setItem('dossierActifCard_isOpen', String(next));
+      return next;
+    });
   };
 
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -226,7 +250,7 @@ export default function ProspectionDetail() {
       commissionEnDevise,
       commissionEnAriary,
 
-      modePaiement: formData.modePaiement || 'COMPTANT',
+      // modePaiement: formData.modePaiement || 'COMPTANT',
 
       services: (formData.services || []).map((s: any) => ({
         serviceSpecifiqueId: s.serviceSpecifiqueId,
@@ -292,7 +316,7 @@ export default function ProspectionDetail() {
     updateNewLineField('typePassager',   s.typePassager   || 'ADULTE');
     updateNewLineField('dureeVol',       s.dureeVol       || '');
     updateNewLineField('dureeEscale',    s.dureeEscale    || '');
-    updateNewLineField('modePaiement',   s.modePaiement   || 'COMPTANT');
+    // updateNewLineField('modePaiement',   s.modePaiement   || 'COMPTANT');
     updateNewLineField('devise',                    s.devise      || 'EUR');
     updateNewLineField('tauxEchange',               s.tauxEchange || 4900);
     updateNewLineField('puBilletCompagnieDevise',   s.puBilletCompagnieDevise   || 0);
@@ -512,7 +536,7 @@ export default function ProspectionDetail() {
       montantServiceClientDevise: 0,
       montantPenaliteClientDevise: 0,
       serviceValues: initialServiceValues,
-      modePaiement: 'COMPTANT' as ModePaiement,
+      // modePaiement: 'COMPTANT' as ModePaiement,
       isSaving: false,
     });
   };
@@ -535,10 +559,6 @@ export default function ProspectionDetail() {
   const handleCreateDevis = async () => {
     if (selectedLigneIds.length === 0) return;
 
-    if (!window.confirm(`Créer un devis avec ${selectedLigneIds.length} ligne(s) ?`)) {
-      return;
-    }
-
     try {
       const payload = {
         prospectionEnteteId: enteteId,
@@ -548,7 +568,6 @@ export default function ProspectionDetail() {
       const response = await axios.post('/devis', payload);
 
       if (response.data?.success) {
-        alert('Devis créé avec succès !');
         setSelectedLigneIds([]);
         setSelectionMode(false);
         navigate(`/dossiers-communs/ticketing/pages/devis/${enteteId}`)
@@ -583,83 +602,138 @@ export default function ProspectionDetail() {
         <div
           style={{
             position: 'fixed',
-            // ← Si pas assez de place en bas, afficher au-dessus
             top: showAbove
-              ? suggestionAnchor.top - PANEL_HEIGHT   // au-dessus de l'ancre
-              : suggestionAnchor.bottom + 4,          // en-dessous de l'ancre
+              ? suggestionAnchor.top - PANEL_HEIGHT
+              : suggestionAnchor.bottom + 4,
             left: suggestionAnchor.left,
-            width: 520,
+            width: 700, // Plus large pour la lisibilité
             zIndex: 9999,
-            // Limiter la hauteur si même au-dessus ça déborde
             maxHeight: showAbove
               ? suggestionAnchor.top - 8
               : window.innerHeight - suggestionAnchor.bottom - 8,
           }}
-          className="bg-white border border-blue-200 rounded-xl shadow-2xl overflow-hidden flex flex-col"
+          className="bg-white border border-blue-200 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] overflow-hidden flex flex-col animate-in fade-in zoom-in duration-200"
         >
-          {/* Header */}
-          <div className="px-4 py-2.5 bg-blue-50 border-b border-blue-100 flex items-center justify-between shrink-0">
-            <span className="text-xs font-bold text-blue-700 uppercase tracking-wide">
-              {searchLoading ? 'Recherche...' : `${suggestions.length} ligne${suggestions.length > 1 ? 's' : ''} similaire${suggestions.length > 1 ? 's' : ''}`}
-            </span>
+          {/* Header - Plus moderne */}
+          <div className="px-5 py-3 bg-gradient-to-r from-blue-600 to-blue-700 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-blue-200 rounded-full animate-pulse" />
+              <span className="text-xs font-black text-white uppercase tracking-widest">
+                {searchLoading ? 'Recherche en cours...' : `${suggestions.length} Suggestions trouvées`}
+              </span>
+            </div>
             <button
               type="button"
               onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
               onClick={() => setShowSuggestions(false)}
-              className="text-blue-400 hover:text-blue-700 text-xs px-2 py-1 rounded hover:bg-blue-100 transition-colors"
+              className="text-blue-100 hover:text-white text-[11px] font-bold bg-white/10 px-3 py-1 rounded-lg transition-colors border border-white/10"
             >
-              ✕ Fermer
+              ✕ ESC
             </button>
           </div>
 
-          {/* Liste — flex-1 pour occuper l'espace restant */}
-          <div className="max-h-72 overflow-y-auto divide-y divide-slate-100">
+          {/* Liste */}
+          <div className="max-h-[450px] overflow-y-auto divide-y divide-slate-100 bg-slate-50/30">
             {suggestions.map((s) => (
               <button
                 key={s.id}
                 type="button"
-                // onMouseDown évite que le blur ferme le panneau avant le click
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => applySuggestion(s)}
-                className="w-full px-4 py-3 text-left hover:bg-blue-50 transition-colors"
+                className="w-full px-5 py-4 text-left hover:bg-blue-50/50 hover:shadow-inner transition-all group relative"
               >
-                <div className="flex items-center gap-3 mb-1.5">
-                  <span className="text-xs font-mono font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded">
-                    {s.numeroVol}
-                  </span>
-                  <span className="text-xs text-slate-700 font-medium flex-1 truncate">
-                    {s.itineraire || '—'}
-                  </span>
-                  <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded font-medium shrink-0">
-                    {s.classe}
+                {/* Ligne 1 : Vol & Itinéraire */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <span className="text-[11px] font-black font-mono text-blue-700 bg-blue-100 border border-blue-200 px-2 py-1 rounded-md shadow-sm">
+                      {s.numeroVol}
+                    </span>
+                    <span className="text-sm font-bold text-slate-800 truncate">
+                      {s.itineraire || 'Itinéraire non défini'}
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-bold bg-slate-200 text-slate-600 px-2 py-1 rounded uppercase tracking-tighter">
+                    Classe {s.classe}
                   </span>
                 </div>
-                <div className="flex items-center gap-4 text-[11px] text-slate-500 mb-1">
-                  <span>🛫 {s.dateHeureDepart ? formatDateISO(s.dateHeureDepart) : '—'}</span>
-                  <span>🛬 {s.dateHeureArrive ? formatDateISO(s.dateHeureArrive) : '—'}</span>
-                  {s.avion && <span>✈ {s.avion}</span>}
+
+                {/* Grille de données - C'est ici que la lisibilité s'améliore */}
+                <div className="grid grid-cols-12 gap-4 items-center">
+                  
+                  {/* Dates (Col 1-5) */}
+                  <div className="col-span-5 space-y-1 border-r border-slate-200/60 pr-4">
+                    <div className="flex items-center gap-2 text-[11px] text-slate-600">
+                      <span className="opacity-50 text-blue-500">🛫</span>
+                      <span className="font-medium">{s.dateHeureDepart ? formatDateISO(s.dateHeureDepart) : '—'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px] text-slate-600">
+                      <span className="opacity-50 text-red-400">🛬</span>
+                      <span className="font-medium">{s.dateHeureArrive ? formatDateISO(s.dateHeureArrive) : '—'}</span>
+                    </div>
+                  </div>
+
+                  {/* Prix (Col 6-12) */}
+                  <div className="col-span-7 flex flex-wrap items-center gap-x-4 gap-y-1">
+                    <div className="flex flex-col">
+                      <span className="text-[9px] uppercase font-bold text-slate-400 tracking-tight">Billet</span>
+                      <span className="text-sm font-black text-emerald-600">
+                        {s.puBilletCompagnieDevise?.toLocaleString('fr-FR')} <small className="text-[10px]">{s.devise}</small>
+                      </span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[9px] uppercase font-bold text-slate-400 tracking-tight">Service</span>
+                      <span className="text-sm font-black text-blue-600">
+                        {s.puServiceCompagnieDevise?.toLocaleString('fr-FR')} <small className="text-[10px]">{s.devise}</small>
+                      </span>
+                    </div>
+                    <div className="flex flex-col ml-auto text-right">
+                      <span className="text-[9px] uppercase font-bold text-slate-400 tracking-tight text-right">Taux</span>
+                      <span className="text-[11px] font-mono font-bold text-slate-500">
+                        {s.tauxEchange?.toLocaleString('fr-FR')} Ar
+                      </span>
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3 text-[11px]">
-                  <span className="text-emerald-700 font-semibold">
-                    Billet : {s.puBilletCompagnieDevise?.toLocaleString('fr-FR')} {s.devise}
-                  </span>
-                  <span className="text-emerald-600">
-                    Service : {s.puServiceCompagnieDevise?.toLocaleString('fr-FR')} {s.devise}
-                  </span>
-                  <span className="text-slate-400">Taux : {s.tauxEchange?.toLocaleString('fr-FR')} Ar</span>
-                </div>
-                <div className="mt-1 text-[10px] text-slate-400 font-mono">
-                  Réf : {s.numeroDosRef} · {s.prospectionEntete?.numeroEntete}
+
+                {/* Services Optionnels - Version Badges Épurés */}
+                {s.serviceProspectionLigne?.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-slate-100">
+                    {s.serviceProspectionLigne.map((svc) => (
+                      <span
+                        key={svc.id}
+                        className={`inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold border ${
+                          svc.valeur === 'true' 
+                            ? 'bg-indigo-50 text-indigo-700 border-indigo-100' 
+                            : 'bg-slate-50 text-slate-400 border-slate-100 opacity-60'
+                        }`}
+                      >
+                        {svc.serviceSpecifique?.libelle} : {svc.valeur === 'true' ? 'OUI' : svc.valeur === 'false' ? 'NON' : svc.valeur}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                {/* Infos Bas de carte */}
+                <div className="flex items-center justify-between mt-3 opacity-60 group-hover:opacity-100 transition-opacity">
+                  <div className="text-[10px] font-mono text-slate-400">
+                      #{s.numeroDosRef} • {s.prospectionEntete?.numeroEntete}
+                  </div>
+                  <div className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                      Passager : <span className="text-blue-700 uppercase">{s.typePassager}</span>
+                  </div>
                 </div>
               </button>
             ))}
           </div>
 
           {/* Footer */}
-          <div className="px-4 py-2 bg-slate-50 border-t border-slate-100 shrink-0">
-            <p className="text-[10px] text-slate-400">
-              Cliquez sur une ligne pour pré-remplir le formulaire
+          <div className="px-5 py-2.5 bg-slate-100 border-t border-slate-200 shrink-0 flex items-center justify-between">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+              Sélection rapide • Pré-remplissage actif
             </p>
+            {suggestions.length > 5 && (
+              <span className="text-[10px] text-blue-600 font-bold">Scrollez pour voir plus ↓</span>
+            )}
           </div>
         </div>,
         document.body
@@ -675,639 +749,718 @@ export default function ProspectionDetail() {
   return (
     <div className="h-full flex flex-col min-h-0">
       <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange}>
-        <div className="py-2 px-4">
+        <div className="flex h-full min-h-0 overflow-hidden">
+          {/* ── Colonne principale ── */}
+          <div className="flex-1 min-w-0 flex flex-col min-h-0">
+            <div className="shrink-0 px-4 bg-white">
+              <div className='flex items-center justify-between'>
+                <TicketingHeader items={prospectionDetailItems(enteteId)} />
 
-          <TicketingHeader items={prospectionDetailItems(enteteId)} />
-          <header className="mb-10">
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-              <div className="flex flex-row justify-between items-start mb-2">
-                <div>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs font-semibold text-indigo-600 tracking-wider uppercase">
-                      Prospection
-                    </span>
-                    <h1 className="text-xl font-bold text-slate-900 leading-none">
-                      {entete?.numeroEntete}
-                    </h1>
-                  </div>
-                  
-                  <div className="mt-3 flex items-center gap-2">
-                    <span className="text-xs text-slate-400 font-medium uppercase">Prestation :</span>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200">
-                      {entete?.prestation?.numeroDos || entete?.prestationId || '—'}
-                    </span>
-                  </div>
-                </div>
+                {/* Barre d'Actions - Toolbar */}
+                <div className="flex items-center gap-3 flex-wrap">
+                  {selectionMode ? (
+                    <>
+                      {/* Mode Sélection - On se concentre sur l'action finale */}
+                      <button
+                        onClick={toggleSelectionMode}
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-slate-800 transition-all active:scale-95 shadow-sm"
+                      >
+                        <FiX size={15} className="text-slate-400" />
+                        Annuler
+                      </button>
 
-                <button
-                  onClick={() => openEditModal(entete)}
-                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-indigo-600 bg-white border border-indigo-100 hover:border-indigo-600 hover:bg-indigo-50 rounded-lg transition-all duration-200 shadow-sm"
-                  title="Modifier cet en-tête"
-                >
-                  {/* Optionnel : tu pourrais ajouter une icône SVG ici */}
-                  Modifier
-                </button>
-              </div>
+                      <button
+                        onClick={handleCreateDevis}
+                        disabled={selectedLigneIds.length === 0}
+                        className={`flex items-center gap-2 px-5 py-2 text-sm font-bold rounded-lg transition-all active:scale-95 shadow-sm ${
+                          selectedLigneIds.length === 0
+                            ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                            : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-100'
+                        }`}
+                      >
+                        <FiCheckSquare size={15} />
+                        Créer le devis
+                        {selectedLigneIds.length > 0 && (
+                          <span className="ml-2 inline-flex items-center justify-center w-5 h-5 bg-white/20 backdrop-blur-md rounded-full text-[10px] font-black">
+                            {selectedLigneIds.length}
+                          </span>
+                        )}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {/* Navigation & Consultation */}
+                      <button
+                        onClick={() => navigate(`/dossiers-communs/ticketing/pages/devis/${enteteId}`)}
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-blue-700 bg-blue-50/50 border border-blue-100 rounded-lg hover:bg-blue-100 hover:text-blue-800 transition-all active:scale-95"
+                      >
+                        <FiFileText size={15} />
+                        Voir les devis
+                      </button>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-6">
-                <div>
-                  <label className="text-xs uppercase text-slate-500 font-semibold">Fournisseur</label>
-                  <p className="font-medium mt-1">
-                    {entete?.fournisseur?.libelle || entete?.fournisseurId || '—'}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-xs uppercase text-slate-500 font-semibold">Type de vol</label>
-                  <p className="font-medium mt-1">{entete?.typeVol}</p>
-                </div>
-                <div>
-                  <label className="text-xs uppercase text-slate-500 font-semibold">Crédit</label>
-                  <p className="font-medium mt-1">{entete?.credit}</p>
-                </div>
-                <div>
-                  <label className="text-xs uppercase text-slate-500 font-semibold">Commission proposée</label>
-                  <p className="font-medium mt-1">{entete?.commissionPropose} %</p>
-                </div>
-                <div>
-                  <label className="text-xs uppercase text-slate-500 font-semibold">Commission appliquée</label>
-                  <p className="font-medium mt-1">{entete?.commissionAppliquer} %</p>
-                </div>
-                
-              </div>
-            </div>
-          </header>
+                      <div className="w-px h-6 bg-slate-200 mx-1 hidden md:block" />
 
-          <section className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <div className="bg-white border-b border-gray-200">
-              {/* Mode indicator bar */}
-              {selectionMode && (
-                <div className="bg-green-50 border-b border-green-200 px-6 py-2">
-                  <div className="flex items-center gap-2 text-sm">
-                    <div className="flex items-center justify-center w-5 h-5 bg-green-600 rounded-full">
-                      <FiCheckSquare className="text-white" size={12} />
-                    </div>
-                    <span className="font-medium text-green-900">
-                      Mode sélection activé
-                    </span>
-                    <span className="text-green-700">
-                      • Sélectionnez les lignes à inclure dans le devis
-                    </span>
-                  </div>
-                </div>
-              )}
+                      {/* Actions de Sélection */}
+                      <button
+                        onClick={toggleSelectionMode}
+                        disabled={lignes.length === 0 || !!newLine || loadingLignes}
+                        className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all active:scale-95 ${
+                          lignes.length === 0 || !!newLine || loadingLignes
+                            ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                            : 'text-emerald-700 bg-emerald-50/50 border border-emerald-100 hover:bg-emerald-100 hover:text-emerald-800'
+                        }`}
+                      >
+                        <FiCheckSquare size={15} />
+                        Sélectionner
+                      </button>
 
-              {/* Main action bar */}
-              <div className="px-6 py-4">
-                <div className="flex flex-wrap justify-between items-center gap-4">
-                  {/* Titre */}
-                  <div>
-                    <div className="flex items-center gap-3">
-                      <h2 className="text-xl font-semibold text-gray-900">
-                        Lignes de prospection
-                      </h2>
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-700">
-                        {lignes.length} {lignes.length !== 1 ? 'lignes' : 'ligne'}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-500 mt-1">
-                      {selectionMode 
-                        ? `${selectedLigneIds.length} ligne${selectedLigneIds.length !== 1 ? 's' : ''} sélectionnée${selectedLigneIds.length !== 1 ? 's' : ''}`
-                        : 'Gérez vos lignes de prospection et créez des devis'
-                      }
-                    </p>
-                  </div>
+                      <div className="w-px h-6 bg-slate-200 mx-1 hidden md:block" />
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-3 flex-wrap">
-                    {selectionMode ? (
-                      <>
-                        <button
-                          onClick={toggleSelectionMode}
-                          className="flex items-center gap-2 px-4 py-2.5 border border-gray-300 text-gray-700 bg-white rounded-lg hover:bg-gray-50 transition-colors font-medium"
-                        >
-                          <FiX size={16} />
-                          Annuler
-                        </button>
-
-                        <button
-                          onClick={handleCreateDevis}
-                          disabled={selectedLigneIds.length === 0}
-                          className={`flex items-center gap-2 px-5 py-2.5 rounded-lg transition-all font-medium ${
-                            selectedLigneIds.length === 0
-                              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                              : 'bg-green-600 text-white hover:bg-green-700 hover:shadow-md'
-                          }`}
-                        >
-                          <FiCheckSquare size={16} />
-                          Créer le devis
-                          {selectedLigneIds.length > 0 && (
-                            <span className="ml-1 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 bg-white/20 rounded-full text-xs font-semibold">
-                              {selectedLigneIds.length}
-                            </span>
-                          )}
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          onClick={() => navigate(`/dossiers-communs/ticketing/pages/devis/${enteteId}`)}
-                          className="flex items-center gap-2 px-4 py-2.5 border border-blue-200 text-blue-700 bg-blue-50 rounded-lg hover:bg-blue-100 hover:border-blue-300 transition-all font-medium"
-                        >
-                          <FiFileText size={16} />
-                          Voir les devis
-                        </button>
-
-                        {/* Séparateur */}
-                        <div className="w-px h-6 bg-gray-300 mx-1" />
-
-                        <button
-                          onClick={toggleSelectionMode}
-                          disabled={lignes.length === 0 || !!newLine || loadingLignes}
-                          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all font-medium ${
-                            lignes.length === 0 || !!newLine || loadingLignes
-                              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                              : 'border border-green-200 text-green-700 bg-green-50 hover:bg-green-100 hover:border-green-300'
-                          }`}
-                        >
-                          <FiCheckSquare size={16} />
-                          Sélectionner pour devis
-                        </button>
-
-                        {/* Séparateur */}
-                        <div className="w-px h-6 bg-gray-300 mx-1" />
-
-                        {/* Bouton ajout inline dans le tableau */}
+                      {/* Actions d'Ajout - Groupées par style */}
+                      <div className="flex items-center gap-2 ml-auto">
                         <button
                           onClick={handleAddNewLine}
                           disabled={!!newLine || loadingLignes || selectionMode || isModalOpen}
-                          title="Ajouter directement dans le tableau"
-                          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all font-medium ${
+                          className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all active:scale-95 border ${
                             !!newLine || loadingLignes || selectionMode || isModalOpen
-                              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                              : 'border border-slate-300 text-slate-700 bg-white hover:bg-slate-50 hover:border-slate-400'
+                              ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed'
+                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-sm'
                           }`}
                         >
-                          <FiLayout size={16} />
-                          Ajout (Ligne)
+                          <FiPlus size={15} />
+                          Ligne
                         </button>
 
-                        {/* Bouton ajout via modal */}
                         <button
                           onClick={() => setIsModalOpen(true)}
                           disabled={!!newLine || loadingLignes || selectionMode}
-                          title="Ajouter via une fenêtre modale"
-                          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg transition-all font-medium ${
+                          className={`flex items-center gap-2 px-5 py-2 text-sm font-bold rounded-lg transition-all active:scale-95 shadow-lg ${
                             !!newLine || loadingLignes || selectionMode
-                              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                              : 'bg-blue-600 text-white hover:bg-blue-700 hover:shadow-md'
+                              ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                              : 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-100'
                           }`}
                         >
-                          <FiPlus size={16} />
-                          Ajouter (Modal)
+                          <FiPlus size={15} />
+                          Modals
                         </button>
-                      </>
-                    )}
-                  </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Barre de contrôle des groupes */}
-            <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-semibold text-slate-500 uppercase mr-2">Groupes :</span>
-              {[
-                { key: 'infosVol', label: '✈️ Infos Vol', color: 'slate' },
-                { key: 'tarifsCieDevise', label: '🏢 Cie Devise', color: 'emerald' },
-                { key: 'tarifsCieAriary', label: '🏢 Cie Ariary', color: 'emerald' },
-                { key: 'tarifsClientDevise', label: '👤 Client Devise', color: 'blue' },
-                { key: 'tarifsClientAriary', label: '👤 Client Ariary', color: 'blue' },
-                { key: 'commissions', label: '💰 Commissions', color: 'green' },
-              ].map(({ key, label }) => (
-                <button
-                  key={key}
-                  onClick={() => toggleGroup(key as keyof typeof collapsedGroups)}
-                  disabled={!!newLine}
-                  className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
-                    newLine
-                      ? 'opacity-40 cursor-not-allowed'
-                      : collapsedGroups[key as keyof typeof collapsedGroups]
-                        ? 'bg-white text-slate-400 border-slate-200 line-through'
-                        : 'bg-white text-slate-700 border-slate-300 hover:border-slate-400'
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-              {/* Bouton pénalités — s'applique à tous les groupes */}
-              <div className="w-px h-4 bg-slate-300 mx-1" />
-                <button
-                  onClick={() => setShowPenalite(p => !p)}
-                  disabled={!!newLine}
-                  className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
-                    newLine
-                      ? 'opacity-40 cursor-not-allowed'
-                      : showPenalite
-                        ? 'bg-orange-100 text-orange-700 border-orange-300'
-                        : 'bg-white text-slate-400 border-slate-200 line-through'
-                  }`}
-                >
-                  🚫 Pénalités
-                </button>
-                {/* Tout replier — désactivé si tout est déjà replié */}
-                <button
-                  disabled={!!newLine || Object.values(collapsedGroups).every(v => v === true)}
-                  onClick={() => setCollapsedGroups({ infosVol: true, tarifsCieDevise: true, tarifsCieAriary: true, tarifsClientDevise: true, tarifsClientAriary: true, commissions: true, services: true })}
-                  className={`ml-auto text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
-                    !!newLine || Object.values(collapsedGroups).every(v => v === true)
-                      ? 'opacity-40 cursor-not-allowed border-slate-200 text-slate-400'
-                      : 'border-red-200 text-red-600 hover:bg-red-50'
-                  }`}
-                >
-                  Tout replier
-                </button>
+            <div className='px-4 border-b border-neutral-50'>
+              <header className="mb-2">
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden transition-all duration-300">
+                  {/* Top Bar - La partie toujours visible */}
+                  <div 
+                    className={`px-6 py-4 flex items-center justify-between cursor-pointer hover:bg-slate-50/50 transition-colors ${isOpen ? 'border-b border-slate-100' : ''}`}
+                    onClick={handleToggle}
+                  >
+                    <div className="flex items-center gap-4 min-w-0">
+                      {/* Titre et ID */}
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-3">
+                          <h1 className="text-sm font-bold text-slate-900 tracking-tight">
+                            {entete?.numeroEntete}
+                          </h1>
+                          <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[10px] font-bold uppercase rounded-md border border-indigo-100">
+                            Prospection : {entete?.prestation?.numeroDos || entete?.prestationId || '—'}
+                          </span>
+                        </div>
+                        
+                        {/* Sous-titre visible uniquement quand c'est réduit pour garder l'info essentielle */}
+                        {!isOpen && (
+                          <p className="text-xs text-slate-500 mt-1 truncate">
+                            {entete?.fournisseur?.libelle} • {entete?.typeVol} • {entete?.commissionAppliquer}% Commission
+                          </p>
+                        )}
+                      </div>
+                    </div>
 
-                {/* Tout déplier — désactivé si tout est déjà déplié */}
-                <button
-                  disabled={!!newLine || Object.values(collapsedGroups).every(v => v === false)}
-                  onClick={() => setCollapsedGroups({ infosVol: false, tarifsCieDevise: false, tarifsCieAriary: false, tarifsClientDevise: false, tarifsClientAriary: false, commissions: false, services: false })}
-                  className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
-                    !!newLine || Object.values(collapsedGroups).every(v => v === false)
-                      ? 'opacity-40 cursor-not-allowed border-slate-200 text-slate-400'
-                      : 'border-blue-200 text-blue-600 hover:bg-blue-50'
-                  }`}
-                >
-                  Tout déplier
-                </button>
+                    <div className="flex items-center gap-3">
+                      {/* Actions */}
+                      <div className="flex items-center gap-2 mr-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); openEditModal(entete); }}
+                          className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-slate-600 bg-white border border-slate-200 hover:border-indigo-500 hover:text-indigo-600 rounded-lg transition-all shadow-sm"
+                        >
+                          Modifier
+                        </button>
+                      </div>
+
+                      {/* Toggle Button simple et propre */}
+                      <div className={`p-1.5 rounded-md transition-colors ${isOpen ? 'bg-slate-100 text-slate-600' : 'text-slate-400'}`}>
+                        <ChevronDown
+                          size={18}
+                          className={`transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Expanded Content - Les détails */}
+                  <div
+                    className={`transition-all duration-300 ease-in-out overflow-hidden ${
+                      isOpen ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'
+                    }`}
+                  >
+                    <div className="p-6 bg-slate-50/30">
+                      <div className="grid grid-cols-2 md:grid-cols-5 gap-8">
+                        <div className="space-y-1">
+                          <label className="text-[10px] uppercase text-slate-400 font-bold tracking-wider">Fournisseur</label>
+                          <p className="text-sm font-semibold text-slate-700">
+                            {entete?.fournisseur?.libelle || entete?.fournisseurId || '—'}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] uppercase text-slate-400 font-bold tracking-wider">Type de vol</label>
+                          <p className="text-sm font-semibold text-slate-700">{entete?.typeVol}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] uppercase text-slate-400 font-bold tracking-wider">Crédit</label>
+                          <p className="text-sm font-semibold text-slate-700">{entete?.credit}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] uppercase text-slate-400 font-bold tracking-wider">Commission (%)</label>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-slate-400">Prop: {entete?.commissionPropose}%</span>
+                            <span className="w-1 h-1 rounded-full bg-slate-300"></span>
+                            <span className="text-sm font-bold text-emerald-600">App: {entete?.commissionAppliquer}%</span>
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          {/* Espace libre pour un statut ou date */}
+                          <label className="text-[10px] uppercase text-slate-400 font-bold tracking-wider">Dernière mise à jour</label>
+                          <p className="text-sm font-semibold text-slate-700">—</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </header>
+
+              <div className="flex items-center justify-between">
+                <div>
+                  <nav className="flex" aria-label="Tabs">
+                    <button
+                      onClick={() => setActiveTabSousSection('lignes')}
+                      className={`px-6 py-2 text-sm font-semibold rounded-t-lg transition-all ${
+                        activeTabSousSection === 'lignes'
+                          ? 'bg-[#4A77BE] text-white shadow-sm'
+                          : 'bg-white text-[#1E3A8A] hover:bg-[#f2f7fe] border-t border-l border-r border-slate-200'
+                      }`}
+                    >
+                      Liste des billets
+                    </button>
+                    <button
+                      onClick={() => setActiveTabSousSection('suivi')}
+                      className={`px-6 py-2 text-sm font-semibold rounded-t-lg transition-all ${
+                        activeTabSousSection === 'suivi'
+                          ? 'bg-[#4A77BE] text-white shadow-sm'
+                          : 'bg-white text-[#1E3A8A] hover:bg-[#f2f7fe] border-t border-l border-r border-slate-200'
+                      }`}
+                    >
+                      Suivi
+                    </button>
+                  </nav>
+                </div>
               </div>
+            </div>
 
-            {loadingLignes ? (
-              <div className="p-12 text-center text-slate-500 bg-slate-50 animate-pulse">
-                Chargement des lignes...
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-slate-200">
-                  <thead className="bg-slate-50">
-                    {/* Ligne 1 : en-têtes de groupes */}
-                    <tr className="border-b-2 border-slate-300">
-                      {selectionMode && <th rowSpan={2} className="px-4 py-2 w-12 bg-slate-100" />}
-
-                      {/* Colonnes fixes */}
-                      <th rowSpan={2} className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase bg-slate-100 min-w-[120px]">N° Dos Ref</th>
-                      <th rowSpan={2} className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase bg-slate-100 min-w-[100px]">Statut</th>
-                      <th rowSpan={2} className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase bg-slate-100 min-w-[80px]">Nb pax</th>
-
-                      {/* Groupe : Infos Vol */}
-                      <th
-                        colSpan={collapsedGroups.infosVol ? 1 : 11}
-                        className="px-4 py-2 text-center text-xs font-bold text-white uppercase bg-slate-700 border-x border-slate-500 cursor-pointer hover:bg-slate-600 transition-colors select-none"
-                        onClick={() => toggleGroup('infosVol')}
-                      >
-                        <div className="flex items-center justify-center gap-2">
-                          ✈️ Infos Vol
-                          <span className="text-slate-300 text-xs">{collapsedGroups.infosVol ? '▶' : '▼'}</span>
+            <div className="flex-1 min-h-0 overflow-y-auto pb-4 px-4">
+              {activeTabSousSection === 'lignes' && (
+                <section className="bg-white shadow-sm border border-slate-200 overflow-hidden">
+                  <div className="bg-white border-b border-gray-200">
+                    {/* Mode indicator bar */}
+                    {selectionMode && (
+                      <div className="bg-green-50 border-b border-green-200 px-6 py-2">
+                        <div className="flex items-center gap-2 text-sm">
+                          <div className="flex items-center justify-center w-5 h-5 bg-green-600 rounded-full">
+                            <FiCheckSquare className="text-white" size={12} />
+                          </div>
+                          <span className="font-medium text-green-900">
+                            Mode sélection activé
+                          </span>
+                          <span className="text-green-700">
+                            • Sélectionnez les lignes à inclure dans le devis
+                          </span>
                         </div>
-                      </th>
+                      </div>
+                    )}
 
-                      {/* Groupe : Devise + Taux (toujours visible) */}
-                      <th colSpan={2} className="px-4 py-2 text-center text-xs font-bold text-white uppercase bg-gray-600 border-x border-gray-400">
-                        💱 Devise
-                      </th>
-
-                      {/* Groupe : Tarifs Cie Devise */}
-                      <th
-                        colSpan={collapsedGroups.tarifsCieDevise ? 1 : (showPenalite ? 6 : 4)}
-                        className="px-4 py-2 text-center text-xs font-bold text-white uppercase bg-emerald-700 border-x border-emerald-500 cursor-pointer hover:bg-emerald-600 transition-colors select-none"
-                        onClick={() => toggleGroup('tarifsCieDevise')}
-                      >
-                        <div className="flex items-center justify-center gap-2">
-                          🏢 Tarifs Cie Devise
-                          <span className="text-emerald-300 text-xs">{collapsedGroups.tarifsCieDevise ? '▶' : '▼'}</span>
-                        </div>
-                      </th>
-
-                      {/* Groupe : Tarifs Cie Ariary */}
-                      <th
-                        colSpan={collapsedGroups.tarifsCieAriary ? 1 : (showPenalite ? 6 : 4)}
-                        className="px-4 py-2 text-center text-xs font-bold text-white uppercase bg-emerald-800 border-x border-emerald-600 cursor-pointer hover:bg-emerald-700 transition-colors select-none"
-                        onClick={() => toggleGroup('tarifsCieAriary')}
-                      >
-                        <div className="flex items-center justify-center gap-2">
-                          🏢 Tarifs Cie Ariary
-                          <span className="text-emerald-300 text-xs">{collapsedGroups.tarifsCieAriary ? '▶' : '▼'}</span>
-                        </div>
-                      </th>
-
-                      {/* Groupe : Tarifs Client Devise */}
-                      <th
-                        colSpan={collapsedGroups.tarifsClientDevise ? 1 : (showPenalite ? 3 : 2)}
-                        className="px-4 py-2 text-center text-xs font-bold text-white uppercase bg-blue-700 border-x border-blue-500 cursor-pointer hover:bg-blue-600 transition-colors select-none"
-                        onClick={() => toggleGroup('tarifsClientDevise')}
-                      >
-                        <div className="flex items-center justify-center gap-2">
-                          👤 Tarifs Client Devise
-                          <span className="text-blue-300 text-xs">{collapsedGroups.tarifsClientDevise ? '▶' : '▼'}</span>
-                        </div>
-                      </th>
-
-                      {/* Groupe : Tarifs Client Ariary */}
-                      <th
-                        colSpan={collapsedGroups.tarifsClientAriary ? 1 : (showPenalite ? 3 : 2)}
-                        className="px-4 py-2 text-center text-xs font-bold text-white uppercase bg-blue-800 border-x border-blue-600 cursor-pointer hover:bg-blue-700 transition-colors select-none"
-                        onClick={() => toggleGroup('tarifsClientAriary')}
-                      >
-                        <div className="flex items-center justify-center gap-2">
-                          👤 Tarifs Client Ariary
-                          <span className="text-blue-300 text-xs">{collapsedGroups.tarifsClientAriary ? '▶' : '▼'}</span>
-                        </div>
-                      </th>
-
-                      {/* Groupe : Commissions */}
-                      <th
-                        colSpan={collapsedGroups.commissions ? 1 : 2}
-                        className="px-4 py-2 text-center text-xs font-bold text-white uppercase bg-green-700 border-x border-green-500 cursor-pointer hover:bg-green-600 transition-colors select-none"
-                        onClick={() => toggleGroup('commissions')}
-                      >
-                        <div className="flex items-center justify-center gap-2">
-                          💰 Commissions
-                          <span className="text-green-300 text-xs">{collapsedGroups.commissions ? '▶' : '▼'}</span>
-                        </div>
-                      </th>
-
-                      {/* Services + Actions */}
-                      <th rowSpan={2} className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase bg-slate-100 min-w-[140px]">
-                        Mode Paiement
-                      </th>
-                      <th rowSpan={2} className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase bg-slate-100 min-w-[600px]">Services</th>
-                      <th rowSpan={2} className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase bg-slate-100 min-w-[100px]">Actions</th>
-                    </tr>
-
-                    {/* Ligne 2 : sous-en-têtes */}
-                    <tr>
-                      {/* Infos Vol */}
-                      {!collapsedGroups.infosVol ? (
-                        <>
-                          <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[120px]">N° Vol</th>
-                          <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[150px]">Date Départ Pays</th>
-                          <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[150px]">Date Arrivée Pays</th>
-                          <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[100px]">Classe</th>
-                          <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[120px]">Type pax</th>
-                          <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[120px]">Avion</th>
-                          <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[140px]">Départ</th>
-                          <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[140px]">Destination</th>
-                          <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[180px]">Itinéraire</th>
-                          <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[100px]">Durée vol</th>
-                          <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[110px]">Durée escale</th>
-                        </>
-                      ) : (
-                        <th className="px-4 py-2 text-center text-xs text-slate-400 italic bg-slate-800/10">— replié —</th>
-                      )}
-
-                      {/* Devise + Taux */}
-                      <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-gray-100 min-w-[80px]">Devise</th>
-                      <th className="px-4 py-2 text-right text-xs font-semibold text-slate-500 bg-gray-100 min-w-[120px]">Taux</th>
-
-                      {/* Tarifs Cie Devise */}
-                      {!collapsedGroups.tarifsCieDevise ? (
-                        <>
-                          <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[130px]">PU Billet</th>
-                          <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[130px]">PU Service</th>
-                          {showPenalite && <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[130px]">PU Pénalité</th>}
-                          <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[140px]">Mt Billet</th>
-                          <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[140px]">Mt Service</th>
-                          {showPenalite && <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[140px]">Mt Pénalité</th>}
-                        </>
-                      ) : (
-                        <th className="px-4 py-2 text-center text-xs text-emerald-400 italic bg-emerald-50">— replié —</th>
-                      )}
-
-                      {/* Tarifs Cie Ariary */}
-                      {!collapsedGroups.tarifsCieAriary ? (
-                        <>
-                          <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100 min-w-[130px]">PU Billet Ar</th>
-                          <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100 min-w-[130px]">PU Service Ar</th>
-                          {showPenalite && <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100 min-w-[130px]">PU Pénalité Ar</th>}
-                          <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100 min-w-[140px]">Mt Billet Ar</th>
-                          <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100 min-w-[140px]">Mt Service Ar</th>
-                          {showPenalite && <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100 min-w-[140px]">Mt Pénalité Ar</th>}
-                        </>
-                      ) : (
-                        <th className="px-4 py-2 text-center text-xs text-emerald-500 italic bg-emerald-100">— replié —</th>
-                      )}
-
-                      {/* Tarifs Client Devise */}
-                      {!collapsedGroups.tarifsClientDevise ? (
-                        <>
-                          <th className="px-4 py-2 text-right text-xs font-semibold text-blue-700 bg-blue-50 min-w-[140px]">Mt Billet</th>
-                          <th className="px-4 py-2 text-right text-xs font-semibold text-blue-700 bg-blue-50 min-w-[140px]">Mt Service</th>
-                          {showPenalite && <th className="px-4 py-2 text-right text-xs font-semibold text-blue-700 bg-blue-50 min-w-[140px]">Mt Pénalité</th>}
-                        </>
-                      ) : (
-                        <th className="px-4 py-2 text-center text-xs text-blue-400 italic bg-blue-50">— replié —</th>
-                      )}
-
-                      {/* Tarifs Client Ariary */}
-                      {!collapsedGroups.tarifsClientAriary ? (
-                        <>
-                          <th className="px-4 py-2 text-right text-xs font-semibold text-blue-800 bg-blue-100 min-w-[140px]">Mt Billet Ar</th>
-                          <th className="px-4 py-2 text-right text-xs font-semibold text-blue-800 bg-blue-100 min-w-[140px]">Mt Service Ar</th>
-                          {showPenalite && <th className="px-4 py-2 text-right text-xs font-semibold text-blue-800 bg-blue-100 min-w-[140px]">Mt Pénalité Ar</th>}
-                        </>
-                      ) : (
-                        <th className="px-4 py-2 text-center text-xs text-blue-500 italic bg-blue-100">— replié —</th>
-                      )}
-
-                      {/* Commissions */}
-                      {!collapsedGroups.commissions ? (
-                        <>
-                          <th className="px-4 py-2 text-right text-xs font-semibold text-green-700 bg-green-50 min-w-[150px]">Devise</th>
-                          <th className="px-4 py-2 text-right text-xs font-semibold text-green-700 bg-green-50 min-w-[150px]">Ariary</th>
-                        </>
-                      ) : (
-                        <th className="px-4 py-2 text-center text-xs text-green-400 italic bg-green-50">— replié —</th>
-                      )}
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 bg-white">
-                    {Array.isArray(lignes) && lignes.length > 0 ? (
-                      lignes.map((ligne) => (
-                        <tr key={ligne.id} className="hover:bg-blue-50/30 transition-colors">
-                          {selectionMode && (
-                            <td className="px-4 py-4 text-center">
-                              <input type="checkbox" checked={selectedLigneIds.includes(ligne.id)}
-                                onChange={() => toggleLigneSelection(ligne.id)}
-                                className="h-4 w-4 text-blue-600 border-slate-300 rounded" />
-                            </td>
-                          )}
-
-                          {/* Colonnes fixes */}
-                          <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{ligne.numeroDosRef || '—'}</td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-700 uppercase">
-                            {ligne.status === 'CREER' ? 'créé' : ligne.status === 'MODIFIER' ? 'modifié' : ligne.status}
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-700">{ligne.nombre || '—'}</td>
-
-                          {/* Infos Vol */}
-                          {!collapsedGroups.infosVol ? (
-                            <>
-                              <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-slate-700">{ligne.numeroVol || '—'}</td>
-                              <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">
-                                {ligne.dateHeureDepart ? formatDateISO(ligne.dateHeureDepart) : '—'}
-                              </td>
-                              <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">
-                                {ligne.dateHeureArrive ? formatDateISO(ligne.dateHeureArrive) : '—'}
-                              </td>
-                              <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">
-                                <span className="px-2 py-1 bg-slate-100 rounded text-xs font-medium">{ligne.classe || '—'}</span>
-                              </td>
-                              <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">{ligne.typePassager || '—'}</td>
-                              <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">{ligne.avion || '—'}</td>
-                              <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">-</td>
-                              <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">-</td>
-                              <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">{ligne.itineraire || '—'}</td>
-                              
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">{ligne.dureeVol || '—'}</td>
-                            <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">{ligne.dureeEscale || '—'}</td>
-                          </>
-                          ) : (
-                            <td className="px-4 py-4 text-center text-xs text-slate-400 bg-slate-50 italic">
-                              {ligne.numeroVol} · {ligne.itineraire}
-                            </td>
-                          )}
-
-                          {/* Devise + Taux */}
-                          <td className="px-4 py-4 whitespace-nowrap text-sm font-mono font-semibold text-slate-600">{ligne.devise || '—'}</td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium">{ligne.tauxEchange?.toLocaleString('fr-FR') || '—'}</td>
-
-                          {/* Tarifs Cie Devise */}
-                          {!collapsedGroups.tarifsCieDevise ? (
-                            <>
-                              <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{ligne.puBilletCompagnieDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>
-                              <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{ligne.puServiceCompagnieDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>
-                              {showPenalite && <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{ligne.puPenaliteCompagnieDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>}
-                              <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{ligne.montantBilletCompagnieDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>
-                              <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{ligne.montantServiceCompagnieDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>
-                              {showPenalite && <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{ligne.montantPenaliteCompagnieDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>}
-                            </>
-                          ) : (
-                            <td className="px-4 py-4 text-center text-xs text-emerald-600 bg-emerald-50 font-semibold">
-                              {ligne.montantBilletCompagnieDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} {ligne.devise}
-                            </td>
-                          )}
-
-                          {/* Tarifs Cie Ariary */}
-                          {!collapsedGroups.tarifsCieAriary ? (
-                            <>
-                              <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{ligne.puBilletCompagnieAriary?.toLocaleString('fr-FR') || '—'}</td>
-                              <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{ligne.puServiceCompagnieAriary?.toLocaleString('fr-FR') || '—'}</td>
-                              {showPenalite && <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{ligne.puPenaliteCompagnieAriary?.toLocaleString('fr-FR') || '—'}</td>}
-                              <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{ligne.montantBilletCompagnieAriary?.toLocaleString('fr-FR') || '—'}</td>
-                              <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{ligne.montantServiceCompagnieAriary?.toLocaleString('fr-FR') || '—'}</td>
-                              {showPenalite && <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{ligne.montantPenaliteCompagnieAriary?.toLocaleString('fr-FR') || '—'}</td>}
-                            </>
-                          ) : (
-                            <td className="px-4 py-4 text-center text-xs text-emerald-700 bg-emerald-100 font-semibold">
-                              {ligne.montantBilletCompagnieAriary?.toLocaleString('fr-FR')} Ar
-                            </td>
-                          )}
-
-                          {/* Tarifs Client Devise */}
-                          {!collapsedGroups.tarifsClientDevise ? (
-                            <>
-                              <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-blue-700">{ligne.montantBilletClientDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>
-                              <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-blue-700">{ligne.montantServiceClientDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>
-                              {showPenalite && <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-blue-700">{ligne.montantPenaliteClientDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>}
-                            </>
-                          ) : (
-                            <td className="px-4 py-4 text-center text-xs text-blue-600 bg-blue-50 font-semibold">
-                              {ligne.montantBilletClientDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} {ligne.devise}
-                            </td>
-                          )}
-
-                          {/* Tarifs Client Ariary */}
-                          {!collapsedGroups.tarifsClientAriary ? (
-                            <>
-                              <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-blue-800">{ligne.montantBilletClientAriary?.toLocaleString('fr-FR') || '—'}</td>
-                              <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-blue-800">{ligne.montantServiceClientAriary?.toLocaleString('fr-FR') || '—'}</td>
-                              {showPenalite && <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-blue-800">{ligne.montantPenaliteClientAriary?.toLocaleString('fr-FR') || '—'}</td>}
-                            </>
-                          ) : (
-                            <td className="px-4 py-4 text-center text-xs text-blue-700 bg-blue-100 font-semibold">
-                              {ligne.montantBilletClientAriary?.toLocaleString('fr-FR')} Ar
-                            </td>
-                          )}
-
-                          {/* Commissions */}
-                          {!collapsedGroups.commissions ? (
-                            <>
-                              <td className="px-4 py-4 whitespace-nowrap text-sm font-bold text-green-700 text-right">{ligne.commissionEnDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>
-                              <td className="px-4 py-4 whitespace-nowrap text-sm font-bold text-green-600 text-right">{ligne.commissionEnAriary?.toLocaleString('fr-FR') || '—'}</td>
-                            </>
-                          ) : (
-                            <td className="px-4 py-4 text-center text-xs text-green-700 bg-green-50 font-bold">
-                              {ligne.commissionEnDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} {ligne.devise}
-                            </td>
-                          )}
-
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-700">
-                            <span className="px-2 py-1 bg-slate-100 rounded text-xs font-medium">
-                              {ligne.modePaiement || '—'}
+                    {/* Main action bar */}
+                    <div className="px-6 py-4">
+                      <div className="flex flex-wrap justify-between items-center gap-4">
+                        {/* Titre */}
+                        <div>
+                          <div className="flex items-center gap-3">
+                            <h2 className="text-sm font-semibold text-slate-700">
+                              Lignes de prospection
+                            </h2>
+                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-700">
+                              {lignes.length} {lignes.length !== 1 ? 'lignes' : 'ligne'}
                             </span>
-                          </td>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {selectionMode 
+                              ? `${selectedLigneIds.length} ligne${selectedLigneIds.length !== 1 ? 's' : ''} sélectionnée${selectedLigneIds.length !== 1 ? 's' : ''}`
+                              : 'Gérez vos lignes de prospection et créez des devis'
+                            }
+                          </p>
+                        </div>
 
-                          {/* Services */}
-                          <td className="px-4 py-4 text-sm">
-                            <div className="flex flex-row gap-1 flex-wrap">
-                              {ligne.serviceProspectionLigne?.length > 0 ? (
-                                ligne.serviceProspectionLigne.map((service) => (
-                                  <span key={service.id}
-                                    className="inline-flex items-center px-2 py-0.5 bg-blue-100 text-blue-800 text-xs font-medium rounded"
-                                    title={`${service.serviceSpecifique?.libelle} = ${service.valeur}`}
-                                  >
-                                    {service.serviceSpecifique?.libelle?.slice(0, 6) || '?'}: {service.valeur}
+                        
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Barre de contrôle des groupes */}
+                  <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-semibold text-slate-500 uppercase mr-2">Groupes :</span>
+                    {[
+                      { key: 'infosVol', label: '✈️ Infos Vol', color: 'slate' },
+                      { key: 'tarifsCieDevise', label: '🏢 Cie Devise', color: 'emerald' },
+                      { key: 'tarifsCieAriary', label: '🏢 Cie Ariary', color: 'emerald' },
+                      { key: 'tarifsClientDevise', label: '👤 Client Devise', color: 'blue' },
+                      { key: 'tarifsClientAriary', label: '👤 Client Ariary', color: 'blue' },
+                      { key: 'commissions', label: '💰 Commissions', color: 'green' },
+                    ].map(({ key, label }) => (
+                      <button
+                        key={key}
+                        onClick={() => toggleGroup(key as keyof typeof collapsedGroups)}
+                        disabled={!!newLine}
+                        className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
+                          newLine
+                            ? 'opacity-40 cursor-not-allowed'
+                            : collapsedGroups[key as keyof typeof collapsedGroups]
+                              ? 'bg-white text-slate-400 border-slate-200 line-through'
+                              : 'bg-white text-slate-700 border-slate-300 hover:border-slate-400'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                    {/* Bouton pénalités — s'applique à tous les groupes */}
+                    <div className="w-px h-4 bg-slate-300 mx-1" />
+                      <button
+                        onClick={() => setShowPenalite(p => !p)}
+                        disabled={!!newLine}
+                        className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
+                          newLine
+                            ? 'opacity-40 cursor-not-allowed'
+                            : showPenalite
+                              ? 'bg-orange-100 text-orange-700 border-orange-300'
+                              : 'bg-white text-slate-400 border-slate-200 line-through'
+                        }`}
+                      >
+                        🚫 Pénalités
+                      </button>
+                      {/* Tout replier — désactivé si tout est déjà replié */}
+                      <button
+                        disabled={!!newLine || Object.values(collapsedGroups).every(v => v === true)}
+                        onClick={() => setCollapsedGroups({ infosVol: true, tarifsCieDevise: true, tarifsCieAriary: true, tarifsClientDevise: true, tarifsClientAriary: true, commissions: true, services: true })}
+                        className={`ml-auto text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
+                          !!newLine || Object.values(collapsedGroups).every(v => v === true)
+                            ? 'opacity-40 cursor-not-allowed border-slate-200 text-slate-400'
+                            : 'border-red-200 text-red-600 hover:bg-red-50'
+                        }`}
+                      >
+                        Tout replier
+                      </button>
+
+                      {/* Tout déplier — désactivé si tout est déjà déplié */}
+                      <button
+                        disabled={!!newLine || Object.values(collapsedGroups).every(v => v === false)}
+                        onClick={() => setCollapsedGroups({ infosVol: false, tarifsCieDevise: false, tarifsCieAriary: false, tarifsClientDevise: false, tarifsClientAriary: false, commissions: false, services: false })}
+                        className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
+                          !!newLine || Object.values(collapsedGroups).every(v => v === false)
+                            ? 'opacity-40 cursor-not-allowed border-slate-200 text-slate-400'
+                            : 'border-blue-200 text-blue-600 hover:bg-blue-50'
+                        }`}
+                      >
+                        Tout déplier
+                      </button>
+                    </div>
+
+                  {loadingLignes ? (
+                    <div className="p-12 text-center text-slate-500 bg-slate-50 animate-pulse">
+                      Chargement des lignes...
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-slate-200">
+                        <thead className="bg-slate-50">
+                          {/* Ligne 1 : en-têtes de groupes */}
+                          <tr className="border-b-2 border-slate-300">
+                            {selectionMode && <th rowSpan={2} className="px-4 py-2 w-12 bg-slate-100" />}
+
+                            {/* Colonnes fixes */}
+                            <th rowSpan={2} className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase bg-slate-100 min-w-[120px]">N° Dos Ref</th>
+                            <th rowSpan={2} className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase bg-slate-100 min-w-[100px]">Statut</th>
+                            <th rowSpan={2} className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase bg-slate-100 min-w-[80px]">Nb pax</th>
+
+                            {/* Groupe : Infos Vol */}
+                            <th
+                              colSpan={collapsedGroups.infosVol ? 1 : 11}
+                              className="px-4 py-2 text-center text-xs font-bold text-white uppercase bg-slate-700 border-x border-slate-500 cursor-pointer hover:bg-slate-600 transition-colors select-none"
+                              onClick={() => toggleGroup('infosVol')}
+                            >
+                              <div className="flex items-center justify-center gap-2">
+                                ✈️ Infos Vol
+                                <span className="text-slate-300 text-xs">{collapsedGroups.infosVol ? '▶' : '▼'}</span>
+                              </div>
+                            </th>
+
+                            {/* Groupe : Devise + Taux (toujours visible) */}
+                            <th colSpan={2} className="px-4 py-2 text-center text-xs font-bold text-white uppercase bg-gray-600 border-x border-gray-400">
+                              💱 Devise
+                            </th>
+
+                            {/* Groupe : Tarifs Cie Devise */}
+                            <th
+                              colSpan={collapsedGroups.tarifsCieDevise ? 1 : (showPenalite ? 6 : 4)}
+                              className="px-4 py-2 text-center text-xs font-bold text-white uppercase bg-emerald-700 border-x border-emerald-500 cursor-pointer hover:bg-emerald-600 transition-colors select-none"
+                              onClick={() => toggleGroup('tarifsCieDevise')}
+                            >
+                              <div className="flex items-center justify-center gap-2">
+                                🏢 Tarifs Cie Devise
+                                <span className="text-emerald-300 text-xs">{collapsedGroups.tarifsCieDevise ? '▶' : '▼'}</span>
+                              </div>
+                            </th>
+
+                            {/* Groupe : Tarifs Cie Ariary */}
+                            <th
+                              colSpan={collapsedGroups.tarifsCieAriary ? 1 : (showPenalite ? 6 : 4)}
+                              className="px-4 py-2 text-center text-xs font-bold text-white uppercase bg-emerald-800 border-x border-emerald-600 cursor-pointer hover:bg-emerald-700 transition-colors select-none"
+                              onClick={() => toggleGroup('tarifsCieAriary')}
+                            >
+                              <div className="flex items-center justify-center gap-2">
+                                🏢 Tarifs Cie Ariary
+                                <span className="text-emerald-300 text-xs">{collapsedGroups.tarifsCieAriary ? '▶' : '▼'}</span>
+                              </div>
+                            </th>
+
+                            {/* Groupe : Tarifs Client Devise */}
+                            <th
+                              colSpan={collapsedGroups.tarifsClientDevise ? 1 : (showPenalite ? 3 : 2)}
+                              className="px-4 py-2 text-center text-xs font-bold text-white uppercase bg-blue-700 border-x border-blue-500 cursor-pointer hover:bg-blue-600 transition-colors select-none"
+                              onClick={() => toggleGroup('tarifsClientDevise')}
+                            >
+                              <div className="flex items-center justify-center gap-2">
+                                👤 Tarifs Client Devise
+                                <span className="text-blue-300 text-xs">{collapsedGroups.tarifsClientDevise ? '▶' : '▼'}</span>
+                              </div>
+                            </th>
+
+                            {/* Groupe : Tarifs Client Ariary */}
+                            <th
+                              colSpan={collapsedGroups.tarifsClientAriary ? 1 : (showPenalite ? 3 : 2)}
+                              className="px-4 py-2 text-center text-xs font-bold text-white uppercase bg-blue-800 border-x border-blue-600 cursor-pointer hover:bg-blue-700 transition-colors select-none"
+                              onClick={() => toggleGroup('tarifsClientAriary')}
+                            >
+                              <div className="flex items-center justify-center gap-2">
+                                👤 Tarifs Client Ariary
+                                <span className="text-blue-300 text-xs">{collapsedGroups.tarifsClientAriary ? '▶' : '▼'}</span>
+                              </div>
+                            </th>
+
+                            {/* Groupe : Commissions */}
+                            <th
+                              colSpan={collapsedGroups.commissions ? 1 : 2}
+                              className="px-4 py-2 text-center text-xs font-bold text-white uppercase bg-green-700 border-x border-green-500 cursor-pointer hover:bg-green-600 transition-colors select-none"
+                              onClick={() => toggleGroup('commissions')}
+                            >
+                              <div className="flex items-center justify-center gap-2">
+                                💰 Commissions
+                                <span className="text-green-300 text-xs">{collapsedGroups.commissions ? '▶' : '▼'}</span>
+                              </div>
+                            </th>
+
+                            {/* Services + Actions */}
+                            {/* <th rowSpan={2} className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase bg-slate-100 min-w-[140px]">
+                              Mode Paiement
+                            </th> */}
+                            <th rowSpan={2} className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase bg-slate-100 min-w-[600px]">Services</th>
+                            <th rowSpan={2} className="px-4 py-3 text-center text-xs font-semibold text-slate-600 uppercase bg-slate-100 min-w-[100px]">Actions</th>
+                          </tr>
+
+                          {/* Ligne 2 : sous-en-têtes */}
+                          <tr>
+                            {/* Infos Vol */}
+                            {!collapsedGroups.infosVol ? (
+                              <>
+                                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[120px]">N° Vol</th>
+                                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[150px]">Date Départ Pays</th>
+                                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[150px]">Date Arrivée Pays</th>
+                                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[100px]">Classe</th>
+                                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[120px]">Type pax</th>
+                                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[120px]">Avion</th>
+                                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[140px]">Départ</th>
+                                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[140px]">Destination</th>
+                                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[180px]">Itinéraire</th>
+                                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[100px]">Durée vol</th>
+                                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[110px]">Durée escale</th>
+                              </>
+                            ) : (
+                              <th className="px-4 py-2 text-center text-xs text-slate-400 italic bg-slate-800/10">— replié —</th>
+                            )}
+
+                            {/* Devise + Taux */}
+                            <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-gray-100 min-w-[80px]">Devise</th>
+                            <th className="px-4 py-2 text-right text-xs font-semibold text-slate-500 bg-gray-100 min-w-[120px]">Taux</th>
+
+                            {/* Tarifs Cie Devise */}
+                            {!collapsedGroups.tarifsCieDevise ? (
+                              <>
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[130px]">PU Billet</th>
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[130px]">PU Service</th>
+                                {showPenalite && <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[130px]">PU Pénalité</th>}
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[140px]">Mt Billet</th>
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[140px]">Mt Service</th>
+                                {showPenalite && <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[140px]">Mt Pénalité</th>}
+                              </>
+                            ) : (
+                              <th className="px-4 py-2 text-center text-xs text-emerald-400 italic bg-emerald-50">— replié —</th>
+                            )}
+
+                            {/* Tarifs Cie Ariary */}
+                            {!collapsedGroups.tarifsCieAriary ? (
+                              <>
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100 min-w-[130px]">PU Billet Ar</th>
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100 min-w-[130px]">PU Service Ar</th>
+                                {showPenalite && <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100 min-w-[130px]">PU Pénalité Ar</th>}
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100 min-w-[140px]">Mt Billet Ar</th>
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100 min-w-[140px]">Mt Service Ar</th>
+                                {showPenalite && <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100 min-w-[140px]">Mt Pénalité Ar</th>}
+                              </>
+                            ) : (
+                              <th className="px-4 py-2 text-center text-xs text-emerald-500 italic bg-emerald-100">— replié —</th>
+                            )}
+
+                            {/* Tarifs Client Devise */}
+                            {!collapsedGroups.tarifsClientDevise ? (
+                              <>
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-blue-700 bg-blue-50 min-w-[140px]">Mt Billet</th>
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-blue-700 bg-blue-50 min-w-[140px]">Mt Service</th>
+                                {showPenalite && <th className="px-4 py-2 text-right text-xs font-semibold text-blue-700 bg-blue-50 min-w-[140px]">Mt Pénalité</th>}
+                              </>
+                            ) : (
+                              <th className="px-4 py-2 text-center text-xs text-blue-400 italic bg-blue-50">— replié —</th>
+                            )}
+
+                            {/* Tarifs Client Ariary */}
+                            {!collapsedGroups.tarifsClientAriary ? (
+                              <>
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-blue-800 bg-blue-100 min-w-[140px]">Mt Billet Ar</th>
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-blue-800 bg-blue-100 min-w-[140px]">Mt Service Ar</th>
+                                {showPenalite && <th className="px-4 py-2 text-right text-xs font-semibold text-blue-800 bg-blue-100 min-w-[140px]">Mt Pénalité Ar</th>}
+                              </>
+                            ) : (
+                              <th className="px-4 py-2 text-center text-xs text-blue-500 italic bg-blue-100">— replié —</th>
+                            )}
+
+                            {/* Commissions */}
+                            {!collapsedGroups.commissions ? (
+                              <>
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-green-700 bg-green-50 min-w-[150px]">Devise</th>
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-green-700 bg-green-50 min-w-[150px]">Ariary</th>
+                              </>
+                            ) : (
+                              <th className="px-4 py-2 text-center text-xs text-green-400 italic bg-green-50">— replié —</th>
+                            )}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 bg-white">
+                          {Array.isArray(lignes) && lignes.length > 0 ? (
+                            lignes.map((ligne) => (
+                              <tr key={ligne.id} className="hover:bg-blue-50/30 transition-colors">
+                                {selectionMode && (
+                                  <td className="px-4 py-4 text-center">
+                                    <input type="checkbox" checked={selectedLigneIds.includes(ligne.id)}
+                                      onChange={() => toggleLigneSelection(ligne.id)}
+                                      className="h-4 w-4 text-blue-600 border-slate-300 rounded" />
+                                  </td>
+                                )}
+
+                                {/* Colonnes fixes */}
+                                <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{ligne.numeroDosRef || '—'}</td>
+                                <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-700 uppercase">
+                                  {ligne.status === 'CREER' ? 'créé' : ligne.status === 'MODIFIER' ? 'modifié' : ligne.status}
+                                </td>
+                                <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-700">{ligne.nombre || '—'}</td>
+
+                                {/* Infos Vol */}
+                                {!collapsedGroups.infosVol ? (
+                                  <>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-slate-700">{ligne.numeroVol || '—'}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">
+                                      {ligne.dateHeureDepart ? formatDateISO(ligne.dateHeureDepart) : '—'}
+                                    </td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">
+                                      {ligne.dateHeureArrive ? formatDateISO(ligne.dateHeureArrive) : '—'}
+                                    </td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">
+                                      <span className="px-2 py-1 bg-slate-100 rounded text-xs font-medium">{ligne.classe || '—'}</span>
+                                    </td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">{ligne.typePassager || '—'}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">{ligne.avion || '—'}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">-</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">-</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">{ligne.itineraire || '—'}</td>
+                                    
+                                  <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">{ligne.dureeVol || '—'}</td>
+                                  <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">{ligne.dureeEscale || '—'}</td>
+                                </>
+                                ) : (
+                                  <td className="px-4 py-4 text-center text-xs text-slate-400 bg-slate-50 italic">
+                                    {ligne.numeroVol} · {ligne.itineraire}
+                                  </td>
+                                )}
+
+                                {/* Devise + Taux */}
+                                <td className="px-4 py-4 whitespace-nowrap text-sm font-mono font-semibold text-slate-600">{ligne.devise || '—'}</td>
+                                <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium">{ligne.tauxEchange?.toLocaleString('fr-FR') || '—'}</td>
+
+                                {/* Tarifs Cie Devise */}
+                                {!collapsedGroups.tarifsCieDevise ? (
+                                  <>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{ligne.puBilletCompagnieDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{ligne.puServiceCompagnieDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>
+                                    {showPenalite && <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{ligne.puPenaliteCompagnieDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>}
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{ligne.montantBilletCompagnieDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{ligne.montantServiceCompagnieDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>
+                                    {showPenalite && <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{ligne.montantPenaliteCompagnieDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>}
+                                  </>
+                                ) : (
+                                  <td className="px-4 py-4 text-center text-xs text-emerald-600 bg-emerald-50 font-semibold">
+                                    {ligne.montantBilletCompagnieDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} {ligne.devise}
+                                  </td>
+                                )}
+
+                                {/* Tarifs Cie Ariary */}
+                                {!collapsedGroups.tarifsCieAriary ? (
+                                  <>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{ligne.puBilletCompagnieAriary?.toLocaleString('fr-FR') || '—'}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{ligne.puServiceCompagnieAriary?.toLocaleString('fr-FR') || '—'}</td>
+                                    {showPenalite && <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{ligne.puPenaliteCompagnieAriary?.toLocaleString('fr-FR') || '—'}</td>}
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{ligne.montantBilletCompagnieAriary?.toLocaleString('fr-FR') || '—'}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{ligne.montantServiceCompagnieAriary?.toLocaleString('fr-FR') || '—'}</td>
+                                    {showPenalite && <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{ligne.montantPenaliteCompagnieAriary?.toLocaleString('fr-FR') || '—'}</td>}
+                                  </>
+                                ) : (
+                                  <td className="px-4 py-4 text-center text-xs text-emerald-700 bg-emerald-100 font-semibold">
+                                    {ligne.montantBilletCompagnieAriary?.toLocaleString('fr-FR')} Ar
+                                  </td>
+                                )}
+
+                                {/* Tarifs Client Devise */}
+                                {!collapsedGroups.tarifsClientDevise ? (
+                                  <>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-blue-700">{ligne.montantBilletClientDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-blue-700">{ligne.montantServiceClientDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>
+                                    {showPenalite && <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-blue-700">{ligne.montantPenaliteClientDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>}
+                                  </>
+                                ) : (
+                                  <td className="px-4 py-4 text-center text-xs text-blue-600 bg-blue-50 font-semibold">
+                                    {ligne.montantBilletClientDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} {ligne.devise}
+                                  </td>
+                                )}
+
+                                {/* Tarifs Client Ariary */}
+                                {!collapsedGroups.tarifsClientAriary ? (
+                                  <>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-blue-800">{ligne.montantBilletClientAriary?.toLocaleString('fr-FR') || '—'}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-blue-800">{ligne.montantServiceClientAriary?.toLocaleString('fr-FR') || '—'}</td>
+                                    {showPenalite && <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-blue-800">{ligne.montantPenaliteClientAriary?.toLocaleString('fr-FR') || '—'}</td>}
+                                  </>
+                                ) : (
+                                  <td className="px-4 py-4 text-center text-xs text-blue-700 bg-blue-100 font-semibold">
+                                    {ligne.montantBilletClientAriary?.toLocaleString('fr-FR')} Ar
+                                  </td>
+                                )}
+
+                                {/* Commissions */}
+                                {!collapsedGroups.commissions ? (
+                                  <>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm font-bold text-green-700 text-right">{ligne.commissionEnDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm font-bold text-green-600 text-right">{ligne.commissionEnAriary?.toLocaleString('fr-FR') || '—'}</td>
+                                  </>
+                                ) : (
+                                  <td className="px-4 py-4 text-center text-xs text-green-700 bg-green-50 font-bold">
+                                    {ligne.commissionEnDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} {ligne.devise}
+                                  </td>
+                                )}
+
+                                {/* <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-700">
+                                  <span className="px-2 py-1 bg-slate-100 rounded text-xs font-medium">
+                                    {ligne.modePaiement || '—'}
                                   </span>
-                                ))
-                              ) : (
-                                <span className="text-slate-400 italic text-xs">Aucun</span>
-                              )}
-                            </div>
-                          </td>
+                                </td> */}
 
-                          {/* Actions */}
-                          <td className="px-4 py-4 whitespace-nowrap text-center text-sm text-slate-400">—</td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={33} className="px-6 py-10 text-center text-slate-500">
-                          {loadingLignes ? 'Chargement des lignes...' : 'Aucune ligne trouvée'}
-                        </td>
-                      </tr>
-                    )}
+                                {/* Services */}
+                                <td className="px-4 py-4 text-sm">
+                                  <div className="flex flex-row gap-1 flex-wrap">
+                                    {ligne.serviceProspectionLigne?.length > 0 ? (
+                                      ligne.serviceProspectionLigne.map((service) => (
+                                        <span key={service.id}
+                                          className="inline-flex items-center px-2 py-0.5 bg-blue-100 text-blue-800 text-xs font-medium rounded"
+                                          title={`${service.serviceSpecifique?.libelle} = ${service.valeur}`}
+                                        >
+                                          {service.serviceSpecifique?.libelle?.slice(0, 6) || '?'}: {service.valeur == 'true' ? 'Oui' : service.valeur == 'false' ? 'Non' : service.valeur}
+                                        </span>
+                                      ))
+                                    ) : (
+                                      <span className="text-slate-400 italic text-xs">Aucun</span>
+                                    )}
+                                  </div>
+                                </td>
 
-                    {/* Portal suggestion — en dehors du tableau */}
-                    {suggestionPortal}
+                                {/* Actions */}
+                                <td className="px-4 py-4 whitespace-nowrap text-center text-sm text-slate-400">—</td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan={33} className="px-6 py-10 text-center text-slate-500">
+                                {loadingLignes ? 'Chargement des lignes...' : 'Aucune ligne trouvée'}
+                              </td>
+                            </tr>
+                          )}
 
-                    {newLine && (
-                      <NewLineRow
-                        newLine={newLine}
-                        commissionPct={entete?.commissionAppliquer || 0}
-                        destinations={destinations}
-                        servicesDisponibles={servicesDisponibles}
-                        updateNewLineField={updateNewLineField}
-                        updateServiceValue={updateServiceValue}
-                        handleSaveNewLine={handleSaveNewLine}
-                        handleCancelNewLine={handleCancelNewLine}
-                        onSearchTrigger={handleSearchTrigger}  // ← nouveau
-                      />
-                    )}
+                          {/* Portal suggestion — en dehors du tableau */}
+                          {suggestionPortal}
 
-                    
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
+                          {newLine && (
+                            <NewLineRow
+                              newLine={newLine}
+                              commissionPct={entete?.commissionAppliquer || 0}
+                              destinations={destinations}
+                              servicesDisponibles={servicesDisponibles}
+                              updateNewLineField={updateNewLineField}
+                              updateServiceValue={updateServiceValue}
+                              handleSaveNewLine={handleSaveNewLine}
+                              handleCancelNewLine={handleCancelNewLine}
+                              onSearchTrigger={handleSearchTrigger}  // ← nouveau
+                            />
+                          )}
+
+                          
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </section>
+              )}
+              {/* ── Onglet Suivi ── */}
+              {activeTabSousSection === 'suivi' && (
+                <SuiviTabSection
+                  prestationId={prestationId}
+                />
+              )}
+            </div>
+          </div>
         </div>
         <AddProspectionLigneModal
           isOpen={isModalOpen}

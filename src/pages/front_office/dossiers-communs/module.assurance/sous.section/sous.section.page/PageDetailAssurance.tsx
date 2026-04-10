@@ -321,326 +321,332 @@ const PageDetailAssurance = () => {
   const isConforme  = detail.statut === 'CONFORME';
 
   return (
-    <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange} >
-      <div className="min-h-screen bg-neutral-50 space-y-4">
-
-        <AssuranceHeader
-          numeroassurance={numeroDos}
-          nomPassager={''}
-          navigate={navigate}
-          isDetail={true}
-          isProspection={false}
-          isDevis={false}
-        />
-
-        <DossierActifCard gradient="from-green-400 via-green-400 to-green-500" />
-
-        {/* ══ Topbar ══ */}
-        <div className="bg-white border-b border-gray-200 shadow-sm">
-          <div className="px-6 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => navigate('/dossiers-communs/assurance/pages', { state: { targetTab: 'assurance' } })}
-                className="h-8 w-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 text-sm transition"
-              >←</button>
-              <div>
-                <h1 className="text-sm font-bold text-gray-900">Détail assurance</h1>
-                <p className="text-xs text-gray-400">{numeroDos} · {fournisseur}</p>
-              </div>
+    <div className="h-full flex flex-col min-h-0">
+      <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange} >
+        <div className="flex h-full min-h-0 overflow-hidden">
+          {/* ── Colonne principale ── */}
+          <div className="flex-1 min-w-0 flex flex-col min-h-0">
+            {/* ── Header fixe — ne scrolle PAS ── */}
+            <div className="shrink-0 px-4 py-2 bg-white">
+              <AssuranceHeader
+                numeroassurance={numeroDos}
+                nomPassager={''}
+                navigate={navigate}
+                isDetail={true}
+                isProspection={false}
+                isDevis={false}
+              />
             </div>
-          </div>
-        </div>
 
-        {/* ══ Content ══ */}
-        <div className="">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
-
-            {/* ── Colonne gauche (2/3) ── */}
-            <div className="lg:col-span-2 space-y-4">
-
-              {/* Séjour */}
-              <Card title="Séjour">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4">
-                  <Field label="Date départ"   value={fmtDate(prospection?.dateDepart)} />
-                  <Field label="Date retour"   value={fmtDate(prospection?.dateRetour)} />
-                  <Field label="Durée"         value={prospection?.duree ? `${prospection.duree} jours` : '—'} />
-                  <Field label="Taux change"   value={prospection?.tauxChange ? `${fmtNum(prospection.tauxChange)} Ar` : '—'} />
-                  <Field label="Réf. devis"    value={prospection?.referenceDevis} />
-                  <Field label="Date devis"    value={fmtDate(prospection?.dateDevis)} />
-                </div>
-              </Card>
-
-               {/* Facturation — bouton visible uniquement si CONFORME */}
-              <Card
-                title="Facturation"
-                action={
-                  isConforme ? (
+            <div className='px-4 border-b border-neutral-50'>
+              <DossierActifCard gradient="from-green-400 via-green-400 to-green-500" />
+              {/* ══ Topbar ══ */}
+              <div className="bg-white border-b border-gray-200 shadow-sm">
+                <div className="px-6 py-3 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
                     <button
-                      onClick={() => setShowFactModal(true)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition"
-                    >
-                      ✏️ Saisir facture
-                    </button>
-                  ) : undefined
-                }
-              >
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
-                  <Field label="PU assureur (devise)" value={fmtNum(detail.puFactureAssureurDevise)} />
-                  <Field label="PU assureur (Ar)"     value={detail.puFactureAssureurAriary ? `${fmtNum(detail.puFactureAssureurAriary)} Ar` : '—'} />
-                  <Field label="Commission (Ar)"      value={detail.commissionFactureAriary ? `${fmtNum(detail.commissionFactureAriary)} Ar` : '—'} />
-                  <Field label="PU client (Ar)"       value={detail.puFactureClientAriary ? `${fmtNum(detail.puFactureClientAriary)} Ar` : '—'} />
-                  <Field label="Taux change facture"  value={fmtNum(detail.tauxChangeFacture)} />
-                  <Field label="N° ligne"           value={detail.referenceLine} />
-                  <Field label="N° police"            value={detail.numeroPolice} />
-                  <Field label="N° quittance"         value={detail.numeroQuittance} />
-                </div>
-              </Card>
-
-              {/* Paramètres assurance */}
-              {ap && (
-                <Card title="Paramètres assurance" defaultCollapsed={true}>
-                  <div className="space-y-4">
-
-                    {/* Info zone */}
-                    <div className="flex items-center justify-between pb-3 border-b border-gray-50">
-                      <div>
-                        <p className="text-sm font-bold text-gray-900">{ap.zoneDestination}</p>
-                        <p className="text-xs text-gray-400">
-                          {ap.fournisseur?.libelle} · {ap.fournisseur?.code}
-                        </p>
-                      </div>
-                      <StatusBadge status={ap.status} />
-                    </div>
-
-                    {/* Tarifs plein */}
+                      onClick={() => navigate('/dossiers-communs/assurance/pages', { state: { targetTab: 'assurance' } })}
+                      className="h-8 w-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 text-sm transition"
+                    >←</button>
                     <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <p className="text-[11px] font-bold uppercase tracking-widest text-amber-500">Tarifs plein</p>
-                        <span className="text-xs bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full font-semibold">
-                          {ap.assuranceTarifPlein?.length ?? 0}
-                        </span>
-                      </div>
-                      {!ap.assuranceTarifPlein || ap.assuranceTarifPlein.length === 0 ? (
-                        <p className="text-xs text-gray-400 italic">Aucun tarif plein</p>
-                      ) : (
-                        <div className="overflow-hidden rounded-lg border border-gray-200">
-                          <table className="w-full text-xs">
-                            <thead>
-                              <tr className="bg-amber-50">
-                                <th className="px-3 py-2 text-left font-semibold text-amber-600">Borne (j)</th>
-                                <th className="px-3 py-2 text-left font-semibold text-amber-600">Devise</th>
-                                <th className="px-3 py-2 text-right font-semibold text-amber-600">Prix assureur</th>
-                                <th className="px-3 py-2 text-right font-semibold text-amber-600">Commission</th>
-                                <th className="px-3 py-2 text-right font-semibold text-amber-600">Prix client</th>
-                                <th className="px-3 py-2 text-right font-semibold text-amber-600">Prix client (Ar)</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {ap.assuranceTarifPlein.map((t) => (
-                                <tr key={t.id} className="bg-white border-t border-gray-100">
-                                  <td className="px-3 py-2">
-                                    <span className="font-mono bg-amber-50 text-amber-700 px-2 py-0.5 rounded font-semibold">
-                                      {t.borneInf} – {t.borneSup}
-                                    </span>
-                                  </td>
-                                  <td className="px-3 py-2 font-mono font-semibold text-gray-700">{t.devise}</td>
-                                  <td className="px-3 py-2 text-right text-gray-700">{fmtNum(t.prixAssureurDevise)}</td>
-                                  <td className="px-3 py-2 text-right text-amber-600 font-semibold">{fmtNum(t.commissionDevise)}</td>
-                                  <td className="px-3 py-2 text-right text-indigo-700 font-bold">{fmtNum(t.prixClientDevise)}</td>
-                                  <td className="px-3 py-2 text-right text-indigo-700 font-bold">{fmtNum(t.prixClientAriary)} Ar</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Tarifs réduit */}
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <p className="text-[11px] font-bold uppercase tracking-widest text-violet-500">Tarifs réduits</p>
-                        <span className="text-xs bg-violet-50 text-violet-600 px-2 py-0.5 rounded-full font-semibold">
-                          {ap.assuranceTarifReduit?.length ?? 0}
-                        </span>
-                      </div>
-                      {!ap.assuranceTarifReduit || ap.assuranceTarifReduit.length === 0 ? (
-                        <p className="text-xs text-gray-400 italic">Aucun tarif réduit</p>
-                      ) : (
-                        <div className="overflow-hidden rounded-lg border border-gray-200">
-                          <table className="w-full text-xs">
-                            <thead>
-                              <tr className="bg-violet-50">
-                                <th className="px-3 py-2 text-left font-semibold text-violet-600">Borne (j)</th>
-                                <th className="px-3 py-2 text-left font-semibold text-violet-600">Taux appliqué</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {ap.assuranceTarifReduit.map((t) => (
-                                <tr key={t.id} className="bg-white border-t border-gray-100">
-                                  <td className="px-3 py-2">
-                                    <span className="font-mono bg-violet-50 text-violet-700 px-2 py-0.5 rounded font-semibold">
-                                      {t.borneInf} – {t.borneSup}
-                                    </span>
-                                  </td>
-                                  <td className="px-3 py-2">
-                                    <span className="text-lg font-bold text-violet-600">
-                                      {t.tauxApplique}%
-                                    </span>
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Documents requis */}
-                    <div>
-                      <div className="flex items-center gap-2 mb-2">
-                        <p className="text-[11px] font-bold uppercase tracking-widest text-indigo-500">Documents requis</p>
-                        <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-semibold">
-                          {ap.assuranceDocParams?.length ?? 0}
-                        </span>
-                      </div>
-                      {!ap.assuranceDocParams || ap.assuranceDocParams.length === 0 ? (
-                        <p className="text-xs text-gray-400 italic">Aucun document requis</p>
-                      ) : (
-                        <div className="flex flex-wrap gap-2">
-                          {ap.assuranceDocParams.map((doc) => (
-                            <div key={doc.id} className="inline-flex items-center gap-1.5 bg-white border border-gray-200 rounded-lg px-3 py-1.5 shadow-sm">
-                              <span className="text-sm">📄</span>
-                              <div>
-                                <p className="text-xs font-semibold text-gray-800">
-                                  {doc.assuranceDoc?.document ?? '—'}
-                                </p>
-                                <p className="text-[10px] text-gray-400 font-mono">
-                                  {doc.assuranceDoc?.codeDoc ?? doc.assuranceDocId}
-                                </p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-              )}
-            </div>
-
-            {/* ── Colonne droite (1/3) ── */}
-            <div className="space-y-4">
-
-              <Card title="Résumé">
-                {[
-                  // { label: 'Statut',        value: <StatusBadge status={detail.statut} /> },
-                  { label: 'Statut ligne',  value: <StatusBadge status={detail.statusLigne == 'CREER' ? 'créé' : detail.statusLigne == 'ASSIGNER' ? 'assigné' : detail.statusLigne == 'ENVOYE' ? 'envoyé' : detail.statusLigne == 'APPROUVE' ? 'approuvé' : detail.statusLigne == 'INACTIF' ? 'inactif' : detail.statusLigne} /> },
-                  { label: 'Référence',     value: detail.referenceLine ?? '—' },
-                  { label: 'N° dossier',    value: detail.numeroDossier ?? '—' },
-                  { label: 'Créé le',       value: fmtDate(detail.createdAt) },
-                ].map(({ label, value }) => (
-                  <div key={label} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                    <span className="text-sm text-gray-500">{label}</span>
-                    <span className="text-sm font-medium text-gray-900">{value}</span>
-                  </div>
-                ))}
-              </Card>
-
-              {detail?.assuranceEntete?.pdfLogin != null && (
-                <div className="flex items-center gap-2 justify-between bg-white border border-gray-100 rounded-lg px-4 py-3">
-                  <div className="text-sm font-medium text-gray-500">Voir les liste des accèes</div>
-                  <a 
-                    href={`${API_URL}/${detail.assuranceEntete?.pdfLogin}`} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="
-                      flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-700
-                      bg-linear-to-b from-white to-[#f0f0f0]
-                      border border-gray-300 rounded-md
-                      hover:text-orange-600 transition-all duration-200
-                      active:translate-y-1px active:shadow-inner
-                    "
-                  >
-                    <FiFile className="text-lg text-orange-500" />
-                    <span>Voir le PDF</span>
-                  </a>
-                </div>
-              )}
-
-
-              <div className="bg-linear-to-b from-white to-[#f9fafb] border border-gray-200 rounded-xl p-5">
-                <div className="flex flex-col gap-4">
-                  {/* En-tête : Icône et Titre */}
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-orange-500">
-                      Client Bénéficiaire
-                    </span>
-                    <h3 className="text-lg font-bold text-gray-800">
-                      {detail.clientBeneficiaire?.libelle || "Nom non spécifié"}
-                    </h3>
-                    <div className="flex justify-between items-center gap-1.5 text-xs text-gray-500 font-medium">
-                      <div>
-                        <span className="bg-gray-200 px-1.5 py-0.5 rounded text-[10px] text-gray-600 mr-2">ID</span>
-                        {detail.clientBeneficiaire?.code}
-                      </div>
-                      {/* Actions */}
-                      <div className="flex items-center justify-between">
-                        <button
-                          onClick={() => navigate(`/dossiers-communs/assurance/passager/${detail.id}`, {
-                            state: { 
-                              nomPassager: detail.clientBeneficiaire?.libelle,
-                              numeroDos: detail.numeroDossier,
-                            }
-                          })}
-                          className="
-                            flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-tight
-                            text-white bg-green-500
-                            rounded-lg shadow-md hover:shadow-lg hover:brightness-105
-                            active:scale-95 transition-all duration-200
-                          "
-                        >
-                          Voir les Détails 
-                          <FiArrowRight className="text-sm" /> 
-                        </button>
-                      </div>
+                      <h1 className="text-sm font-bold text-gray-900">Détail assurance</h1>
+                      <p className="text-xs text-gray-400">{numeroDos} · {fournisseur}</p>
                     </div>
                   </div>
                 </div>
               </div>
+            </div>
 
-              {ap && (
-                <Card title="Zone & Fournisseur">
-                  {[
-                    { label: 'Zone',             value: ap.zoneDestination },
-                    { label: 'Fournisseur',      value: ap.fournisseur?.libelle },
-                    { label: 'Code',             value: ap.fournisseur?.code },
-                    { label: 'Date application', value: fmtDate(ap.dateApplication) },
-                    { label: 'Statut params',    value: <StatusBadge status={ap.status} /> },
-                  ].map(({ label, value }) => (
-                    <div key={label} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-                      <span className="text-sm text-gray-500">{label}</span>
-                      <span className="text-sm font-medium text-gray-900">{value}</span>
+            <div className="flex-1 min-h-0 overflow-y-auto py-2 px-4">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+                {/* ── Colonne gauche (2/3) ── */}
+                <div className="lg:col-span-2 space-y-4">
+
+                  {/* Séjour */}
+                  <Card title="Séjour">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4">
+                      <Field label="Date départ"   value={fmtDate(prospection?.dateDepart)} />
+                      <Field label="Date retour"   value={fmtDate(prospection?.dateRetour)} />
+                      <Field label="Durée"         value={prospection?.duree ? `${prospection.duree} jours` : '—'} />
+                      <Field label="Taux change"   value={prospection?.tauxChange ? `${fmtNum(prospection.tauxChange)} Ar` : '—'} />
+                      <Field label="Réf. devis"    value={prospection?.referenceDevis} />
+                      <Field label="Date devis"    value={fmtDate(prospection?.dateDevis)} />
                     </div>
-                  ))}
-                </Card>
-              )}
+                  </Card>
 
+                  {/* Facturation — bouton visible uniquement si CONFORME */}
+                  <Card
+                    title="Facturation"
+                    action={
+                      isConforme ? (
+                        <button
+                          onClick={() => setShowFactModal(true)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition"
+                        >
+                          ✏️ Saisir facture
+                        </button>
+                      ) : undefined
+                    }
+                  >
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4">
+                      <Field label="PU assureur (devise)" value={fmtNum(detail.puFactureAssureurDevise)} />
+                      <Field label="PU assureur (Ar)"     value={detail.puFactureAssureurAriary ? `${fmtNum(detail.puFactureAssureurAriary)} Ar` : '—'} />
+                      <Field label="Commission (Ar)"      value={detail.commissionFactureAriary ? `${fmtNum(detail.commissionFactureAriary)} Ar` : '—'} />
+                      <Field label="PU client (Ar)"       value={detail.puFactureClientAriary ? `${fmtNum(detail.puFactureClientAriary)} Ar` : '—'} />
+                      <Field label="Taux change facture"  value={fmtNum(detail.tauxChangeFacture)} />
+                      <Field label="N° ligne"           value={detail.referenceLine} />
+                      <Field label="N° police"            value={detail.numeroPolice} />
+                      <Field label="N° quittance"         value={detail.numeroQuittance} />
+                    </div>
+                  </Card>
+
+                  {/* Paramètres assurance */}
+                  {ap && (
+                    <Card title="Paramètres assurance" defaultCollapsed={true}>
+                      <div className="space-y-4">
+
+                        {/* Info zone */}
+                        <div className="flex items-center justify-between pb-3 border-b border-gray-50">
+                          <div>
+                            <p className="text-sm font-bold text-gray-900">{ap.zoneDestination}</p>
+                            <p className="text-xs text-gray-400">
+                              {ap.fournisseur?.libelle} · {ap.fournisseur?.code}
+                            </p>
+                          </div>
+                          <StatusBadge status={ap.status} />
+                        </div>
+
+                        {/* Tarifs plein */}
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <p className="text-[11px] font-bold uppercase tracking-widest text-amber-500">Tarifs plein</p>
+                            <span className="text-xs bg-amber-50 text-amber-600 px-2 py-0.5 rounded-full font-semibold">
+                              {ap.assuranceTarifPlein?.length ?? 0}
+                            </span>
+                          </div>
+                          {!ap.assuranceTarifPlein || ap.assuranceTarifPlein.length === 0 ? (
+                            <p className="text-xs text-gray-400 italic">Aucun tarif plein</p>
+                          ) : (
+                            <div className="overflow-hidden rounded-lg border border-gray-200">
+                              <table className="w-full text-xs">
+                                <thead>
+                                  <tr className="bg-amber-50">
+                                    <th className="px-3 py-2 text-left font-semibold text-amber-600">Borne (j)</th>
+                                    <th className="px-3 py-2 text-left font-semibold text-amber-600">Devise</th>
+                                    <th className="px-3 py-2 text-right font-semibold text-amber-600">Prix assureur</th>
+                                    <th className="px-3 py-2 text-right font-semibold text-amber-600">Commission</th>
+                                    <th className="px-3 py-2 text-right font-semibold text-amber-600">Prix client</th>
+                                    <th className="px-3 py-2 text-right font-semibold text-amber-600">Prix client (Ar)</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {ap.assuranceTarifPlein.map((t) => (
+                                    <tr key={t.id} className="bg-white border-t border-gray-100">
+                                      <td className="px-3 py-2">
+                                        <span className="font-mono bg-amber-50 text-amber-700 px-2 py-0.5 rounded font-semibold">
+                                          {t.borneInf} – {t.borneSup}
+                                        </span>
+                                      </td>
+                                      <td className="px-3 py-2 font-mono font-semibold text-gray-700">{t.devise}</td>
+                                      <td className="px-3 py-2 text-right text-gray-700">{fmtNum(t.prixAssureurDevise)}</td>
+                                      <td className="px-3 py-2 text-right text-amber-600 font-semibold">{fmtNum(t.commissionDevise)}</td>
+                                      <td className="px-3 py-2 text-right text-indigo-700 font-bold">{fmtNum(t.prixClientDevise)}</td>
+                                      <td className="px-3 py-2 text-right text-indigo-700 font-bold">{fmtNum(t.prixClientAriary)} Ar</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Tarifs réduit */}
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <p className="text-[11px] font-bold uppercase tracking-widest text-violet-500">Tarifs réduits</p>
+                            <span className="text-xs bg-violet-50 text-violet-600 px-2 py-0.5 rounded-full font-semibold">
+                              {ap.assuranceTarifReduit?.length ?? 0}
+                            </span>
+                          </div>
+                          {!ap.assuranceTarifReduit || ap.assuranceTarifReduit.length === 0 ? (
+                            <p className="text-xs text-gray-400 italic">Aucun tarif réduit</p>
+                          ) : (
+                            <div className="overflow-hidden rounded-lg border border-gray-200">
+                              <table className="w-full text-xs">
+                                <thead>
+                                  <tr className="bg-violet-50">
+                                    <th className="px-3 py-2 text-left font-semibold text-violet-600">Borne (j)</th>
+                                    <th className="px-3 py-2 text-left font-semibold text-violet-600">Taux appliqué</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {ap.assuranceTarifReduit.map((t) => (
+                                    <tr key={t.id} className="bg-white border-t border-gray-100">
+                                      <td className="px-3 py-2">
+                                        <span className="font-mono bg-violet-50 text-violet-700 px-2 py-0.5 rounded font-semibold">
+                                          {t.borneInf} – {t.borneSup}
+                                        </span>
+                                      </td>
+                                      <td className="px-3 py-2">
+                                        <span className="text-lg font-bold text-violet-600">
+                                          {t.tauxApplique}%
+                                        </span>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Documents requis */}
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <p className="text-[11px] font-bold uppercase tracking-widest text-indigo-500">Documents requis</p>
+                            <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-semibold">
+                              {ap.assuranceDocParams?.length ?? 0}
+                            </span>
+                          </div>
+                          {!ap.assuranceDocParams || ap.assuranceDocParams.length === 0 ? (
+                            <p className="text-xs text-gray-400 italic">Aucun document requis</p>
+                          ) : (
+                            <div className="flex flex-wrap gap-2">
+                              {ap.assuranceDocParams.map((doc) => (
+                                <div key={doc.id} className="inline-flex items-center gap-1.5 bg-white border border-gray-200 rounded-lg px-3 py-1.5 shadow-sm">
+                                  <span className="text-sm">📄</span>
+                                  <div>
+                                    <p className="text-xs font-semibold text-gray-800">
+                                      {doc.assuranceDoc?.document ?? '—'}
+                                    </p>
+                                    <p className="text-[10px] text-gray-400 font-mono">
+                                      {doc.assuranceDoc?.codeDoc ?? doc.assuranceDocId}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </Card>
+                  )}
+                </div>
+
+                {/* ── Colonne droite (1/3) ── */}
+                <div className="space-y-4">
+
+                  <Card title="Résumé">
+                    {[
+                      // { label: 'Statut',        value: <StatusBadge status={detail.statut} /> },
+                      { label: 'Statut ligne',  value: <StatusBadge status={detail.statusLigne == 'CREER' ? 'créé' : detail.statusLigne == 'ASSIGNER' ? 'assigné' : detail.statusLigne == 'ENVOYE' ? 'envoyé' : detail.statusLigne == 'APPROUVE' ? 'approuvé' : detail.statusLigne == 'INACTIF' ? 'inactif' : detail.statusLigne} /> },
+                      { label: 'Référence',     value: detail.referenceLine ?? '—' },
+                      { label: 'N° dossier',    value: detail.numeroDossier ?? '—' },
+                      { label: 'Créé le',       value: fmtDate(detail.createdAt) },
+                    ].map(({ label, value }) => (
+                      <div key={label} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                        <span className="text-sm text-gray-500">{label}</span>
+                        <span className="text-sm font-medium text-gray-900">{value}</span>
+                      </div>
+                    ))}
+                  </Card>
+
+                  {detail?.assuranceEntete?.pdfLogin != null && (
+                    <div className="flex items-center gap-2 justify-between bg-white border border-gray-100 rounded-lg px-4 py-3">
+                      <div className="text-sm font-medium text-gray-500">Voir les liste des accèes</div>
+                      <a 
+                        href={`${API_URL}/${detail.assuranceEntete?.pdfLogin}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="
+                          flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-700
+                          bg-linear-to-b from-white to-[#f0f0f0]
+                          border border-gray-300 rounded-md
+                          hover:text-orange-600 transition-all duration-200
+                          active:translate-y-1px active:shadow-inner
+                        "
+                      >
+                        <FiFile className="text-lg text-orange-500" />
+                        <span>Voir le PDF</span>
+                      </a>
+                    </div>
+                  )}
+
+
+                  <div className="bg-linear-to-b from-white to-[#f9fafb] border border-gray-200 rounded-xl p-5">
+                    <div className="flex flex-col gap-4">
+                      {/* En-tête : Icône et Titre */}
+                      <div className="space-y-1">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-orange-500">
+                          Client Bénéficiaire
+                        </span>
+                        <h3 className="text-lg font-bold text-gray-800">
+                          {detail.clientBeneficiaire?.libelle || "Nom non spécifié"}
+                        </h3>
+                        <div className="flex justify-between items-center gap-1.5 text-xs text-gray-500 font-medium">
+                          <div>
+                            <span className="bg-gray-200 px-1.5 py-0.5 rounded text-[10px] text-gray-600 mr-2">ID</span>
+                            {detail.clientBeneficiaire?.code}
+                          </div>
+                          {/* Actions */}
+                          <div className="flex items-center justify-between">
+                            <button
+                              onClick={() => navigate(`/dossiers-communs/assurance/passager/${detail.id}`, {
+                                state: { 
+                                  nomPassager: detail.clientBeneficiaire?.libelle,
+                                  numeroDos: detail.numeroDossier,
+                                }
+                              })}
+                              className="
+                                flex items-center gap-2 px-4 py-2 text-xs font-bold uppercase tracking-tight
+                                text-white bg-green-500
+                                rounded-lg shadow-md hover:shadow-lg hover:brightness-105
+                                active:scale-95 transition-all duration-200
+                              "
+                            >
+                              Voir les Détails 
+                              <FiArrowRight className="text-sm" /> 
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {ap && (
+                    <Card title="Zone & Fournisseur">
+                      {[
+                        { label: 'Zone',             value: ap.zoneDestination },
+                        { label: 'Fournisseur',      value: ap.fournisseur?.libelle },
+                        { label: 'Code',             value: ap.fournisseur?.code },
+                        { label: 'Date application', value: fmtDate(ap.dateApplication) },
+                        { label: 'Statut params',    value: <StatusBadge status={ap.status} /> },
+                      ].map(({ label, value }) => (
+                        <div key={label} className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
+                          <span className="text-sm text-gray-500">{label}</span>
+                          <span className="text-sm font-medium text-gray-900">{value}</span>
+                        </div>
+                      ))}
+                    </Card>
+                  )}
+
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Modal facturation */}
-      {showFactModal && detail?.id && (
-        <FactureModal
-          assuranceId={detail.id}
-          initial={factureInitial}
-          onClose={() => setShowFactModal(false)}
-          onSaved={handleFactureSaved}
-        />
-      )}
-    </TabContainer>
+          {/* Modal facturation */}
+          {showFactModal && detail?.id && (
+            <FactureModal
+              assuranceId={detail.id}
+              initial={factureInitial}
+              onClose={() => setShowFactModal(false)}
+              onSaved={handleFactureSaved}
+            />
+          )}
+        </div>
+      </TabContainer>
+    </div>
   );
 };
 

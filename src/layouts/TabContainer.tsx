@@ -1,7 +1,6 @@
 export default function TabContainer({ tabs, activeTab, setActiveTab, children, color }: any) {
   return (
     <div className="flex flex-col h-full w-full overflow-hidden bg-white border-b-2 border-gray-200 rounded-lg">
-
       {/* Onglets — hauteur fixe */}
       <div className="inline-flex items-center gap-0.5rounded-[10px] p-1">
         {tabs.map((tab: any) => {

@@ -55,9 +55,9 @@ export default function AnnulationDevisModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b flex justify-between items-center">
+        <div className="p-6 border-b border-slate-200 flex justify-between items-center">
           <div className="flex items-center gap-3">
             <FiAlertTriangle className="text-amber-600" size={24} />
             <h2 className="text-xl font-bold text-slate-800">
@@ -157,7 +157,7 @@ export default function AnnulationDevisModal({
             </div>
           </div> */}
 
-          <div className="flex justify-end gap-4 pt-6 border-t">
+          <div className="flex justify-end gap-4 pt-6 border-t border-slate-200">
             <button
               type="button"
               onClick={onClose}

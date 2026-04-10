@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
 import TabContainer from '../../../../../layouts/TabContainer';
 import type { AppDispatch, RootState } from '../../../../../app/store';
-import RaisonAnnulationListe from '../../module.ticketing/ticketing.sous.module/SousMenuPrestation/RaisonAnnulationListe';
+import RaisonAnnulationListe from '../../module.parametre/RaisonAnnulation/RaisonAnnulationListe';
 import {
   fetchAssuranceParams, fetchAssuranceDocs, fetchAssuranceTarifsPlein, fetchAssuranceTarifsReduit,
   createAssuranceParams, createAssuranceDoc, createAssuranceTarifPlein, createAssuranceTarifReduit,

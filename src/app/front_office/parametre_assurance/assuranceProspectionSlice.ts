@@ -125,7 +125,7 @@ export interface AssuranceDevisDetail {
   }[];
   suivi: {
     id: string;
-    evolution: string;
+    evolution: string | null;
     entity: string;
     statut: string;
     origineLigne: string;

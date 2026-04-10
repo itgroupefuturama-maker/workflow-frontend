@@ -46,6 +46,7 @@ export interface AttestationLigne {
   id: string;
   numeroDosRef: string;
   numeroVol: string;
+  referenceLine: string;
   avion: string;
   itineraire: string;
   departId: string;
@@ -78,6 +79,7 @@ export interface ClientBeneficiaireInfo {
   typeDoc: string;
   referenceDoc: string;
   dateDelivranceDoc: string;
+  dateValiditeDoc: string;
   statut: string;
 }
 

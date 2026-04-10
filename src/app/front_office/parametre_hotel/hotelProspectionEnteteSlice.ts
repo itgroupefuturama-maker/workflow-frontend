@@ -12,29 +12,19 @@ export type GeneratePdfDirectionPayload = {
 
 export type SendDevisPayload = {
   benchmarkingId: string;
-  dataBooking: {
-    benchmarkingEnteteId: string;
-    hotel: string;
-    plateformeId: string;
-    typeChambreId: string;
-    nuiteDevise: number;
-    devise: string;
-    tauxChange: number;
-    nuiteAriary: number;
-    montantDevise: number;
-    montantAriary: number;
-  };
   dataClient: {
     benchmarkingEnteteId: string;
     hotel: string;
     plateformeId: string;
     typeChambreId: string;
-    nuiteDevise: number;
-    devise: string;
-    tauxChange: number;
-    nuiteAriary: number;
-    montantDevise: number;
-    montantAriary: number;
+    devises: {
+      deviseId: string;
+      nuiteDevise: number;
+      tauxChange: number;
+      nuiteAriary: number;
+      montantDevise: number;
+      montantAriary: number;
+    }[];
   };
   dataCommission: {
     tauxPrixUnitaire: number;
@@ -44,20 +34,24 @@ export type SendDevisPayload = {
   };
 };
 
+export type DeviseLignePayload = {
+  deviseId: string;
+  nuiteDevise: number;        // saisi manuellement
+  tauxChange: number;         // saisi manuellement
+  nuiteAriary: number;        // auto: nuiteDevise * tauxChange
+  montantDevise: number;      // auto: nuiteDevise * nombreChambre
+  montantAriary: number;      // auto: montantDevise * tauxChange
+};
 
 export type CreateBenchmarkingLignePayload = {
   benchmarkingEnteteId: string;
   hotel: string;
   plateformeId: string;
   typeChambreId: string;
-  nuiteDevise: number;
-  nuiteAriary: number;
-  montantDevise: number;
-  montantAriary: number;
-  devise: string;
-  tauxChange: number;
+  nombreChambre: number;
   isRefundable: boolean;
-  dateLimiteAnnulation: string;
+  dateLimiteAnnulation: string | null;
+  devises: DeviseLignePayload[];
 };
 
 export type CreateBenchmarkingPayload = {
@@ -68,7 +62,7 @@ export type CreateBenchmarkingPayload = {
   nuite: number;
   pays: string;
   ville: string;
-  serviceHotelIds: string[];
+  serviceSpecifiqueIds: string[];
 };
 
 // Types simplifiés (on garde l'essentiel pour l'affichage)
@@ -85,10 +79,13 @@ export type PrestationLight = {
 
 export type BenchService = {
   id: string;
-  serviceHotelId: string;
-  serviceHotel: {
+  serviceSpecifiqueId: string;
+  serviceSpecifique: {
     id: string;
-    service: string;
+    code: string;
+    libelle: string;
+    type: string;
+    typeService: string;
   };
 };
 
@@ -110,14 +107,10 @@ export type BenchmarkingEntete = {
     hotel: string;
     plateforme: { id: string; code: string; nom: string; status: string };
     typeChambre: { id: string; type: string; capacite: number };
-    nuiteDevise: number;
     nombreChambre: number;
-    devise: string;
-    tauxChange: number;
-    nuiteAriary: number;
-    montantDevise: number;
-    montantAriary: number;
     isBenchMark: boolean;
+    isRefundable: boolean;
+    deviseHotel: DeviseHotel[];  // ← ajout
   }>;
 };
 
@@ -158,6 +151,7 @@ export type BenchmarkingDetail = {
     hotel: string;
     plateforme: { id: string; code: string; nom: string; status: string };
     typeChambre: { id: string; type: string; capacite: number };
+    deviseHotel: DeviseHotel[];
     nuiteDevise: number;
     nombreChambre: number;
     devise: string;
@@ -170,8 +164,24 @@ export type BenchmarkingDetail = {
   }>;
   benchService: Array<{
     id: string;
-    serviceHotel: { id: string; service: string };
+    serviceSpecifique: { id: string; libelle: string };
   }>;
+};
+
+export type DeviseHotel = {
+  id: string;
+  nuiteDevise: string;
+  nuiteAriary: string;
+  montantDevise: number;
+  montantAriary: number;
+  tauxChange: number;
+  createdAt: number;
+  updatedAt: number;
+  devise: {
+    id: string;
+    devise: string;
+    status: string;
+  }
 };
 
 // État pour le détail
@@ -291,10 +301,18 @@ export const createBenchmarkingLigne = createAsyncThunk(
 
 export const setBenchmarkOfficial = createAsyncThunk(
   'benchmarking/setBenchmarkOfficial',
-  async ({ benchmarkingId, isRefundable }: { benchmarkingId: string; isRefundable: boolean }, { rejectWithValue }) => {
+  async (
+    { benchmarkingId, isRefundable, benchmarkingLigneId }: { 
+      benchmarkingId: string; 
+      isRefundable: boolean;
+      benchmarkingLigneId: string; // ← nouveau
+    },
+    { rejectWithValue }
+  ) => {
     try {
       const response = await axios.patch(`/hotel/benchmarking/${benchmarkingId}/set-benchmark`, {
         isRefundable,
+        benchmarkingLigneId, // ← nouveau
       });
 
       if (!response.data.success) {

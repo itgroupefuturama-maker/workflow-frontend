@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FiCheck, FiCheckCircle, FiEye, FiList, FiRefreshCw, FiX } from 'react-icons/fi';
+import { FiCheck, FiCheckCircle, FiChevronRight, FiEye, FiList, FiRefreshCw, FiX } from 'react-icons/fi';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { AppDispatch, RootState } from '../../../../../app/store';
 import { useDispatch, useSelector } from 'react-redux';
@@ -11,7 +11,8 @@ import TabContainer from '../../../../../layouts/TabContainer';
 import AnnulationDevisModal from '../../../../../components/modals/AnnulationDevisModal';
 import { API_URL } from '../../../../../service/env';
 import { TicketingHeader } from './components.billet/TicketingHeader';
-import { devisListeItems, prospectionDetailItems } from './components.billet/utils/ticketingHeaderItems';
+import { devisListeItems } from './components.billet/utils/ticketingHeaderItems';
+import { PdfDownloadButton } from '../../module.parametre/sections/pdf.generation/components/PdfDownloadButton';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -25,7 +26,6 @@ export default function Devis () {
   const { items: devisList, loading, error } = useSelector((state: RootState) => state.devis);
   const [openDevisId, setOpenDevisId] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState<{ [key: string]: boolean }>({});
-  const { current: billet } = useSelector((state: RootState) => state.billet);
 
   const [showAnnulationModal, setShowAnnulationModal] = useState(false);
   const [selectedDevisForCancel, setSelectedDevisForCancel] = useState<Devis | null>(null);
@@ -39,16 +39,7 @@ export default function Devis () {
   ];
 
   const [activeTab, setActiveTab] = useState('prospection');
-
-  const [openRow, setOpenRow] = useState<string | null>(null);
-
-  const toggleRow = (id: string) => {
-    setOpenRow(openRow === id ? null : id);
-  };
-
-  const [previewImage, setPreviewImage] = useState<string | null>(null);
-
-
+  
   // FONCTION DE NAVIGATION INTERCEPTÉE
     const handleTabChange = (id: string) => {
       if (id === 'billet') {
@@ -126,17 +117,7 @@ export default function Devis () {
   const handleAsAapprouved = async (billetId: string) => {
     if (!enteteId) return;
     try {
-      const result = await dispatch(
-        updateApprouverDevisStatut({ enteteId: billetId })
-      ).unwrap();
-
-      // L'image base64 est déjà prête à être utilisée directement
-      // result.data.images[0].base64 contient déjà "data:image/png;base64,..."
-      const imageBase64 = result?.data?.images?.[0]?.base64;
-      if (imageBase64) {
-        setPreviewImage(imageBase64);
-      }
-
+      await dispatch(updateApprouverDevisStatut({ enteteId: billetId })).unwrap();
       dispatch(fetchDevisByEntete(enteteId));
     } catch (err: any) {
       alert('Erreur lors du changement de statut');
@@ -194,7 +175,6 @@ export default function Devis () {
       // Optionnel : recharger la liste pour refléter un éventuel changement de statut
       dispatch(fetchDevisByEntete(enteteId));
       
-      alert('PDF Commission généré et envoyé à la direction avec succès !');
     } else {
       throw new Error('Chemin du PDF non reçu');
     }
@@ -217,528 +197,431 @@ export default function Devis () {
   return (
     <div className="h-full flex flex-col min-h-0">
       <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange}>
-        <div className="py-2 px-4">
-
-          <TicketingHeader items={devisListeItems(enteteId)} />
-          {/* Header */}
-          <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 gap-4">
-            <h1 className="text-xl font-bold text-slate-800">
-              Liste devis liés à l'en-tête
-            </h1>
-          </header>
-
-          {loading && (
-            <div className="flex justify-center items-center py-20">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-indigo-600"></div>
-              <span className="ml-4 text-slate-600 font-medium">Chargement des devis...</span>
+        <div className="flex h-full min-h-0 overflow-hidden">
+          {/* ── Colonne principale ── */}
+          <div className="flex-1 min-w-0 flex flex-col min-h-0"> 
+            <div className="shrink-0 px-4 pt-2 bg-white">
+              <TicketingHeader items={devisListeItems(enteteId)} />
             </div>
-          )}
+            {loading && (
+              <div className="flex justify-center items-center py-20">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-indigo-600"></div>
+                <span className="ml-4 text-slate-600 font-medium">Chargement des devis...</span>
+              </div>
+            )}
 
-          {error && !loading && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg mb-8">
-              <strong>Erreur :</strong> {error}
-            </div>
-          )}
+            {error && !loading && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg mb-8">
+                <strong>Erreur :</strong> {error}
+              </div>
+            )}
 
-          {!loading && !error && (
-            <>
-              {devisList.length === 0 ? (
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
-                  <p className="text-slate-600 text-lg font-medium">
-                    Aucun devis généré pour cet en-tête.
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {devisList.map((devis) => {
-                    const entete = devis.data?.entete || {};
-                    const lignes = devis.data?.lignes || [];
-                    const lignesCount = lignes.length;
-                    const isLoadingPdf = pdfLoading[devis.id] || false;
+            <div className="flex-1 min-h-0 overflow-y-auto pb-4 px-4">
 
-                    const handleCreateBillet = async () => {
-                      try {
-                        const payload = {
-                          devisId: devis.id,
-                          prospectionEnteteId: entete.id,   // ou devis.data?.entete?.id selon ta structure exacte
+              {!loading && !error && (
+                <>
+                  {devisList.length === 0 ? (
+                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
+                      <p className="text-slate-600 text-lg font-medium">
+                        Aucun devis généré pour cet en-tête.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {devisList.map((devis) => {
+                        const entete = devis.data?.entete || {};
+                        const lignes = devis.data?.lignes || [];
+                        const lignesCount = lignes.length;
+                        const isLoadingPdf = pdfLoading[devis.id] || false;
+
+                        const handleCreateBillet = async () => {
+                          try {
+                            const payload = {
+                              devisId: devis.id,
+                              prospectionEnteteId: entete.id,   // ou devis.data?.entete?.id selon ta structure exacte
+                            };
+
+                            const response = await axios.post('/billet/entete', payload);
+
+                            if (response.data?.success && response.data?.data?.id) {
+
+                              navigate(`/dossiers-communs/ticketing/pages/billet/${devis.id}?prospectionEnteteId=${devis.data?.entete?.id}`);
+                              // Option 2 (alternative) : juste l'ID et re-fetch dans la page billet
+                              // navigate(`/dossiers-communs/ticketing/billet/${nouveauBilletId}`);
+                            } else {
+                              alert('Erreur lors de la création du billet');
+                            }
+                          } catch (err: any) {
+                            console.error('Erreur création billet:', err);
+                            const msg = err.response?.data?.message || 'Erreur serveur';
+                            alert(`Échec création billet : ${msg}`);
+                          }
                         };
 
-                        const response = await axios.post('/billet/entete', payload);
-
-                        if (response.data?.success && response.data?.data?.id) {
-                          alert('Creation billet avec succée')
-
-                          navigate(`/dossiers-communs/ticketing/pages/billet/${devis.id}?prospectionEnteteId=${devis.data?.entete?.id}`);
-                          // Option 2 (alternative) : juste l'ID et re-fetch dans la page billet
-                          // navigate(`/dossiers-communs/ticketing/billet/${nouveauBilletId}`);
-                        } else {
-                          alert('Erreur lors de la création du billet');
-                        }
-                      } catch (err: any) {
-                        console.error('Erreur création billet:', err);
-                        const msg = err.response?.data?.message || 'Erreur serveur';
-                        alert(`Échec création billet : ${msg}`);
-                      }
-                    };
-
-                    return (
-                      <div
-                        key={devis.id}
-                        className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden"
-                      >
-                        {/* En-tête du devis (toujours visible) */}
-                        <div
-                          className="p-5 flex flex-wrap justify-between items-center gap-4 cursor-pointer hover:bg-slate-50 transition-colors"
-                          onClick={() => toggleDevis(devis.id)}
-                        >
-                          <div>
-                            <h3 className="text-lg font-bold text-indigo-700">
-                              {devis.reference}
-                            </h3>
-                            <p className="text-sm text-slate-500">
-                              Créé le {new Date(devis.createdAt).toLocaleString('fr-FR', {
-                                dateStyle: 'medium',
-                                timeStyle: 'short',
-                              })}
-                            </p>
-                          </div>
-
-                          <div className="flex items-center gap-6">
-                            <div className="text-right">
-                              <div className="text-xl font-bold text-emerald-700">
-                                {devis.totalGeneral.toLocaleString('fr-FR')} Ar
+                        return (
+                          <div
+                            key={devis.id}
+                            className={`bg-white rounded-xl shadow-sm overflow-hidden ${devis.statut == 'ANNULER' ? 'border border-red-200 ' : 'border border-slate-200'}`}
+                          >
+                            {/* En-tête du devis (toujours visible) */}
+                            {/* ── EN-TÊTE (toujours visible) ── */}
+                            <div
+                              className= {`px-5 py-4 flex items-center gap-4 cursor-pointer hover:bg-slate-50 transition-colors`}
+                              onClick={() => toggleDevis(devis.id)}
+                            >
+                              {/* Référence + statut */}
+                              <div className="flex flex-col gap-1 min-w-0">
+                                <div className="flex items-center gap-2.5 flex-wrap">
+                                  <span className="text-sm font-medium text-slate-800">{devis.reference}</span>
+                                  {/* <StatusBadge statut={devis.statut} /> */}
+                                </div>
+                                <span className="text-xs text-slate-400">
+                                  Créé le {new Date(devis.createdAt).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })}
+                                </span>
                               </div>
-                              <div className="text-xs text-slate-500">
-                                {lignesCount} ligne{lignesCount !== 1 ? 's' : ''}
+
+                              {/* Total + nb lignes */}
+                              <div className="ml-auto flex items-center gap-4">
+                                <div className="text-right">
+                                  <p className="text-sm font-medium text-slate-800">{devis.totalGeneral.toLocaleString('fr-FR')} Ar</p>
+                                  <p className="text-xs text-slate-400">{lignesCount} ligne{lignesCount !== 1 ? 's' : ''}</p>
+                                </div>
+                                
                               </div>
+                              <PdfDownloadButton
+                                data={devis}                           // ← devis est déjà un DevisListItem
+                                filename={`${devis.reference}.pdf`}
+                              />
+                              {devis.statut == 'ANNULER' && (
+                                <button
+                                  className="bg-red-500 hover:bg-red-400 text-white px-4 py-2 rounded-lg"
+                                >
+                                  Devis annulé
+                                </button>
+                              )}
+                              <FiChevronRight
+                                  size={16}
+                                  className={`text-slate-400 transition-transform `}
+                                />
                             </div>
-                          </div>
-                        </div>
 
-                        {/* Contenu détaillé (visible quand ouvert) */}
-                        <div className="px-5 pb-6 border-t border-slate-200">
-                          {/* Infos entête */}
-                          <div className="mt-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
-                            <div>
-                              <label className="text-xs uppercase text-slate-500 font-semibold block mb-1">
-                                Statut 
-                              </label>
-                              <div className="font-medium">{devis.statut || '—'}</div>
-                            </div>
-                            <div>
-                              <label className="text-xs uppercase text-slate-500 font-semibold block mb-1">
-                                Fournisseur 
-                              </label>
-                              <div className="font-medium">{entete.fournisseur?.libelle || '—'}</div>
-                            </div>
-                            <div>
-                              <label className="text-xs uppercase text-slate-500 font-semibold block mb-1">
-                                Type de vol
-                              </label>
-                              <div className="font-medium">{entete.typeVol || '—'}</div>
-                            </div>
-                            <div>
-                              <label className="text-xs uppercase text-slate-500 font-semibold block mb-1">
-                                Crédit
-                              </label>
-                              <div className="font-medium">{entete.credit || '—'}</div>
-                            </div>
-                            <div>
-                              <label className="text-xs uppercase text-slate-500 font-semibold block mb-1">
-                                Commission proposée
-                              </label>
-                              <div className="font-medium">
-                                {entete.commissionPropose != null ? `${entete.commissionPropose} %` : '—'}
+                            {/* Contenu détaillé (visible quand ouvert) */}
+                            <div className="px-5 pb-6 border-t border-slate-200">
+                              {/* Infos entête */}
+                              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 py-4 border-b border-slate-100">
+                                {[
+                                  { label: 'Fournisseur',           value: entete.fournisseur?.libelle },
+                                  { label: 'Type de vol',            value: entete.typeVol },
+                                  { label: 'Crédit',                 value: entete.credit },
+                                  { label: 'Commission proposée',    value: entete.commissionPropose != null ? `${entete.commissionPropose} %` : null },
+                                  { label: 'Commission appliquée',   value: entete.commissionAppliquer != null ? `${entete.commissionAppliquer} %` : null },
+                                ].map(({ label, value }) => (
+                                  <div key={label}>
+                                    <p className="text-[10px] uppercase tracking-wide text-slate-400 font-medium mb-1">{label}</p>
+                                    <p className="text-sm text-slate-700 font-medium">{value || '—'}</p>
+                                  </div>
+                                ))}
                               </div>
-                            </div>
-                            <div>
-                              <label className="text-xs uppercase text-slate-500 font-semibold block mb-1">
-                                Commission appliquée
-                              </label>
-                              <div className="font-medium">
-                                {entete.commissionAppliquer != null ? `${entete.commissionAppliquer} %` : '—'}
-                              </div>
-                            </div>
-                          </div>
 
-                          {/* Tableau des lignes */}
-                          {lignes.length > 0 ? (
-                            <div className="overflow-x-auto rounded-xl border border-slate-200 shadow-sm bg-white">
-                              <table className="min-w-full divide-y divide-slate-200">
-                                <thead className="bg-slate-50/80 backdrop-blur-md sticky top-0">
-                                  <tr>
-                                    <th className="px-4 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Vol & Itinéraire</th>
-                                    <th className="px-4 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Passager / Classe</th>
-                                    <th className="px-4 py-4 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Horaires & Durée</th>
-                                    <th className="px-4 py-4 text-right text-xs font-bold text-emerald-600 uppercase tracking-wider bg-emerald-50/30">Tarification Cie</th>
-                                    <th className="px-4 py-4 text-right text-xs font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50/30">Tarification Client</th>
-                                    <th className="px-4 py-4 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Services & Conditions</th>
-                                  </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-100 bg-white">
-                                  {lignes.map((ligne: Ligne) => (
-                                    <tr key={ligne.id} className="hover:bg-indigo-50/30 transition-colors group">
-                                      {/* 1. VOL & ITINERAIRE */}
-                                      <td className="px-4 py-4">
-                                        <div className="flex flex-col">
-                                          <span className="text-sm font-bold text-indigo-600 mb-1">{ligne.numeroVol || 'N/A'}</span>
-                                          <div className="flex items-center gap-2">
-                                            <span className="text-sm font-semibold text-slate-700">{ligne.itineraire}</span>
-                                          </div>
-                                          <span className="text-[10px] text-slate-400 mt-1 uppercase font-medium">Réf: {ligne.numeroDosRef || '—'}</span>
-                                          <span className="text-[10px] text-slate-400 mt-1 uppercase font-medium">Nb ligne: {ligne.nombre || '—'}</span>
-                                        </div>
-                                      </td>
+                              {/* Tableau des lignes */}
+                              {lignes.length > 0 ? (
+                                <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200">
+                                  <table className="min-w-full divide-y divide-slate-100 text-xs">
+                                    <thead className="bg-slate-50">
+                                      <tr>
+                                        <th className="px-4 py-3 text-left text-[10px] font-medium text-slate-400 uppercase tracking-wider">Vol & itinéraire</th>
+                                        <th className="px-4 py-3 text-left text-[10px] font-medium text-slate-400 uppercase tracking-wider">Passager / classe</th>
+                                        <th className="px-4 py-3 text-left text-[10px] font-medium text-slate-400 uppercase tracking-wider">Horaires</th>
+                                        <th className="px-4 py-3 text-right text-[10px] font-medium text-emerald-600 uppercase tracking-wider">Tarif compagnie</th>
+                                        <th className="px-4 py-3 text-right text-[10px] font-medium text-indigo-500 uppercase tracking-wider">Tarif client</th>
+                                        <th className="px-4 py-3 text-left text-[10px] font-medium text-slate-400 uppercase tracking-wider">Services & conditions</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100 bg-white">
+                                      {lignes.map((ligne: Ligne) => (
+                                        <tr key={ligne.id} className="hover:bg-slate-50/60 transition-colors">
 
-                                      {/* 2. PASSAGER & CLASSE */}
-                                      <td className="px-4 py-4">
-                                        <div className="flex flex-col">
-                                          <span className="text-sm text-slate-700 font-medium">{ligne.typePassager}</span>
-                                          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-slate-100 text-slate-600 w-fit mt-1">
-                                            Classe {ligne.classe}
-                                          </span>
-                                        </div>
-                                      </td>
+                                          {/* Vol & itinéraire */}
+                                          <td className="px-4 py-3">
+                                            <p className="font-medium text-indigo-600">{ligne.numeroVol || 'N/A'}</p>
+                                            <p className="text-slate-700 mt-0.5">{ligne.itineraire}</p>
+                                            <p className="text-slate-400 mt-1 text-[10px] uppercase">Réf : {ligne.numeroDosRef || '—'}</p>
+                                            <p className="text-slate-400 text-[10px]">Nb lignes : {ligne.nombre || '—'}</p>
+                                          </td>
 
-                                      {/* 3. HORAIRES & INFOS TECHNIQUES */}
-                                      <td className="px-4 py-4">
-                                        <div className="text-xs space-y-1 text-slate-600">
-                                          <div className="flex items-center gap-2">
-                                            <span className="w-12 font-semibold text-slate-400">Départ:</span> 
-                                            <span>{new Date(ligne.dateHeureDepart).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</span>
-                                          </div>
-                                          <div className="flex items-center gap-2">
-                                            <span className="w-12 font-semibold text-slate-400">Arrivée:</span>
-                                            <span>{ligne.dateHeureArrive ? new Date(ligne.dateHeureArrive).toLocaleString('fr-FR', { timeStyle: 'short' }) : '—'}</span>
-                                          </div>
-                                          <div className="flex gap-3 mt-2 text-[10px] font-bold text-indigo-500 uppercase">
-                                            <span>✈️ {ligne.avion || 'N/A'}</span>
-                                            <span>⏳ {ligne.dureeVol || '—'}</span>
-                                          </div>
-                                        </div>
-                                      </td>
+                                          {/* Passager / classe */}
+                                          <td className="px-4 py-3">
+                                            <p className="text-slate-700">{ligne.typePassager}</p>
+                                            <span className="inline-block mt-1 px-2 py-0.5 rounded bg-slate-100 text-slate-500 text-[10px] font-medium">
+                                              Classe {ligne.classe}
+                                            </span>
+                                          </td>
 
-                                      {/* 4. TARIFICATION COMPAGNIE (SÉPARÉ) */}
-                                      <td className="px-4 py-4 bg-emerald-50/10">
-                                        <div className="flex flex-col items-end gap-1">
-                                          <div className="text-xs text-slate-500">
-                                            Billet: <span className="font-semibold text-slate-700">{ligne.montantBilletCompagnieDevise?.toLocaleString()} {ligne.devise}</span>
-                                          </div>
-                                          <div className="text-xs text-slate-500">
-                                            Service: <span className="text-slate-700">{ligne.montantServiceCompagnieDevise?.toLocaleString()} {ligne.devise}</span>
-                                          </div>
-                                          <div className="text-xs font-bold text-emerald-700 mt-1 pt-1 border-t border-emerald-100">
-                                            Total: { (ligne.montantBilletCompagnieDevise + ligne.montantServiceCompagnieDevise).toLocaleString() } {ligne.devise}
-                                          </div>
-                                        </div>
-                                      </td>
-
-                                      {/* 5. TARIFICATION CLIENT (SÉPARÉ) */}
-                                      <td className="px-4 py-4 bg-indigo-50/10">
-                                        <div className="flex flex-col items-end gap-1">
-                                          <div className="text-xs text-slate-500">
-                                            Billet: <span className="font-semibold text-slate-700">{ligne.montantBilletClientDevise?.toLocaleString()} {ligne.devise}</span>
-                                          </div>
-                                          <div className="text-xs text-indigo-600 font-medium">
-                                            Com: +{ligne.commissionEnDevise?.toLocaleString()} {ligne.devise}
-                                          </div>
-                                          <div className="text-sm font-black text-indigo-700 mt-1 pt-1 border-t border-indigo-100">
-                                            Total: { (ligne.montantBilletClientDevise + ligne.montantServiceClientDevise).toLocaleString() } {ligne.devise}
-                                          </div>
-                                        </div>
-                                      </td>
-
-                                      {/* 6. SERVICES & CONDITIONS */}
-                                      <td className="px-4 py-4">
-                                        <div className="space-y-3">
-                                          {/* Tags de services */}
-                                          <div className="flex flex-wrap gap-1">
-                                            {ligne.serviceProspectionLigne?.length > 0 ? (
-                                              ligne.serviceProspectionLigne.map((svc) => (
-                                                <span key={svc.id} className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-[10px] font-bold rounded-md border border-indigo-100">
-                                                  {svc.serviceSpecifique?.libelle || 'Svc'}: {svc.valeur === 'true' ? 'Oui' : svc.valeur === 'false' ? 'Non' : svc.valeur}
-                                                </span>
-                                              ))
-                                            ) : <span className="text-[10px] text-slate-300 italic">Aucun service</span>}
-                                          </div>
-                                          
-                                          {/* Conditions Modif/Annul */}
-                                          {(ligne.conditionModif || ligne.conditionAnnul) && (
-                                            <div className="grid grid-cols-2 gap-2 mt-2">
-                                              <div className="p-1.5 bg-orange-50 rounded border border-orange-100 text-center">
-                                                <p className="text-[9px] uppercase font-bold text-orange-600">Modif</p>
-                                                <p className="text-[10px] text-orange-800 font-medium truncate" title={ligne.conditionModif}>{ligne.conditionModif || 'N/A'}</p>
-                                              </div>
-                                              <div className="p-1.5 bg-red-50 rounded border border-red-100 text-center">
-                                                <p className="text-[9px] uppercase font-bold text-red-600">Annul</p>
-                                                <p className="text-[10px] text-red-800 font-medium truncate" title={ligne.conditionAnnul}>{ligne.conditionAnnul || 'N/A'}</p>
-                                              </div>
+                                          {/* Horaires */}
+                                          <td className="px-4 py-3">
+                                            <div className="space-y-1 text-slate-600">
+                                              <p><span className="text-slate-400 w-12 inline-block">Départ</span>
+                                                {new Date(ligne.dateHeureDepart).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
+                                              </p>
+                                              <p><span className="text-slate-400 w-12 inline-block">Arrivée</span>
+                                                {ligne.dateHeureArrive ? new Date(ligne.dateHeureArrive).toLocaleString('fr-FR', { timeStyle: 'short' }) : '—'}
+                                              </p>
+                                              <p className="text-indigo-400 font-medium text-[10px] uppercase mt-1">
+                                                {ligne.avion || 'N/A'} · {ligne.dureeVol || '—'}
+                                              </p>
                                             </div>
-                                          )}
-                                        </div>
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          ) : (
-                            <p className="text-slate-500 italic mt-4">Aucune ligne dans ce devis</p>
-                          )}
-                          <div className="mt-6 flex flex-wrap justify-end gap-3 items-center">
-                            
-                            {/* Bouton Voir liste Billet - Toujours actif */}
-                            <button
-                            disabled= { devis.statut == 'ANNULER' || devis.statut == 'DEVIS_A_APPROUVER'}
-                              onClick={() => navigate(`/dossiers-communs/ticketing/pages/billet/${devis.id}?prospectionEnteteId=${devis.data?.entete?.id}`)}
-                              className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-2 font-medium ${
-                                devis.statut === 'DEVIS_APPROUVE'
-                                  ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
-                                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                              }`}
-                            >
-                              <FiList size={16} />
-                            </button>
+                                          </td>
 
-                            
-                            {/* Bouton Voir/Télécharger PDF - Toujours actif */}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDownloadPdf(devis.id, devis.reference);
-                              }}
-                              disabled={isLoadingPdf || devis.statut == 'ANNULER'}
-                              className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              {isLoadingPdf ? (
-                                <>
-                                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-white"></div>
-                                  Génération...
-                                </>
+                                          {/* Tarif compagnie */}
+                                          <td className="px-4 py-3 text-right">
+                                            <p className="text-slate-400">Billet <span className="text-slate-700 font-medium">{ligne.montantBilletCompagnieDevise?.toLocaleString()} {ligne.devise}</span></p>
+                                            <p className="text-slate-400 mt-0.5">Service <span className="text-slate-700">{ligne.montantServiceCompagnieDevise?.toLocaleString()} {ligne.devise}</span></p>
+                                            <p className="text-emerald-700 font-medium mt-1.5 pt-1.5 border-t border-slate-100">
+                                              {(ligne.montantBilletCompagnieDevise + ligne.montantServiceCompagnieDevise).toLocaleString()} {ligne.devise}
+                                            </p>
+                                          </td>
+
+                                          {/* Tarif client */}
+                                          <td className="px-4 py-3 text-right">
+                                            <p className="text-slate-400">Billet <span className="text-slate-700 font-medium">{ligne.montantBilletClientDevise?.toLocaleString()} {ligne.devise}</span></p>
+                                            <p className="text-indigo-400 mt-0.5">+{ligne.commissionEnDevise?.toLocaleString()} {ligne.devise}</p>
+                                            <p className="text-indigo-700 font-medium mt-1.5 pt-1.5 border-t border-slate-100">
+                                              {(ligne.montantBilletClientDevise + ligne.montantServiceClientDevise).toLocaleString()} {ligne.devise}
+                                            </p>
+                                          </td>
+
+                                          {/* Services & conditions */}
+                                          <td className="px-4 py-3">
+                                            <div className="flex flex-wrap gap-1">
+                                              {ligne.serviceProspectionLigne?.length > 0
+                                                ? ligne.serviceProspectionLigne.map((svc) => (
+                                                    <span key={svc.id} className="px-2 py-0.5 bg-indigo-50 text-indigo-500 text-[10px] font-medium rounded border border-indigo-100">
+                                                      {svc.serviceSpecifique?.libelle}: {svc.valeur === 'true' ? 'Oui' : svc.valeur === 'false' ? 'Non' : svc.valeur}
+                                                    </span>
+                                                  ))
+                                                : <span className="text-slate-300 italic text-[10px]">Aucun service</span>
+                                              }
+                                            </div>
+                                            {(ligne.conditionModif || ligne.conditionAnnul) && (
+                                              <div className="grid grid-cols-2 gap-1.5 mt-2">
+                                                <div className="p-1.5 bg-orange-50 rounded text-center">
+                                                  <p className="text-[9px] font-medium text-orange-500 uppercase mb-0.5">Modif</p>
+                                                  <p className="text-[10px] text-orange-800 font-medium truncate" title={ligne.conditionModif || 'N/A'}>{ligne.conditionModif || 'N/A'}</p>
+                                                </div>
+                                                <div className="p-1.5 bg-red-50 rounded text-center">
+                                                  <p className="text-[9px] font-medium text-red-500 uppercase mb-0.5">Annul</p>
+                                                  <p className="text-[10px] text-red-800 font-medium truncate" title={ligne.conditionAnnul || 'N/A'}>{ligne.conditionAnnul || 'N/A'}</p>
+                                                </div>
+                                              </div>
+                                            )}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
                               ) : (
-                                <>
-                                  <FiEye size={16} />
-                                  PDF
-                                </>
+                                <p className="text-sm text-slate-400 italic mt-4">Aucune ligne dans ce devis</p>
                               )}
-                            </button>
+                              <div className="mt-6 flex flex-wrap justify-end gap-3 items-center">
+                                {/* Bouton Voir liste Billet - Toujours actif */}
+                                <button
+                                disabled= { devis.statut == 'ANNULER' || devis.statut == 'DEVIS_A_APPROUVER'}
+                                  onClick={() => navigate(`/dossiers-communs/ticketing/pages/billet/${devis.id}?prospectionEnteteId=${devis.data?.entete?.id}`)}
+                                  className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-2 font-medium ${
+                                    devis.statut === 'DEVIS_APPROUVE'
+                                      ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+                                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                  }`}
+                                >
+                                  <FiList size={16} />
+                                </button>
 
-                            {/* Séparateur */}
-                            <div className="w-px h-6 bg-gray-300 mx-1" />
+                                
+                                {/* Bouton Voir/Télécharger PDF - Toujours actif */}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDownloadPdf(devis.id, devis.reference);
+                                  }}
+                                  disabled={isLoadingPdf || devis.statut == 'ANNULER'}
+                                  className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  {isLoadingPdf ? (
+                                    <>
+                                      <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-white"></div>
+                                      Génération...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <FiEye size={16} />
+                                      PDF
+                                    </>
+                                  )}
+                                </button>
 
-                            <button
-                              onClick={() => {
-                                if (devis.statut === 'CREER') {   // adapte selon le statut où le bouton doit être actif
-                                  handleApprouverDirection(devis.id, devis.reference);
-                                }
-                              }}
-                              disabled={devis.statut !== 'CREER' || directionLoading[devis.id]}
-                              className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-2 font-medium min-w-[180px] justify-center ${
-                                devis.statut === 'CREER' && !directionLoading[devis.id]
-                                  ? 'bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer'
-                                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                              }`}
-                              title={devis.statut !== 'DEVIS_APPROUVE' ? 'Disponible uniquement pour les devis approuvés' : ''}
-                            >
-                              {directionLoading[devis.id] ? (
-                                <>
-                                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-white"></div>
-                                  En cours...
-                                </>
-                              ) : (
-                                <>
+                                {/* Séparateur */}
+                                <div className="w-px h-6 bg-gray-300 mx-1" />
+
+                                <button
+                                  onClick={() => {
+                                    if (devis.statut === 'CREER') {   // adapte selon le statut où le bouton doit être actif
+                                      handleApprouverDirection(devis.id, devis.reference);
+                                    }
+                                  }}
+                                  disabled={devis.statut !== 'CREER' || directionLoading[devis.id]}
+                                  className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-2 font-medium min-w-[180px] justify-center ${
+                                    devis.statut === 'CREER' && !directionLoading[devis.id]
+                                      ? 'bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer'
+                                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                  }`}
+                                  title={devis.statut !== 'DEVIS_APPROUVE' ? 'Disponible uniquement pour les devis approuvés' : ''}
+                                >
+                                  {directionLoading[devis.id] ? (
+                                    <>
+                                      <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-white"></div>
+                                      En cours...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <FiCheck size={16} />
+                                      Envoyer Direction
+                                    </>
+                                  )}
+                                </button>
+
+                                {/* Bouton Devis à approuver */}
+                                <button
+                                  onClick={() => {
+                                    if (devis.statut === 'CREER') {
+                                      handleAsAapprouved(devis.id);
+                                    }
+                                  }}
+                                  disabled={devis.statut !== 'CREER'}
+                                  className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-2 font-medium ${
+                                    devis.statut === 'CREER'
+                                      ? 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
+                                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                  }`}
+                                  title={devis.statut !== 'CREER' ? 'Disponible uniquement pour les devis créés' : ''}
+                                >
+                                  <FiCheckCircle size={16} />
+                                  Envoyer Client
+                                </button>
+
+                                {/* Bouton Devis à valider */}
+                                <button
+                                  onClick={() => {
+                                    if (devis.statut === 'DEVIS_A_APPROUVER') {
+                                      handleAsValidate(devis.id);
+                                    }
+                                  }}
+                                  disabled={devis.statut !== 'DEVIS_A_APPROUVER'}
+                                  className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-2 font-medium ${
+                                    devis.statut === 'DEVIS_A_APPROUVER'
+                                      ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+                                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                  }`}
+                                  title={devis.statut !== 'DEVIS_A_APPROUVER' ? 'Disponible uniquement pour les devis à approuver' : ''}
+                                >
                                   <FiCheck size={16} />
-                                  Envoyer Direction
-                                </>
-                              )}
-                            </button>
+                                  Approuver / Client
+                                </button>
 
-                            {/* Bouton Devis à approuver */}
-                            <button
-                              onClick={() => {
-                                // if (devis.statut === 'CREER') {
-                                  handleAsAapprouved(devis.id);
-                                // }
-                              }}
-                              // disabled={devis.statut !== 'CREER'}
-                              className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-2 font-medium ${
-                                devis.statut === 'CREER'
-                                  ? 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
-                                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                              }`}
-                              title={devis.statut !== 'CREER' ? 'Disponible uniquement pour les devis créés' : ''}
-                            >
-                              <FiCheckCircle size={16} />
-                              Envoyer Client
-                            </button>
+                                {/* Séparateur */}
+                                <div className="w-px h-6 bg-gray-300 mx-1" />
 
-                            {/* Bouton Devis à valider */}
-                            <button
-                              onClick={() => {
-                                if (devis.statut === 'DEVIS_A_APPROUVER') {
-                                  handleAsValidate(devis.id);
-                                }
-                              }}
-                              disabled={devis.statut !== 'DEVIS_A_APPROUVER'}
-                              className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-2 font-medium ${
-                                devis.statut === 'DEVIS_A_APPROUVER'
-                                  ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
-                                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                              }`}
-                              title={devis.statut !== 'DEVIS_A_APPROUVER' ? 'Disponible uniquement pour les devis à approuver' : ''}
-                            >
-                              <FiCheck size={16} />
-                              Approuver / Client
-                            </button>
+                                {/* Bouton Devis à transformer */}
+                                <button
+                                  onClick={() => {
+                                    if (devis.statut === 'DEVIS_APPROUVE') {
+                                      handleCreateBillet();
+                                    }
+                                  }}
+                                  disabled={devis.statut !== 'DEVIS_APPROUVE'}
+                                  className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-2 font-medium ${
+                                    devis.statut === 'DEVIS_APPROUVE'
+                                      ? 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
+                                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                  }`}
+                                  title={devis.statut !== 'DEVIS_APPROUVE' ? 'Disponible uniquement pour les devis approuvés' : ''}
+                                >
+                                  <FiRefreshCw size={16} />
+                                  Transformer / Billet
+                                </button>
 
-                            {/* Séparateur */}
-                            <div className="w-px h-6 bg-gray-300 mx-1" />
+                                {/* Séparateur */}
+                                <div className="w-px h-6 bg-gray-300 mx-1" />
 
-                            {/* Bouton Devis à transformer */}
-                            <button
-                              onClick={() => {
-                                if (devis.statut === 'DEVIS_APPROUVE') {
-                                  handleCreateBillet();
-                                }
-                              }}
-                              disabled={devis.statut !== 'DEVIS_APPROUVE'}
-                              className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-2 font-medium ${
-                                devis.statut === 'DEVIS_APPROUVE'
-                                  ? 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
-                                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                              }`}
-                              title={devis.statut !== 'DEVIS_APPROUVE' ? 'Disponible uniquement pour les devis approuvés' : ''}
-                            >
-                              <FiRefreshCw size={16} />
-                              Transformer / Billet
-                            </button>
-
-                            {/* Séparateur */}
-                            <div className="w-px h-6 bg-gray-300 mx-1" />
-
-                            {/* Nouveau bouton Annuler */}
-                            {/* Bouton Annuler - Visible selon le statut */}
-                            {/* {['CREER', 'DEVIS_A_APPROUVER'].includes(devis.statut) && ( */}
-                              <button
-                              disabled= { devis.statut == 'ANNULER' || devis.statut == 'DEVIS_APPROUVE'}
-                                onClick={() => {
-                                  setSelectedDevisForCancel(devis);
-                                  setShowAnnulationModal(true);
-                                }}
-                                className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-2 font-medium ${
-                                  devis.statut === 'CREER' || devis.statut === 'DEVIS_A_APPROUVER'
-                                    ? 'bg-red-600 text-white hover:bg-red-700 cursor-pointer'
-                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                }`}
-                              >
-                                <FiX size={16} />
-                                Annuler
-                              </button>
-                            {/* )} */}
+                                {/* Nouveau bouton Annuler */}
+                                {/* Bouton Annuler - Visible selon le statut */}
+                                {/* {['CREER', 'DEVIS_A_APPROUVER'].includes(devis.statut) && ( */}
+                                  <button
+                                  disabled= { devis.statut == 'ANNULER' || devis.statut == 'DEVIS_APPROUVE'}
+                                    onClick={() => {
+                                      setSelectedDevisForCancel(devis);
+                                      setShowAnnulationModal(true);
+                                    }}
+                                    className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-2 font-medium ${
+                                      devis.statut === 'CREER' || devis.statut === 'DEVIS_A_APPROUVER'
+                                        ? 'bg-red-600 text-white hover:bg-red-700 cursor-pointer'
+                                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                    }`}
+                                  >
+                                    <FiX size={16} />
+                                    Annuler
+                                  </button>
+                                {/* )} */}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </>
               )}
-            </>
-          )}
-          {selectedDevisForCancel && (
-          // Dans Devis.tsx, cherchez le composant AnnulationDevisModal
-          <AnnulationDevisModal
-            isOpen={showAnnulationModal}
-            onClose={() => {
-              setShowAnnulationModal(false);
-              setSelectedDevisForCancel(null);
-            }}
-            onSubmit={async (data) => {
-              if (!selectedDevisForCancel) return;
-              
-              setAnnulationLoading(true);
-              try {
-                // 1. On lance l'annulation
-                await dispatch(
-                  annulerDevis({
-                    devisId: selectedDevisForCancel.id,
-                    payload: data,
-                  })
-                ).unwrap();
-                
-                // 2. ICI : On réactualise la liste immédiatement
-                if (enteteId) {
-                  dispatch(fetchDevisByEntete(enteteId));
-                }
-
-                alert('Devis annulé avec succès');
-                setShowAnnulationModal(false);
-                setSelectedDevisForCancel(null);
-              } catch (err: any) {
-                alert(err || 'Erreur lors de l\'annulation');
-              } finally {
-                setAnnulationLoading(false);
-              }
-            }}
-            lignes={selectedDevisForCancel?.data?.lignes || []} // Ajout du ? au cas où
-            loading={annulationLoading}
-          />
-        )}
-
-        {/* Modal aperçu image devis */}
-        {previewImage && (
-          <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm"
-            onClick={() => setPreviewImage(null)}
-          >
-            <div
-              className="bg-white rounded-2xl shadow-2xl p-4 max-w-3xl w-full mx-4 relative"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Header modal */}
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-bold text-slate-800">Aperçu du devis</h2>
-                <button
-                  onClick={() => setPreviewImage(null)}
-                  className="p-2 rounded-full hover:bg-slate-100 transition-colors"
-                >
-                  <FiX size={20} className="text-slate-600" />
-                </button>
-              </div>
-
-              {/* Image */}
-              <div className="overflow-auto max-h-[75vh] rounded-lg border border-slate-200">
-                <img
-                  src={previewImage}
-                  alt="Aperçu devis"
-                  className="w-full object-contain"
-                />
-              </div>
-
-              {/* Footer */}
-              <div className="mt-4 flex justify-end gap-3">
-                <button
-                  onClick={() => {
-                    // Téléchargement direct de l'image
-                    const link = document.createElement('a');
-                    link.href = previewImage;
-                    link.download = 'devis-apercu.png';
-                    link.click();
-                  }}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium flex items-center gap-2"
-                >
-                  <FiEye size={16} />
-                  Télécharger
-                </button>
-                <button
-                  onClick={() => setPreviewImage(null)}
-                  className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-colors font-medium"
-                >
-                  Fermer
-                </button>
-              </div>
             </div>
+            {selectedDevisForCancel && (
+              // Dans Devis.tsx, cherchez le composant AnnulationDevisModal
+              <AnnulationDevisModal
+                isOpen={showAnnulationModal}
+                onClose={() => {
+                  setShowAnnulationModal(false);
+                  setSelectedDevisForCancel(null);
+                }}
+                onSubmit={async (data) => {
+                  if (!selectedDevisForCancel) return;
+                  
+                  setAnnulationLoading(true);
+                  try {
+                    // 1. On lance l'annulation
+                    await dispatch(
+                      annulerDevis({
+                        devisId: selectedDevisForCancel.id,
+                        payload: data,
+                      })
+                    ).unwrap();
+                    
+                    // 2. ICI : On réactualise la liste immédiatement
+                    if (enteteId) {
+                      dispatch(fetchDevisByEntete(enteteId));
+                    }
+
+                    // alert('Devis annulé avec succès');
+                    setShowAnnulationModal(false);
+                    setSelectedDevisForCancel(null);
+                  } catch (err: any) {
+                    alert(err || 'Erreur lors de l\'annulation');
+                  } finally {
+                    setAnnulationLoading(false);
+                  }
+                }}
+                lignes={selectedDevisForCancel?.data?.lignes || []} // Ajout du ? au cas où
+                loading={annulationLoading}
+              />
+            )}
           </div>
-        )}
         </div>
       </TabContainer>
     </div>

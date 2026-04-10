@@ -367,9 +367,9 @@ export default function DossierCommunDetail() {
                         <th className="px-6 py-3.5 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
                           Statut
                         </th>
-                        {/* <th className="px-6 py-3.5 text-right text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        <th className="px-6 py-3.5 text-right text-xs font-semibold text-slate-700 uppercase tracking-wider">
                           Actions
-                        </th> */}
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -377,7 +377,7 @@ export default function DossierCommunDetail() {
                         <tr
                           key={prest.id}
                           className="hover:bg-slate-50/70 transition-colors group cursor-pointer"
-                          onClick={() => navigate(`/dossiers-communs/${prest.id}`)}
+                          onClick={() => navigate(`/dossiers-communs/specification-client/${prest.id}`)}
                         >
                           <td className="px-6 py-4 whitespace-nowrap">
                             <div className="flex items-center gap-2">
@@ -418,18 +418,14 @@ export default function DossierCommunDetail() {
                               Active
                             </span>
                           </td>
-                          {/* <td className="px-6 py-4 whitespace-nowrap text-right">
+                          <td>
                             <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/dossiers-communs/${prest.moduleName}/${prest.id}`);
-                              }}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded-lg transition-colors"
+                              className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-all shadow-sm hover:shadow-md"
                             >
-                              Ouvrir
-                              <span className="group-hover:translate-x-0.5 transition-transform">→</span>
+                              <FiFileText size={18} />
+                              Spécification Client
                             </button>
-                          </td> */}
+                          </td>
                         </tr>
                       ))}
                     </tbody>

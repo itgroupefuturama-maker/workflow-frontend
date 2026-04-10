@@ -186,239 +186,251 @@ const PageDetailProspectionAssurance = () => {
   const canApprouver = devis.statut === 'ENVOYE';
 
   return (
-    <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange}>
-      <div className="min-h-screen bg-neutral-50 space-y-4">
+    <div className="h-full flex flex-col min-h-0">
+      <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange}>
+        <div className="flex h-full min-h-0 overflow-hidden">
+          {/* ── Colonne principale ── */}
+          <div className="flex-1 min-w-0 flex flex-col min-h-0">
+            {/* ── Header fixe — ne scrolle PAS ── */}
+            <div className="shrink-0 px-4 pt-2 bg-white">
+              <AssuranceHeader numeroassurance={devis.reference} nomPassager= {''} navigate={navigate} isDetail={true} isProspection={true}/>
+            </div>
+            {/* ── Topbar ── */}
+            <div className="px-4 bg-white border-b border-gray-200 shadow-sm">
+              <div className="py-3 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => navigate(-1)}
+                    className="h-8 w-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 text-sm transition"
+                  >←</button>
+                  <div>
+                    <h1 className="text-sm font-bold text-gray-900">Détail prospection</h1>
+                    <p className="text-xs text-gray-400">{numeroDos} · <span className="font-mono">{devis.reference}</span></p>
+                  </div>
+                </div>
 
-        <AssuranceHeader numeroassurance={devis.reference} nomPassager= {''} navigate={navigate} isDetail={true} isProspection={true}/>
+                {/* ── Actions ── */}
+                  <div className="flex items-center gap-3">
+                    {suivi && (
+                      <Badge status={suivi.evolution || ''} />
+                    )}
 
+                    {/* Séparateur */}
+                    <div className="h-6 w-px bg-gray-200" />
 
-        {/* ── Topbar ── */}
-        <div className=" bg-white border-b border-gray-200 shadow-sm">
-          <div className="px-6 py-3 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => navigate(-1)}
-                className="h-8 w-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 text-sm transition"
-              >←</button>
-              <div>
-                <h1 className="text-sm font-bold text-gray-900">Détail prospection</h1>
-                <p className="text-xs text-gray-400">{numeroDos} · <span className="font-mono">{devis.reference}</span></p>
+                    {/* ── Groupe 1 : Génération PDF ── */}
+                    <div className="flex items-center gap-1.5 bg-gray-100 rounded-lg p-1">
+                      <button
+                        onClick={handleDevisDirection}
+                        disabled={actioning}
+                        title="Générer le devis direction"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed text-gray-700 text-xs font-semibold rounded-md transition shadow-sm border border-gray-200"
+                      >
+                        {actioning ? <Spinner size={3} /> : (
+                          <svg className="w-3.5 h-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        )}
+                        PDF Direction
+                      </button>
+
+                      <button
+                        onClick={handleDevisClient}
+                        disabled={actioning}
+                        title="Générer le devis client"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed text-gray-700 text-xs font-semibold rounded-md transition shadow-sm border border-gray-200"
+                      >
+                        {actioning ? <Spinner size={3} /> : (
+                          <svg className="w-3.5 h-3.5 text-teal-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        )}
+                        PDF Client
+                      </button>
+                    </div>
+
+                    {/* Séparateur */}
+                    <div className="h-6 w-px bg-gray-200" />
+
+                    {/* ── Groupe 2 : Workflow ── */}
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={handleEnvoyer}
+                        disabled={actioning || !canEnvoyer}
+                        title={!canEnvoyer ? 'Devis déjà envoyé ou approuvé' : 'Envoyer le devis'}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-violet-50 hover:bg-violet-100 border border-violet-200 disabled:opacity-40 disabled:cursor-not-allowed text-violet-700 text-xs font-semibold rounded-lg transition"
+                      >
+                        {actioning ? <Spinner size={3} /> : (
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                          </svg>
+                        )}
+                        Envoyer
+                      </button>
+
+                      <button
+                        onClick={handleApprouver}
+                        disabled={actioning}
+                        title={!canApprouver ? "Impossible d'approuver dans cet état" : 'Approuver le devis'}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 disabled:opacity-40 disabled:cursor-not-allowed text-emerald-700 text-xs font-semibold rounded-lg transition"
+                      >
+                        {actioning ? <Spinner size={3} /> : (
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                        Approuver
+                      </button>
+
+                      <button
+                        onClick={handleCreateEntete}
+                        disabled={actioning || devis.statut !== 'DEVIS_APPROUVE'}
+                        title={devis.statut !== 'DEVIS_APPROUVE' ? "Le devis doit être approuvé avant de créer l'assurance" : "Créer l'assurance"}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 border border-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg transition shadow-sm"
+                      >
+                        {actioning ? <Spinner size={3} /> : (
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                          </svg>
+                        )}
+                        Créer assurance
+                      </button>
+                    </div>
+                  </div>
               </div>
             </div>
 
-            {/* ── Actions ── */}
-              <div className="flex items-center gap-3">
-                <Badge status={suivi.evolution} />
+            <div className="flex-1 min-h-0 overflow-y-auto pb-4 px-4">
 
-                {/* Séparateur */}
-                <div className="h-6 w-px bg-gray-200" />
+              {/* ── Feedbacks ── */}
+              <div className=" px-6 pt-4 space-y-2">
+                {actionSuccess && (
+                  <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl px-4 py-3">
+                    ✓ {actionSuccess}
+                  </div>
+                )}
+                {actionError && (
+                  <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-3">
+                    ⚠️ {actionError}
+                  </div>
+                )}
+              </div>
 
-                {/* ── Groupe 1 : Génération PDF ── */}
-                <div className="flex items-center gap-1.5 bg-gray-100 rounded-lg p-1">
-                  <button
-                    onClick={handleDevisDirection}
-                    disabled={actioning}
-                    title="Générer le devis direction"
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed text-gray-700 text-xs font-semibold rounded-md transition shadow-sm border border-gray-200"
-                  >
-                    {actioning ? <Spinner size={3} /> : (
-                      <svg className="w-3.5 h-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                    )}
-                    PDF Direction
-                  </button>
+              {/* ── Content ── */}
+              <div className="">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
 
-                  <button
-                    onClick={handleDevisClient}
-                    disabled={actioning}
-                    title="Générer le devis client"
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed text-gray-700 text-xs font-semibold rounded-md transition shadow-sm border border-gray-200"
-                  >
-                    {actioning ? <Spinner size={3} /> : (
-                      <svg className="w-3.5 h-3.5 text-teal-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                    )}
-                    PDF Client
-                  </button>
-                </div>
+                  {/* ── Colonne gauche ── */}
+                  <div className="lg:col-span-2 space-y-4">
 
-                {/* Séparateur */}
-                <div className="h-6 w-px bg-gray-200" />
+                    {/* Lignes */}
+                    <Card title={`Lignes de prospection · ${assuranceProspectionLignes.length}`}>
+                      {assuranceProspectionLignes.length === 0 ? (
+                        <p className="text-sm text-gray-400 italic">Aucune ligne.</p>
+                      ) : (
+                        <div className="overflow-hidden rounded-lg border border-gray-200 -mx-1">
+                          <table className="w-full">
+                            <thead>
+                              <tr>
+                                <Th>Départ</Th>
+                                <Th>Retour</Th>
+                                <Th>Durée</Th>
+                                <Th>Taux change</Th>
+                                <Th>Réf. devis</Th>
+                                <Th>Date devis</Th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {assuranceProspectionLignes.map((ligne) => (
+                                <tr key={ligne.id} className="hover:bg-gray-50 transition">
+                                  <Td>{fmtDate(ligne.dateDepart)}</Td>
+                                  <Td>{fmtDate(ligne.dateRetour)}</Td>
+                                  <Td>
+                                    <span className="font-mono bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs font-semibold">
+                                      {ligne.duree} j
+                                    </span>
+                                  </Td>
+                                  <Td>{fmtNum(ligne.tauxChange)} Ar</Td>
+                                  <Td className="text-gray-400 italic text-xs">{ligne.referenceDevis ?? '—'}</Td>
+                                  <Td className="text-gray-400 text-xs">{fmtDate(ligne.dateDevis)}</Td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </Card>
 
-                {/* ── Groupe 2 : Workflow ── */}
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={handleEnvoyer}
-                    disabled={actioning || !canEnvoyer}
-                    title={!canEnvoyer ? 'Devis déjà envoyé ou approuvé' : 'Envoyer le devis'}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-violet-50 hover:bg-violet-100 border border-violet-200 disabled:opacity-40 disabled:cursor-not-allowed text-violet-700 text-xs font-semibold rounded-lg transition"
-                  >
-                    {actioning ? <Spinner size={3} /> : (
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                      </svg>
-                    )}
-                    Envoyer
-                  </button>
+                    {/* Suivi */}
+                    <Card title="Suivi">
+                      {suivi && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
+                          <DataRow label="Évolution"        value={<Badge status={suivi.evolution || 'EN_ATTENTE'} />} />
+                          <DataRow label="Statut"           value={<Badge status={suivi.statut} />} />
+                          <DataRow label="Entité"           value={suivi.entity} />
+                          <DataRow label="Envoi devis"      value={fmtDate(suivi.dateEnvoieDevis)} />
+                          <DataRow label="Approbation"      value={fmtDate(suivi.dateApprobation)} />
+                          <DataRow label="Réf. BC client"   value={suivi.referenceBcClient} />
+                          <DataRow label="Création BC"      value={fmtDate(suivi.dateCreationBc)} />
+                          <DataRow label="Soumis BC"        value={fmtDate(suivi.dateSoumisBc)} />
+                          <DataRow label="Approbation BC"   value={fmtDate(suivi.dateApprobationBc)} />
+                          <DataRow label="Réf. facture"     value={suivi.referenceFacClient} />
+                          <DataRow label="Création facture" value={fmtDate(suivi.dateCreationFac)} />
+                          <DataRow label="Règlement"        value={fmtDate(suivi.dateReglement)} />
+                          <DataRow label="Annulation"       value={fmtDate(suivi.dateAnnulation)} />
+                        </div>
+                      )}
+                    </Card>
+                  </div>
 
-                  <button
-                    onClick={handleApprouver}
-                    disabled={actioning}
-                    title={!canApprouver ? "Impossible d'approuver dans cet état" : 'Approuver le devis'}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 disabled:opacity-40 disabled:cursor-not-allowed text-emerald-700 text-xs font-semibold rounded-lg transition"
-                  >
-                    {actioning ? <Spinner size={3} /> : (
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                    )}
-                    Approuver
-                  </button>
+                  {/* ── Colonne droite ── */}
+                  <div className="space-y-4">
 
-                  <button
-                    onClick={handleCreateEntete}
-                    disabled={actioning || devis.statut !== 'DEVIS_APPROUVE'}
-                    title={devis.statut !== 'DEVIS_APPROUVE' ? "Le devis doit être approuvé avant de créer l'assurance" : "Créer l'assurance"}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 border border-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg transition shadow-sm"
-                  >
-                    {actioning ? <Spinner size={3} /> : (
-                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                      </svg>
-                    )}
-                    Créer assurance
-                  </button>
+                    {/* Devis */}
+                    <Card title="Devis">
+                      <DataRow label="Référence" value={
+                        <span className="font-mono font-bold text-indigo-700">{devis.reference}</span>
+                      } />
+                      <DataRow label="Statut"    value={<Badge status={devis.statut} />} />
+                      <DataRow label="Total"     value={
+                        <span className="text-base font-bold text-indigo-700">{fmtNum(devis.totalGeneral)} Ar</span>
+                      } />
+                      <DataRow label="Créé le"   value={fmtDate(devis.createdAt)} />
+                      {/* {devis.url1 && (
+                        <DataRow label="URL 1" value={
+                          <a href={devis.url1} target="_blank" rel="noreferrer" className="text-indigo-600 text-xs underline">Voir</a>
+                        } />
+                      )}
+                      {devis.url2 && (
+                        <DataRow label="URL 2" value={
+                          <a href={devis.url2} target="_blank" rel="noreferrer" className="text-indigo-600 text-xs underline">Voir</a>
+                        } /> */}
+                      {/* )} */}
+                    </Card>
+
+                    {/* Prospection */}
+                    <Card title="Prospection">
+                      <DataRow label="N° dossier"        value={prospectionAssurance.prestation.numeroDos} />
+                      <DataRow label="Client"            value={prospectionAssurance.clientFacture} />
+                      <DataRow label="N° dossier commun" value={`#${prospectionAssurance.numeroDossierCommun}`} />
+                      <DataRow label="Statut"            value={<Badge status={prospectionAssurance.prestation.status == 'CREER' ? 'créé' : prospectionAssurance.prestation.status} />} />
+                      <DataRow label="Fournisseur"       value={
+                        <div className="text-right">
+                          <p className="text-sm font-medium text-gray-900">{prospectionAssurance.fournisseur.libelle}</p>
+                          <p className="text-xs text-gray-400 font-mono">{prospectionAssurance.fournisseur.code}</p>
+                        </div>
+                      } />
+                      <DataRow label="Créé le" value={fmtDate(prospectionAssurance.createdAt)} />
+                    </Card>
+
+                  </div>
                 </div>
               </div>
-          </div>
-        </div>
-
-        {/* ── Feedbacks ── */}
-        <div className=" px-6 pt-4 space-y-2">
-          {actionSuccess && (
-            <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl px-4 py-3">
-              ✓ {actionSuccess}
-            </div>
-          )}
-          {actionError && (
-            <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-3">
-              ⚠️ {actionError}
-            </div>
-          )}
-        </div>
-
-        {/* ── Content ── */}
-        <div className="">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
-
-            {/* ── Colonne gauche ── */}
-            <div className="lg:col-span-2 space-y-4">
-
-              {/* Lignes */}
-              <Card title={`Lignes de prospection · ${assuranceProspectionLignes.length}`}>
-                {assuranceProspectionLignes.length === 0 ? (
-                  <p className="text-sm text-gray-400 italic">Aucune ligne.</p>
-                ) : (
-                  <div className="overflow-hidden rounded-lg border border-gray-200 -mx-1">
-                    <table className="w-full">
-                      <thead>
-                        <tr>
-                          <Th>Départ</Th>
-                          <Th>Retour</Th>
-                          <Th>Durée</Th>
-                          <Th>Taux change</Th>
-                          <Th>Réf. devis</Th>
-                          <Th>Date devis</Th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {assuranceProspectionLignes.map((ligne) => (
-                          <tr key={ligne.id} className="hover:bg-gray-50 transition">
-                            <Td>{fmtDate(ligne.dateDepart)}</Td>
-                            <Td>{fmtDate(ligne.dateRetour)}</Td>
-                            <Td>
-                              <span className="font-mono bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs font-semibold">
-                                {ligne.duree} j
-                              </span>
-                            </Td>
-                            <Td>{fmtNum(ligne.tauxChange)} Ar</Td>
-                            <Td className="text-gray-400 italic text-xs">{ligne.referenceDevis ?? '—'}</Td>
-                            <Td className="text-gray-400 text-xs">{fmtDate(ligne.dateDevis)}</Td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </Card>
-
-              {/* Suivi */}
-              <Card title="Suivi">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                  <DataRow label="Évolution"        value={<Badge status={suivi.evolution} />} />
-                  <DataRow label="Statut"           value={<Badge status={suivi.statut} />} />
-                  <DataRow label="Entité"           value={suivi.entity} />
-                  <DataRow label="Envoi devis"      value={fmtDate(suivi.dateEnvoieDevis)} />
-                  <DataRow label="Approbation"      value={fmtDate(suivi.dateApprobation)} />
-                  <DataRow label="Réf. BC client"   value={suivi.referenceBcClient} />
-                  <DataRow label="Création BC"      value={fmtDate(suivi.dateCreationBc)} />
-                  <DataRow label="Soumis BC"        value={fmtDate(suivi.dateSoumisBc)} />
-                  <DataRow label="Approbation BC"   value={fmtDate(suivi.dateApprobationBc)} />
-                  <DataRow label="Réf. facture"     value={suivi.referenceFacClient} />
-                  <DataRow label="Création facture" value={fmtDate(suivi.dateCreationFac)} />
-                  <DataRow label="Règlement"        value={fmtDate(suivi.dateReglement)} />
-                  <DataRow label="Annulation"       value={fmtDate(suivi.dateAnnulation)} />
-                </div>
-              </Card>
-            </div>
-
-            {/* ── Colonne droite ── */}
-            <div className="space-y-4">
-
-              {/* Devis */}
-              <Card title="Devis">
-                <DataRow label="Référence" value={
-                  <span className="font-mono font-bold text-indigo-700">{devis.reference}</span>
-                } />
-                <DataRow label="Statut"    value={<Badge status={devis.statut} />} />
-                <DataRow label="Total"     value={
-                  <span className="text-base font-bold text-indigo-700">{fmtNum(devis.totalGeneral)} Ar</span>
-                } />
-                <DataRow label="Créé le"   value={fmtDate(devis.createdAt)} />
-                {/* {devis.url1 && (
-                  <DataRow label="URL 1" value={
-                    <a href={devis.url1} target="_blank" rel="noreferrer" className="text-indigo-600 text-xs underline">Voir</a>
-                  } />
-                )}
-                {devis.url2 && (
-                  <DataRow label="URL 2" value={
-                    <a href={devis.url2} target="_blank" rel="noreferrer" className="text-indigo-600 text-xs underline">Voir</a>
-                  } /> */}
-                {/* )} */}
-              </Card>
-
-              {/* Prospection */}
-              <Card title="Prospection">
-                <DataRow label="N° dossier"        value={prospectionAssurance.prestation.numeroDos} />
-                <DataRow label="Client"            value={prospectionAssurance.clientFacture} />
-                <DataRow label="N° dossier commun" value={`#${prospectionAssurance.numeroDossierCommun}`} />
-                <DataRow label="Statut"            value={<Badge status={prospectionAssurance.prestation.status == 'CREER' ? 'créé' : prospectionAssurance.prestation.status} />} />
-                <DataRow label="Fournisseur"       value={
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-gray-900">{prospectionAssurance.fournisseur.libelle}</p>
-                    <p className="text-xs text-gray-400 font-mono">{prospectionAssurance.fournisseur.code}</p>
-                  </div>
-                } />
-                <DataRow label="Créé le" value={fmtDate(prospectionAssurance.createdAt)} />
-              </Card>
-
             </div>
           </div>
         </div>
-      </div>
-    </TabContainer>
+      </TabContainer>
+    </div>
   );
 };
 

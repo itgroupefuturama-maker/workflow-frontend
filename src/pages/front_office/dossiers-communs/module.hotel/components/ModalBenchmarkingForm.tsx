@@ -77,7 +77,7 @@ const ModalBenchmarkingForm: React.FC<Props> = ({
     nuite: '',
     pays: 'Madagascar',
     ville: 'Antananarivo',
-    serviceHotelIds: [] as string[],
+    serviceSpecifiqueIds: [] as string[],
   });
 
   // ─── Calcul automatique nuitées ───────────────────────────────────────────
@@ -97,9 +97,9 @@ const ModalBenchmarkingForm: React.FC<Props> = ({
     const { value, checked } = e.target;
     setForm((prev) => ({
       ...prev,
-      serviceHotelIds: checked
-        ? [...prev.serviceHotelIds, value]
-        : prev.serviceHotelIds.filter((id) => id !== value),
+      serviceSpecifiqueIds: checked
+        ? [...prev.serviceSpecifiqueIds, value]
+        : prev.serviceSpecifiqueIds.filter((id) => id !== value),
     }));
   };
 
@@ -121,7 +121,7 @@ const ModalBenchmarkingForm: React.FC<Props> = ({
 
   return (
     <div
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[9999] p-4"
+      className="fixed inset-0 bg-black/10 flex items-center justify-center z-9999 p-4"
       onClick={onClose}
     >
       <div
@@ -274,7 +274,7 @@ const ModalBenchmarkingForm: React.FC<Props> = ({
               ) : (
                 <div className="max-h-40 overflow-y-auto rounded-xl border border-gray-200 bg-white p-3 grid grid-cols-2 gap-1.5">
                   {services.map((s) => {
-                    const checked = form.serviceHotelIds.includes(s.id);
+                    const checked = form.serviceSpecifiqueIds.includes(s.id);
                     return (
                       <label
                         key={s.id}
@@ -297,9 +297,9 @@ const ModalBenchmarkingForm: React.FC<Props> = ({
                   })}
                 </div>
               )}
-              {form.serviceHotelIds.length > 0 && (
+              {form.serviceSpecifiqueIds.length > 0 && (
                 <p className="text-xs text-gray-400 mt-2">
-                  {form.serviceHotelIds.length} service{form.serviceHotelIds.length > 1 ? 's' : ''} sélectionné{form.serviceHotelIds.length > 1 ? 's' : ''}
+                  {form.serviceSpecifiqueIds.length} service{form.serviceSpecifiqueIds.length > 1 ? 's' : ''} sélectionné{form.serviceSpecifiqueIds.length > 1 ? 's' : ''}
                 </p>
               )}
             </Section>

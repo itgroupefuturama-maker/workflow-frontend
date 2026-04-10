@@ -43,6 +43,8 @@ import { fetchPlateformes } from "../app/front_office/parametre_hotel/plateforme
 import { fetchTypesChambre } from "../app/front_office/parametre_hotel/typeChambreSlice";
 // import { fetchServicesHotel } from "../app/front_office/parametre_hotel/serviceHotelSlice";
 import { fetchAttestationParams } from "../app/front_office/parametre_attestation/attestationParamsSlice";
+import { fetchCurrentUser } from "../app/front_office/parametre_utilisateur/userSlice";
+import { fetchDevises } from "../app/front_office/parametre-global/deviseSlice";
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -54,6 +56,9 @@ export default function AppLoader({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!token) return; // ← rien ne part sans token
+
+    dispatch(fetchCurrentUser());
+    dispatch(fetchDevises());
 
     // Back office
     dispatch(fetchDossiersCommuns());
@@ -106,7 +111,7 @@ export default function AppLoader({ children }: { children: React.ReactNode }) {
     dispatch(fetchRaisonsAnnulation());
     dispatch(fetchExigences());
     dispatch(fetchServicesByType("TICKET"));
-    // dispatch(fetchServicesByType("HOTEL"));
+    dispatch(fetchServicesByType("HOTEL"));
 
   }, [dispatch, token]); // ← token en dépendance : refetch si reconnexion
 

@@ -42,7 +42,7 @@ const ActionButton = ({
       disabled={!enabled}
       onClick={onClick}
       className={`
-        inline-flex items-center gap-1.5 px-3.5 py-1.5
+        inline-flex items-center gap-1.5 px-3.5 py-2.5
         text-xs font-medium rounded-lg border transition-colors
         ${base}
         ${enabled ? active : 'opacity-40 cursor-not-allowed'}

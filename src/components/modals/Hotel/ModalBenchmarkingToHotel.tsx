@@ -1,5 +1,3 @@
-// src/pages/front_office/hotel/components/ModalBenchmarkingToHotel.tsx
-
 import React, { useState } from 'react';
 import { FiX, FiCheck } from 'react-icons/fi';
 import type { HotelProspectionEntete } from '../../../app/front_office/parametre_hotel/hotelProspectionEnteteSlice';
@@ -25,26 +23,33 @@ const ModalBenchmarkingToHotel: React.FC<Props> = ({
 }) => {
   const [selectedLigneIds, setSelectedLigneIds] = useState<string[]>([]);
   const [showConfirmation, setShowConfirmation] = useState(false);
-  // const [totalGeneral, setTotalGeneral] = useState<number>(0);
 
   if (!isOpen) return null;
 
-  // Récupérer toutes les lignes de type "client" de tous les benchmarkings
+  // Benchmarkings ayant une ligne client
   const lignesClient = entete.benchmarkingEntete.filter((bench) =>
     bench.benchmarkingLigne.some(
       (l) => l.plateforme?.nom?.toLowerCase() === 'client'
     )
   );
 
-  // Calcul automatique du total général = somme des montantAriary des lignes "client"
-  // pour les benchmarkings sélectionnés uniquement
+  // Total général = somme de tous les montantAriary de toutes les devises
+  // des lignes client des benchmarkings sélectionnés
   const totalGeneralAuto = entete.benchmarkingEntete
     .filter((bench) => selectedLigneIds.includes(bench.id))
     .reduce((total, bench) => {
       const ligneClient = bench.benchmarkingLigne.find(
         (l) => l.plateforme?.nom?.toLowerCase() === 'client'
       );
-      return total + (ligneClient?.montantAriary ?? 0);
+      if (!ligneClient) return total;
+
+      // Somme de tous les montantAriary des devises
+      const montantTotal = ligneClient.deviseHotel?.reduce(
+        (sum, dv) => sum + (Number(dv.montantAriary) || 0),
+        0
+      ) ?? 0;
+
+      return total + montantTotal;
     }, 0);
 
   const toggleLigne = (ligneId: string) => {
@@ -82,7 +87,6 @@ const ModalBenchmarkingToHotel: React.FC<Props> = ({
     setShowConfirmation(false);
   };
 
-
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
@@ -108,7 +112,6 @@ const ModalBenchmarkingToHotel: React.FC<Props> = ({
 
         {/* ── Body ── */}
         <div className="flex-1 overflow-y-auto bg-gray-50">
-
           {lignesClient.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
               <svg className="w-10 h-10 text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -134,8 +137,6 @@ const ModalBenchmarkingToHotel: React.FC<Props> = ({
                     ({selectedLigneIds.length}/{lignesClient.length})
                   </span>
                 </label>
-
-                {/* Total auto */}
                 <div className="text-right">
                   <p className="text-xs text-gray-400 uppercase tracking-wide">Total général</p>
                   <p className="text-sm font-mono font-semibold text-gray-800">
@@ -155,79 +156,141 @@ const ModalBenchmarkingToHotel: React.FC<Props> = ({
                   )
                 )
                 .map((bench) => {
-                const isSelected = selectedLigneIds.includes(bench.id);
-                const ligneClient = bench.benchmarkingLigne.find(
-                  (l) => l.plateforme?.nom?.toLowerCase() === 'client'
-                );
+                  const isSelected = selectedLigneIds.includes(bench.id);
+                  const ligneClient = bench.benchmarkingLigne.find(
+                    (l) => l.plateforme?.nom?.toLowerCase() === 'client'
+                  );
 
-                return (
-                  <div
-                    key={bench.id}
-                    onClick={() => toggleLigne(bench.id)}
-                    className={`bg-white border rounded-lg cursor-pointer transition-all ${
-                      isSelected
-                        ? 'border-gray-800 shadow-sm'
-                        : 'border-gray-200 hover:border-gray-400'
-                    }`}
-                  >
-                    {/* Header bench */}
-                    <div className="px-4 py-3 flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => toggleLigne(bench.id)}
-                        onClick={(e) => e.stopPropagation()}
-                        className="w-4 h-4 accent-gray-900 cursor-pointer shrink-0"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-sm font-semibold text-gray-800 font-mono">
-                            {bench.numero}
-                          </span>
-                          <span className="text-xs text-gray-400">
-                            {new Date(bench.du).toLocaleDateString('fr-FR')}
-                            <span className="mx-1">→</span>
-                            {new Date(bench.au).toLocaleDateString('fr-FR')}
-                          </span>
-                          <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
-                            {bench.nuite} nuit{bench.nuite > 1 ? 's' : ''}
-                          </span>
+                  // Total montant ariary toutes devises confondues
+                  const montantTotalAriary = ligneClient?.deviseHotel?.reduce(
+                    (sum, dv) => sum + (Number(dv.montantAriary) || 0),
+                    0
+                  ) ?? 0;
+
+                  return (
+                    <div
+                      key={bench.id}
+                      onClick={() => toggleLigne(bench.id)}
+                      className={`bg-white border rounded-lg cursor-pointer transition-all ${
+                        isSelected
+                          ? 'border-gray-800 shadow-sm'
+                          : 'border-gray-200 hover:border-gray-400'
+                      }`}
+                    >
+                      {/* Header bench */}
+                      <div className="px-4 py-3 flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleLigne(bench.id)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="w-4 h-4 accent-gray-900 cursor-pointer shrink-0"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-semibold text-gray-800 font-mono">
+                              {bench.numero}
+                            </span>
+                            <span className="text-xs text-gray-400">
+                              {new Date(bench.du).toLocaleDateString('fr-FR')}
+                              <span className="mx-1">→</span>
+                              {new Date(bench.au).toLocaleDateString('fr-FR')}
+                            </span>
+                            <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                              {bench.nuite} nuit{bench.nuite > 1 ? 's' : ''}
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-400 mt-0.5">{bench.ville}, {bench.pays}</p>
                         </div>
-                        <p className="text-xs text-gray-400 mt-0.5">{bench.ville}, {bench.pays}</p>
+
+                        {/* Montant total ariary ligne client */}
+                        {ligneClient ? (
+                          <div className="text-right shrink-0">
+                            <p className="text-xs text-gray-400">Total client</p>
+                            <p className="text-sm font-mono font-semibold text-gray-800">
+                              {montantTotalAriary.toLocaleString('fr-FR')} Ar
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400 italic shrink-0">Pas de ligne client</span>
+                        )}
                       </div>
 
-                      {/* Montant ligne client */}
-                      {ligneClient ? (
-                        <div className="text-right shrink-0">
-                          <p className="text-xs text-gray-400">Ligne client</p>
-                          <p className="text-sm font-mono font-semibold text-gray-800">
-                            {ligneClient.montantAriary.toLocaleString('fr-FR')} Ar
-                          </p>
+                      {/* Détails — visible si sélectionné */}
+                      {isSelected && ligneClient && (
+                        <div className="px-4 pb-3 border-t border-gray-100 pt-3 space-y-3">
+
+                          {/* Infos fixes */}
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <p className="text-xs text-gray-400 mb-0.5">Type chambre</p>
+                              <p className="text-xs font-medium text-gray-700">
+                                {ligneClient.typeChambre?.type ?? '—'}
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-xs text-gray-400 mb-0.5">Nb chambres</p>
+                              <p className="text-xs font-medium text-gray-700">
+                                {ligneClient.nombreChambre}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Une ligne par devise */}
+                          {ligneClient.deviseHotel?.length > 0 ? (
+                            <div className="space-y-2">
+                              {ligneClient.deviseHotel.map((dv) => (
+                                <div
+                                  key={dv.id}
+                                  className="bg-gray-50 border border-gray-200 rounded-md px-3 py-2"
+                                >
+                                  {/* Badge devise + taux */}
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <span className="text-[10px] font-bold text-blue-600 uppercase bg-blue-50 px-1.5 py-0.5 rounded">
+                                      {dv.devise?.devise}
+                                    </span>
+                                    <span className="text-[10px] text-gray-400">
+                                      Taux : {dv.tauxChange?.toLocaleString('fr-FR')}
+                                    </span>
+                                  </div>
+
+                                  <div className="grid grid-cols-4 gap-3">
+                                    <div>
+                                      <p className="text-[10px] text-gray-400 mb-0.5">Nuit/Devise</p>
+                                      <p className="text-xs font-mono font-medium text-gray-700">
+                                        {Number(dv.nuiteDevise)?.toLocaleString('fr-FR')} {dv.devise?.devise}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <p className="text-[10px] text-gray-400 mb-0.5">Nuit/Ariary</p>
+                                      <p className="text-xs font-mono font-medium text-gray-700">
+                                        {Number(dv.nuiteAriary)?.toLocaleString('fr-FR')} Ar
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <p className="text-[10px] text-gray-400 mb-0.5">Montant Devise</p>
+                                      <p className="text-xs font-mono font-medium text-gray-700">
+                                        {Number(dv.montantDevise)?.toLocaleString('fr-FR')} {dv.devise?.devise}
+                                      </p>
+                                    </div>
+                                    <div>
+                                      <p className="text-[10px] text-gray-400 mb-0.5">Montant Ariary</p>
+                                      <p className="text-xs font-mono font-semibold text-gray-800">
+                                        {Number(dv.montantAriary)?.toLocaleString('fr-FR')} Ar
+                                      </p>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-gray-400 italic">Aucune devise disponible</p>
+                          )}
                         </div>
-                      ) : (
-                        <span className="text-xs text-gray-400 italic shrink-0">Pas de ligne client</span>
                       )}
                     </div>
-
-                    {/* Détails ligne client — visible si sélectionné */}
-                    {isSelected && ligneClient && (
-                      <div className="px-4 pb-3 border-t border-gray-100 pt-3 grid grid-cols-4 gap-3">
-                        {[
-                          { label: 'Type chambre', value: ligneClient.typeChambre?.type ?? '—' },
-                          { label: 'Nb chambres', value: ligneClient.nombreChambre },
-                          { label: 'Nuit/devise', value: `${ligneClient.nuiteDevise.toLocaleString('fr-FR')} ${ligneClient.devise}` },
-                          { label: 'Taux', value: ligneClient.tauxChange.toLocaleString('fr-FR') },
-                        ].map(({ label, value }) => (
-                          <div key={label}>
-                            <p className="text-xs text-gray-400 mb-0.5">{label}</p>
-                            <p className="text-xs font-medium text-gray-700">{value}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+                  );
+                })}
             </div>
           )}
         </div>
@@ -262,16 +325,12 @@ const ModalBenchmarkingToHotel: React.FC<Props> = ({
         {showConfirmation && (
           <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
             <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden">
-
-              {/* Header confirmation */}
               <div className="bg-gray-950 px-6 py-5">
                 <p className="text-gray-500 text-xs uppercase tracking-widest mb-1">Confirmation</p>
                 <h3 className="text-white font-bold text-base">Vérifier avant de soumettre</h3>
               </div>
 
               <div className="p-6 space-y-4">
-
-                {/* Récap */}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
                     <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">En-tête</p>
@@ -289,7 +348,6 @@ const ModalBenchmarkingToHotel: React.FC<Props> = ({
                   </div>
                 </div>
 
-                {/* Avertissement */}
                 <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
                   <svg className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -300,7 +358,6 @@ const ModalBenchmarkingToHotel: React.FC<Props> = ({
                 </div>
               </div>
 
-              {/* Footer confirmation */}
               <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end gap-2">
                 <button
                   onClick={() => setShowConfirmation(false)}

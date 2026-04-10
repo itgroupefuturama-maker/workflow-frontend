@@ -37,16 +37,17 @@ export interface CreateServiceSpecifiqueDto {
 
 interface ServiceState {
   items: ServiceSpecifique[];
+  itemsByType: Record<TypeService, ServiceSpecifique[]>; // ← nouveau
   loading: boolean;
   error: string | null;
 }
 
 const initialState: ServiceState = {
   items: [],
+  itemsByType: { TICKET: [], HOTEL: [] }, // ← doit être présent
   loading: false,
   error: null,
 };
-
 // ─── Thunks ───────────────────────────────────────────────
 
 // Fetch filtré par typeService (TICKET ou HOTEL)
@@ -117,25 +118,66 @@ const serviceSpecifiqueSlice = createSlice({
 
     builder
       .addCase(fetchServicesByType.pending, handlePending)
-      .addCase(fetchServicesByType.fulfilled, handleFulfilled)
+      .addCase(fetchServicesByType.fulfilled, (state, action) => {
+        state.loading = false;
+        state.items = action.payload;
+        const typeService = action.meta.arg;
+        
+        // ← S'assurer que itemsByType existe avant d'écrire
+        if (!state.itemsByType) {
+          state.itemsByType = { TICKET: [], HOTEL: [] };
+        }
+        
+        state.itemsByType[typeService] = action.payload.map((item) => ({
+          ...item,
+          servicePreference: item.servicePreference ?? [],
+        }));
+      })
+
       .addCase(fetchServicesByType.rejected, handleRejected)
 
       .addCase(createServiceSpecifique.pending, handlePending)
       .addCase(createServiceSpecifique.fulfilled, (state, action: PayloadAction<ServiceSpecifique>) => {
         state.loading = false;
         state.items.unshift(action.payload);
+
+        // ← Même protection
+        if (!state.itemsByType) {
+          state.itemsByType = { TICKET: [], HOTEL: [] };
+        }
+
+        const type = action.payload.typeService;
+        state.itemsByType[type].unshift({
+          ...action.payload,
+          servicePreference: action.payload.servicePreference ?? [],
+        });
       })
+
       .addCase(createServiceSpecifique.rejected, handleRejected)
 
       .addCase(createServicePreference.pending, handlePending)
       .addCase(createServicePreference.fulfilled, (state, action: PayloadAction<ServicePreference>) => {
         state.loading = false;
-        // On trouve le service parent et on lui ajoute la préférence
-        const service = state.items.find(
-          (s) => s.id === action.payload.serviceSpecifiqueId
-        );
+
+        const service = state.items.find(s => s.id === action.payload.serviceSpecifiqueId);
         if (service) {
           service.servicePreference.push(action.payload);
+        }
+
+        // ← Même protection
+        if (!state.itemsByType) {
+          state.itemsByType = { TICKET: [], HOTEL: [] };
+          return;
+        }
+
+        for (const type of Object.keys(state.itemsByType) as TypeService[]) {
+          const serviceInType = state.itemsByType[type].find(
+            s => s.id === action.payload.serviceSpecifiqueId
+          );
+          if (serviceInType) {
+            serviceInType.servicePreference.push(action.payload);
+            break;
+          }
         }
       })
       .addCase(createServicePreference.rejected, handleRejected);

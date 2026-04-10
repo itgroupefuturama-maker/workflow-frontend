@@ -186,11 +186,11 @@ const ProspectionTab = ({ prestationId }: Props) => {
                         <p className="font-bold text-gray-800 text-sm">
                           {entete.prestation.numeroDos}
                         </p>
-                        <span className="font-mono text-[11px] bg-white border border-gray-200 text-gray-400 px-2 py-0.5 rounded-md">
-                          {dossier.referenceTravelPlaner}
+                        <span className="font-mono text-[11px] bg-white border border-gray-200 text-gray-700 px-2 py-0.5 rounded-md font-bold">
+                          {entete.consulat.nom}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-400 mt-0.5">{dossier.description}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">{entete.consulat.nom}</p>
                     </div>
                   </div>
 

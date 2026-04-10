@@ -8,8 +8,9 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { createTypeChambre, fetchTypesChambre } from '../../../../../app/front_office/parametre_hotel/typeChambreSlice';
 // import { createServiceHotel, fetchServicesHotel } from '../../../../../app/front_office/parametre_hotel/serviceHotelSlice';
 import ModalFormParametre from '../components/ModalFormParametre';
-import RaisonAnnulationListe from '../../module.ticketing/ticketing.sous.module/SousMenuPrestation/RaisonAnnulationListe';
+import RaisonAnnulationListe from '../../module.parametre/RaisonAnnulation/RaisonAnnulationListe';
 import ServiceSpecifiqueListe from '../../module.parametre/ServiceSpecifique/ServiceSpecifiqueListe';
+import DeviseListe from '../../module.parametre/devise/DeviseListe';
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
 const ParametreViewHotel = () => {
@@ -30,26 +31,18 @@ const ParametreViewHotel = () => {
     error: errorTypes,
   } = useSelector((state: any) => state.typeChambre);
 
-  // const {
-  //   items: services,
-  //   loading: loadingServices,
-  //   error: errorServices,
-  // } = useSelector((state: any) => state.serviceHotel);
-
-  // const raisonState = useSelector((state: RootState) => state.raisonAnnulation);
-
   const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'plateformes');
 
   const tabs = [
     { id: 'plateformes', label: 'Plateformes' },
     { id: 'typeChambre', label: 'Types de chambre' },
     { id: 'service', label: 'Services' },
+    { id: 'devise', label: 'Devise' },
     { id: 'listeRaisonAnnulation', label: 'Raison Annulation' },
   ];
 
   const [showAddPlateforme, setShowAddPlateforme] = useState(false);
   const [showAddTypeChambre, setShowAddTypeChambre] = useState(false);
-  const [showAddService, setShowAddService] = useState(false);
 
   useEffect(() => {
     if (location.state?.targetTab) {
@@ -77,13 +70,6 @@ const ParametreViewHotel = () => {
       dispatch(fetchTypesChambre());
     });
   };
-
-  // const handleCreateService = (data: any) => {
-  //   dispatch(createServiceHotel(data)).then(() => {
-  //     setShowAddService(false);
-  //     dispatch(fetchServicesHotel());
-  //   });
-  // };
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
@@ -163,6 +149,10 @@ const ParametreViewHotel = () => {
               </>
             )}
 
+            {activeTab === 'devise' && (
+              <DeviseListe />
+            )}
+
             {activeTab === 'listeRaisonAnnulation' && (
               <>
                 <RaisonAnnulationListe />
@@ -200,15 +190,6 @@ const ParametreViewHotel = () => {
         ]}
         loading={loadingTypes}
       />
-
-      {/* <ModalFormParametre
-        isOpen={showAddService}
-        onClose={() => setShowAddService(false)}
-        onSubmit={handleCreateService}
-        title="Nouveau service"
-        fields={[{ name: 'service', label: 'Nom du service', type: 'text', required: true }]}
-        loading={loadingServices}
-      /> */}
     </div>
   );
 };

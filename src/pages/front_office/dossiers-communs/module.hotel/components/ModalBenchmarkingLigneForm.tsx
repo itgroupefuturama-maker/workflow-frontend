@@ -1,5 +1,16 @@
-import React, { useState, useEffect } from 'react';
-import { FiX, FiInfo, FiSave } from 'react-icons/fi';
+import React, { useState } from 'react';
+import { FiX, FiInfo, FiSave, FiPlus, FiTrash2 } from 'react-icons/fi';
+import { useSelector } from 'react-redux';
+import type { RootState } from '../../../../../app/store';
+
+type DeviseLigne = {
+  deviseId: string;
+  nuiteDevise: string;    // saisie manuelle
+  tauxChange: string;     // saisie manuelle
+  nuiteAriary: string;    // auto: nuiteDevise * tauxChange
+  montantDevise: string;  // auto: nuiteDevise * nombreChambre
+  montantAriary: string;  // auto: montantDevise * tauxChange
+};
 
 type Props = {
   isOpen: boolean;
@@ -11,6 +22,15 @@ type Props = {
   loading?: boolean;
 };
 
+const emptyDeviseLigne = (): DeviseLigne => ({
+  deviseId: '',
+  nuiteDevise: '',
+  tauxChange: '',
+  nuiteAriary: '',
+  montantDevise: '',
+  montantAriary: '',
+});
+
 const ModalBenchmarkingLigneForm: React.FC<Props> = ({
   isOpen,
   onClose,
@@ -20,77 +40,135 @@ const ModalBenchmarkingLigneForm: React.FC<Props> = ({
   benchmarkingEnteteId,
   loading = false,
 }) => {
+  const { items: devises } = useSelector((state: RootState) => state.devise);
+
   const [form, setForm] = useState({
     hotel: '',
     plateformeId: '',
     typeChambreId: '',
-    nuiteDevise: '',
-    nombreChambre: '',
-    nuiteAriary: '',
-    montantDevise: '',
-    montantAriary: '',
-    devise: 'EUR',
-    tauxChange: '',
-    isRefundable: false,       // ← boolean dès le départ
+    nombreChambre: '1',
+    isRefundable: false,
     dateLimiteAnnulation: '',
   });
 
-  // ── Calculs automatiques ──────────────────────────────────────
-  useEffect(() => {
-    const nuiteDevise   = parseFloat(form.nuiteDevise)   || 0;
-    const tauxChange    = parseFloat(form.tauxChange)    || 0;
-    const nombreChambre = parseFloat(form.nombreChambre) || 0;
+  const [devisesLignes, setDevisesLignes] = useState<DeviseLigne[]>([emptyDeviseLigne()]);
 
-    const nuiteAriary   = nuiteDevise * tauxChange;
-    const montantDevise = nuiteDevise * nombreChambre;
-    const montantAriary = nuiteAriary * nombreChambre;
-
-    setForm((prev) => ({
-      ...prev,
-      nuiteAriary:   nuiteAriary   > 0 ? String(nuiteAriary)   : '',
-      montantDevise: montantDevise > 0 ? String(montantDevise) : '',
-      montantAriary: montantAriary > 0 ? String(montantAriary) : '',
-    }));
-  }, [form.nuiteDevise, form.tauxChange, form.nombreChambre]);
-
-  // ── Handlers séparés pour text/select et checkbox ────────────
+  // ── Handler formulaire principal ──────────────────────────────
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+
+    // Si nombreChambre change → recalculer montantDevise et montantAriary de chaque ligne
+    if (name === 'nombreChambre') {
+      const nbChambre = parseFloat(value) || 0;
+      setDevisesLignes((prev) =>
+        prev.map((ligne) => {
+          const nuiteDevise  = parseFloat(ligne.nuiteDevise)  || 0;
+          const tauxChange   = parseFloat(ligne.tauxChange)   || 0;
+          const montantDevise = nuiteDevise * nbChambre;
+          const montantAriary = montantDevise * tauxChange;
+          return {
+            ...ligne,
+            montantDevise: montantDevise > 0 ? String(montantDevise) : '',
+            montantAriary: montantAriary > 0 ? String(montantAriary) : '',
+          };
+        })
+      );
+    }
   };
 
-  // ── FIX isRefundable : on gère le boolean directement ─────────
   const handleCheckbox = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, isRefundable: e.target.checked }));
   };
 
+  // ── Handlers lignes devises ───────────────────────────────────
+  const handleDeviseLigneChange = (
+    index: number,
+    field: keyof DeviseLigne,
+    value: string
+  ) => {
+    setDevisesLignes((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+
+      const nbChambre   = parseFloat(form.nombreChambre) || 0;
+      const nuiteDevise = parseFloat(
+        field === 'nuiteDevise' ? value : updated[index].nuiteDevise
+      ) || 0;
+      const tauxChange  = parseFloat(
+        field === 'tauxChange'  ? value : updated[index].tauxChange
+      ) || 0;
+
+      const nuiteAriary   = nuiteDevise * tauxChange;
+      const montantDevise = nuiteDevise * nbChambre;
+      const montantAriary = montantDevise * tauxChange;
+
+      updated[index] = {
+        ...updated[index],
+        nuiteAriary:   nuiteAriary   > 0 ? String(nuiteAriary)   : '',
+        montantDevise: montantDevise > 0 ? String(montantDevise) : '',
+        montantAriary: montantAriary > 0 ? String(montantAriary) : '',
+      };
+
+      return updated;
+    });
+  };
+
+  const handleAddDeviseLigne = () => {
+    setDevisesLignes((prev) => [...prev, emptyDeviseLigne()]);
+  };
+
+  const handleRemoveDeviseLigne = (index: number) => {
+    setDevisesLignes((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  // ── Submit ────────────────────────────────────────────────────
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.hotel || !form.plateformeId || !form.typeChambreId || !form.nuiteDevise) {
-      alert('Veuillez remplir les champs obligatoires');
+
+    if (!form.hotel || !form.plateformeId || !form.typeChambreId) {
+      alert('Veuillez remplir les champs obligatoires (hôtel, plateforme, type de chambre)');
       return;
     }
+
+    if (devisesLignes.length === 0) {
+      alert('Veuillez ajouter au moins une devise');
+      return;
+    }
+
+    const invalidDevise = devisesLignes.some(
+      (d) => !d.deviseId || !d.nuiteDevise || !d.tauxChange
+    );
+    if (invalidDevise) {
+      alert('Veuillez compléter toutes les lignes devise (devise, nuit/devise et taux requis)');
+      return;
+    }
+
     onSubmit({
       benchmarkingEnteteId,
-      hotel:               form.hotel.trim(),
-      plateformeId:        form.plateformeId,
-      typeChambreId:       form.typeChambreId,
-      nuiteDevise:         Number(form.nuiteDevise),
-      nombreChambre:       Number(form.nombreChambre)  || 1,
-      nuiteAriary:         Number(form.nuiteAriary)    || 0,
-      montantDevise:       Number(form.montantDevise)  || 0,
-      montantAriary:       Number(form.montantAriary)  || 0,
-      devise:              form.devise,
-      tauxChange:          Number(form.tauxChange)     || 1,
-      isRefundable:        form.isRefundable,           // ← boolean true/false
-      dateLimiteAnnulation: form.dateLimiteAnnulation || null,
+      hotel:                form.hotel.trim(),
+      plateformeId:         form.plateformeId,
+      typeChambreId:        form.typeChambreId,
+      nombreChambre:        Number(form.nombreChambre) || 1,
+      isRefundable:         form.isRefundable,
+      dateLimiteAnnulation: form.dateLimiteAnnulation
+        ? new Date(form.dateLimiteAnnulation).toISOString()
+        : null,
+      devises: devisesLignes.map((d) => ({
+        deviseId:      d.deviseId,
+        nuiteDevise:   Number(d.nuiteDevise),
+        tauxChange:    Number(d.tauxChange),
+        nuiteAriary:   Number(d.nuiteAriary)   || 0,
+        montantDevise: Number(d.montantDevise) || 0,
+        montantAriary: Number(d.montantAriary) || 0,
+      })),
     });
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/10 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[92vh] overflow-hidden flex flex-col">
 
         {/* ── Header ── */}
@@ -114,11 +192,7 @@ const ModalBenchmarkingLigneForm: React.FC<Props> = ({
         <form onSubmit={handleSubmit} className="overflow-y-auto flex-1 p-6 space-y-5 bg-gray-50">
 
           {/* Section 1 — Identification */}
-          <Section
-            label="Identification"
-            number="1"
-            color="orange"
-          >
+          <Section label="Identification" number="1" color="orange">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Field label="Hôtel" required>
                 <input
@@ -142,11 +216,10 @@ const ModalBenchmarkingLigneForm: React.FC<Props> = ({
                 >
                   <option value="">— Choisir —</option>
                   {plateformes
-                    .filter((p) => p.nom.toLowerCase().startsWith('platforme'))
-                    .map((p) => (
-                      <option key={p.id} value={p.id}>{p.code} – {p.nom}</option>
-                    ))
-                  }
+                  .filter((p) => p.nom.toLowerCase().startsWith('platforme') || p.nom.toLowerCase().startsWith('booking'))
+                  .map((p) => (
+                    <option key={p.id} value={p.id}>{p.code} – {p.nom}</option>
+                  ))}
                 </select>
               </Field>
 
@@ -160,7 +233,9 @@ const ModalBenchmarkingLigneForm: React.FC<Props> = ({
                 >
                   <option value="">— Choisir —</option>
                   {typesChambre.map((t) => (
-                    <option key={t.id} value={t.id}>{t.type} ({t.capacite} pers.)</option>
+                    <option key={t.id} value={t.id}>
+                      {t.type} ({t.capacite} pers.)
+                    </option>
                   ))}
                 </select>
               </Field>
@@ -177,56 +252,9 @@ const ModalBenchmarkingLigneForm: React.FC<Props> = ({
                 />
               </Field>
             </div>
-          </Section>
-
-          {/* Section 2 — Tarif */}
-          <Section label="Tarif en devise" number="2" color="blue">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Field label="Devise">
-                <select
-                  name="devise"
-                  value={form.devise}
-                  onChange={handleChange}
-                  className={inputClass}
-                >
-                  <option value="EUR">EUR</option>
-                  <option value="USD">USD</option>
-                  <option value="MGA">MGA</option>
-                </select>
-              </Field>
-
-              <Field label="Nuit / Devise" required>
-                <input
-                  type="number"
-                  name="nuiteDevise"
-                  value={form.nuiteDevise}
-                  onChange={handleChange}
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                  className={inputClass}
-                  required
-                />
-              </Field>
-
-              <Field label="Taux de change">
-                <input
-                  type="number"
-                  name="tauxChange"
-                  value={form.tauxChange}
-                  onChange={handleChange}
-                  min="0"
-                  step="0.01"
-                  placeholder="0.00"
-                  className={inputClass}
-                />
-              </Field>
-            </div>
 
             {/* Remboursable + Date limite */}
             <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-
-              {/* ── FIX : toggle switch au lieu du checkbox natif ── */}
               <Field label="Remboursable">
                 <label className="inline-flex items-center gap-3 cursor-pointer mt-1">
                   <div className="relative">
@@ -234,7 +262,7 @@ const ModalBenchmarkingLigneForm: React.FC<Props> = ({
                       type="checkbox"
                       name="isRefundable"
                       checked={form.isRefundable}
-                      onChange={handleCheckbox}   // ← handleCheckbox, pas handleChange
+                      onChange={handleCheckbox}
                       className="sr-only peer"
                     />
                     <div className="w-11 h-6 bg-gray-200 rounded-full peer-checked:bg-green-500 transition-colors" />
@@ -259,26 +287,109 @@ const ModalBenchmarkingLigneForm: React.FC<Props> = ({
             </div>
           </Section>
 
-          {/* Section 3 — Totaux */}
-          <Section label="Totaux calculés automatiquement" number="3" color="emerald">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <CalcField
-                label="Nuit / Ariary"
-                value={form.nuiteAriary}
-                formula="Nuit Devise × Taux"
-              />
-              <CalcField
-                label="Montant Devise"
-                value={form.montantDevise}
-                suffix={form.devise}
-                formula="Nuit Devise × Nbre chambres"
-              />
-              <CalcField
-                label="Montant Ariary"
-                value={form.montantAriary}
-                suffix="MGA"
-                formula="Nuit Ariary × Nbre chambres"
-              />
+          {/* Section 2 — Devises */}
+          <Section label="Tarifs par devise" number="2" color="blue">
+            <div className="space-y-3">
+
+              {devisesLignes.map((ligne, index) => (
+                <div
+                  key={index}
+                  className="p-4 bg-gray-50 rounded-xl border border-gray-100 space-y-3"
+                >
+                  {/* Header ligne */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-blue-600 uppercase tracking-wide">
+                      Devise {index + 1}
+                    </span>
+                    {devisesLignes.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveDeviseLigne(index)}
+                        className="text-gray-300 hover:text-red-400 transition-colors"
+                      >
+                        <FiTrash2 size={14} />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Ligne 1 : Devise + Nuit/Devise + Taux */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <Field label="Devise" required>
+                      <select
+                        value={ligne.deviseId}
+                        onChange={(e) => handleDeviseLigneChange(index, 'deviseId', e.target.value)}
+                        className={inputClass}
+                        required
+                      >
+                        <option value="">— Choisir —</option>
+                        {devises.map((d) => (
+                          <option key={d.id} value={d.id}>
+                            {d.devise}
+                            {d.status === 'INACTIF' ? ' (inactif)' : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+
+                    <Field label="Nuit / Devise" required>
+                      <input
+                        type="number"
+                        value={ligne.nuiteDevise}
+                        onChange={(e) => handleDeviseLigneChange(index, 'nuiteDevise', e.target.value)}
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        className={inputClass}
+                        required
+                      />
+                    </Field>
+
+                    <Field label="Taux de change" required>
+                      <input
+                        type="number"
+                        value={ligne.tauxChange}
+                        onChange={(e) => handleDeviseLigneChange(index, 'tauxChange', e.target.value)}
+                        min="0"
+                        step="0.01"
+                        placeholder="0.00"
+                        className={inputClass}
+                        required
+                      />
+                    </Field>
+                  </div>
+
+                  {/* Ligne 2 : Calculés auto */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <CalcField
+                      label="Nuit / Ariary"
+                      value={ligne.nuiteAriary}
+                      suffix="MGA"
+                      formula="Nuit Devise × Taux"
+                    />
+                    <CalcField
+                      label="Montant Devise"
+                      value={ligne.montantDevise}
+                      formula="Nuit Devise × Nb chambres"
+                    />
+                    <CalcField
+                      label="Montant Ariary"
+                      value={ligne.montantAriary}
+                      suffix="MGA"
+                      formula="Montant Devise × Taux"
+                    />
+                  </div>
+                </div>
+              ))}
+
+              {/* Bouton ajouter une devise */}
+              <button
+                type="button"
+                onClick={handleAddDeviseLigne}
+                className="w-full flex items-center justify-center gap-2 py-2.5 text-xs font-semibold text-blue-500 border border-dashed border-blue-300 rounded-xl hover:bg-blue-50 transition-colors"
+              >
+                <FiPlus size={14} />
+                Ajouter une devise
+              </button>
             </div>
           </Section>
         </form>
@@ -316,7 +427,7 @@ const ModalBenchmarkingLigneForm: React.FC<Props> = ({
   );
 };
 
-/* ── Helpers ────────────────────────────────────────────────── */
+/* ── Helpers ─────────────────────────────────────────────────── */
 
 const inputClass =
   'w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm text-gray-700 bg-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-300 focus:border-transparent transition';
@@ -328,15 +439,9 @@ const sectionColors = {
 };
 
 const Section = ({
-  label,
-  number,
-  color = 'orange',
-  children,
+  label, number, color = 'orange', children,
 }: {
-  label: string;
-  number: string;
-  color?: keyof typeof sectionColors;
-  children: React.ReactNode;
+  label: string; number: string; color?: keyof typeof sectionColors; children: React.ReactNode;
 }) => {
   const c = sectionColors[color];
   return (
@@ -353,33 +458,22 @@ const Section = ({
 };
 
 const Field = ({
-  label,
-  required,
-  children,
+  label, required, children,
 }: {
-  label: string;
-  required?: boolean;
-  children: React.ReactNode;
+  label: string; required?: boolean; children: React.ReactNode;
 }) => (
   <div>
     <label className="block text-xs font-semibold text-gray-500 mb-1.5 uppercase tracking-wide">
-      {label}
-      {required && <span className="text-red-400 ml-0.5">*</span>}
+      {label}{required && <span className="text-red-400 ml-0.5">*</span>}
     </label>
     {children}
   </div>
 );
 
 const CalcField = ({
-  label,
-  value,
-  suffix,
-  formula,
+  label, value, suffix, formula,
 }: {
-  label: string;
-  value: string;
-  suffix?: string;
-  formula: string;
+  label: string; value: string; suffix?: string; formula: string;
 }) => (
   <div>
     <div className="flex items-center gap-1.5 mb-1.5">
@@ -395,9 +489,7 @@ const CalcField = ({
           : <span className="text-gray-300 font-normal">—</span>
         }
       </span>
-      {suffix && (
-        <span className="text-xs font-bold text-emerald-500 shrink-0">{suffix}</span>
-      )}
+      {suffix && <span className="text-xs font-bold text-emerald-500 shrink-0">{suffix}</span>}
     </div>
   </div>
 );

@@ -17,7 +17,8 @@ const useAppDispatch = () => useDispatch<AppDispatch>();
 
 export default function ServiceSpecifiqueListe({ typeService }: Props) {
   const dispatch = useAppDispatch();
-  const { items, loading } = useSelector((state: RootState) => state.serviceSpecifique);
+  const { itemsByType, loading } = useSelector((state: RootState) => state.serviceSpecifique);
+  const filteredItems = (itemsByType ?? {})[typeService] ?? [];
   const [modalOpen, setModalOpen] = useState(false);
 
   // ── État modal préférence ──────────────────────────────────
@@ -76,7 +77,7 @@ export default function ServiceSpecifiqueListe({ typeService }: Props) {
         <div>
           <h2 className="text-base font-bold text-slate-800">Services & Spécifiques</h2>
           <p className="text-xs text-slate-400 mt-0.5">
-            {items.length} service{items.length > 1 ? 's' : ''} enregistré{items.length > 1 ? 's' : ''}
+            {filteredItems.length} service{filteredItems.length > 1 ? 's' : ''} enregistré{filteredItems.length > 1 ? 's' : ''}
           </p>
         </div>
         <button
@@ -95,7 +96,7 @@ export default function ServiceSpecifiqueListe({ typeService }: Props) {
             <div className="w-8 h-8 border-2 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
             <span className="text-xs text-slate-400">Chargement des services...</span>
           </div>
-        ) : items.length === 0 ? (
+        ) : filteredItems.length === 0 ? (
           <div className="py-16 flex flex-col items-center gap-3">
             <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
               <span className="text-2xl">📋</span>
@@ -118,7 +119,7 @@ export default function ServiceSpecifiqueListe({ typeService }: Props) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {items.map((item) => (
+                {filteredItems.map((item) => (
                   <tr key={item.id} className="group hover:bg-slate-50/80 transition-colors duration-150">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{item.code}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">{item.libelle}</td>
@@ -140,20 +141,23 @@ export default function ServiceSpecifiqueListe({ typeService }: Props) {
 
                     {/* Préférences */}
                     <td className="px-6 py-4">
-                      {item.servicePreference.length === 0 ? (
-                        <span className="text-xs text-slate-400 italic">Aucune</span>
-                      ) : (
-                        <div className="flex flex-wrap gap-1.5">
-                          {item.servicePreference.map((pref) => (
-                            <span
-                              key={pref.id}
-                              className="px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-md text-xs font-medium"
-                            >
-                              {pref.preference}
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                      {(() => {
+                        const prefs = item.servicePreference ?? [];
+                        return prefs.length === 0 ? (
+                          <span className="text-xs text-slate-400 italic">Aucune</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1.5">
+                            {prefs.map((pref) => (
+                              <span
+                                key={pref.id}
+                                className="px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-md text-xs font-medium"
+                              >
+                                {pref.preference}
+                              </span>
+                            ))}
+                          </div>
+                        );
+                      })()}
                     </td>
 
                     {/* Date */}
@@ -177,7 +181,7 @@ export default function ServiceSpecifiqueListe({ typeService }: Props) {
             </table>
             <div className="px-6 py-3 bg-slate-50/50 border-t border-slate-100">
               <span className="text-[11px] text-slate-400">
-                {items.length} résultat{items.length > 1 ? 's' : ''}
+                {filteredItems.length} résultat{filteredItems.length > 1 ? 's' : ''}
               </span>
             </div>
           </>
@@ -211,11 +215,11 @@ export default function ServiceSpecifiqueListe({ typeService }: Props) {
             )}
 
             {/* Préférences existantes */}
-            {prefModal.service.servicePreference.length > 0 && (
+            {(prefModal.service.servicePreference ?? []).length > 0 && (
               <div className="mb-4">
                 <p className="text-xs font-semibold text-slate-500 uppercase mb-2">Déjà ajoutées</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {prefModal.service.servicePreference.map((p) => (
+                  {(prefModal.service.servicePreference ?? []).map((p) => (
                     <span
                       key={p.id}
                       className="px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-md text-xs"

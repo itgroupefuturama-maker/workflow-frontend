@@ -72,7 +72,7 @@ const DataRow = ({ label, value, valueClass = '' }: {
 );
 
 const Field = ({ label, value }: { label: string; value: React.ReactNode }) => (
-  <div className="flex flex-col gap-0.5">
+  <div className="flex flex-col gap-0.5 border border-blue-200 rounded-2xl p-4">
     <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">{label}</span>
     <span className="text-sm font-medium text-gray-900">{value ?? '—'}</span>
   </div>
@@ -126,7 +126,7 @@ const FormsVisa = ({
     <>
       {forms.map((form, fIdx) => (
         <section key={form.id}>
-          <div className="flex items-center justify-between mb-3">
+          <div className="p-4 flex items-center justify-between mb-3">
             <div className="flex items-center gap-2.5">
               <h2 className="text-base font-bold text-gray-900">{form.prenom} {form.nom}</h2>
               <span className="text-xs text-gray-400 font-medium">Formulaire #{fIdx + 1}</span>
@@ -277,7 +277,7 @@ const FormsAssurance = ({
           </div>
 
           <SectionLabel label="Informations personnelles" />
-          <div className="bg-white p-4 grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 mb-4">
+          <div className=" p-4 grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-4 mb-4">
             <Field label="Nom"             value={form.nom} />
             <Field label="Prénom"          value={form.prenom} />
             <Field label="Date naissance"  value={fmtDate(form.dateNaissance)} />
@@ -294,7 +294,7 @@ const FormsAssurance = ({
 
 /** Petit label de section réutilisable */
 const SectionLabel = ({ label }: { label: string }) => (
-  <div className="flex items-center gap-3 mb-2">
+  <div className="flex items-center gap-3 mb-2 border-b border-gray-200">
     <span className="px-3 py-1 bg-white text-[11px] font-bold uppercase tracking-widest text-gray-500 w-fit">
       {label}
     </span>
@@ -418,158 +418,170 @@ const PageDetailPassager = () => {
 
   /* ── rendu ── */
   return (
-    <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange}>
-      <div className="min-h-screen bg-white space-y-4">
-        <AssuranceHeader
-          numeroassurance={detail?.assurance?.zoneDestination}
-          nomPassager={nomPassager}
-          navigate={navigate}
-          isDetail={true}
-          isProspection={false}
-          isPassager={true}
-        />
+    <div className="h-full flex flex-col min-h-0">
+      <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange}>
+        <div className="flex h-full min-h-0 overflow-hidden">
+          {/* ── Colonne principale ── */}
+          <div className="flex-1 min-w-0 flex flex-col min-h-0">
+            {/* ── Header fixe — ne scrolle PAS ── */}
+            <div className="shrink-0 px-4 pt-2 bg-white">
+              <div className='flex items-center justify-between'>
+                <AssuranceHeader
+                  numeroassurance={detail?.assurance?.zoneDestination}
+                  nomPassager={nomPassager}
+                  navigate={navigate}
+                  isDetail={true}
+                  isProspection={false}
+                  isPassager={true}
+                />
 
-        <div className=" py-6 space-y-4">
-          {/* Feedbacks */}
-          {actionSuccess && (
-            <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl px-4 py-3">
-              ✓ {actionSuccess}
+                <button
+                  onClick={handleSync}
+                  disabled={syncLoading}
+                  className="inline-flex items-center gap-2 px-4 py-1 rounded-lg bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white text-xs font-semibold transition"
+                >
+                  {syncLoading ? <Spinner size={3} /> : syncDone ? '✓' : '⚡'}
+                  {syncDone ? 'Synchronisé' : 'Synchroniser'}
+                </button>
+              </div>
             </div>
-          )}
-          {actionError && (
-            <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-3">
-              ⚠️ {actionError}
-            </div>
-          )}
 
-          {detail && (
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
+            <div className="flex-1 min-h-0 overflow-y-auto pb-4 px-4">
+              {/* Feedbacks */}
+              {actionSuccess && (
+                <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl px-4 py-3">
+                  ✓ {actionSuccess}
+                </div>
+              )}
+              {actionError && (
+                <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-3">
+                  ⚠️ {actionError}
+                </div>
+              )}
 
-              {/* ── Colonne gauche (2/3) ── */}
-              <div className="lg:col-span-2 space-y-6">
+              {detail && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
 
-                {/* Documents (commun VISA + ASSURANCE) */}
-                {detail.userDocument.length > 0 && (
-                  <section>
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center gap-2">
-                        <h2 className="text-base font-bold text-gray-900">Documents</h2>
-                        <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">
-                          {detail.userDocument.length}
-                        </span>
-                      </div>
+                  {/* ── Colonne gauche (2/3) ── */}
+                  <div className="lg:col-span-2 space-y-6">
 
-                      <button
-                        onClick={handleSync}
-                        disabled={syncLoading}
-                        className="inline-flex items-center gap-2 px-4 py-1 rounded-lg bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white text-xs font-semibold transition"
-                      >
-                        {syncLoading ? <Spinner size={3} /> : syncDone ? '✓' : '⚡'}
-                        {syncDone ? 'Synchronisé' : 'Synchroniser'}
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {detail.userDocument.map((doc) => (
-                        <div key={doc.id} className="bg-white border border-gray-200 rounded-xl px-4 py-3.5 flex items-center justify-between gap-3 shadow-sm hover:shadow-md hover:border-indigo-100 transition-all">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <div className="h-10 w-10 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0 text-lg">
-                              📄
-                            </div>
-                            <div className="min-w-0">
-                              <p className="text-sm font-semibold text-gray-900 truncate">{doc.nomDoc}</p>
-                              <div className="flex items-center gap-2 mt-2 mb-2 flex-wrap">
-                                <span className="text-xs text-gray-400">{fmtDate(doc.createdAt)}</span>
-                              </div>
-                              <Badge status={doc.status} />
-                            </div>
+                    {/* Documents (commun VISA + ASSURANCE) */}
+                    {detail.userDocument.length > 0 && (
+                      <section>
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-2">
+                            <h2 className="text-base font-bold text-gray-900">Documents</h2>
+                            <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">
+                              {detail.userDocument.length}
+                            </span>
                           </div>
-                          <div className="flex flex-col items-end gap-1.5 shrink-0">
-                            <a
-                              href={`${API_URL_PORTAIL}${doc.pj}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="inline-flex items-center gap-1 px-2.5 py-1 border border-gray-200 text-indigo-600 text-xs font-semibold rounded-lg hover:bg-indigo-50 transition"
-                            >
-                              Voir
-                            </a>
-                            <ActionButton
-                              onClick={() => handleValidateDoc(doc.id)}
-                              loading={docLoading[doc.id] ?? false}
-                              statut={doc.status}
-                              done={docDone[doc.id] ?? (doc.status === 'VALIDE' || doc.status === 'VALIDER')}
-                              label="Valider" doneLabel="Validé" color="green"
-                            />
-                          </div>
+
+                          
                         </div>
-                      ))}
-                    </div>
-                  </section>
-                )}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                          {detail.userDocument.map((doc) => (
+                            <div key={doc.id} className="bg-white border border-gray-200 rounded-xl px-4 py-3.5 flex items-center justify-between gap-3 shadow-sm hover:shadow-md hover:border-indigo-100 transition-all">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="h-10 w-10 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0 text-lg">
+                                  📄
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-sm font-semibold text-gray-900 truncate">{doc.nomDoc}</p>
+                                  <div className="flex items-center gap-2 mt-2 mb-2 flex-wrap">
+                                    <span className="text-xs text-gray-400">{fmtDate(doc.createdAt)}</span>
+                                  </div>
+                                  <Badge status={doc.status} />
+                                </div>
+                              </div>
+                              <div className="flex flex-col items-end gap-1.5 shrink-0">
+                                <a
+                                  href={`${API_URL_PORTAIL}${doc.pj}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 border border-gray-200 text-indigo-600 text-xs font-semibold rounded-lg hover:bg-indigo-50 transition"
+                                >
+                                  Voir
+                                </a>
+                                <ActionButton
+                                  onClick={() => handleValidateDoc(doc.id)}
+                                  loading={docLoading[doc.id] ?? false}
+                                  statut={doc.status}
+                                  done={docDone[doc.id] ?? (doc.status === 'VALIDE' || doc.status === 'VALIDER')}
+                                  label="Valider" doneLabel="Validé" color="green"
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </section>
+                    )}
 
-                {/* Formulaires — selon userType */}
-                {isAssurance ? (
-                  <FormsAssurance
-                    forms={forms}
-                    formLoading={formLoading}
-                    formDone={formDone}
-                    onValidate={handleValidateForm}
-                  />
-                ) : (
-                  <FormsVisa
-                    forms={forms}
-                    formLoading={formLoading}
-                    formDone={formDone}
-                    onValidate={handleValidateForm}
-                  />
-                )}
-              </div>
-
-              {/* ── Colonne droite (1/3) ── */}
-              <div className="space-y-4">
-                <Card title="Résumé du compte">
-                  <DataRow label="Type"       value={
-                    <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
-                      {detail.userType}
-                    </span>
-                  } />
-                  <DataRow label="Statut"     value={<Badge status={detail.actif ? 'ACTIF' : 'INACTIF'} />} />
-                  <DataRow label="Validation" value={<Badge status={detail.isValidate ? 'VALIDE' : 'EN_ATTENTE'} />} />
-                  <DataRow label="Créé le"    value={fmtDate(detail.createdAt)} />
-
-                  {/* Infos spécifiques assurance */}
-                  {isAssurance && detail.assurance && (
-                    <>
-                      <DataRow label="Zone"    value={detail.assurance.zoneDestination} />
-                      <DataRow label="Assureur" value={detail.assurance.assureur} />
-                    </>
-                  )}
-                </Card>
-
-                {detail.userDocument.length > 0 && (
-                  <Card title="Récap documents">
-                    {detail.userDocument.map((doc) => (
-                      <DataRow key={doc.id} label={doc.nomDoc} value={<Badge status={doc.status} />} />
-                    ))}
-                  </Card>
-                )}
-
-                {forms.length > 0 && (
-                  <Card title="Récap formulaires">
-                    {forms.map((form, i) => (
-                      <DataRow
-                        key={form.id}
-                        label={`Formulaire #${i + 1} — ${form.prenom} ${form.nom}`}
-                        value={<Badge status={form.status} />}
+                    {/* Formulaires — selon userType */}
+                    {isAssurance ? (
+                      <FormsAssurance
+                        forms={forms}
+                        formLoading={formLoading}
+                        formDone={formDone}
+                        onValidate={handleValidateForm}
                       />
-                    ))}
-                  </Card>
-                )}
-              </div>
+                    ) : (
+                      <FormsVisa
+                        forms={forms}
+                        formLoading={formLoading}
+                        formDone={formDone}
+                        onValidate={handleValidateForm}
+                      />
+                    )}
+                  </div>
+
+                  {/* ── Colonne droite (1/3) ── */}
+                  <div className="space-y-4">
+                    <Card title="Résumé du compte">
+                      <DataRow label="Type"       value={
+                        <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700">
+                          {detail.userType}
+                        </span>
+                      } />
+                      <DataRow label="Statut"     value={<Badge status={detail.actif ? 'ACTIF' : 'INACTIF'} />} />
+                      <DataRow label="Validation" value={<Badge status={detail.isValidate ? 'VALIDE' : 'EN_ATTENTE'} />} />
+                      <DataRow label="Créé le"    value={fmtDate(detail.createdAt)} />
+
+                      {/* Infos spécifiques assurance */}
+                      {isAssurance && detail.assurance && (
+                        <>
+                          <DataRow label="Zone"    value={detail.assurance.zoneDestination} />
+                          <DataRow label="Assureur" value={detail.assurance.assureur} />
+                        </>
+                      )}
+                    </Card>
+
+                    {detail.userDocument.length > 0 && (
+                      <Card title="Récap documents">
+                        {detail.userDocument.map((doc) => (
+                          <DataRow key={doc.id} label={doc.nomDoc} value={<Badge status={doc.status} />} />
+                        ))}
+                      </Card>
+                    )}
+
+                    {forms.length > 0 && (
+                      <Card title="Récap formulaires">
+                        {forms.map((form, i) => (
+                          <DataRow
+                            key={form.id}
+                            label={`Formulaire #${i + 1} — ${form.prenom} ${form.nom}`}
+                            value={<Badge status={form.status} />}
+                          />
+                        ))}
+                      </Card>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          </div>
         </div>
-      </div>
-    </TabContainer>
+      </TabContainer>
+    </div>
   );
 };
 

@@ -54,9 +54,25 @@ export const fetchTodos = createAsyncThunk(
 
 export const createTodo = createAsyncThunk(
   'todos/create',
-  async ({ prestationId, objet, moment }: { prestationId: string; objet: string; moment: string }, { rejectWithValue }) => {
+  async (
+    payload: 
+      | { prestationId: string; objet: string; moment: string; type?: never; googleAccountId?: never }
+      | { prestationId: string; objet: string; moment: string; type: 'URGENT'; googleAccountId: string },
+    { rejectWithValue }
+  ) => {
     try {
-      const res = await axiosInstance.post('/todolists', { prestationId, objet, moment });
+      const body: Record<string, string> = {
+        prestationId: payload.prestationId,
+        objet: payload.objet,
+        moment: payload.moment,
+      };
+
+      if (payload.type === 'URGENT') {
+        body.type = 'URGENT';
+        body.googleAccountId = payload.googleAccountId;
+      }
+
+      const res = await axiosInstance.post('/todolists', body);
       if (!res.data.success) throw new Error();
       return res.data.data;
     } catch (err: any) {

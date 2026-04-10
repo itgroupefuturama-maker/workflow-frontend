@@ -42,6 +42,9 @@ import PageDetailAssurance from "../pages/front_office/dossiers-communs/module.a
 import PageDetailPassagerAssurance from "../pages/front_office/dossiers-communs/module.assurance/sous.section/sous.section.page/PageDetailPassagerAssurance";
 import HomePageBaseDonnee from "../pages/front_office/dossiers-communs/module.base.donnee/HomePageBaseDonnee";
 import PageDetailClient from "../pages/front_office/dossiers-communs/module.base.donnee/sous.section/PageDetailClient";
+import SuccesCreateCompte from "../pages/front_office/dossiers-communs/module.calendar/succesCreateCompte";
+import SpecificationClient from "../pages/front_office/dossiers-communs/module.dossier.commun/specification.client/specificationClient";
+import PageFormulairePassager from "../pages/front_office/dossiers-communs/module.visa/sous.section/sous.section.page/PageFormulairePassager";
 
 export function frontOfficeRoutes() {
   return (
@@ -50,6 +53,7 @@ export function frontOfficeRoutes() {
       <Route path="dossiers-communs" element={<DossierCommun />} />
       <Route path="dossiers-communs/liste-by-module/:module" element={<ListeDossierByModule />} />
       <Route path="dossiers-communs/todolist" element={<ToDoList />} />
+      <Route path="dossiers-communs/specification-client/:id" element={<SpecificationClient />} />
 
       {/* <Route path="dossiers-communs/ticketing/list" element={<TicketingPage />} /> */}
       <Route path="dossiers-communs/nouveau" element={<DossierCommunForm />} />
@@ -101,6 +105,7 @@ export function frontOfficeRoutes() {
         <Route path="details/:enteteId" element={<PageDetailProspection />} />
         <Route path="visa-detail/:visaEnteteId" element={<PageDetailVisa />} />
         <Route path="passager/:passagerId" element={<PageDetailPassager />} />
+        <Route path="formulaire-passager/:passagerId" element={<PageFormulairePassager />} />
       </Route>
 
       <Route path="dossiers-communs/assurance" element={<HomePageAssurance />}>

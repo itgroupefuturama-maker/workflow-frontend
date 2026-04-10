@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { FiHelpCircle, FiBell, FiUser, FiChevronDown, FiLogOut, FiX, FiTrash2, FiHome, FiCheck, FiUsers } from "react-icons/fi";
+import { FiHelpCircle, FiBell, FiUser, FiChevronDown, FiLogOut, FiX, FiTrash2, FiHome, FiCheck, FiUsers, FiSettings } from "react-icons/fi";
 import { useState, useRef, useEffect } from "react";
 import { logout } from '../app/authSlice';
 import { useDispatch, useSelector } from 'react-redux';
@@ -134,8 +134,8 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
 
   return (
     <>
-      <header className={`stick p-1 top-0 z-50  px-4 sm:px-10 bg-slate-700 border-b border-slate-600`}>
-        <div className="h-14 flex items-center justify-between gap-4">
+      <header className={`stick p-1 top-0 px-4 sm:px-10 bg-slate-700 border-b border-slate-600`}>
+        <div className="h-10 flex items-center justify-between gap-4">
 
           {/* ── Gauche : Logo + Accueil ── */}
           <div className="flex items-center gap-4">
@@ -193,7 +193,7 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
               </button>
 
               {openNotifications && (
-                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-50">
+                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden z-999">
 
                   {/* Header notifs */}
                   <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
@@ -324,6 +324,16 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
                   <div className="h-px bg-gray-50 mx-3 my-1" />
 
                   <button
+                    onClick={() => { navigate('/dossiers-communs/parametre', { state: { key: 'utilisateurs' } }) }}
+                    className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-colors"
+                  >
+                    <FiSettings size={14} />
+                    Paramètres
+                  </button>
+
+                  <div className="h-px bg-gray-50 mx-3 my-1" />
+
+                  <button
                     onClick={handleLogout}
                     className="w-full flex items-center gap-2.5 px-4 py-2 text-sm text-red-500 hover:bg-red-50 transition-colors"
                   >
@@ -339,7 +349,7 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
 
       {/* ── Modal Profil ── */}
       {openProfileModal && user && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-999 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
           <div
             ref={modalRef}
             className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden"
@@ -386,6 +396,7 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
                   </span>
                 </div>
               </div>
+              
 
               {profilsActifs.length > 0 && (
                 <div>

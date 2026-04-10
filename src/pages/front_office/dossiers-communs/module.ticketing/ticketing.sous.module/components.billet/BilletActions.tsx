@@ -1,4 +1,4 @@
-import { FiCheck, FiCheckCircle, FiFileText, FiSend } from "react-icons/fi";
+import { FiCheck, FiCheckCircle, FiFileText, FiSend, FiArrowRight } from "react-icons/fi";
 
 interface BilletActionsProps {
   billet: any;
@@ -12,6 +12,46 @@ interface BilletActionsProps {
   onAnnulerEmission?: () => void;        // ← nouveau
 }
 
+// Composant de bouton réutilisable pour garder le code propre
+const ActionButton = ({ 
+  onClick, 
+  disabled, 
+  icon: Icon, 
+  label, 
+  variant = "blue" 
+}: { 
+  onClick: () => void; 
+  disabled: boolean; 
+  icon: any; 
+  label: string; 
+  variant?: "amber" | "emerald" | "blue" | "purple" 
+}) => {
+  const themes = {
+    amber:   "text-amber-700 bg-amber-50 border-amber-200 hover:bg-amber-100 hover:border-amber-300",
+    emerald: "text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300",
+    blue:    "text-blue-700 bg-blue-50 border-blue-200 hover:bg-blue-100 hover:border-blue-300",
+    purple:  "text-purple-700 bg-purple-50 border-purple-200 hover:bg-purple-100 hover:border-purple-300",
+  };
+
+  return (
+    <button
+      disabled={disabled}
+      onClick={onClick}
+      className={`
+        flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all duration-200 border shadow-sm
+        active:scale-95
+        ${disabled 
+          ? "bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed shadow-none" 
+          : themes[variant]}
+      `}
+    >
+      <Icon size={14} className={disabled ? "text-slate-200" : ""} />
+      {label}
+      {!disabled && <FiArrowRight size={12} className="ml-1 opacity-50" />}
+    </button>
+  );
+};
+
 export const BilletActions = ({
   billet,
   allLinesEmission,
@@ -21,67 +61,44 @@ export const BilletActions = ({
   onApprouver,
   onShowEmission,
 }: BilletActionsProps) => {
+  
   return (
-    <div className="flex flex-wrap gap-4 mb-2 justify-end items-center">
-      {/* Bouton : Émettre facture client */}
-      <button
-        disabled={!(billet?.statut === 'BILLET_EMIS')}
-        onClick={onShowFacture}
-        className={`
-          flex items-center gap-2 px-6 py-2.5 rounded-lg font-semibold transition-all shadow-sm
-          ${billet?.statut === 'BILLET_EMIS'
-            ? 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100'
-            : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'}
-        `}
-      >
-        <FiFileText size={18} />
-        Emettre Facture
-      </button>
-
-      {/* Bouton : Marquer facture réglée */}
-      <button
-        disabled={!(billet?.statut === 'FACTURE_EMISE')}
-        onClick={onRegler}
-        className={`
-          flex items-center gap-2 px-6 py-2.5 rounded-lg font-semibold transition-all shadow-sm
-          ${billet?.statut === 'FACTURE_EMISE'
-            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
-            : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'}
-        `}
-      >
-        <FiCheckCircle size={18} />
-        Régler Facture
-      </button>
-
-      {/* Bouton : Approbation Réservation */}
-      <button
-        disabled={!(allLinesReservation && billet?.statut === 'CREER')}
+    <div className="flex flex-wrap gap-2 justify-end items-center">
+      {/* 1. Mettre à jour la réservation */}
+      <ActionButton
+        label="Réserver"
+        icon={FiSend}
+        variant="blue"
         onClick={() => onApprouver(billet.id)}
-        className={`
-          flex items-center gap-2 px-6 py-2.5 rounded-lg font-semibold transition-all shadow-sm
-          ${allLinesReservation && billet?.statut === 'CREER'
-            ? 'bg-blue-50 text-blue-700 border border-blue-200 hover:bg-blue-100'
-            : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'}
-        `}
-      >
-        <FiSend size={18} />
-        Mettre à jour la réservation
-      </button>
+        disabled={!(allLinesReservation && billet?.statut === 'CREER')}
+      />
 
-      {/* Bouton : Émettre Billet */}
-      <button
-        disabled={!(allLinesEmission && billet?.statut === 'BC_CLIENT_A_APPROUVER')}
+      {/* 2. Émettre Billet */}
+      <ActionButton
+        label="Émettre Billet"
+        icon={FiCheck}
+        variant="purple"
         onClick={onShowEmission}
-        className={`
-          flex items-center gap-2 px-6 py-2.5 rounded-lg font-semibold transition-all shadow-sm
-          ${allLinesEmission && billet?.statut === 'BC_CLIENT_A_APPROUVER'
-            ? 'bg-purple-50 text-purple-700 border border-purple-200 hover:bg-purple-100'
-            : 'bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed'}
-        `}
-      >
-        <FiCheck size={18} />
-        Emettre Billet
-      </button>
+        disabled={!(allLinesEmission && billet?.statut === 'BC_CLIENT_A_APPROUVER')}
+      />
+
+      {/* 3. Émettre Facture */}
+      <ActionButton
+        label="Facturer"
+        icon={FiFileText}
+        variant="amber"
+        onClick={onShowFacture}
+        disabled={!(billet?.statut === 'BILLET_EMIS')}
+      />
+
+      {/* 4. Régler Facture */}
+      <ActionButton
+        label="Régler"
+        icon={FiCheckCircle}
+        variant="emerald"
+        onClick={onRegler}
+        disabled={!(billet?.statut === 'FACTURE_EMISE')}
+      />
     </div>
   );
 };

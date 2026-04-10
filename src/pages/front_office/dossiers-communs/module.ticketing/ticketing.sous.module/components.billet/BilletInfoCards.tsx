@@ -1,61 +1,37 @@
-import React from 'react';
-import { FileText, Hash, Calendar, Tag, XCircle, User, Phone, Building2, Plane, DollarSign, Percent } from 'lucide-react';
+import React, { useState } from 'react';
+import { 
+  FileText, Hash, Calendar, Tag, XCircle, User, 
+  Phone, Building2, Plane, DollarSign, Percent, 
+  ChevronDown, ChevronUp
+} from 'lucide-react';
 
-const color = {
-  bg:      '#3b82f6',
-  bgLight: '#eff6ff',
-  text:    '#2563eb',
-  border:  '#bfdbfe',
-};
-
-const InfoItem = ({
+// --- Sous-composant interne ---
+const InfoItemCompact = ({
   label,
   value,
   icon: Icon,
-  accent = false,
   highlight,
 }: {
   label: string;
   value?: string | number | React.ReactNode | null;
   icon?: React.ElementType;
-  accent?: boolean;
   highlight?: 'red' | 'green' | 'amber';
 }) => {
-  const highlightStyles = {
-    red:   'bg-red-50 border border-red-100',
-    green: 'bg-emerald-50 border border-emerald-100',
-    amber: 'bg-amber-50 border border-amber-100',
+  const highlightColors = {
+    red:   'text-red-600',
+    green: 'text-emerald-600 font-black',
+    amber: 'text-amber-600 font-black',
   };
 
   return (
-    <div className={`flex items-center gap-2 px-2.5 py-2 rounded-lg transition-colors ${
-      highlight ? highlightStyles[highlight] : 'bg-gray-50 hover:bg-gray-100/80'
-    }`}>
-      {Icon && (
-        <div
-          className={`shrink-0 w-6 h-6 rounded-md flex items-center justify-center ${
-            highlight === 'red'     ? 'bg-red-100 text-red-500'
-            : highlight === 'green' ? 'bg-emerald-100 text-emerald-600'
-            : highlight === 'amber' ? 'bg-amber-100 text-amber-600'
-            : !accent               ? 'bg-white text-gray-400 shadow-sm border border-gray-100'
-            : ''
-          }`}
-          style={accent && !highlight ? { backgroundColor: color.bgLight, color: color.text } : undefined}
-        >
-          <Icon size={11} />
-        </div>
-      )}
-      <div className="min-w-0 flex-1">
-        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest leading-none mb-0.5">{label}</p>
-        <p className={`text-xs font-bold truncate leading-none ${
-          highlight === 'red'     ? 'text-red-700'
-          : highlight === 'green' ? 'text-emerald-700'
-          : highlight === 'amber' ? 'text-amber-700'
-          : 'text-gray-800'
-        }`}>
-          {value ?? '—'}
-        </p>
+    <div className="flex flex-col py-1.5 transition-colors group">
+      <div className="flex items-center gap-1.5 mb-0.5">
+        {Icon && <Icon size={10} className="text-slate-300" />}
+        <span className="text-[9px] font-bold uppercase tracking-tighter text-slate-400">{label}</span>
       </div>
+      <p className={`text-[11px] font-semibold truncate ${highlight ? highlightColors[highlight] : 'text-slate-700'}`}>
+        {value ?? '—'}
+      </p>
     </div>
   );
 };
@@ -66,98 +42,95 @@ interface BilletInfoCardsProps {
   dossier: any;
 }
 
+// --- Ton Composant Principal ---
 const BilletInfoCards: React.FC<BilletInfoCardsProps> = ({ billet, clientFacture, dossier }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
   const isAnnule = !!billet?.raisonAnnul;
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-
-      {/* ── Hero header ──────────────────────────────────────────────────── */}
-      <div className="relative bg-white px-4 py-3 overflow-hidden border-b border-gray-100">
-        <div className="absolute -top-3 -right-3 w-16 h-16 rounded-full opacity-20 bg-gradient-to-r from-blue-400 to-blue-600" />
-        <div className="absolute -bottom-4 -right-8 w-24 h-24 rounded-full opacity-10 bg-gradient-to-r from-blue-400 to-blue-600" />
-
-        <div className="relative flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div
-              className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border"
-              style={{ backgroundColor: color.bgLight, borderColor: color.border, color: color.text }}
-            >
-              <Plane size={14} />
-            </div>
-            <div>
-              <p className="text-gray-400 text-[9px] font-bold uppercase tracking-widest leading-none mb-0.5">Billet</p>
-              <p className="text-gray-900 text-base font-black tracking-tight leading-none">
-                {billet?.numeroBillet ?? '—'}
-              </p>
-            </div>
+    <div className="bg-white rounded-lg border border-slate-200 shadow-sm transition-all duration-200 overflow-hidden">
+      
+      {/* Header Ultra-Compact */}
+      <div 
+        className={`px-4 py-2 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors ${isExpanded ? 'border-b border-slate-100 bg-slate-50/30' : ''}`}
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-2">
+            <Plane size={14} className={isAnnule ? 'text-red-400' : 'text-indigo-500'} />
+            <span className="text-xs font-black text-slate-800 tracking-tight whitespace-nowrap">
+              {billet?.numeroBillet || 'N/A'}
+            </span>
           </div>
 
-          {isAnnule ? (
-            <span className="inline-flex items-center gap-1 bg-red-50 border border-red-100 text-red-500 text-[10px] font-bold px-2.5 py-1 rounded-full">
-              <XCircle size={10} /> Annulé
+          <div className="h-4 w-px bg-slate-200 hidden sm:block" />
+
+          <div className="hidden sm:flex items-center gap-3 truncate text-[10px]">
+            <span className="text-slate-500 font-medium truncate max-w-[150px]">
+              {clientFacture?.libelle}
             </span>
-          ) : (
-            <span
-              className="inline-flex items-center gap-1 text-[10px] font-bold px-2.5 py-1 rounded-full border"
-              style={{ backgroundColor: color.bgLight, borderColor: color.border, color: color.text }}
-            >
-              <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: color.bg }} />
-              {billet?.statut === 'CREER' ? 'Créé' : billet?.statut}
+            <span className="font-bold text-emerald-600">
+              {billet?.totalCompagnie?.toLocaleString('fr-FR')} Ar
             </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4">
+          {isAnnule && (
+            <span className="text-[9px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded border border-red-100">ANNULÉ</span>
           )}
+          <div className="text-slate-400">
+            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+          </div>
         </div>
       </div>
 
-      {/* ── Bloc annulation ───────────────────────────────────────────────── */}
-      {isAnnule && (
-        <div className="px-4 pt-3">
-          <div className="flex items-center gap-2.5 p-2.5 bg-red-50 border border-red-100 rounded-xl">
-            <div className="w-6 h-6 rounded-lg bg-red-100 flex items-center justify-center shrink-0">
-              <XCircle size={12} className="text-red-500" />
+      {/* Contenu Déplié */}
+      <div className={`overflow-hidden transition-all duration-200 ${isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
+        {isAnnule && (
+          <div className="px-4 py-2 bg-red-50/50 border-b border-red-100 text-[10px] text-red-700 flex items-center gap-2">
+            <XCircle size={12} />
+            <strong>Motif:</strong> {billet.raisonAnnul}
+          </div>
+        )}
+
+        <div className="px-5 py-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-x-6 gap-y-4">
+            <div className="space-y-0.5">
+              <InfoItemCompact label="Entête" value={billet?.prospectionEntete?.numeroEntete} icon={FileText} />
+              <InfoItemCompact label="Date" value={billet?.createdAt ? new Date(billet.createdAt).toLocaleDateString() : null} icon={Calendar} />
             </div>
-            <div>
-              <p className="text-[9px] font-bold text-red-400 uppercase tracking-widest mb-0.5">Raison d'annulation</p>
-              <p className="text-xs font-bold text-red-700">{billet.raisonAnnul}</p>
+
+            <div className="space-y-0.5">
+              <InfoItemCompact label="Type Vol" value={billet?.typeVol} icon={Plane} />
+              <InfoItemCompact label="Compagnie" value={billet?.prospectionEntete?.fournisseur?.libelle} icon={Tag} />
+            </div>
+
+            <div className="space-y-0.5">
+              <InfoItemCompact label="Facturé à" value={clientFacture?.libelle} icon={Building2} />
+              <InfoItemCompact label="WhatsApp" value={dossier?.whatsapp} icon={Phone} />
+            </div>
+
+            <div className="space-y-0.5">
+              <InfoItemCompact label="Contact" value={dossier?.contactPrincipal} icon={User} />
+              <InfoItemCompact label="Passager" value={billet?.typePassager} icon={User} />
+            </div>
+
+            <div className="space-y-0.5">
+              <InfoItemCompact label="Comm. Prop" value={`${billet?.commissionPropose}%`} icon={Percent} />
+              <InfoItemCompact label="Comm. App" value={`${billet?.commissionAppliquer}%`} icon={Percent} highlight="green" />
+            </div>
+
+            <div className="space-y-0.5 border-l border-slate-100 pl-4 text-right sm:text-left">
+              <InfoItemCompact label="Total Ar" value={billet?.totalCompagnie?.toLocaleString('fr-FR')} icon={DollarSign} highlight="amber" />
+              <InfoItemCompact label="Taux" value={`${billet?.tauxEchange} Ar`} icon={Hash} />
             </div>
           </div>
         </div>
-      )}
-
-      {/* ── Grille compacte tout-en-un ───────────────────────────────────── */}
-      <div className="p-3 space-y-3">
-
-        {/* Référence */}
-        <div>
-          <p className="text-[9px] font-black text-gray-300 uppercase tracking-widest mb-1.5 px-0.5">Référence</p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-1.5">
-            <InfoItem label="N° Dossier entête" value={billet?.prospectionEntete?.numeroEntete} icon={FileText} accent />
-            <InfoItem label="N° Billet"         value={billet?.numeroBillet}                   icon={Hash}     accent />
-            <InfoItem label="Date création"     value={billet?.createdAt ? new Date(billet.createdAt).toLocaleString('fr-FR') : null} icon={Calendar} />
-            <InfoItem label="Type vol"          value={billet?.typeVol}                        icon={Plane} />
-            <InfoItem label="Total compagnie"     value={billet?.totalCompagnie     != null ? `${billet.totalCompagnie.toLocaleString('fr-FR')} Ar` : null} icon={DollarSign} highlight="amber" />
-            <InfoItem label="Commission appliquée" value={billet?.commissionAppliquer != null ? `${billet.commissionAppliquer} %`                        : null} icon={Percent} />
-          </div>
-        </div>
-
-        <div className="h-px bg-gray-100" />
-
-        {/* Client */}
-        <div>
-          <p className="text-[9px] font-black text-gray-300 uppercase tracking-widest mb-1.5 px-0.5">Client</p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-1.5">
-            <InfoItem label="Client facturé"    value={clientFacture?.libelle}                          icon={Building2} />
-            <InfoItem label="Contact principal" value={dossier?.contactPrincipal}                       icon={User}   accent />
-            <InfoItem label="WhatsApp"          value={dossier?.whatsapp}                               icon={Phone}  accent />
-            <InfoItem label="Compagnie"         value={billet?.prospectionEntete?.fournisseur?.libelle} icon={Tag} />
-            <InfoItem label="Commission proposée" value={billet?.commissionPropose  != null ? `${billet.commissionPropose} %`                           : null} icon={Percent} />
-            <InfoItem label="Total commission"    value={billet?.totalCommission    != null ? `${billet.totalCommission} %`                             : null} icon={Percent} highlight="green" />
-          </div>
-        </div>
-
       </div>
     </div>
   );
 };
 
+// --- LE FIX : L'EXPORTATION ---
 export default BilletInfoCards;

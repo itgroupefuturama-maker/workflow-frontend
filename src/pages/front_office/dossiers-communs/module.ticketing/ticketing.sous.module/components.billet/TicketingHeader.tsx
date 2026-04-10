@@ -17,7 +17,7 @@ export const TicketingHeader = ({ items }: TicketingHeaderProps) => {
   const navigate = useNavigate();
 
   return (
-    <header className="mb-5 mt-2">
+    <header className="my-2">
       <div className="flex items-center">
         {items.map((item, index) => {
           const isLast      = index === items.length - 1;

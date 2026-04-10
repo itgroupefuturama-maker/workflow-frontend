@@ -292,272 +292,281 @@ const AssuranceEnteteListe = () => {
   );
 
   return (
-    <div className="min-h-screen bg-neutral-50">
-      <AssuranceHeader
-          numeroassurance={''}
-          nomPassager={''}
-          navigate={navigate}
-          isDetail={false}
-          isProspection={false}
-          isDevis={false}
-          />
-
-      <DossierActifCard gradient="from-green-400 via-green-400 to-green-500" />
-
-      <div className="flex items-center justify-between">
-        {/* Tab headers */}
-        <div>
-          <nav className="flex" aria-label="Tabs">
-            <button
-              onClick={() => setActiveTabSousSection('lignes')}
-              className={`px-6 py-2 text-sm font-semibold rounded-t-lg transition-all ${
-                activeTabSousSection === 'lignes'
-                  ? 'bg-[#4A77BE] text-white shadow-sm'
-                  : 'bg-white text-[#1E3A8A] hover:bg-[#f2f7fe] border-t border-l border-r border-slate-200'
-              }`}
-            >
-              Liste des assurances ({entetes.length})
-            </button>
-            <button
-              onClick={() => setActiveTabSousSection('suivi')}
-              className={`px-6 py-2 text-sm font-semibold rounded-t-lg transition-all ${
-                activeTabSousSection === 'suivi'
-                  ? 'bg-[#4A77BE] text-white shadow-sm'
-                  : 'bg-white text-[#1E3A8A] hover:bg-[#f2f7fe] border-t border-l border-r border-slate-200'
-              }`}
-            >
-              Suivi
-            </button>
-          </nav>
+    <div className="flex h-full min-h-0 overflow-hidden">
+      {/* ── Colonne principale ── */}
+      <div className="flex-1 min-w-0 flex flex-col min-h-0">
+        {/* ── Header fixe — ne scrolle PAS ── */}
+        <div className="shrink-0 px-4 py-2 bg-white">
+          <AssuranceHeader
+            numeroassurance={''}
+            nomPassager={''}
+            navigate={navigate}
+            isDetail={false}
+            isProspection={false}
+            isDevis={false}
+            />
         </div>
 
-        <button
-          onClick={() => setSortOrder(o => o === 'desc' ? 'asc' : 'desc')}
-          className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-all"
-        >
-          <svg
-            width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-            className={`transition-transform duration-200 ${sortOrder === 'asc' ? 'rotate-180' : ''}`}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h13M3 8h9M3 12h5m10-4v12m0 0l-4-4m4 4l4-4" />
-          </svg>
-          {sortOrder === 'desc' ? 'Plus récent' : 'Plus ancien'}
-        </button>
-      </div>
-
-      {activeTabSousSection === 'lignes' && (
-        <div className="space-y-4 overflow-hidden">
-          {[...entetes]
-            .sort((a, b) => {
-              const dateA = new Date(a.createdAt).getTime();
-              const dateB = new Date(b.createdAt).getTime();
-              return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
-            })
-            .map((entete) => (
-            <div key={entete.id} className="bg-white border border-gray-200 rounded-br-xl rounded-bl-xl rounded-tr-xl shadow-sm overflow-hidden">
-
-              {/* ── Header entete ── */}
-              <div
-                className="flex items-center justify-between px-5 py-4 bg-gray-50 border-b border-gray-100 cursor-pointer hover:bg-gray-100 transition"
-                onClick={() => toggleEntete(entete.id)}
-              >
-                <div className="flex items-center gap-3 flex-wrap">
-                  <div className="h-9 w-9 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold shrink-0">
-                    <FiFile/>
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-gray-900">
-                      {entete.assuranceProspectionEntete.fournisseur.libelle}
-                      {' · '}
-                      {entete.assuranceProspectionEntete.fournisseur.code}
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      {entete.assuranceProspectionEntete.prestation.numeroDos}
-                    </p>
-                  </div>
-                  {/* <StatusBadge status={entete.statut} /> */}
-                  <StatusBadge status={entete.statutEntete == 'CREER' ? 'créé' : entete.statutEntete == 'ASSIGNER' ? 'assigné' : entete.statutEntete == 'ENVOYE' ? 'envoyé' : entete.statutEntete == 'APPROUVE' ? 'approuvé' : entete.statutEntete == 'INACTIF' ? 'inactif' : entete.statutEntete} />
-                  {entete.pdfLogin != null && (
-                    <div className="flex items-center gap-2">
-                      <a 
-                        href={`${API_URL}/${entete.pdfLogin}`} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="
-                          flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-700
-                          bg-linear-to-b from-white to-[#f0f0f0]
-                          border border-gray-300 rounded-md
-                          hover:text-orange-600 transition-all duration-200
-                          active:translate-y-[1px] active:shadow-inner
-                        "
-                      >
-                        <FiFile className="text-lg text-orange-500" />
-                        <span>Voir le PDF</span>
-                      </a>
-                    </div>
-                  )}
-
-                </div>
-                <div className="flex items-center gap-3 shrink-0">
-                  <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-semibold">
-                    {entete.assurance.length} ligne{entete.assurance.length > 1 ? 's' : ''}
-                  </span>
-                  <span className="text-xs text-gray-400">{fmtDate(entete.createdAt)}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                  disabled = {entete.statutEntete === 'ASSIGNER'}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setAddPassagerModal({
-                        assuranceEnteteId: entete.id,
-                        lignes: entete.assurance,
-                      });
-                    }}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    👤 Ajouter passager
-                  </button>
-
-                  <button
-                    disabled = {genLoading[entete.id] || entete.statutEntete === 'ASSIGNER'}
-                    onClick={(e) => handleGenerer(e, entete.id)}
-                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold transition shadow-sm"
-                  >
-                    {genLoading[entete.id] ? (
-                      <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                      </svg>
-                    ) : genDone[entete.id] ? '✓' : '⚡'}
-                    {genLoading[entete.id] ? 'Génération…' : genDone[entete.id] ? 'Généré' : 'Générer portail'}
-                  </button>
-                </div>
-              </div>
-
-              {/* ── Lignes assurance ── */}
-              {/* {expanded[entete.id] && ( */}
-                <div className="divide-y divide-gray-50">
-                  {entete.assurance.length === 0 ? (
-                    <p className="text-sm text-gray-400 italic px-5 py-4">Aucune ligne assurance.</p>
-                  ) : (
-                    <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mx-4 my-4">
-                      <table className="w-full">
-                        <thead>
-                          <tr>
-                            <Th></Th>
-                            <Th>Référence</Th>
-                            <Th>Zone · Fournisseur</Th>
-                            <Th>Période</Th>
-                            <Th>Durée</Th>
-                            {/* <Th>Statut</Th> */}
-                            <Th>Statut ligne</Th>
-                            <Th>N° police</Th>
-                            <Th></Th> 
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {entete.assurance.map((ligne) => (
-                            <React.Fragment key={ligne.id}>
-                              {/* ligne principale */}
-                              <tr
-                                className="hover:bg-gray-50 transition cursor-pointer"
-                                onClick={() => toggleLigne(ligne.id)}
-                              >
-                                <Td>
-                                  <svg
-                                    className={`h-4 w-4 text-gray-400 transition-transform ${expandedLignes[ligne.id] ? 'rotate-180' : ''}`}
-                                    fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                  >
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                  </svg>
-                                </Td>
-                                <Td>
-                                  <span className="font-mono text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded">
-                                    {ligne.referenceLine ?? '—'}
-                                  </span>
-                                </Td>
-                                <Td>
-                                  <div>
-                                    <p className="font-medium text-gray-800">
-                                      {ligne.assuranceProspectionLigne?.assuranceParams?.zoneDestination ?? '—'}
-                                    </p>
-                                    <p className="text-xs text-gray-400">
-                                      {entete.assuranceProspectionEntete.fournisseur.libelle}
-                                    </p>
-                                  </div>
-                                </Td>
-                                <Td>
-                                  <span className="text-xs">
-                                    {fmtDate(ligne.assuranceProspectionLigne?.dateDepart)}
-                                    {' → '}
-                                    {fmtDate(ligne.assuranceProspectionLigne?.dateRetour)}
-                                  </span>
-                                </Td>
-                                <Td>
-                                  <span className="text-xs font-mono bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-semibold">
-                                    {ligne.assuranceProspectionLigne?.duree ?? '—'} j
-                                  </span>
-                                </Td>
-                                {/* <Td><StatusBadge status={ligne.statut} /></Td> */}
-                                <Td><StatusBadge status={ligne.statusLigne} /></Td>
-                                <Td className="text-gray-400 text-xs">{ligne.numeroPolice ?? '—'}</Td>
-                                <Td>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation(); 
-                                      navigate(`/dossiers-communs/assurance/detailsAssurance/${ligne.id}`, {
-                                        state: {
-                                          numeroDos: entete.assuranceProspectionEntete.prestation.numeroDos,
-                                          fournisseur: entete.assuranceProspectionEntete.fournisseur.libelle,
-                                        }
-                                      });
-                                    }}
-                                    className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-indigo-50 border border-indigo-200 text-indigo-600 text-xs font-semibold rounded-lg hover:bg-indigo-100 transition"
-                                  >
-                                    Détail <FiArrowRight/>
-                                  </button>
-                                </Td>
-                              </tr>
-
-                              {/* ligne expandée */}
-                              {expandedLignes[ligne.id] && (
-                                <tr>
-                                  <td colSpan={9} className="px-5 py-4 bg-gray-50 border-b border-gray-100">
-                                    <LigneDetail ligne={ligne} />
-                                  </td>
-                                </tr>
-                              )}
-                            </React.Fragment>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              {/* )} */}
+        <div className='px-4 border-b border-neutral-50'>
+          <DossierActifCard gradient="from-green-400 via-green-400 to-green-500" />
+          <div className="flex items-center justify-between">
+            {/* Tab headers */}
+            <div>
+              <nav className="flex" aria-label="Tabs">
+                <button
+                  onClick={() => setActiveTabSousSection('lignes')}
+                  className={`px-6 py-2 text-sm font-semibold rounded-t-lg transition-all ${
+                    activeTabSousSection === 'lignes'
+                      ? 'bg-[#4A77BE] text-white shadow-sm'
+                      : 'bg-white text-[#1E3A8A] hover:bg-[#f2f7fe] border-t border-l border-r border-slate-200'
+                  }`}
+                >
+                  Liste des assurances ({entetes.length})
+                </button>
+                <button
+                  onClick={() => setActiveTabSousSection('suivi')}
+                  className={`px-6 py-2 text-sm font-semibold rounded-t-lg transition-all ${
+                    activeTabSousSection === 'suivi'
+                      ? 'bg-[#4A77BE] text-white shadow-sm'
+                      : 'bg-white text-[#1E3A8A] hover:bg-[#f2f7fe] border-t border-l border-r border-slate-200'
+                  }`}
+                >
+                  Suivi
+                </button>
+              </nav>
             </div>
-          ))}
-        </div>
-      )}
 
-      {/* ── Onglet Suivi ── */}
-      {activeTabSousSection === 'suivi' && (
-        <SuiviTabSection
-          prestationId={prestationId}
-        />
-      )}
-      
-      {addPassagerModal && (
-        <AddPassagerAssuranceModal
-          assuranceEnteteId={addPassagerModal.assuranceEnteteId}
-          lignes={addPassagerModal.lignes}
-          onClose={() => setAddPassagerModal(null)}
-          onSuccess={() => {
-            // re-fetch ta liste si nécessaire
-          }}
-        />
-      )}
+            <button
+              onClick={() => setSortOrder(o => o === 'desc' ? 'asc' : 'desc')}
+              className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-all"
+            >
+              <svg
+                width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                className={`transition-transform duration-200 ${sortOrder === 'asc' ? 'rotate-180' : ''}`}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h13M3 8h9M3 12h5m10-4v12m0 0l-4-4m4 4l4-4" />
+              </svg>
+              {sortOrder === 'desc' ? 'Plus récent' : 'Plus ancien'}
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 min-h-0 overflow-y-auto pb-4 px-4">
+          {activeTabSousSection === 'lignes' && (
+            <div className="space-y-4 overflow-hidden">
+              {[...entetes]
+                .sort((a, b) => {
+                  const dateA = new Date(a.createdAt).getTime();
+                  const dateB = new Date(b.createdAt).getTime();
+                  return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+                })
+                .map((entete) => (
+                <div key={entete.id} className="bg-white border border-gray-200 rounded-br-xl rounded-bl-xl rounded-tr-xl shadow-sm overflow-hidden">
+
+                  {/* ── Header entete ── */}
+                  <div
+                    className="flex items-center justify-between px-5 py-4 bg-gray-50 border-b border-gray-100 cursor-pointer hover:bg-gray-100 transition"
+                    onClick={() => toggleEntete(entete.id)}
+                  >
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <div className="h-9 w-9 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold shrink-0">
+                        <FiFile/>
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-gray-900">
+                          {entete.assuranceProspectionEntete.fournisseur.libelle}
+                          {' · '}
+                          {entete.assuranceProspectionEntete.fournisseur.code}
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          {entete.assuranceProspectionEntete.prestation.numeroDos}
+                        </p>
+                      </div>
+                      {/* <StatusBadge status={entete.statut} /> */}
+                      <StatusBadge status={entete.statutEntete == 'CREER' ? 'créé' : entete.statutEntete == 'ASSIGNER' ? 'assigné' : entete.statutEntete == 'ENVOYE' ? 'envoyé' : entete.statutEntete == 'APPROUVE' ? 'approuvé' : entete.statutEntete == 'INACTIF' ? 'inactif' : entete.statutEntete} />
+                      {entete.pdfLogin != null && (
+                        <div className="flex items-center gap-2">
+                          <a 
+                            href={`${API_URL}/${entete.pdfLogin}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="
+                              flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-700
+                              bg-linear-to-b from-white to-[#f0f0f0]
+                              border border-gray-300 rounded-md
+                              hover:text-orange-600 transition-all duration-200
+                              active:translate-y-[1px] active:shadow-inner
+                            "
+                          >
+                            <FiFile className="text-lg text-orange-500" />
+                            <span>Voir le PDF</span>
+                          </a>
+                        </div>
+                      )}
+
+                    </div>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-semibold">
+                        {entete.assurance.length} ligne{entete.assurance.length > 1 ? 's' : ''}
+                      </span>
+                      <span className="text-xs text-gray-400">{fmtDate(entete.createdAt)}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                      disabled = {entete.statutEntete === 'ASSIGNER'}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setAddPassagerModal({
+                            assuranceEnteteId: entete.id,
+                            lignes: entete.assurance,
+                          });
+                        }}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        👤 Ajouter passager
+                      </button>
+
+                      <button
+                        disabled = {genLoading[entete.id] || entete.statutEntete === 'ASSIGNER'}
+                        onClick={(e) => handleGenerer(e, entete.id)}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold transition shadow-sm"
+                      >
+                        {genLoading[entete.id] ? (
+                          <svg className="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                          </svg>
+                        ) : genDone[entete.id] ? '✓' : '⚡'}
+                        {genLoading[entete.id] ? 'Génération…' : genDone[entete.id] ? 'Généré' : 'Générer portail'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* ── Lignes assurance ── */}
+                  {/* {expanded[entete.id] && ( */}
+                    <div className="divide-y divide-gray-50">
+                      {entete.assurance.length === 0 ? (
+                        <p className="text-sm text-gray-400 italic px-5 py-4">Aucune ligne assurance.</p>
+                      ) : (
+                        <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mx-4 my-4">
+                          <table className="w-full">
+                            <thead>
+                              <tr>
+                                <Th></Th>
+                                <Th>Référence</Th>
+                                <Th>Zone · Fournisseur</Th>
+                                <Th>Période</Th>
+                                <Th>Durée</Th>
+                                {/* <Th>Statut</Th> */}
+                                <Th>Statut ligne</Th>
+                                <Th>N° police</Th>
+                                <Th></Th> 
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {entete.assurance.map((ligne) => (
+                                <React.Fragment key={ligne.id}>
+                                  {/* ligne principale */}
+                                  <tr
+                                    className="hover:bg-gray-50 transition cursor-pointer"
+                                    onClick={() => toggleLigne(ligne.id)}
+                                  >
+                                    <Td>
+                                      <svg
+                                        className={`h-4 w-4 text-gray-400 transition-transform ${expandedLignes[ligne.id] ? 'rotate-180' : ''}`}
+                                        fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                                      >
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                      </svg>
+                                    </Td>
+                                    <Td>
+                                      <span className="font-mono text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded">
+                                        {ligne.referenceLine ?? '—'}
+                                      </span>
+                                    </Td>
+                                    <Td>
+                                      <div>
+                                        <p className="font-medium text-gray-800">
+                                          {ligne.assuranceProspectionLigne?.assuranceParams?.zoneDestination ?? '—'}
+                                        </p>
+                                        <p className="text-xs text-gray-400">
+                                          {entete.assuranceProspectionEntete.fournisseur.libelle}
+                                        </p>
+                                      </div>
+                                    </Td>
+                                    <Td>
+                                      <span className="text-xs">
+                                        {fmtDate(ligne.assuranceProspectionLigne?.dateDepart)}
+                                        {' → '}
+                                        {fmtDate(ligne.assuranceProspectionLigne?.dateRetour)}
+                                      </span>
+                                    </Td>
+                                    <Td>
+                                      <span className="text-xs font-mono bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-semibold">
+                                        {ligne.assuranceProspectionLigne?.duree ?? '—'} j
+                                      </span>
+                                    </Td>
+                                    {/* <Td><StatusBadge status={ligne.statut} /></Td> */}
+                                    <Td><StatusBadge status={ligne.statusLigne} /></Td>
+                                    <Td className="text-gray-400 text-xs">{ligne.numeroPolice ?? '—'}</Td>
+                                    <Td>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation(); 
+                                          navigate(`/dossiers-communs/assurance/detailsAssurance/${ligne.id}`, {
+                                            state: {
+                                              numeroDos: entete.assuranceProspectionEntete.prestation.numeroDos,
+                                              fournisseur: entete.assuranceProspectionEntete.fournisseur.libelle,
+                                            }
+                                          });
+                                        }}
+                                        className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-indigo-50 border border-indigo-200 text-indigo-600 text-xs font-semibold rounded-lg hover:bg-indigo-100 transition"
+                                      >
+                                        Détail <FiArrowRight/>
+                                      </button>
+                                    </Td>
+                                  </tr>
+
+                                  {/* ligne expandée */}
+                                  {/* {expandedLignes[ligne.id] && (
+                                    <tr>
+                                      <td colSpan={9} className="px-5 py-4 bg-gray-50 border-b border-gray-100">
+                                        <LigneDetail ligne={ligne} />
+                                      </td>
+                                    </tr>
+                                  )} */}
+                                </React.Fragment>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </div>
+                  {/* )} */}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* ── Onglet Suivi ── */}
+          {activeTabSousSection === 'suivi' && (
+            <SuiviTabSection
+              prestationId={prestationId}
+            />
+          )}
+        </div>
+        
+        {addPassagerModal && (
+          <AddPassagerAssuranceModal
+            assuranceEnteteId={addPassagerModal.assuranceEnteteId}
+            lignes={addPassagerModal.lignes}
+            onClose={() => setAddPassagerModal(null)}
+            onSuccess={() => {
+              // re-fetch ta liste si nécessaire
+            }}
+          />
+        )}
+      </div>
     </div>
   );
 };

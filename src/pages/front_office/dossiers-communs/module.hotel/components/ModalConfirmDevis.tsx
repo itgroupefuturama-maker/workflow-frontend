@@ -7,12 +7,16 @@ type ConfirmDevisModalProps = {
   data: {
     detail: any;
     benchmarkLine: any;
-    bookingData: any;
-    clientData: any;
+    clientDataMap: Record<string, {
+      nuiteDevise: number;
+      tauxChange: number;
+      nuiteAriary: number;
+      montantDevise: number;
+      montantAriary: number;
+    }>;
     commissionData: any;
-    bookingPlateforme: any;
     clientPlateforme: any;
-    nbChambreClient: number;
+    nbChambreClient: number | undefined;
   };
   loading: boolean;
 };
@@ -29,10 +33,8 @@ const ModalConfirmDevis: React.FC<ConfirmDevisModalProps> = ({
   const {
     detail,
     benchmarkLine,
-    bookingData,
-    clientData,
+    clientDataMap,
     commissionData,
-    bookingPlateforme,
     clientPlateforme,
     nbChambreClient,
   } = data;
@@ -103,96 +105,60 @@ const ModalConfirmDevis: React.FC<ConfirmDevisModalProps> = ({
               </div>
             </div>
 
-            {/* Données Booking */}
-            <div className="mb-6">
-              <h4 className="text-sm font-semibold text-neutral-700 uppercase tracking-wide mb-3 pb-2 border-b border-neutral-200 flex items-center gap-2">
-                <span className="inline-block w-3 h-3 rounded-full bg-neutral-500"></span>
-                Plateforme Booking
-              </h4>
-              <div className="bg-neutral-50 rounded-lg p-4">
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <div className="text-neutral-500 text-xs mb-1">Plateforme</div>
-                    <div className="font-medium text-neutral-900">{bookingPlateforme.nom}</div>
-                  </div>
-                  <div>
-                    <div className="text-neutral-500 text-xs mb-1">Nuitée (Devise)</div>
-                    <div className="font-mono font-medium text-neutral-900">
-                      {bookingData.nuiteDevise.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} {benchmarkLine.devise}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-neutral-500 text-xs mb-1">Taux de change</div>
-                    <div className="font-mono font-medium text-neutral-900">
-                      {bookingData.tauxChange.toLocaleString('fr-FR')}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-neutral-500 text-xs mb-1">Nuitée (Ariary)</div>
-                    <div className="font-mono font-medium text-neutral-900">
-                      {bookingData.nuiteAriary.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} Ar
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-neutral-500 text-xs mb-1">Montant (Devise)</div>
-                    <div className="font-mono font-medium text-neutral-900">
-                      {bookingData.montantDevise.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} {benchmarkLine.devise}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-neutral-500 text-xs mb-1">Montant Total (Ariary)</div>
-                    <div className="font-mono font-semibold text-blue-700 text-base">
-                      {bookingData.montantAriary.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} Ar
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
             {/* Données Client */}
             <div className="mb-6">
               <h4 className="text-sm font-semibold text-neutral-700 uppercase tracking-wide mb-3 pb-2 border-b border-neutral-200 flex items-center gap-2">
                 <span className="inline-block w-3 h-3 rounded-full bg-blue-500"></span>
                 Plateforme Client
               </h4>
-              <div className="bg-blue-50 rounded-lg p-4">
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <div className="text-neutral-500 text-xs mb-1">Plateforme</div>
-                    <div className="font-medium text-neutral-900">{clientPlateforme.nom}</div>
-                  </div>
-                  <div>
-                    <div className="text-neutral-500 text-xs mb-1">Nuitée (Devise)</div>
-                    <div className="font-mono font-medium text-neutral-900">
-                      {clientData.nuiteDevise.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} {benchmarkLine.devise}
+
+              {benchmarkLine?.deviseHotel?.map((dv: any) => {
+                const cd = clientDataMap[dv.id];
+                if (!cd) return null;
+                return (
+                  <div key={dv.id} className="bg-blue-50 rounded-lg p-4 mb-3">
+                    <div className="text-xs font-bold text-blue-700 uppercase mb-3">
+                      {dv.devise?.devise}
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <div className="text-neutral-500 text-xs mb-1">Plateforme</div>
+                        <div className="font-medium text-neutral-900">{clientPlateforme.nom}</div>
+                      </div>
+                      <div>
+                        <div className="text-neutral-500 text-xs mb-1">Taux de change</div>
+                        <div className="font-mono font-medium text-neutral-900">
+                          {cd.tauxChange.toLocaleString('fr-FR')}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-neutral-500 text-xs mb-1">Nuitée (Devise)</div>
+                        <div className="font-mono font-medium text-neutral-900">
+                          {cd.nuiteDevise.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} {dv.devise?.devise}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-neutral-500 text-xs mb-1">Nuitée (Ariary)</div>
+                        <div className="font-mono font-medium text-neutral-900">
+                          {cd.nuiteAriary.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} Ar
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-neutral-500 text-xs mb-1">Montant (Devise)</div>
+                        <div className="font-mono font-medium text-neutral-900">
+                          {cd.montantDevise.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} {dv.devise?.devise}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-neutral-500 text-xs mb-1">Montant (Ariary)</div>
+                        <div className="font-mono font-semibold text-blue-700 text-base">
+                          {cd.montantAriary.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} Ar
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  <div>
-                    <div className="text-neutral-500 text-xs mb-1">Taux de change</div>
-                    <div className="font-mono font-medium text-neutral-900">
-                      {clientData.tauxChange.toLocaleString('fr-FR')}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-neutral-500 text-xs mb-1">Nuitée (Ariary)</div>
-                    <div className="font-mono font-medium text-neutral-900">
-                      {clientData.nuiteAriary.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} Ar
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-neutral-500 text-xs mb-1">Montant (Devise)</div>
-                    <div className="font-mono font-medium text-neutral-900">
-                      {clientData.montantDevise.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} {benchmarkLine.devise}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-neutral-500 text-xs mb-1">Montant Total (Ariary)</div>
-                    <div className="font-mono font-semibold text-blue-700 text-base">
-                      {clientData.montantAriary.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} Ar
-                    </div>
-                  </div>
-                </div>
-              </div>
+                );
+              })}
             </div>
 
             {/* Commission */}

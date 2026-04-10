@@ -1,8 +1,8 @@
 import { useSelector, useDispatch } from 'react-redux';
-import type { RootState, AppDispatch } from '../../../../../../app/store';
-import { activateRaisonAnnulation, deactivateRaisonAnnulation } from '../../../../../../app/front_office/parametre_ticketing/raisonAnnulationSlice';
+import type { RootState, AppDispatch } from '../../../../../app/store';
+import { activateRaisonAnnulation, deactivateRaisonAnnulation } from '../../../../../app/front_office/parametre_ticketing/raisonAnnulationSlice';
 import { useState } from 'react';
-import RaisonAnnulationModal from '../../../../../../components/modals/RaisonAnnulationModal';
+import RaisonAnnulationModal from '../../../../../components/modals/RaisonAnnulationModal';
 
 export default function RaisonAnnulationListe() {
   const dispatch = useDispatch<AppDispatch>();

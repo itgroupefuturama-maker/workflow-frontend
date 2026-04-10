@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import type { AppDispatch, RootState } from '../../../../../../app/store';
-import { FiArrowRight, FiFile, FiUser } from 'react-icons/fi';
+import { FiArrowRight, FiCheck, FiCheckCircle, FiFile } from 'react-icons/fi';
 import {
   clearVisaEnteteDetail,
   fetchVisaEnteteDetail,
@@ -34,7 +34,7 @@ const Card = ({ title, children, action }: {
   children: React.ReactNode;
   action?: React.ReactNode;
 }) => (
-  <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+  <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
     <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
       <p className="text-sm font-semibold text-gray-600 uppercase tracking-wide">{title}</p>
       {action}
@@ -104,12 +104,6 @@ const PageDetailVisa = () => {
       return next;
     });
 
-  // État à ajouter dans le composant
-  const [passagerModal, setPassagerModal] = useState<{
-    idVisaAbstract: string;
-    nom: string;
-  } | null>(null);
-
   useEffect(() => {
     if (clientFactureId) dispatch(fetchClientFactureById(clientFactureId));
   }, [dispatch, clientFactureId]);
@@ -164,20 +158,6 @@ const PageDetailVisa = () => {
       setPayLoading(false);
     }
   };
-
-  // ── States ─────────────────────────────────────────────────────────────────
-
-  // if (loading) return (
-  //   <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
-  //     <div className="flex items-center gap-3 text-gray-400">
-  //       <svg className="animate-spin h-6 w-6" viewBox="0 0 24 24" fill="none">
-  //         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-  //         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-  //       </svg>
-  //       Chargement...
-  //     </div>
-  //   </div>
-  // );
 
   if (error) return (
     <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
@@ -253,15 +233,6 @@ const PageDetailVisa = () => {
                   </>
                 ) : detail ? (
                   <>
-                    {/* <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-400 font-medium">Statut</span>
-                      <StatusBadge status={detail.statut} />
-                      <span className="text-gray-200">·</span>
-                      <span className="text-xs text-gray-400 font-medium">Entête</span>
-                      <StatusBadge status={detail.statutEntete} />
-                    </div>
-
-                    <div className="w-px h-8 bg-gray-300 shrink-0" /> */}
 
                     <button
                       onClick={() => setShowAccesPortail(true)}
@@ -410,12 +381,12 @@ const PageDetailVisa = () => {
                     );
 
                   return (
-                    <div key={ligne.id} className="rounded-xl border border-gray-100 overflow-hidden">
+                    <div key={ligne.id} className="bg-slate-700 rounded-xl border border-slate-400 overflow-hidden">
 
                       {/* ── Header accordéon ── */}
                       <div
                         onClick={() => toggleLigne(ligne.id)}
-                        className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-indigo-50 border-b border-gray-100 transition cursor-pointer"
+                        className="w-full flex items-center justify-between px-4 py-3  hover:bg-slate-600 transition cursor-pointer"
                       >
                         {/* Infos ligne */}
                         <div className="flex items-center gap-3 flex-wrap">
@@ -424,10 +395,10 @@ const PageDetailVisa = () => {
                           </span>
 
                           <div className="flex flex-col">
-                            <span className="font-semibold text-gray-800 text-sm">
+                            <span className="font-semibold text-white text-sm">
                               {vParams.pays.pays}
                             </span>
-                            <span className="text-[10px] text-gray-400 font-medium">
+                            <span className="text-[10px] text-gray-100 font-medium">
                               {vParams.code} — {vParams.visaType.nom}
                             </span>
                           </div>
@@ -447,15 +418,6 @@ const PageDetailVisa = () => {
                           <span className="text-sm font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-lg">
                             {sousTotal.toLocaleString('fr-FR')} Ar
                           </span>
-
-                          {/* État pièces */}
-                          {/* <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-lg border ${
-                            vp.etatPiece
-                              ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
-                              : 'bg-orange-50 text-orange-500 border-orange-200'
-                          }`}>
-                            {vp.etatPiece ? '✓ Pièces OK' : '✗ Incomplet'}
-                          </span> */}
 
                           <div className="w-px h-6 bg-gray-200 shrink-0" />
 
@@ -587,14 +549,13 @@ const PageDetailVisa = () => {
                             ) : (
                               <div className="space-y-3">
                                 {passagers.map((passager) => {
-                                  const acces      = ligne.accesPortail?.find(a => a.passager?.id === passager.clientbeneficiaireId);
                                   const visaPassager = visa.find((v: Visa) => v.passagerAbstractId === passager.id);
                                   const isActif    = passager.clientbeneficiaire.statut === 'ACTIF';
 
                                   return (
                                     <div
                                       key={passager.id}
-                                      className="rounded-2xl border border-gray-100 overflow-hidden shadow-sm"
+                                      className="rounded-2xl border border-slate-300 overflow-hidden shadow-sm"
                                     >
                                       {/* ── Header passager ── */}
                                       <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-100">
@@ -606,10 +567,13 @@ const PageDetailVisa = () => {
                                           </div>
                                           <div>
                                             <p className="text-sm font-semibold text-gray-900 leading-tight">
-                                              {passager.clientbeneficiaire.libelle}
+                                              {passager.clientbeneficiaire.libelle} 
                                             </p>
                                             <p className="text-xs text-gray-400 font-mono">{passager.clientbeneficiaire.code}</p>
                                           </div>
+
+                                          
+                                         
                                         </div>
 
                                         <div className="flex items-center gap-2">
@@ -628,8 +592,12 @@ const PageDetailVisa = () => {
                                             })}
                                             className="flex items-center bg-blue-500 gap-1 text-xs font-medium text-blue-100 hover:text-gray-900 hover:bg-gray-200 px-2.5 py-1 rounded-lg transition"
                                           >
-                                            Voir les Détails <FiArrowRight size={11} /> 
+                                            Valider Les Infos <FiArrowRight size={11} /> 
                                           </button>
+
+                                          <div>
+                                            {visaPassager?.statusVisa == 'ACCEPTER' ? <FiCheck size={30} color='green' />  : ''}
+                                          </div>
                                         </div>
                                       </div>
 
@@ -637,42 +605,33 @@ const PageDetailVisa = () => {
                                       <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-100">
 
                                         {/* Accès portail */}
-                                        <div className="px-4 py-3 space-y-2">
+                                        <div className="px-4 py-3 space-y-6">
                                           <div className="flex items-center justify-between">
                                             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Accès portail</p> 
-                                          {/* Bouton ouvrir en plein */}
-                                              <a
-                                                href={`${API_URL}/${detail.pdfLogin}`}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-blue-500 text-white border border-blue-200 hover:bg-blue-600 transition-all"
-                                              >
-                                                <FiFile size={12} /> Ouvrir en plein écran
-                                              </a>
+                                            {/* Bouton ouvrir en plein */}
+                                            <a
+                                              href={`${API_URL}/${detail.pdfLogin}`}
+                                              target="_blank"
+                                              rel="noreferrer"
+                                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-blue-500 text-white border border-blue-200 hover:bg-blue-600 transition-all"
+                                            >
+                                              Ouvrir le pdf
+                                            </a>
                                           </div>
-                                          {detail.pdfLogin ? (
-                                            <div className="space-y-2">
-                                              {/* Aperçu iframe */}
-                                              <div className="rounded-xl overflow-hidden border border-gray-100 shadow-sm bg-white">
-                                                <div className="scale-[0.99] origin-top">
-                                                  <iframe
-                                                    src={`${API_URL}/${detail.pdfLogin}#toolbar=0&navpanes=0&scrollbar=0`}
-                                                    className="w-full h-40 border-0 block"
-                                                    title="Aperçu PDF"
-                                                  />
-                                                </div>
-                                              </div>
-                                            </div>
-                                          ) : (
-                                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-gray-100 text-gray-400 border border-gray-200">
-                                              Accés non disponible
-                                            </span>
-                                          )}
+                                          <div className="flex items-center justify-between">
+                                            <p className="text-xs text-gray-500">Completer manuellement les infos du client</p>
+                                            <button
+                                              onClick={() => navigate(`/dossiers-communs/visa/formulaire-passager/${passager.id}`)}
+                                              className="bg-indigo-500 text-xs text-white px-2 py-1 rounded-lg font-semibold hover:bg-indigo-600 transition-all"
+                                            >
+                                              Acceder au formulaire
+                                            </button>
+                                          </div>
                                         </div>
 
                                         {/* Visa du passager */}
                                         <div className="px-4 py-3 space-y-2">
-                                          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Visa</p>
+                                          <p className={`text-xs font-semibold ${visaPassager?.statusVisa == 'ACCEPTER' ? 'text-green-500' : 'text-gray-400'} uppercase tracking-wide`}>Visa {visaPassager?.statusVisa == 'ACCEPTER' ? 'Valider' : ''} </p>
                                           {visaPassager ? (
                                             <>
                                               <div className="flex items-center gap-2 flex-wrap">

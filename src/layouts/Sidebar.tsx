@@ -89,6 +89,7 @@ export default function Sidebar({ module }: SidebarProps) {
             { label: 'Plateform',         path: 'parametres', icon: <FiLayers size={15} />, tab: 'plateformes'          },
             { label: 'Type chambre',      path: 'parametres', icon: <FiMap    size={15} />, tab: 'typeChambre'           },
             { label: 'Service',           path: 'parametres', icon: <FiMap    size={15} />, tab: 'service'               },
+            { label: 'Devise',            path: 'parametres', icon: <FiMap    size={15} />, tab: 'devise'               },
             { label: 'Raison Annulation', path: 'parametres', icon: <FiMap    size={15} />, tab: 'listeRaisonAnnulation' },
           ]
         : module === 'visa'

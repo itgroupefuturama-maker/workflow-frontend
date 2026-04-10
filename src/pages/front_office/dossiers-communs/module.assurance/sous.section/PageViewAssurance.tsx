@@ -28,9 +28,6 @@ const PageViewAssurance = () => {
     ?.find((colab) => colab.module?.nom?.toLowerCase() === 'assurance')
     ?.prestation?.[0]?.id ?? '';
 
-    console.log(prestationId);
-    
-
   useEffect(() => {
     if (prestationId) {
       dispatch(fetchAssuranceProspections(prestationId));

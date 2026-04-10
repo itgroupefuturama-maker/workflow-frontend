@@ -4,16 +4,51 @@ import axios from '../../../service/Axios';
 
 // ─── Types mis à jour selon la nouvelle réponse API ───────────────────────────
 
-export interface ServiceHotel {
+export interface DeviseHotelDevis {
   id: string;
-  service: string;
+  deviseId: string;
+  tauxChange: number;
+  nuiteAriary: number;
+  nuiteDevise: number;
+  montantAriary: number;
+  montantDevise: number;
+  benchmarkingLigneId: string;
+  devise: {
+    id: string;
+    devise: string;
+    status: string;
+  };
+}
+
+export interface ServiceSpecifique {
+  id: string;
+  code: string;
+  libelle: string;
+  type: string | null;
+  typeService: string;
 }
 
 export interface BenchService {
   id: string;
-  serviceHotelId: string;
+  serviceSpecifiqueId: string;
   benchmarkingEnteteId: string;
-  serviceHotel: ServiceHotel;
+  serviceSpecifique: ServiceSpecifique;  // ← remplace serviceHotel
+}
+
+// Remplacer LigneClient
+export interface LigneClient {
+  id: string;
+  hotel: string;
+  plateforme: Plateforme;
+  typeChambre: TypeChambre;
+  plateformeId: string;
+  nombreChambre: number;
+  typeChambreId: string;
+  isBenchMark: boolean;
+  isRefundable: boolean;
+  benchmarkingEnteteId: string;
+  dateLimiteAnnulation: string | null;
+  deviseHotel: DeviseHotelDevis[];  // ← remplace les champs directs
 }
 
 export interface Plateforme {
@@ -62,6 +97,7 @@ export interface BenchmarkingEntete {
   tauxPrixUnitaire: number;
   forfaitaireGlobal: number;
   montantCommission: number;
+  dateLimitePaiement: string;
   forfaitaireUnitaire: number;
   hotelProspectionEnteteId: string;
 }
@@ -193,27 +229,27 @@ export const genererPdfClient = createAsyncThunk(
 );
 
 // ─── Thunk : générer PDF direction ───────────────────────────────────────────
-export const genererPdfDirection = createAsyncThunk(
-  'hotelDevis/genererPdfDirection',
-  async (
-    payload: {
-      id: string; // enteteId
-      montantTotalClient: number;
-      tauxCommission: number;
-      montantTotalCommission: number;
-    },
-    { rejectWithValue }
-  ) => {
-    try {
-      const { id, ...body } = payload;
-      const response = await axios.put(`/hotel/prospection/${id}/pdf/direction`, body);
-      if (!response.data?.success) return rejectWithValue(response.data?.message || 'Réponse invalide');
-      return response.data.data as string; // "uploads/hotel-devis-direction/DM-2-direction.pdf"
-    } catch (err: any) {
-      return rejectWithValue(err.response?.data?.message || err.message || 'Erreur génération PDF direction');
-    }
-  }
-);
+// export const genererPdfDirection = createAsyncThunk(
+//   'hotelDevis/genererPdfDirection',
+//   async (
+//     payload: {
+//       id: string; // enteteId
+//       montantTotalClient: number;
+//       tauxCommission: number;
+//       montantTotalCommission: number;
+//     },
+//     { rejectWithValue }
+//   ) => {
+//     try {
+//       const { id, ...body } = payload;
+//       const response = await axios.put(`/hotel/prospection/${id}/pdf/direction`, body);
+//       if (!response.data?.success) return rejectWithValue(response.data?.message || 'Réponse invalide');
+//       return response.data.data as string; // "uploads/hotel-devis-direction/DM-2-direction.pdf"
+//     } catch (err: any) {
+//       return rejectWithValue(err.response?.data?.message || err.message || 'Erreur génération PDF direction');
+//     }
+//   }
+// );
 
 // ─── Slice ────────────────────────────────────────────────────────────────────
 const hotelDevisSlice = createSlice({
@@ -307,21 +343,21 @@ const hotelDevisSlice = createSlice({
       })
 
       // PDF Direction
-      .addCase(genererPdfDirection.pending, (state) => {
-        state.actionLoading = 'pdfDirection';
-        state.actionError = null;
-      })
-      .addCase(genererPdfDirection.fulfilled, (state, action) => {
-        state.actionLoading = null;
-        state.pdfDirectionUrl = action.payload;
-        if (state.data?.devis) {
-          state.data.devis.url2 = action.payload;
-        }
-      })
-      .addCase(genererPdfDirection.rejected, (state, action) => {
-        state.actionLoading = null;
-        state.actionError = action.payload as string;
-      });
+      // .addCase(genererPdfDirection.pending, (state) => {
+      //   state.actionLoading = 'pdfDirection';
+      //   state.actionError = null;
+      // })
+      // .addCase(genererPdfDirection.fulfilled, (state, action) => {
+      //   state.actionLoading = null;
+      //   state.pdfDirectionUrl = action.payload;
+      //   if (state.data?.devis) {
+      //     state.data.devis.url2 = action.payload;
+      //   }
+      // })
+      // .addCase(genererPdfDirection.rejected, (state, action) => {
+      //   state.actionLoading = null;
+      //   state.actionError = action.payload as string;
+      // });
   },
 });
 

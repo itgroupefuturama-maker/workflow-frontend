@@ -57,8 +57,8 @@ const PassagersCell = ({ billets }: { billets: BilletLigne['billet'] }) => {
     <div className="space-y-2 min-w-[280px]">
       {billets.map((b, idx) => {
         const info = b.clientbeneficiaireInfo;
-        const nomComplet = `${info.prenom || ''} ${info.nom || ''}`.trim();
-        const docExpire = info.dateValiditeDoc
+        const nomComplet = `${info?.prenom || ''} ${info?.nom || ''}`.trim() || 'Passager inconnu';
+        const docExpire = info?.dateValiditeDoc
           ? new Date(info.dateValiditeDoc) < new Date()
           : false;
 

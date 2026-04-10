@@ -71,10 +71,10 @@ const AddLigneModal = ({
   }, [prixActif?.id]);
 
   // ─── Calcul automatique durée vol ────────────────────────────────────────
-  useEffect(() => {
-    const duree = calculerDuree(formData.dateHeureDepart, formData.dateHeureArrive);
-    if (duree) setFormData((prev) => ({ ...prev, dureeVol: duree }));
-  }, [formData.dateHeureDepart, formData.dateHeureArrive]);
+  // useEffect(() => {
+  //   const duree = calculerDuree(formData.dateHeureDepart, formData.dateHeureArrive);
+  //   if (duree) setFormData((prev) => ({ ...prev, dureeVol: duree }));
+  // }, [formData.dateHeureDepart, formData.dateHeureArrive]);
 
   // ─── Calcul automatique itinéraire ───────────────────────────────────────
   useEffect(() => {
@@ -139,6 +139,13 @@ const AddLigneModal = ({
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
+  const ROWS = 4;
+
+  const colonnes = [];
+  for (let i = 0; i < beneficiaires.length; i += ROWS) {
+    colonnes.push(beneficiaires.slice(i, i + ROWS));
+  }
+
   const handleSubmit = async () => {
     if (selectedPassagerIds.length === 0) {
       setError('Veuillez sélectionner au moins un passager.');
@@ -166,7 +173,7 @@ const AddLigneModal = ({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 top-16 bg-black/50 backdrop-blur-sm flex items-center justify-center z-9999 p-4">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-9999 p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl max-h-[94vh] overflow-hidden flex flex-col">
 
         {/* ── Header ── */}
@@ -206,36 +213,63 @@ const AddLigneModal = ({
             <div className="px-5 py-3.5 border-b border-gray-100 flex items-center gap-2">
               <span className="w-5 h-5 rounded-full bg-gray-950 text-white text-xs flex items-center justify-center font-bold shrink-0">1</span>
               <h3 className="text-sm font-semibold text-gray-800">Clients bénéficiaires</h3>
+              {selectedBeneficiaireIds.length > 0 && (
+                <span className="ml-auto text-xs text-gray-400">
+                  {selectedBeneficiaireIds.length} sélectionné{selectedBeneficiaireIds.length > 1 ? 's' : ''}
+                </span>
+              )}
             </div>
-            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-44 overflow-y-auto">
-              {beneficiaires.map((b) => {
-                const ben = b.clientBeneficiaire;
-                const isSelected = selectedBeneficiaireIds.includes(ben.id);
-                return (
-                  <label
-                    key={ben.id}
-                    className={`flex items-start gap-2.5 p-3 rounded-lg border cursor-pointer transition-all ${
-                      isSelected
-                        ? 'bg-blue-50 border-blue-500 text-blue-900'
-                        : 'bg-white border-gray-200 hover:border-blue-300 text-gray-800'
-                    }`}
+
+            {/* Scroll horizontal */}
+            <div className="overflow-x-auto px-4 py-3">
+              <div className="flex flex-row w-max">
+                {colonnes.map((colonne, colIndex) => (
+                  <div
+                    key={colIndex}
+                    className={`flex flex-col min-w-[200px] ${
+                      colIndex < colonnes.length - 1 ? 'border-r border-gray-100 pr-2 mr-0' : ''
+                    } ${colIndex > 0 ? 'pl-4' : ''}`}
                   >
-                    <input
-                      type="checkbox"
-                      checked={isSelected}
-                      onChange={() => toggleBeneficiaire(ben.id)}
-                      className="mt-0.5 h-4 w-4 rounded border-gray-300 accent-blue-600"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-sm font-medium truncate">
-                        {ben.code && <span className="text-gray-400 mr-1">{ben.code} ·</span>}
-                        {ben.libelle || 'Sans nom'}
-                      </div>
-                      <div className="text-xs mt-0.5 text-gray-400">{ben.statut || '—'}</div>
-                    </div>
-                  </label>
-                );
-              })}
+                    {colonne.map((b) => {
+                      const ben = b.clientBeneficiaire;
+                      const isSelected = selectedBeneficiaireIds.includes(ben.id);
+                      return (
+                        <label
+                          key={ben.id}
+                          className="flex items-center gap-2 py-1.5 px-1 cursor-pointer select-none group"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleBeneficiaire(ben.id)}
+                            className="sr-only"
+                          />
+                          {/* Checkbox custom */}
+                          <div className={`w-4 h-4 rounded shrink-0 flex items-center justify-center border transition-all ${
+                            isSelected
+                              ? 'bg-violet-600 border-violet-600'
+                              : 'bg-white border-gray-300 group-hover:border-violet-400'
+                          }`}>
+                            {isSelected && (
+                              <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 10 10" fill="none">
+                                <path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                              </svg>
+                            )}
+                          </div>
+                          <span className={`text-sm whitespace-nowrap transition-colors ${
+                            isSelected
+                              ? 'text-violet-900'
+                              : 'text-gray-700 group-hover:text-violet-600'
+                          }`}>
+                            {ben.code && <span className="text-gray-400">{ben.code} · </span>}
+                            {ben.libelle || 'Sans nom'}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
             </div>
           </section>
 
@@ -398,7 +432,7 @@ const AddLigneModal = ({
                 <select name="departId" value={formData.departId} onChange={handleInputChange}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white">
                   <option value="">Sélectionner</option>
-                  {destinations.map((d) => <option key={d.id} value={d.id}>{d.ville} ({d.paysVoyage?.pays || '—'})</option>)}
+                  {destinations.map((d) => <option key={d.id} value={d.id}>{d.ville}</option>)}
                 </select>
               </div>
 
@@ -408,7 +442,7 @@ const AddLigneModal = ({
                 <select name="destinationId" value={formData.destinationId} onChange={handleInputChange}
                   className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white">
                   <option value="">Sélectionner</option>
-                  {destinations.map((d) => <option key={d.id} value={d.id}>{d.ville} ({d.paysVoyage?.pays || '—'})</option>)}
+                  {destinations.map((d) => <option key={d.id} value={d.id}>{d.ville}</option>)}
                 </select>
               </div>
 
@@ -466,7 +500,7 @@ const AddLigneModal = ({
               </div>
 
               {/* Durée vol — calculée auto, lecture seule */}
-              <div>
+              {/* <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">
                   Durée vol
                   {formData.dateHeureDepart && formData.dateHeureArrive && (
@@ -481,33 +515,21 @@ const AddLigneModal = ({
                   placeholder="Calculé automatiquement"
                   className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-slate-100 text-slate-500 cursor-not-allowed"
                 />
-              </div>
-
-              {/* PU Ariary */}
-              {/* <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">
-                  PU Ariary
-                  {prixActif && (
-                    <span className="ml-2 text-gray-400 normal-case tracking-normal font-normal">
-                      (prix actif : {prixActif.prix.toLocaleString('fr-FR')} Ar)
-                    </span>
-                  )}
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    name="puAriary"
-                    value={formData.puAriary}
-                    onChange={handleInputChange}
-                    min="0"
-                    placeholder="450000"
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400 font-medium pointer-events-none">
-                    Ar
-                  </span>
-                </div>
               </div> */}
+              {/* Durée vol — saisie manuelle */}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">
+                  Durée vol
+                </label>
+                <input
+                  type="text"
+                  name="dureeVol"
+                  value={formData.dureeVol}
+                  onChange={handleInputChange}
+                  placeholder="ex: 2h30"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                />
+              </div>
             </div>
           </section>
         </div>

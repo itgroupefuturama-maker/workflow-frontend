@@ -4,15 +4,117 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import axios from '../../../service/Axios'; // ton instance axios
 
+export interface CreateHotelReservationPayload {
+  hotelLigneId: string;
+  numeroResa: string;
+  puResaNuiteHotelDevise: number;
+  resaTauxChange: number;
+  puResaNuiteHotelAriary: number;
+  puResaMontantDevise: number;
+  puResaMontantAriary: number;
+  pourcentageCommission: number;
+  commissionUnitaire: number;
+  passagers: Array<{
+    clientbeneficiaireInfoId: string;
+    clientBeneficiaireId: string;
+    servicePreferenceIds: string[];
+  }>;
+  objet?: string;
+  moment?: string;
+  googleAccountId?: string;
+}
+
+// Dans hotelReservationEnteteSlice.ts — remplacer HotelLigne et HotelReservationEntete
+
+export interface DeviseHotel {
+  id: string;
+  deviseId: string;
+  nuiteDevise: number;
+  nuiteAriary: number;
+  montantDevise: number;
+  montantAriary: number;
+  tauxChange: number;
+  devise: { id: string; devise: string; status: string };
+}
+
+export interface BenchService {
+  id: string;
+  serviceSpecifiqueId: string;
+  serviceSpecifique: {
+    id: string;
+    code: string;
+    libelle: string;
+    typeService: string;
+  };
+}
+
+export interface BenchmarkingEntete {
+  id: string;
+  numero: string;
+  du: string;
+  au: string;
+  nuite: number;
+  pays: string;
+  ville: string;
+  tauxPrixUnitaire: number;
+  forfaitaireUnitaire: number;
+  forfaitaireGlobal: number;
+  montantCommission: number;
+  dateLimitePaiement: string | null;
+  benchService: BenchService[];
+}
+
+export interface BenchmarkingLigne {
+  id: string;
+  hotel: string;
+  nombreChambre: number;
+  isRefundable: boolean;
+  dateLimiteAnnulation: string | null;
+  plateforme: { id: string; code: string; nom: string };
+  typeChambre: { id: string; type: string; capacite: number };
+  deviseHotel: DeviseHotel[];
+  benchmarkingEntete: BenchmarkingEntete;
+}
+
+// Dans hotelReservationEnteteSlice.ts — remplacer HotelPassager
+
+export interface HotelPassager {
+  id: string;
+  clientbeneficiaireInfoId: string;
+  clientbeneficiaireId: string | null;       // ← null dans la vraie réponse
+  entityLineId: string;
+  entity: string;
+  servicePreference: string[];               // ← tableau de labels string, pas d'objets
+  createdAt: string;
+  updatedAt: string;
+  // ← clé en minuscules comme dans la vraie réponse API
+  clientbeneficiaireInfo?: {
+    id: string;
+    nom: string;
+    prenom: string;
+    nationalite: string;
+    referenceDoc: string;
+    typeDoc: string;
+    dateDelivranceDoc: string;
+    dateValiditeDoc: string;
+    clientType: string | null;
+    tel: string | null;
+    whatsapp: string | null;
+  };
+}
+
 export interface HotelLigne {
   id: string;
+  HotelEnteteId: string;
+  benchmarkingLigneId: string;
   referenceLine: string;
-  numeroResa: string;
+  numeroResa: string | null;
   statut: string;
   statusLigne: string;
   puResaMontantAriary: number;
   commissionUnitaire: number;
   puResaNuiteHotelDevise: number;
+  resaTauxChange: number;
   puResaNuiteHotelAriary: number;
   puResaMontantDevise: number;
   pourcentageCommission: number;
@@ -21,25 +123,15 @@ export interface HotelLigne {
   puConfPrixNuitClientArary: number;
   puConfMontantNuitClientAriary: number;
   confirmationCommissionAriary: number;
-  BenchmarkingLigne: {
-    hotel: string;
-    typeChambre: { type: string; capacite: number };
-    plateforme: { nom: string };
-    nuiteDevise: number;
-    tauxChange: number;
-    nuiteAriary: number;
-    montantDevise: number;
-    montantAriary: number;
-    isRefundable: boolean;
-    dateLimiteAnnulation: string;
-  };
+  passagers: HotelPassager[];
+  BenchmarkingLigne: BenchmarkingLigne;
 }
 
 export interface HotelReservationEntete {
   id: string;
   statut: string;
-  totalHotel: number;           // attention : semble être 0 dans l'exemple
-  totalCommission: number;      // idem
+  totalHotel: number;
+  totalCommission: number;
   createdAt: string;
   updatedAt: string;
   HotelProspectionEntete: {
@@ -95,7 +187,10 @@ export const fetchHotelReservationDetail = createAsyncThunk(
 
 export const createHotelReservation = createAsyncThunk(
   'hotelReservation/createReservation',
-  async ({ ligneId, payload }: { ligneId: string; payload: any }, { rejectWithValue }) => {
+  async (
+    { ligneId, payload }: { ligneId: string; payload: CreateHotelReservationPayload },
+    { rejectWithValue }
+  ) => {
     try {
       const res = await axios.patch(`/hotel/ligne/${ligneId}/reservation`, payload);
       return res.data.data;

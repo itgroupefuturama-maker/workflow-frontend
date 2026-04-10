@@ -3,7 +3,7 @@ import { useSelector } from 'react-redux';
 import { useLocation, useNavigate } from 'react-router-dom';
 import TabContainer from '../../../../../layouts/TabContainer';
 import type { RootState } from '../../../../../app/store';
-import RaisonAnnulationListe from '../../module.ticketing/ticketing.sous.module/SousMenuPrestation/RaisonAnnulationListe';
+import RaisonAnnulationListe from '../../module.parametre/RaisonAnnulation/RaisonAnnulationListe';
 import CreateVisaTypeModal from '../components/CreateVisaTypeModal';
 import CreateVisaDureeModal from '../components/CreateVisaDureeModal';
 import CreateVisaEntreeModal from '../components/CreateVisaEntreeModal';

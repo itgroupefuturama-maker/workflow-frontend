@@ -94,10 +94,10 @@ export default function DossierActifCard({
   const color    = colorMap[colorKey] ?? colorMap['amber'];
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden mb-5">
+    <div className="bg-white z-20 rounded-lg border border-slate-200 overflow-hidden mb-2" >
 
       {/* ── Hero header ──────────────────────────────────────────── */}
-      <div className="relative bg-white px-6 py-5 overflow-hidden border-b border-gray-100">
+      <div className="relative bg-white px-2 py-2 overflow-hidden " onClick={handleToggle}>
 
         <div className={`absolute -top-4 -right-4 w-24 h-24 rounded-full opacity-20 bg-linear-to-r ${gradient}`} />
         <div className={`absolute -bottom-6 -right-12 w-32 h-32 rounded-full opacity-10 bg-linear-to-r ${gradient}`} />
@@ -139,7 +139,7 @@ export default function DossierActifCard({
 
             {/* ── Bouton collapse ── */}
             <button
-              onClick={handleToggle}
+              
               className="w-7 h-7 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 flex items-center justify-center text-gray-400 transition-colors"
               title={isOpen ? 'Réduire' : 'Agrandir'}
             >

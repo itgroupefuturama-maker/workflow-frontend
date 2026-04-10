@@ -30,7 +30,7 @@ export const AssuranceHeader = ({ numeroassurance, nomPassager, navigate, isDeta
 
   return (
     <header>
-      <div className="flex items-center mt-2">
+      <div className="flex items-center">
         {steps.map((step, index) => {
           const isLast      = index === steps.length - 1;
           const isActive    = isLast && !step.done;
