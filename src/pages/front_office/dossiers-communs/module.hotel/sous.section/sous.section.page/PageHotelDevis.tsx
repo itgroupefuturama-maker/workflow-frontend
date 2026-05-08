@@ -9,10 +9,10 @@ import { HotelHeader } from '../../components/HotelHeader';
 import { setShowPreferences, togglePreferences } from '../../../../../../app/uiSlice';
 import PanneauPreferencesClient from '../../components/PanneauPreferencesClient';
 import { ChevronDown } from 'lucide-react';
-import { normalizeDevisToEntete, type HotelPdfSelection} from '../../../module.parametre/sections/pdf.generation/types/hotel.types';
-import type { PdfAudience, PdfDesignId } from '../../../module.parametre/sections/pdf.generation/types/pdf-design.types';
+import { normalizeDevisToEntete, type HotelPdfSelection} from '../../../module.pdf/pdf.generation/types/hotel.types';
+import type { PdfAudience, PdfDesignId } from '../../../module.pdf/pdf.generation/types/pdf-design.types';
 import { ModalHotelPdfSelector } from '../../components/ModalHotelPdfSelector';
-import { useHotelPdf } from '../../../module.parametre/sections/pdf.generation/hooks/usePdfGenerator';
+import { useHotelPdf } from '../../../module.pdf/pdf.generation/hooks/usePdfGenerator';
 // ─── Badge statut devis ───────────────────────────────────────────────────────
 const StatutBadge = ({ statut }: { statut: string }) => {
   const map: Record<string, string> = {
@@ -337,7 +337,7 @@ export default function PageHotelDevis() {
           {/* ── Colonne principale ── */}
           <div className="flex-1 min-w-0 flex flex-col min-h-0">
             {/* ── Header fixe — ne scrolle PAS ── */}
-            <div className="shrink-0 px-4 py-2 border-b border-neutral-200">
+            <div className="shrink-0 px-4 py-2 border-b border-neutral-200 bg-slate-200">
               <div className='flex items-center justify-between'>
                 <HotelHeader numerohotel={prospection?.numeroEntete} navigate={navigate} isBenchmarking={true} isDetail={true} isDevis={true}/>
                 
@@ -573,7 +573,7 @@ export default function PageHotelDevis() {
                 </div>
               </div>
             </div>
-            <div className="flex-1 min-h-0 overflow-y-auto py-2 px-4">
+            <div className="flex-1 min-h-0 overflow-y-auto py-2">
               {/* ── Body ── */}
               <div className="space-y-4">
                 {benchmarkings.length === 0 ? (

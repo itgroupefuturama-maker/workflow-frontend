@@ -510,7 +510,9 @@ function NewLineRow({
               const isBoolean =
                 svc.type === 'SPECIFIQUE' || svc.type === 'SERVICE' &&
                 !svc.libelle.toLowerCase().includes('bagage') &&
+                !svc.libelle.toLowerCase().includes('siège') &&
                 !svc.libelle.toLowerCase().includes('supplément') ;
+
 
               return (
                 <div key={svc.id} className="flex flex-col gap-1.5 p-3 bg-white rounded-lg border border-slate-200 shadow-sm">

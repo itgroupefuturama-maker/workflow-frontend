@@ -9,6 +9,7 @@ import {
 } from 'react-icons/fi';
 import type { AppDispatch, RootState } from '../app/store';
 import { setCurrentClientFactureId, type DossierCommun } from '../app/front_office/dossierCommunSlice';
+import { setSidebarCollapsed } from '../app/uiSlice';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -23,7 +24,7 @@ export default function Sidebar({ module }: SidebarProps) {
   
   const dispatch = useAppDispatch();
 
-  const [collapsed, setCollapsed] = useState(false);
+  const collapsed = useSelector((state: RootState) => state.ui.sidebarCollapsed);
 
   const { data: dossiers, loading: loadingDossiers, currentClientFactureId } = useSelector(
     (state: RootState) => state.dossierCommun
@@ -62,7 +63,7 @@ export default function Sidebar({ module }: SidebarProps) {
 
   const staticMenuConfig = [
     {
-      title: 'Accueil',
+      title: 'Contrôle',
       icon: <FiHome size={16} />,
       links: [
         { label: 'Tableau de bord', path: 'accueil', icon: <FiBarChart2 size={15} />, tab: 'dashboard' },
@@ -166,11 +167,11 @@ export default function Sidebar({ module }: SidebarProps) {
 
   // Config par module
   const moduleConfig = {
-    ticketing:   { label: 'Ticketing',        icon: <FiList   size={15} />, gradient: 'from-amber-400 to-orange-500',  iconBg: 'bg-amber-500',   activeBg: 'bg-amber-500',   activeText: 'text-amber-600',   border: 'border-amber-200',   dotColor: 'bg-amber-400'   },
-    attestation: { label: 'Attestation',      icon: <FiFolder size={15} />, gradient: 'from-rose-400 to-pink-500',     iconBg: 'bg-rose-500',    activeBg: 'bg-rose-500',    activeText: 'text-rose-600',    border: 'border-rose-200',    dotColor: 'bg-rose-400'    },
-    hotel:       { label: 'Hôtel',            icon: <FiHome   size={15} />, gradient: 'from-orange-400 to-red-500',    iconBg: 'bg-orange-500',  activeBg: 'bg-orange-500',  activeText: 'text-orange-600',  border: 'border-orange-200',  dotColor: 'bg-orange-400'  },
-    visa:        { label: 'Visa',             icon: <FiMap    size={15} />, gradient: 'from-blue-400 to-indigo-500',   iconBg: 'bg-blue-500',    activeBg: 'bg-blue-500',    activeText: 'text-blue-600',    border: 'border-blue-200',    dotColor: 'bg-blue-400'    },
-    assurance:   { label: 'Assurance',        icon: <FiMap    size={15} />, gradient: 'from-green-600 to-green-500',   iconBg: 'bg-green-500',    activeBg: 'bg-green-500',    activeText: 'text-green-600',    border: 'border-green-200',    dotColor: 'bg-green-400'    },
+    ticketing:   { label: 'Ticketing',        icon: <FiList   size={15} />, gradient: 'from-amber-400 to-orange-500',  iconBg: 'bg-amber-500',   activeBg: 'bg-amber-500',   activeText: 'text-amber-400',   border: 'border-amber-200',   dotColor: 'bg-amber-400'   },
+    attestation: { label: 'Attestation',      icon: <FiFolder size={15} />, gradient: 'from-rose-400 to-pink-500',     iconBg: 'bg-rose-500',    activeBg: 'bg-rose-500',    activeText: 'text-rose-400',    border: 'border-rose-200',    dotColor: 'bg-rose-400'    },
+    hotel:       { label: 'Hôtel',            icon: <FiHome   size={15} />, gradient: 'from-orange-400 to-red-500',    iconBg: 'bg-orange-500',  activeBg: 'bg-orange-500',  activeText: 'text-orange-400',  border: 'border-orange-200',  dotColor: 'bg-orange-400'  },
+    visa:        { label: 'Visa',             icon: <FiMap    size={15} />, gradient: 'from-blue-400 to-indigo-500',   iconBg: 'bg-blue-500',    activeBg: 'bg-blue-500',    activeText: 'text-blue-400',    border: 'border-blue-200',    dotColor: 'bg-blue-400'    },
+    assurance:   { label: 'Assurance',        icon: <FiMap    size={15} />, gradient: 'from-green-600 to-green-500',   iconBg: 'bg-green-500',    activeBg: 'bg-green-500',    activeText: 'text-green-400',    border: 'border-green-200',    dotColor: 'bg-green-400'    },
   };
 
   const current = module
@@ -184,85 +185,118 @@ export default function Sidebar({ module }: SidebarProps) {
 
   return (
     <aside
-      className={`h-full sticky top-0 flex flex-col bg-slate-700 border-r border-slate-200/80 transition-all duration-300 ease-in-out shadow-sm ${
-        collapsed ? 'w-[60px]' : 'w-64'
+      className={`h-full sticky top-0 flex flex-col bg-slate-700 border-r border-slate-200/80 transition-all duration-300 ease-in-out shadow-sm overflow-x-hidden ${
+        collapsed ? 'w-[60px]' : 'w-63'
       }`}
     >
-
       {/* ══ HEADER ══ */}
-      <div className={`shrink-0 ${collapsed ? 'px-2 py-3' : 'px-3 py-3'}`}>
-        {!collapsed ? (
-          <div className="flex items-center gap-2">
-            {/* Badge module */}
-            <div className={`flex-1 flex items-center gap-2.5 bg-linear-to-r ${current.gradient} rounded-xl px-3 py-2.5 shadow-sm`}>
-              <div className="bg-white/20 p-1.5 rounded-lg">
+
+        {collapsed && (
+          <div className={`shrink-0 px-2 py-3`}>
+            <div className="flex flex-col items-center gap-2">
+              {/* Icône module seule */}
+              <div className={`w-9 h-9 bg-linear-to-br ${current.gradient} rounded-xl flex items-center justify-center shadow-sm`}>
                 <span className="text-white">{current.icon}</span>
               </div>
-              <div className="min-w-0">
-                <p className="text-[10px] text-white/70 font-medium leading-none mb-0.5">Module actif</p>
-                <p className="text-sm font-bold text-white truncate leading-none">{current.label}</p>
-              </div>
-              {/* Petite forme déco */}
-              <div className="ml-auto w-6 h-6 rounded-full bg-white/10" />
-            </div>
+              {/* Bouton expand */}
+              <button
+                onClick={() => dispatch(setSidebarCollapsed(false))}
+                className="p-1.5 rounded-lg text-white hover:text-white hover:bg-slate-600 transition-colors"
+                title="Agrandir"
+              >
+                <FiChevronsRight size={15} />
+              </button>
 
-            {/* Bouton collapse */}
-            <button
-              onClick={() => setCollapsed(true)}
-              className="p-2 rounded-lg text-white hover:text-slate-100 hover:bg-slate-600 transition-colors shrink-0"
-              title="Réduire"
-            >
-              <FiChevronsLeft size={16} />
-            </button>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center gap-2">
-            {/* Icône module seule */}
-            <div className={`w-9 h-9 bg-linear-to-br ${current.gradient} rounded-xl flex items-center justify-center shadow-sm`}>
-              <span className="text-white">{current.icon}</span>
+              {/* Séparateur */}
+              <div className="mx-3 h-px bg-linear-to-r from-transparent via-slate-600 to-transparent shrink-0" />
             </div>
-            {/* Bouton expand */}
-            <button
-              onClick={() => setCollapsed(false)}
-              className="p-1.5 rounded-lg text-white hover:text-white hover:bg-slate-600 transition-colors"
-              title="Agrandir"
-            >
-              <FiChevronsRight size={15} />
-            </button>
           </div>
         )}
-      </div>
-
-      {/* Séparateur */}
-      <div className="mx-3 h-px bg-linear-to-r from-transparent via-slate-600 to-transparent shrink-0" />
 
       {/* ══ NAV ══ */}
-      <nav className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent py-2">
-
+      <nav className="flex-1 overflow-x-visible scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent py-2">
         {/* ── MODE COLLAPSED ── */}
         {collapsed ? (
-          <div className="flex flex-col items-center gap-1 px-2">
+          <div className="flex flex-col items-center gap-0.5 py-1 ">
 
-            {/* Section nav principale */}
-            <div className="w-full space-y-1">
-              {allCollapsedIcons.map((item) => {
-                const active = isTabActive(item.tab);
+            {/* Dossiers */}
+            <div className="w-full  px-2 space-y-0.5">
+              {loadingDossiers ? (
+                <div className="flex justify-center py-2">
+                  <FiLoader className={`animate-spin ${current.activeText}`} size={14} />
+                </div>
+              ) : dossiersTicketing.length === 0 ? (
+                <div className="flex justify-center py-2">
+                  <FiFolder size={14} className="text-slate-500" />
+                </div>
+              ) : (
+                dossiersTicketing.map((dossier) => {
+                  const isActive = currentClientFactureId?.id === dossier.id;
+                  return (
+                    <div key={dossier.id} className="relative group w-full">
+                      <button
+                        onClick={() => handleDossierSelect(dossier)}
+                        className={`w-full flex items-center justify-center p-2.5 rounded-lg transition-all duration-200 ${
+                          isActive
+                            ? `bg-linear-to-br ${current.gradient} text-white shadow-sm`
+                            : 'text-slate-400 hover:bg-slate-600 hover:text-white'
+                        }`}
+                      >
+                        {/* Initiales dans un petit cercle */}
+                        <span className="text-[10px] font-bold leading-none">
+                          {dossier.numero ?? <FiFolder size={14} />}
+                        </span>
+                      </button>
+                      {/* Tooltip enrichi */}
+                      <div className="absolute left-full ml-2 top-1/2 -translate-y-1/2 z-50 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                        <div className="bg-slate-900 text-white text-xs font-medium px-2.5 py-2 rounded-lg whitespace-nowrap shadow-lg min-w-[140px]">
+                          <p className="font-semibold text-white">{dossier.numero}</p>
+                          <p className="text-slate-400 text-[11px] mt-0.5 truncate max-w-[160px]">
+                            {dossier.clientfacture?.libelle || 'Client...'}
+                          </p>
+                          {isActive && (
+                            <div className="flex items-center gap-1 mt-1.5">
+                              <span className={`w-1.5 h-1.5 rounded-full ${current.dotColor} animate-pulse`} />
+                              <span className="text-[10px] text-slate-400">Actif</span>
+                            </div>
+                          )}
+                          <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-900" />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Séparateur sous-liens */}
+            {subLinks.length > 0 && (
+              <div className="w-6 h-px bg-slate-600 my-2 shrink-0" />
+            )}
+
+            {/* Sous-liens */}
+            <div className="w-full  px-2 space-y-0.5">
+              {subLinks.map((link) => {
+                const active = isTabActive(link.tab);
                 return (
-                  <div key={item.tab} className="relative group">
+                  <div key={link.tab} className="relative group w-full">
                     <button
-                      onClick={() => navigate(item.path, { state: { targetTab: item.tab } })}
+                      onClick={() => handleSubPageClick(link.path, link.tab)}
                       className={`w-full flex items-center justify-center p-2.5 rounded-lg transition-all duration-200 ${
                         active
-                          ? `bg-linear-to-br ${current.gradient} text-white shadow-sm`
-                          : 'text-white hover:bg-slate-600 hover:text-white'
+                          ? 'bg-slate-500 text-white'
+                          : 'text-slate-400 hover:bg-slate-600 hover:text-white'
                       }`}
                     >
-                      {item.icon}
+                      {link.icon}
                     </button>
                     {/* Tooltip */}
-                    <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 z-50 pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-200 translate-x-1 group-hover:translate-x-0">
+                    <div
+                      className="absolute left-full ml-2 top-1/2 -translate-y-1/2 z-9999 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+                      style={{ position: 'fixed', left: '64px' }}  // 64px = largeur du sidebar collapsed (w-[60px] + border)
+                    >
                       <div className="bg-slate-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-lg whitespace-nowrap shadow-lg">
-                        {item.tooltip}
+                        {link.label}
                         <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-900" />
                       </div>
                     </div>
@@ -271,55 +305,30 @@ export default function Sidebar({ module }: SidebarProps) {
               })}
             </div>
 
-            {/* Séparateur Dossiers */}
-            <div className="w-7 h-px bg-white my-2" />
-
-            {/* Dossiers */}
-            {dossiersTicketing.map((dossier) => {
-              const isActive = currentClientFactureId?.id === dossier.id;
+            {/* Séparateur */}
+            <div className="w-6 h-px bg-slate-600 my-2 shrink-0" />
+            {/* Nav statique */}
+            {allCollapsedIcons.map((item) => {
+              const active = isTabActive(item.tab);
               return (
-                <div key={dossier.id} className="relative group w-full">
+                <div key={item.tab} className="relative group w-full px-2">
                   <button
-                    onClick={() => handleDossierSelect(dossier)}
-                    className={`w-full flex items-center justify-center p-2.5 rounded-lg transition-all duration-200 ${
-                      isActive
-                        ? `bg-linear-to-br ${current.gradient} text-white shadow-sm`
-                        : 'text-white hover:bg-slate-600 hover:text-white'
-                    }`}
-                  >
-                    <FiFolder size={15} />
-                  </button>
-                  <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 z-50 pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-200">
-                    <div className="bg-slate-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-lg whitespace-nowrap shadow-lg">
-                      {dossier.numero}
-                      <span className="block text-white text-[10px] mt-0.5">
-                        {dossier.clientfacture?.libelle || 'Client...'}
-                      </span>
-                      <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-900" />
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-
-            {/* Sous-liens */}
-            {subLinks.map((link) => {
-              const active = isTabActive(link.tab);
-              return (
-                <div key={link.tab} className="relative group w-full">
-                  <button
-                    onClick={() => handleSubPageClick(link.path, link.tab)}
+                    onClick={() => navigate(item.path, { state: { targetTab: item.tab } })}
                     className={`w-full flex items-center justify-center p-2.5 rounded-lg transition-all duration-200 ${
                       active
-                        ? 'bg-slate-100 text-slate-900'
-                        : 'text-slate-400 hover:bg-slate-50 hover:text-slate-700'
+                        ? `bg-linear-to-br ${current.gradient} text-white shadow-sm`
+                        : 'text-slate-400 hover:bg-slate-600 hover:text-white'
                     }`}
                   >
-                    {link.icon}
+                    {item.icon}
                   </button>
-                  <div className="absolute left-full ml-3 top-1/2 -translate-y-1/2 z-50 pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-200">
+                  {/* Tooltip */}
+                  <div
+                    className="absolute left-full ml-2 top-18 -translate-y-1/2 z-9999 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+                    style={{ position: 'fixed', left: '64px' }}  // 64px = largeur du sidebar collapsed (w-[60px] + border)
+                  >
                     <div className="bg-slate-900 text-white text-xs font-medium px-2.5 py-1.5 rounded-lg whitespace-nowrap shadow-lg">
-                      {link.label}
+                      {item.tooltip}
                       <div className="absolute right-full top-1/2 -translate-y-1/2 border-4 border-transparent border-r-slate-900" />
                     </div>
                   </div>
@@ -327,93 +336,35 @@ export default function Sidebar({ module }: SidebarProps) {
               );
             })}
           </div>
-
         ) : (
           /* ── MODE EXPANDED ── */
           <div className="px-3 space-y-1">
-
-            {/* ── Paramètres Globaux ── */}
-            <div className="mb-1">
-              <div className="flex items-center gap-1.5 px-2 py-1.5 mb-1">
-                <FiGlobe size={11} className="text-white" />
-                <span className="text-[10px] font-bold text-white uppercase tracking-widest">
-                  Navigation
-                </span>
-              </div>
-
-              {staticMenuConfig.map((menu) => {
-                const isOpen = openMenus[menu.title];
-                return (
-                  <div key={menu.title} className="mb-1">
-                    <button
-                      onClick={() => toggleMenu(menu.title)}
-                      className="w-full flex items-center justify-between px-2.5 py-2 text-white hover:bg-slate-600 hover:text-white rounded-lg transition-colors group"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="text-white group-hover:text-white transition-colors">{menu.icon}</span>
-                        <span className="text-sm font-semibold text-white">{menu.title}</span>
-                      </div>
-                      <span className="text-white">
-                        {isOpen
-                          ? <FiChevronDown  size={14} />
-                          : <FiChevronRight size={14} />
-                        }
-                      </span>
-                    </button>
-
-                    {isOpen && (
-                      <div className="ml-2 mt-0.5 pl-4 border-l-2 border-slate-600 space-y-0.5">
-                        {menu.links.map((link) => {
-                          const active = isTabActive(link.tab);
-                          return (
-                            <button
-                              key={link.label}
-                              onClick={() => navigate(link.path, { state: { targetTab: link.tab } })}
-                              className={`w-full flex items-center gap-2.5 px-2.5 py-2 text-sm rounded-lg transition-all duration-200 ${
-                                active
-                                  ? `bg-linear-to-r ${current.gradient} text-white shadow-sm font-medium`
-                                  : 'text-slate-300 hover:bg-slate-600 hover:text-white'
-                              }`}
-                            >
-                              <span className={active ? 'text-white/80' : 'text-slate-200'}>{link.icon}</span>
-                              {link.label}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Séparateur */}
-            <div className="h-px bg-linear-to-r from-transparent via-slate-600 to-transparent my-2" />
-
             {/* ── Dossiers ── */}
             <div>
-              {/* Lien retour */}
-              <button
-                onClick={() => navigate(`/dossiers-communs/liste-by-module/${module}`)}
-                className="w-full flex items-center gap-2 px-2.5 py-1.5 mb-2 rounded-lg text-slate-300 hover:text-white hover:bg-slate-600 transition-all group"
-              >
-                <FiArrowLeft size={13} className="group-hover:-translate-x-0.5 transition-transform" />
-                <span className="text-[10px] font-bold uppercase tracking-widest">
-                  Voir tous les dossiers
-                </span>
-              </button>
-
               {/* Titre section */}
-              <div className="flex items-center gap-1.5 px-2 py-1.5 mb-2">
-                <FiFolder size={11} className="text-white" />
-                <span className="text-[10px] font-bold text-white uppercase tracking-widest">
-                  Dossiers {module}
-                </span>
-                {dossiersTicketing.length > 0 && (
-                  <span className="ml-auto text-[10px] font-semibold text-white bg-slate-600 px-1.5 py-0.5 rounded-full">
-                    {dossiersTicketing.length}
-                  </span>
-                )}
+              <div className="flex items-center gap-1.5  mb-2 cursor-pointer">
+                <div className="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-600 hover:text-white rounded-lg transition-all duration-200" onClick={() => navigate(`/dossiers-communs/liste-by-module/${module}`)}>
+                    <FiArrowLeft size={11} className="text-white" />
+                    <span className="text-[10px] font-bold text-white uppercase tracking-widest">
+                      Dossiers {module}
+                    </span>
+                    {dossiersTicketing.length > 0 && (
+                      <span className="ml-auto text-[10px] font-semibold text-white bg-slate-500 px-1.5 py-0.5 rounded-full">
+                        {dossiersTicketing.length}
+                      </span>
+                    )}
+                </div>
+
+                {/* Petite forme déco */}
+                <div className="ml-auto w-6 h-6 rounded-full bg-white/10 flex items-center justify-center hover:text-slate-100 hover:bg-white/50" >
+                  <button
+                    onClick={() => dispatch(setSidebarCollapsed(true))}
+                    className="p-2 rounded-lg text-white  transition-colors shrink-0"
+                    title="Réduire"
+                  >
+                    <FiChevronsLeft size={16} />
+                  </button>
+                </div>
               </div>
 
               {/* Liste dossiers */}
@@ -439,24 +390,27 @@ export default function Sidebar({ module }: SidebarProps) {
                       <div key={dossier.id}>
                         <button
                           onClick={() => handleDossierSelect(dossier)}
-                          className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl transition-all duration-200 ${
+                          className={`w-full flex items-center gap-2.5 px-3 py-1 ${
                             isActive
-                              ? `bg-linear-to-r ${current.gradient} text-white shadow-md`
-                              : 'bg-slate-600 border border-slate-600 text-white hover:border-slate-400 hover:shadow-sm hover:bg-slate-500'
+                              ? `bg-linear-to-r ${current.gradient} text-white rounded-sm`
+                              : 'bg-slate-600 border-b border-slate-600 text-white hover:border-slate-500 hover:bg-slate-500 rounded-sm' 
                           }`}
                         >
                           {/* Point indicateur */}
                           <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${isActive ? 'bg-white/60' : current.dotColor}`} />
                           <div className="flex-1 min-w-0 text-left">
                             <p className={`text-xs font-bold truncate ${isActive ? 'text-white' : 'text-white'}`}>
-                              {dossier.numero}
+                              N° {dossier.numero}
                             </p>
                             <p className={`text-[10px] truncate mt-0.5 ${isActive ? 'text-white' : 'text-white'}`}>
                               {dossier.clientfacture?.libelle || 'Client...'}
                             </p>
                           </div>
-                          {isActive && (
-                            <div className="w-1.5 h-1.5 rounded-full bg-white/50 shrink-0 animate-pulse" />
+                          {isActive ? (
+                            // <div className="w-1.5 h-1.5 rounded-full bg-white/50 shrink-0 animate-pulse" />
+                            <FiChevronDown className="text-white" size={16} />
+                          ) : (
+                            <FiChevronRight className="text-white/50" size={16} />
                           )}
                         </button>
 
@@ -469,13 +423,13 @@ export default function Sidebar({ module }: SidebarProps) {
                                 <button
                                   key={link.label}
                                   onClick={() => handleSubPageClick(link.path, link.tab)}
-                                  className={`w-full flex items-center gap-2 px-2.5 py-1.5 text-xs rounded-lg transition-all duration-200 ${
+                                  className={`w-full flex items-center gap-2 px-2.5 py-1.5 text-xs transition-all duration-200 ${
                                     active
-                                      ? 'bg-slate-500 text-white font-semibold'
+                                      ? 'border-r-2 border-slate-500 text-white font-semibold'
                                       : 'text-slate-300 hover:bg-slate-600 hover:text-white'
                                   }`}
                                 >
-                                  <span className={active ? 'text-white' : 'text-slate-300'}>{link.icon}</span>
+                                  <span className={active ? current.activeText : 'text-slate-300'}>{link.icon}</span>
                                   {link.label}
                                 </button>
                               );
@@ -487,6 +441,64 @@ export default function Sidebar({ module }: SidebarProps) {
                   })
                 )}
               </div>
+            </div>
+
+            {/* Séparateur */}
+            <div className="h-px bg-linear-to-r from-transparent via-slate-600 to-transparent my-2" />
+
+            {/* ── Paramètres Globaux ── */}
+            <div className="mb-1">
+              <div className="flex items-center gap-1.5 px-2 py-1.5 mb-1">
+                <FiGlobe size={11} className="text-white" />
+                <span className="text-[10px] font-bold text-white uppercase tracking-widest">
+                  Navigation
+                </span>
+              </div>
+
+              {staticMenuConfig.map((menu) => {
+                const isOpen = openMenus[menu.title];
+                return (
+                  <div key={menu.title} className="mb-1">
+                    <button
+                      onClick={() => toggleMenu(menu.title)}
+                      className="w-full flex items-center justify-between px-2.5 py-2 text-white hover:bg-slate-600 hover:text-white rounded-lg transition-colors group"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-white group-hover:text-white transition-colors">{menu.icon}</span>
+                        <span className="text-xs font-semibold text-white">{menu.title}</span>
+                      </div>
+                      <span className="text-white">
+                        {isOpen
+                          ? <FiChevronDown  size={14} />
+                          : <FiChevronRight size={14} />
+                        }
+                      </span>
+                    </button>
+
+                    {isOpen && (
+                      <div className="ml-2 mt-0.5 pl-4 border-l-2 border-slate-600 space-y-0.5">
+                        {menu.links.map((link) => {
+                          const active = isTabActive(link.tab);
+                          return (
+                            <button
+                              key={link.label}
+                              onClick={() => navigate(link.path, { state: { targetTab: link.tab } })}
+                              className={`w-full flex items-center gap-2.5 px-2.5 py-2 text-xs rounded-lg transition-all duration-200 ${
+                                active
+                                  ? `bg-linear-to-r ${current.gradient} text-white shadow-sm font-medium`
+                                  : 'text-slate-300 hover:bg-slate-600 hover:text-white'
+                              }`}
+                            >
+                              <span className={active ? 'text-white/80' : 'text-slate-200'}>{link.icon}</span>
+                              {link.label}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

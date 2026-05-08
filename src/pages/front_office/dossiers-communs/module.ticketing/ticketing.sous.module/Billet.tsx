@@ -15,6 +15,7 @@ import {
   type AnnulationBilletPayload,
   reprogrammerLigne,
   type ServiceSpecifique,
+  reporterLigne,
 } from '../../../../../app/front_office/billetSlice';
 import AnnulationBilletModal from '../../../../../components/modals/AnnulationBilletModal';
 import ReservationModal from '../../../../../components/modals/ReservationModal';
@@ -43,7 +44,6 @@ const Billet = () => {
 
   const { enteteId, prestationId } = useParams<{ enteteId: string , prestationId : string}>();
   // const [searchParams] = useSearchParams();
-
 
   const [showAnnulModal, setShowAnnulModal] = useState(false);
   const [annulType, setAnnulType] = useState<'reservation' | 'emission' | null>(null);
@@ -190,6 +190,16 @@ const Billet = () => {
       setSelectedLigne(null);
     } catch (err: any) {
       alert('Erreur réservation : ' + (err.message || '—'));
+    }
+  };
+
+  const handleReporter = async (ligne: BilletLigne) => {
+    if (!enteteId) return;
+    try {
+      await dispatch(reporterLigne(ligne.id)).unwrap();
+      dispatch(fetchBilletById(enteteId));
+    } catch (err: any) {
+      alert('Erreur lors du report : ' + (err.message || 'Erreur inconnue'));
     }
   };
 
@@ -379,7 +389,7 @@ const Billet = () => {
         <div className="flex h-full min-h-0 overflow-hidden">
           {/* ── Colonne principale ── */}
           <div className="flex-1 min-w-0 flex flex-col min-h-0">
-            <div className="shrink-0 px-4 pt-2 bg-white">
+            <div className="shrink-0 px-4 bg-slate-200 rounded-t-xl">
               <div className='flex items-center justify-between'>
                 <TicketingHeader items={billetDetailItems(billet?.numeroBillet)} />
 
@@ -403,7 +413,7 @@ const Billet = () => {
               </div>
             </div>
 
-            <div className='px-4 border-b border-neutral-50'>
+            <div className='px-4 bg-slate-200 rounded-b-xl'>
               {/* Infos principales */}
               <BilletInfoCards
                 billet={billet}
@@ -412,27 +422,33 @@ const Billet = () => {
               />
 
               {/* Tableau groupé avec Sous-Onglets */}
-              <div className="mt-5 rounded-t-lg flex space-x-1">
-                {innerTabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setInnerTab(tab.id)}
-                    className={`
-                      px-6 py-2 text-sm font-semibold rounded-t-lg transition-all
-                      ${innerTab === tab.id 
-                        ? 'bg-[#4A77BE] text-white shadow-sm'
-                        : 'bg-[#ffffff] text-[#1E3A8A] hover:bg-[#f2f7fe] border-t border-l border-r border-slate-200'}
-                    `}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
+              <div className="my-2 flex items-center">
+                <nav className="flex p-1 bg-slate-300 rounded-xl" aria-label="Inner Tabs">
+                  {innerTabs.map((tab) => {
+                    const isActive = innerTab === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        onClick={() => setInnerTab(tab.id)}
+                        className={`
+                          px-10 py-1.5 text-sm font-medium rounded-lg transition-all duration-200
+                          ${isActive 
+                            ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/50' 
+                            : 'text-slate-500 hover:text-slate-700 hover:bg-white/50'
+                          }
+                        `}
+                      >
+                        <span className="flex items-center gap-2">
+                          {tab.label}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </nav>
               </div>
             </div>
 
-           
-
-            <div className="flex-1 min-h-0 overflow-y-auto pb-4 px-4">
+            <div className="flex-1 min-h-0 overflow-y-auto py-4">
               {/* CONTENU : BILLET */}
               {innerTab === 'billet' && (
                 <BilletTable
@@ -444,7 +460,8 @@ const Billet = () => {
                   handleOpenEmission={handleOpenEmission}
                   handleReprogrammer={handleReprogrammer}
                   handleRemove={handleAnnulerLigne}
-                  serviceById={serviceById}   // ← AJOUT ICI
+                  handleReporter={handleReporter}
+                  serviceById={serviceById} 
                 />
               )}
 

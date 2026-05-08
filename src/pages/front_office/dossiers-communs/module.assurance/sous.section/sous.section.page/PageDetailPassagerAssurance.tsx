@@ -17,66 +17,8 @@ import {
 import { API_URL_PORTAIL } from '../../../../../../service/env';
 import TabContainer from '../../../../../../layouts/TabContainer';
 import { AssuranceHeader } from '../../components/AssuranceHeader';
-
-/* ─────────────────────── helpers ─────────────────────── */
-
-const fmtDate = (d: string | null) =>
-  d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
-
-/* ─────────────────────── atoms ───────────────────────── */
-
-const Spinner = ({ size = 4 }: { size?: number }) => (
-  <svg className={`animate-spin h-${size} w-${size}`} viewBox="0 0 24 24" fill="none">
-    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-  </svg>
-);
-
-const Badge = ({ status }: { status: string }) => {
-  const isValid = status === 'VALIDE' || status === 'VALIDER';
-  return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold ${
-      isValid
-        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-        : 'bg-amber-50 text-amber-700 border border-amber-200'
-    }`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${isValid ? 'bg-emerald-500' : 'bg-amber-400'}`} />
-      {status}
-    </span>
-  );
-};
-
-const Card = ({ title, badge, action, children }: {
-  title: string; badge?: React.ReactNode;
-  action?: React.ReactNode; children: React.ReactNode;
-}) => (
-  <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-    <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 bg-gray-50">
-      <div className="flex items-center gap-2.5">
-        <span className="text-sm font-semibold text-gray-800">{title}</span>
-        {badge}
-      </div>
-      {action && <div>{action}</div>}
-    </div>
-    <div className="px-5 py-4">{children}</div>
-  </div>
-);
-
-const DataRow = ({ label, value, valueClass = '' }: {
-  label: string; value: React.ReactNode; valueClass?: string;
-}) => (
-  <div className="flex items-center justify-between py-2.5 border-b border-gray-50 last:border-0">
-    <span className="text-sm text-gray-500">{label}</span>
-    <span className={`text-sm font-medium text-gray-900 text-right ${valueClass}`}>{value ?? '—'}</span>
-  </div>
-);
-
-const Field = ({ label, value }: { label: string; value: React.ReactNode }) => (
-  <div className="flex flex-col gap-0.5 border border-blue-200 rounded-2xl p-4">
-    <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">{label}</span>
-    <span className="text-sm font-medium text-gray-900">{value ?? '—'}</span>
-  </div>
-);
+import { Badge, Card, DataRow, Field, SectionLabel, Spinner } from '../../components/atoms';
+import { fmtDate } from '../../utils/formatters';
 
 const ActionButton = ({
   onClick, loading, done, label, statut, doneLabel, color = 'green',
@@ -98,7 +40,7 @@ const ActionButton = ({
         isDisabled ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : colors[color]
       }`}
     >
-      {loading ? <Spinner size={3} /> : done ? '✓' : null}
+      {loading ? <Spinner /> : done ? '✓' : null}
       {done ? doneLabel : label}
     </button>
   );
@@ -292,15 +234,6 @@ const FormsAssurance = ({
   );
 };
 
-/** Petit label de section réutilisable */
-const SectionLabel = ({ label }: { label: string }) => (
-  <div className="flex items-center gap-3 mb-2 border-b border-gray-200">
-    <span className="px-3 py-1 bg-white text-[11px] font-bold uppercase tracking-widest text-gray-500 w-fit">
-      {label}
-    </span>
-  </div>
-);
-
 /* ─────────────────────── page principale ─────────────────── */
 
 const PageDetailPassager = () => {
@@ -310,11 +243,10 @@ const PageDetailPassager = () => {
   const location       = useLocation();
 
   const nomPassager = location.state?.nomPassager ?? 'Passager';
-  const numeroAssurance   = location.state?.numeroAssurance ?? null;
 
   console.log(passagerId);
 
-  const { detail, loading, error } = useSelector((s: RootState) => s.passagerDetail);
+  const { detail, loading } = useSelector((s: RootState) => s.passagerDetail);
 
   const [formLoading,   setFormLoading]   = useState<Record<string, boolean>>({});
   const [formDone,      setFormDone]      = useState<Record<string, boolean>>({});
@@ -328,6 +260,7 @@ const PageDetailPassager = () => {
   const tabs = [
     { id: 'prospection', label: 'Listes des prospections' },
     { id: 'assurance',   label: 'Listes des assurance' },
+    { id: 'beneficiaire', label: 'Listes des bénéficiaires' },
   ];
 
   const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'assurance');
@@ -424,7 +357,7 @@ const PageDetailPassager = () => {
           {/* ── Colonne principale ── */}
           <div className="flex-1 min-w-0 flex flex-col min-h-0">
             {/* ── Header fixe — ne scrolle PAS ── */}
-            <div className="shrink-0 px-4 pt-2 bg-white">
+            <div className="shrink-0 px-4 bg-slate-200 rounded-xl">
               <div className='flex items-center justify-between'>
                 <AssuranceHeader
                   numeroassurance={detail?.assurance?.zoneDestination}
@@ -440,13 +373,13 @@ const PageDetailPassager = () => {
                   disabled={syncLoading}
                   className="inline-flex items-center gap-2 px-4 py-1 rounded-lg bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white text-xs font-semibold transition"
                 >
-                  {syncLoading ? <Spinner size={3} /> : syncDone ? '✓' : '⚡'}
+                  {syncLoading ? <Spinner/> : syncDone ? '✓' : '⚡'}
                   {syncDone ? 'Synchronisé' : 'Synchroniser'}
                 </button>
               </div>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto pb-4 px-4">
+            <div className="flex-1 min-h-0 overflow-y-auto py-4 px-4">
               {/* Feedbacks */}
               {actionSuccess && (
                 <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl px-4 py-3">

@@ -6,6 +6,8 @@ import { approuverDevis, clearVisaDevis, creerVisaEntete, envoyerDevis, fetchVis
 import TabContainer from '../../../../../../layouts/TabContainer';
 import { VisaHeader } from '../../components/VisaHeader';
 import { API_URL } from '../../../../../../service/env';
+import { useVisaPdf } from '../../../module.pdf/pdf.generation/hooks/usePdfGenerator';
+import { Download, Eye } from 'lucide-react';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -14,54 +16,35 @@ const fmtDate = (d: string | null) =>
   d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
 const STATUT_COLORS: Record<string, string> = {
-  DEVIS_APPROUVE  : 'bg-green-100 text-green-700',
-  DEVIS_ENVOYE    : 'bg-blue-100  text-blue-700',
-  DEVIS           : 'bg-yellow-100 text-yellow-700',
-  CREER           : 'bg-gray-100  text-gray-600',
-  ANNULER         : 'bg-red-100   text-red-700',
+    créé: 'bg-green-100 text-green-700',
+    DEVIS_APPROUVE  : 'bg-green-100 text-green-700',
+    DEVIS_ENVOYE    : 'bg-blue-100  text-blue-700',
+    DEVIS           : 'bg-yellow-100 text-yellow-700',
+    CREER           : 'bg-gray-100  text-gray-600',
+    ANNULER         : 'bg-red-100   text-red-700',
 };
 
 const Badge = ({ label }: { label: string }) => (
-  <span className={`px-3 py-2 rounded-full border border-slate-200 text-xs font-semibold ${STATUT_COLORS[label] ?? 'bg-gray-100 text-gray-600'}`}>
+  <span className={`px-3 py-2 uppercase rounded-full border border-slate-200 text-xs font-semibold ${STATUT_COLORS[label] ?? 'bg-gray-100 text-gray-600'}`}>
     {label.replace('_', ' ')}
   </span>
 );
 
 const Card = ({ title, children }: { title: string; children: React.ReactNode }) => (
-  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-    <div className="px-5 py-3 border-b border-gray-100 bg-gray-50">
+  <div className="bg-white rounded-2xl border border-slate-300 shadow-sm overflow-hidden">
+    <div className="px-5 py-3 border-b border-slate-300 bg-slate-200">
       <p className="text-sm font-semibold text-gray-600 uppercase tracking-wide">{title}</p>
     </div>
-    <div className="px-5 py-4">{children}</div>
+    <div className="">{children}</div>
   </div>
 );
 
 const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
-  <div className="flex items-start justify-between py-1.5 text-sm border-b border-gray-50 last:border-0">
+  <div className="flex items-start justify-between py-1.5 mx-2 text-sm border-b border-gray-50 last:border-0">
     <span className="text-gray-400 shrink-0 w-44">{label}</span>
     <span className="font-medium text-gray-800 text-right">{value ?? '—'}</span>
   </div>
 );
-
-{/* Spinner réutilisable */}
-const BtnSpinner = () => (
-  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-  </svg>
-);
-
-// ── Timeline suivi ─────────────────────────────────────────────────────────
-
-const TIMELINE_STEPS = [
-  { key: 'dateEnvoieDevis',    label: 'Devis envoyé' },
-  { key: 'dateApprobation',    label: 'Devis approuvé' },
-  { key: 'dateCreationBc',     label: 'BC créé' },
-  { key: 'dateSoumisBc',       label: 'BC soumis' },
-  { key: 'dateApprobationBc',  label: 'BC approuvé' },
-  { key: 'dateCreationFac',    label: 'Facture créée' },
-  { key: 'dateReglement',      label: 'Réglé' },
-] as const;
 
 // ── Page ───────────────────────────────────────────────────────────────────
 
@@ -70,6 +53,9 @@ const PageDetailProspection = () => {
     const dispatch     = useDispatch<AppDispatch>();
     const navigate     = useNavigate();
     const location = useLocation();
+
+    console.log(enteteId);
+    
 
     const { detail, loading, error } = useSelector((s: RootState) => s.visaDevis);
 
@@ -83,6 +69,8 @@ const PageDetailProspection = () => {
     ];
 
     const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'prospection');
+
+    const { generate: generatePdf, preview: previewPdf, loading: pdfLoading } = useVisaPdf();
 
     useEffect(() => {
         if (enteteId) dispatch(fetchVisaDevis(enteteId));
@@ -151,41 +139,52 @@ const PageDetailProspection = () => {
         }
     };
 
-    const handlePdfDirection = async () => {
+    // ── Remplacer handlePdfDirection et handlePdfClient ──────────────────
+    const handlePdfDirection = () => {
         if (!detail) return;
-        setActionLoading('pdf-direction');
-        setActionError('');
-        setActionSuccess('');
-        try {
-            const path = await dispatch(
-            genererPdfDirection(detail.prospectionVisa.id)
-            ).unwrap();
-            window.open(`${API_URL}/${path}`, '_blank');
-            setActionSuccess('PDF direction généré avec succès.');
-        } catch (e: any) {
-            setActionError(e ?? 'Erreur génération PDF direction.');
-        } finally {
-            setActionLoading(null);
-        }
-        };
+        generatePdf(detail, 'direction', undefined, `${detail.devis.reference}-direction.pdf`);
+    };
 
-        const handlePdfClient = async () => {
+    const handlePdfClient = () => {
         if (!detail) return;
-        setActionLoading('pdf-client');
-        setActionError('');
-        setActionSuccess('');
-        try {
-            const path = await dispatch(
-            genererPdfClient(detail.prospectionVisa.id)
-            ).unwrap();
-            window.open(`${API_URL}/${path}`, '_blank');
-            setActionSuccess('PDF client généré avec succès.');
-        } catch (e: any) {
-            setActionError(e ?? 'Erreur génération PDF client.');
-        } finally {
-            setActionLoading(null);
-        }
-        };
+        generatePdf(detail, 'client', undefined, `${detail.devis.reference}-client.pdf`);
+    };
+
+    // const handlePdfDirection = async () => {
+    //     if (!detail) return;
+    //     setActionLoading('pdf-direction');
+    //     setActionError('');
+    //     setActionSuccess('');
+    //     try {
+    //         const path = await dispatch(
+    //         genererPdfDirection(detail.prospectionVisa.id)
+    //         ).unwrap();
+    //         window.open(`${API_URL}/${path}`, '_blank');
+    //         setActionSuccess('PDF direction généré avec succès.');
+    //     } catch (e: any) {
+    //         setActionError(e ?? 'Erreur génération PDF direction.');
+    //     } finally {
+    //         setActionLoading(null);
+    //     }
+    //     };
+
+    //     const handlePdfClient = async () => {
+    //     if (!detail) return;
+    //     setActionLoading('pdf-client');
+    //     setActionError('');
+    //     setActionSuccess('');
+    //     try {
+    //         const path = await dispatch(
+    //         genererPdfClient(detail.prospectionVisa.id)
+    //         ).unwrap();
+    //         window.open(`${API_URL}/${path}`, '_blank');
+    //         setActionSuccess('PDF client généré avec succès.');
+    //     } catch (e: any) {
+    //         setActionError(e ?? 'Erreur génération PDF client.');
+    //     } finally {
+    //         setActionLoading(null);
+    //     }
+    //     };
 
 
     // ── Loading ──────────────────────────────────────────────────────────────
@@ -220,271 +219,254 @@ const PageDetailProspection = () => {
     return (
         <div className="h-full flex flex-col min-h-0">
             <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange}>
-                <div className="py-2 px-4 space-y-4">
-                    <div className="">
-                        <VisaHeader numerovisa={devis.reference} nomPassager= {''} navigate={navigate} isDetail={true} isProspection={true}/>
-                    </div>
-
-                    {/* ── Topbar ── */}
-                    <div className="bg-white p-4 flex items-center justify-between flex-wrap gap-3">
-                        {/* Gauche : retour + titre */}
-                        <div className="flex items-center gap-3">
-                            <button
-                                onClick={() => navigate(-1)}
-                                className="p-2 rounded-lg hover:bg-gray-200 text-gray-500 transition"
-                            >
-                                ←
-                            </button>
-                            <div>
-                                <h1 className="text-2xl font-bold text-gray-800">
-                                    Devis {devis.reference}
-                                </h1>
-                                <p className="text-sm text-gray-400">
-                                    {prospectionVisa.prestation.numeroDos} — créé le {fmtDate(devis.createdAt)}
-                                </p>
+                <div className="flex h-full min-h-0 overflow-hidden">
+                    {/* ── Colonne principale ── */}
+                    <div className="flex-1 min-w-0 flex flex-col min-h-0">
+                        {/* ── Header fixe — ne scrolle PAS ── */}
+                        <div className="shrink-0 px-4 bg-slate-200 rounded-t-xl">
+                            <div className='flex items-center justify-between'>
+                                <VisaHeader numerovisa={devis.reference} nomPassager= {''} navigate={navigate} isDetail={true} isProspection={true}/>
                             </div>
                         </div>
 
-                        {/* Droite : badge + actions */}
-                        <div className="flex items-center gap-3 flex-wrap">
-                            <Badge label={devis.statut} />
-                            <div className="w-px h-8 bg-gray-300 shrink-0" />
-                                {/* PDF Direction */}
+                        <div className=" p-2 flex items-center justify-between flex-wrap bg-slate-200 rounded-b-xl">
+                            {/* Gauche : retour + titre */}
+                            <div className="flex items-center gap-3">
                                 <button
-                                    onClick={handlePdfDirection}
-                                    disabled={actionLoading === 'pdf-direction'}
-                                    className="px-4 py-2 bg-slate-600 text-white text-sm rounded-lg hover:bg-slate-700 disabled:opacity-60 flex items-center gap-2"
+                                    onClick={() => navigate(-1)}
+                                    className="p-2 rounded-lg hover:bg-gray-200 text-gray-500 transition"
                                 >
-                                    {actionLoading === 'pdf-direction' ? (
-                                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                                        </svg>
-                                    ) : '📄'}
-                                    PDF Direction
+                                    ←
                                 </button>
+                                <div>
+                                    <h1 className="text-2xl font-bold text-gray-800">
+                                        Devis {devis.reference}
+                                    </h1>
+                                    <p className="text-sm text-gray-400">
+                                        {prospectionVisa.prestation.numeroDos} — créé le {fmtDate(devis.createdAt)}
+                                    </p>
+                                </div>
+                            </div>
 
-                                {/* PDF Client */}
-                                <button
-                                    onClick={handlePdfClient}
-                                    disabled={actionLoading === 'pdf-client'}
-                                    className="px-4 py-2 bg-teal-600 text-white text-sm rounded-lg hover:bg-teal-700 disabled:opacity-60 flex items-center gap-2"
-                                    >
-                                    {actionLoading === 'pdf-client' ? (
-                                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                                        </svg>
-                                    ) : '📋'}
-                                    PDF Client
-                                </button>
-
-                                {/* Séparateur */}
-                                <div className="w-px h-8 bg-gray-300 shrink-0" />
-                                    <div className="flex items-center gap-2">
-                                        {/* Envoyer le devis */}
+                            {/* Droite : badge + actions */}
+                            <div className="flex items-center gap-3 flex-wrap">
+                                <Badge label={devis.statut} />
+                                <div className="w-px h-8 bg-slate-400 shrink-0" />
+                                    <div className="flex bg-slate-300 p-1 rounded-xl gap-1">
+                                        {/* Direction */}
                                         <button
-                                            onClick={devis.statut === 'CREER' ? handleEnvoyer : undefined}
-                                            disabled={devis.statut !== 'CREER' || actionLoading === 'envoyer'}
-                                            className={`px-4 py-2 text-sm rounded-lg font-semibold flex items-center gap-2 transition-all ${
-                                            devis.statut === 'CREER'
-                                                ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                                                : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
-                                            }`}
+                                        onClick={() => detail && previewPdf(detail, 'direction')}
+                                        disabled={pdfLoading}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-slate-700
+                                            text-xs font-bold rounded-lg border border-slate-200 shadow-sm
+                                            hover:bg-slate-50 disabled:opacity-50 transition-all"
+                                        title="Aperçu direction"
                                         >
-                                            {actionLoading === 'envoyer' ? (
-                                            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                                            </svg>
-                                            ) : <span className={devis.statut !== 'CREER' ? 'grayscale opacity-50' : ''}>📤</span>}
-                                            Envoyer le devis
+                                        <Eye size={13} className="text-slate-400" />Direction
+                                        </button>
+                                        <button
+                                        onClick={handlePdfDirection}
+                                        disabled={pdfLoading}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-slate-700
+                                            text-xs font-bold rounded-lg border border-slate-200 shadow-sm
+                                            hover:bg-slate-50 disabled:opacity-50 transition-all"
+                                        title="Télécharger direction"
+                                        >
+                                        <Download size={14} className="text-slate-400" /> 
                                         </button>
 
-                                        <span className="text-gray-300">›</span>
+                                        <div className="w-px bg-slate-200 mx-0.5" />
 
-                                        {/* Approuver */}
+                                        {/* Client */}
                                         <button
-                                            onClick={devis.statut === 'DEVIS_A_APPROUVER' ? handleApprouver : undefined}
-                                            disabled={devis.statut !== 'DEVIS_A_APPROUVER' || actionLoading === 'approuver'}
-                                            className={`px-4 py-2 text-sm rounded-lg font-semibold flex items-center gap-2 transition-all ${
-                                            devis.statut === 'DEVIS_A_APPROUVER'
-                                                ? 'bg-green-600 hover:bg-green-700 text-white'
-                                                : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
-                                            }`}
+                                        onClick={() => detail && previewPdf(detail, 'client')}
+                                        disabled={pdfLoading}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-slate-700
+                                            text-xs font-bold rounded-lg border border-slate-200 shadow-sm
+                                            hover:bg-slate-50 disabled:opacity-50 transition-all"
+                                        title="Aperçu client"
                                         >
-                                            {actionLoading === 'approuver' ? (
-                                            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                                            </svg>
-                                            ) : <span className={devis.statut !== 'DEVIS_A_APPROUVER' ? 'grayscale opacity-50' : ''}>✅</span>}
-                                            Approuver
+                                        <Eye size={13} className="text-teal-500" />Client
                                         </button>
-
-                                        <span className="text-gray-300">›</span>
-
-                                        {/* Créer le Visa */}
                                         <button
-                                            onClick={devis.statut === 'DEVIS_APPROUVE' ? handleCreerVisa : undefined}
-                                            disabled={devis.statut !== 'DEVIS_APPROUVE' || actionLoading === 'visa'}
-                                            className={`px-4 py-2 text-sm rounded-lg font-semibold flex items-center gap-2 transition-all ${
-                                            devis.statut === 'DEVIS_APPROUVE'
-                                                ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
-                                                : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
-                                            }`}
+                                        onClick={handlePdfClient}
+                                        disabled={pdfLoading}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-slate-700
+                                            text-xs font-bold rounded-lg border border-slate-200 shadow-sm
+                                            hover:bg-slate-50 disabled:opacity-50 transition-all"
+                                        title="Télécharger client"
                                         >
-                                            {actionLoading === 'visa' ? (
-                                            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                                            </svg>
-                                            ) : <span className={devis.statut !== 'DEVIS_APPROUVE' ? 'grayscale opacity-50' : ''}>🛂</span>}
-                                            Créer le Visa
+                                        <Download size={14} className="text-teal-500" />
                                         </button>
                                     </div>
+
+                                    {/* Séparateur */}
+                                    <div className="w-px h-8 bg-slate-400 shrink-0" />
+                                        <div className="flex items-center gap-2">
+                                            {/* Envoyer le devis */}
+                                            <button
+                                                onClick={devis.statut === 'CREER' ? handleEnvoyer : undefined}
+                                                disabled={devis.statut !== 'CREER' || actionLoading === 'envoyer'}
+                                                className={`px-4 py-2 text-sm rounded-lg font-semibold flex items-center gap-2 transition-all ${
+                                                devis.statut === 'CREER'
+                                                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                                                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                                                }`}
+                                            >
+                                                {actionLoading === 'envoyer' ? (
+                                                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                                                </svg>
+                                                ) : <span className={devis.statut !== 'CREER' ? 'grayscale opacity-50' : ''}>📤</span>}
+                                                Envoyer le devis
+                                            </button>
+
+                                            <span className="text-gray-300">›</span>
+
+                                            {/* Approuver */}
+                                            <button
+                                                onClick={devis.statut === 'DEVIS_A_APPROUVER' ? handleApprouver : undefined}
+                                                disabled={devis.statut !== 'DEVIS_A_APPROUVER' || actionLoading === 'approuver'}
+                                                className={`px-4 py-2 text-sm rounded-lg font-semibold flex items-center gap-2 transition-all ${
+                                                devis.statut === 'DEVIS_A_APPROUVER'
+                                                    ? 'bg-green-600 hover:bg-green-700 text-white'
+                                                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                                                }`}
+                                            >
+                                                {actionLoading === 'approuver' ? (
+                                                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                                                </svg>
+                                                ) : <span className={devis.statut !== 'DEVIS_A_APPROUVER' ? 'grayscale opacity-50' : ''}>✅</span>}
+                                                Approuver
+                                            </button>
+
+                                            <span className="text-gray-300">›</span>
+
+                                            {/* Créer le Visa */}
+                                            <button
+                                                onClick={devis.statut === 'DEVIS_APPROUVE' ? handleCreerVisa : undefined}
+                                                disabled={devis.statut !== 'DEVIS_APPROUVE' || actionLoading === 'visa'}
+                                                className={`px-4 py-2 text-sm rounded-lg font-semibold flex items-center gap-2 transition-all ${
+                                                devis.statut === 'DEVIS_APPROUVE'
+                                                    ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                                                    : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                                                }`}
+                                            >
+                                                {actionLoading === 'visa' ? (
+                                                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                                                </svg>
+                                                ) : <span className={devis.statut !== 'DEVIS_APPROUVE' ? 'grayscale opacity-50' : ''}>🛂</span>}
+                                                Créer le Visa
+                                            </button>
+                                        </div>
+                                    </div>
+                        </div>
+                        
+
+                        {/* ── Feedback actions ── */}
+                        {actionSuccess && (
+                        <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg px-4 py-3 flex items-center gap-2">
+                            ✓ {actionSuccess}
+                        </div>
+                        )}
+                        {actionError && (
+                        <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg px-4 py-3 flex items-center gap-2">
+                            ⚠️ {actionError}
+                        </div>
+                        )}
+                        <div className="flex-1 min-h-0 overflow-y-auto py-2 space-y-4">
+
+                            {/* ── Résumé devis ── */}
+                            <Card title="Résumé du devis">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12">
+                                <Row label="Référence"      value={devis.reference} />
+                                <Row label="Statut"         value={<Badge label={devis.statut} />} />
+                                <Row label="Total général"  value={<span className="text-indigo-700 font-bold text-base">{fmt(devis.totalGeneral)} Ar</span>} />
+                                <Row label="Dernière MAJ"   value={fmtDate(devis.updatedAt)} />
                                 </div>
-                    </div>
+                            </Card>
 
-                {/* ── Feedback actions ── */}
-                {actionSuccess && (
-                <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg px-4 py-3 flex items-center gap-2">
-                    ✓ {actionSuccess}
-                </div>
-                )}
-                {actionError && (
-                <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg px-4 py-3 flex items-center gap-2">
-                    ⚠️ {actionError}
-                </div>
-                )}
+                            {/* ── Lignes de prospection ── */}
+                            <Card title={`Lignes de prospection (${visaProspectionLignes.length})`}>
+                                <div className="space-y-1">
+                                {visaProspectionLignes.map((ligne, idx) => (
+                                    <div key={ligne.id} className=" border border-gray-100 overflow-hidden">
 
-                {/* ── Résumé devis ── */}
-                <Card title="Résumé du devis">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12">
-                    <Row label="Référence"      value={devis.reference} />
-                    <Row label="Statut"         value={<Badge label={devis.statut} />} />
-                    <Row label="Total général"  value={<span className="text-indigo-700 font-bold text-base">{fmt(devis.totalGeneral)} Ar</span>} />
-                    <Row label="Dernière MAJ"   value={fmtDate(devis.updatedAt)} />
-                    </div>
-                </Card>
+                                    {/* Header ligne */}
+                                    <div className="flex items-center justify-between px-4 py-2.5 bg-indigo-50">
+                                        <div className="flex items-center gap-3">
+                                            <span className="text-xs font-bold text-indigo-400">#{idx + 1}</span>
+                                            <span className="font-semibold text-gray-800 text-sm">
+                                                {ligne.visaParams.pays.pays}
+                                                <span className="ml-2 text-xs text-gray-400 font-normal">
+                                                {ligne.visaParams.code} — {ligne.visaParams.visaType.nom}
+                                                </span>
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Badge label={ligne.etatVisa == 'CREER' ? 'créé' : ligne.etatVisa} />
+                                        </div>
+                                    </div>
 
-                {/* ── Lignes de prospection ── */}
-                <Card title={`Lignes de prospection (${visaProspectionLignes.length})`}>
-                    <div className="space-y-4">
-                    {visaProspectionLignes.map((ligne, idx) => (
-                        <div key={ligne.id} className="rounded-xl border border-gray-100 overflow-hidden">
+                                    {/* Body ligne — grille infos */}
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-0 divide-x divide-y divide-gray-50">
 
-                        {/* Header ligne */}
-                        <div className="flex items-center justify-between px-4 py-2.5 bg-indigo-50">
-                            <div className="flex items-center gap-3">
-                            <span className="text-xs font-bold text-indigo-400">#{idx + 1}</span>
-                            <span className="font-semibold text-gray-800 text-sm">
-                                {ligne.visaParams.pays.pays}
-                                <span className="ml-2 text-xs text-gray-400 font-normal">
-                                {ligne.visaParams.code} — {ligne.visaParams.visaType.nom}
-                                </span>
-                            </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                            <Badge label={ligne.etatVisa} />
-                            <span className={`text-xs font-semibold ${ligne.etatPiece ? 'text-green-600' : 'text-orange-500'}`}>
-                                {ligne.etatPiece ? '✓ Pièces OK' : '✗ Pièces incomplètes'}
-                            </span>
-                            </div>
+                                        {/* Séjour */}
+                                        <div className="px-4 py-3 space-y-0.5">
+                                        <p className="text-xs text-gray-400 uppercase tracking-wide">Séjour</p>
+                                        <p className="text-sm font-medium text-gray-800">
+                                            {fmtDate(ligne.dateDepart)} → {fmtDate(ligne.dateRetour)}
+                                        </p>
+                                        <p className="text-xs text-gray-500">
+                                            {ligne.visaParams.visaDuree.duree} j · {ligne.visaParams.visaEntree.entree} · {ligne.nombre} pers.
+                                        </p>
+                                        </div>
+
+                                        {/* Consulat */}
+                                        <div className="px-4 py-3 space-y-0.5">
+                                        <p className="text-xs text-gray-400 uppercase tracking-wide">Consulat</p>
+                                        <p className="text-sm font-medium text-gray-800 capitalize">
+                                            {ligne.consulat?.nom ?? '—'}
+                                        </p>
+                                        <p className="text-xs text-gray-500">
+                                            PU : {fmt(ligne.puConsulatDevise)} {ligne.devise} / {fmt(ligne.puConsulatAriary)} Ar
+                                        </p>
+                                        </div>
+
+                                        {/* Tarif client */}
+                                        <div className="px-4 py-3 space-y-0.5">
+                                        <p className="text-xs text-gray-400 uppercase tracking-wide">Tarif client</p>
+                                        <p className="text-sm font-bold text-indigo-700">
+                                            {fmt(ligne.puClientAriary * ligne.nombre)} Ar
+                                        </p>
+                                        <p className="text-xs text-gray-500">
+                                            {fmt(ligne.puClientDevise)} {ligne.devise} × {ligne.nombre} pers.
+                                        </p>
+                                        </div>
+
+                                        {/* Devise */}
+                                        <div className="px-4 py-3 space-y-0.5">
+                                        <p className="text-xs text-gray-400 uppercase tracking-wide">Change</p>
+                                        <p className="text-sm font-medium text-gray-800">
+                                            1 {ligne.devise} = {fmt(ligne.tauxEchange)} Ar
+                                        </p>
+                                        <p className="text-xs text-gray-500">
+                                            Traitement : {ligne.visaParams.dureeTraitement} j
+                                        </p>
+                                        </div>
+
+                                    </div>
+                                    </div>
+                                ))}
+                                </div>
+                            </Card>    
                         </div>
-
-                        {/* Body ligne — grille infos */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-0 divide-x divide-y divide-gray-50">
-
-                            {/* Séjour */}
-                            <div className="px-4 py-3 space-y-0.5">
-                            <p className="text-xs text-gray-400 uppercase tracking-wide">Séjour</p>
-                            <p className="text-sm font-medium text-gray-800">
-                                {fmtDate(ligne.dateDepart)} → {fmtDate(ligne.dateRetour)}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                                {ligne.visaParams.visaDuree.duree} j · {ligne.visaParams.visaEntree.entree} · {ligne.nombre} pers.
-                            </p>
-                            </div>
-
-                            {/* Consulat */}
-                            <div className="px-4 py-3 space-y-0.5">
-                            <p className="text-xs text-gray-400 uppercase tracking-wide">Consulat</p>
-                            <p className="text-sm font-medium text-gray-800 capitalize">
-                                {ligne.consulat?.nom ?? '—'}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                                PU : {fmt(ligne.puConsulatDevise)} {ligne.devise} / {fmt(ligne.puConsulatAriary)} Ar
-                            </p>
-                            </div>
-
-                            {/* Tarif client */}
-                            <div className="px-4 py-3 space-y-0.5">
-                            <p className="text-xs text-gray-400 uppercase tracking-wide">Tarif client</p>
-                            <p className="text-sm font-bold text-indigo-700">
-                                {fmt(ligne.puClientAriary * ligne.nombre)} Ar
-                            </p>
-                            <p className="text-xs text-gray-500">
-                                {fmt(ligne.puClientDevise)} {ligne.devise} × {ligne.nombre} pers.
-                            </p>
-                            </div>
-
-                            {/* Devise */}
-                            <div className="px-4 py-3 space-y-0.5">
-                            <p className="text-xs text-gray-400 uppercase tracking-wide">Change</p>
-                            <p className="text-sm font-medium text-gray-800">
-                                1 {ligne.devise} = {fmt(ligne.tauxEchange)} Ar
-                            </p>
-                            <p className="text-xs text-gray-500">
-                                Traitement : {ligne.visaParams.dureeTraitement} j
-                            </p>
-                            </div>
-
-                        </div>
-                        </div>
-                    ))}
                     </div>
-                </Card>
-
-                {/* ── Suivi / Timeline ── */}
-                <Card title="Suivi du dossier">
-                    <div className="flex items-start gap-0 overflow-x-auto pb-2">
-                    {suivi && TIMELINE_STEPS.map((step, idx) => {
-                        const date   = suivi[step.key] as string | null;
-                        const isDone = !!date || true;
-                        const isLast = idx === TIMELINE_STEPS.length - 1;
-
-                        return (
-                        <div key={step.key} className="flex items-center shrink-0">
-                            {/* Étape */}
-                            <div className="flex flex-col items-center gap-1 w-32">
-                            <div className={`h-8 w-8 rounded-full flex items-center justify-center text-sm font-bold border-2 transition-all ${
-                                isDone
-                                ? 'bg-green-500 border-green-500 text-white'
-                                : 'bg-white border-gray-200 text-gray-300'
-                            }`}>
-                                {isDone ? '✓' : idx + 1}
-                            </div>
-                            <p className={`text-xs text-center font-medium ${isDone ? 'text-gray-700' : 'text-gray-300'}`}>
-                                {step.label}
-                            </p>
-                            <p className="text-xs text-gray-400 text-center">{fmtDate(date)}</p>
-                            </div>
-
-                            {/* Connecteur */}
-                            {!isLast && (
-                            <div className={`h-0.5 w-8 mb-6 ${
-                                isDone && !!(suivi[TIMELINE_STEPS[idx + 1].key] as string | null)
-                                ? 'bg-green-400'
-                                : 'bg-gray-200'
-                            }`} />
-                            )}
-                        </div>
-                        );
-                    })}
-                    </div>
-                </Card>         
-
                 </div>
             </TabContainer>
         </div>

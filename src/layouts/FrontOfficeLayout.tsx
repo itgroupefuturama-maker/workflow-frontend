@@ -57,7 +57,7 @@ export default function FrontOfficeLayout() {
 
   return (
     <AppLoader>
-      <div className="flex flex-col h-screen bg-slate-200">
+      <div className="flex flex-col h-screen bg-slate-300">
         <AppBar isBackOffice={false} />
         <main className="flex-1 overflow-auto">
           <Outlet />

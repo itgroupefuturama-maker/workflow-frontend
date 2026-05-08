@@ -337,7 +337,7 @@ const HotelConfirmationModal: React.FC<HotelConfirmationModalProps> = ({
               </div>
 
               <div className="p-6 space-y-4">
-                <pre className="bg-gray-900 text-green-400 p-4 rounded text-xs overflow-x-auto font-mono whitespace-pre-wrap">
+                {/* <pre className="bg-gray-900 text-green-400 p-4 rounded text-xs overflow-x-auto font-mono whitespace-pre-wrap">
                   {JSON.stringify(
                     {
                       hotelLigneId: ligne.id,
@@ -351,7 +351,7 @@ const HotelConfirmationModal: React.FC<HotelConfirmationModalProps> = ({
                     null,
                     2
                   )}
-                </pre>
+                </pre> */}
                 <div className="bg-amber-50 border border-amber-200 rounded p-3 flex items-start gap-2">
                   <span>⚠️</span>
                   <p className="text-sm text-amber-800">

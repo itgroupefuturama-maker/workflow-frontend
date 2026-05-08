@@ -104,6 +104,9 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
   // Préférences dispo : on récupère depuis le store pour les services actifs
   const servicesStore = useSelector((state: RootState) => state.serviceSpecifique.items);
 
+  const fmt = (val?: number | null, suffix = '') =>
+    val != null ? `${Number(val).toFixed(2)}${suffix}` : '—';
+
   // ─── Effets ──────────────────────────────────────────────
   useEffect(() => {
     if (currentBeneficiaireId) {
@@ -814,19 +817,19 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
                             <div className="flex justify-between items-center py-2 border-b border-gray-200">
                               <span className="text-xs text-gray-600">Billet Client</span>
                               <span className="text-sm font-semibold text-gray-900">
-                                {ligne?.prospectionLigne?.montantBilletClientDevise || '—'}
+                                {fmt(ligne?.prospectionLigne?.montantBilletClientDevise)}
                               </span>
                             </div>
                             <div className="flex justify-between items-center py-2 border-b border-gray-200">
                               <span className="text-xs text-gray-600">Service Client</span>
                               <span className="text-sm font-semibold text-gray-900">
-                                {ligne?.prospectionLigne?.montantServiceClientDevise || '—'}
+                                {fmt(ligne?.prospectionLigne?.montantServiceClientDevise)}
                               </span>
                             </div>
                             <div className="flex justify-between items-center py-2">
                               <span className="text-xs text-gray-600">Pénalité Client</span>
                               <span className="text-sm font-semibold text-red-600">
-                                {ligne?.prospectionLigne?.montantPenaliteClientDevise || '—'}
+                                {fmt(ligne?.prospectionLigne?.montantPenaliteClientDevise)}
                               </span>
                             </div>
                           </div>
@@ -841,19 +844,19 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
                             <div className="flex justify-between items-center py-2 border-b border-gray-200">
                               <span className="text-xs text-gray-600">Billet Client</span>
                               <span className="text-sm font-semibold text-gray-900">
-                                {ligne?.prospectionLigne?.montantBilletClientAriary || '—'} Ar
+                                {fmt(ligne?.prospectionLigne?.montantBilletClientAriary, ' Ar')}
                               </span>
                             </div>
                             <div className="flex justify-between items-center py-2 border-b border-gray-200">
                               <span className="text-xs text-gray-600">Service Client</span>
                               <span className="text-sm font-semibold text-gray-900">
-                                {ligne?.prospectionLigne?.montantServiceClientAriary || '—'} Ar
+                                {fmt(ligne?.prospectionLigne?.montantServiceClientAriary, ' Ar')}
                               </span>
                             </div>
                             <div className="flex justify-between items-center py-2">
                               <span className="text-xs text-gray-600">Pénalité Client</span>
                               <span className="text-sm font-semibold text-red-600">
-                                {ligne?.prospectionLigne?.montantPenaliteClientAriary || '—'} Ar
+                                {fmt(ligne?.prospectionLigne?.montantPenaliteClientAriary, ' Ar')}
                               </span>
                             </div>
                           </div>
@@ -866,7 +869,7 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
                           </h4>
                           <div className="bg-white border border-gray-300 rounded px-4 py-3">
                             <p className="text-xl font-semibold text-gray-900">
-                              {ligne?.prospectionLigne?.commissionEnDevise || '—'}
+                              {fmt(ligne?.prospectionLigne?.commissionEnDevise)}
                             </p>
                           </div>
                         </div>
@@ -877,7 +880,7 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
                           </h4>
                           <div className="bg-white border border-gray-300 rounded px-4 py-3">
                             <p className="text-xl font-semibold text-gray-900">
-                              {ligne?.prospectionLigne?.commissionEnAriary || '—'} Ar
+                              {fmt(ligne?.prospectionLigne?.commissionEnAriary, ' Ar')}
                             </p>
                           </div>
                         </div>

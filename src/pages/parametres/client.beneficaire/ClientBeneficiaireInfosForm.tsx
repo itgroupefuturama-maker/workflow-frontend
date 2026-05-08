@@ -39,6 +39,7 @@ export default function ClientBeneficiaireInfosForm() {
   const [referenceCin, setReferenceCin] = useState('');
   const [dateDelivranceCin, setDateDelivranceCin] = useState('');
   const [dateValiditeCin, setDateValiditeCin] = useState('');
+  const [dateNaissance, setDateNaissance] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [tel, setTel] = useState('');
   const [document, setDocument] = useState<File | null>(null);
@@ -63,6 +64,7 @@ export default function ClientBeneficiaireInfosForm() {
       if (editingInfo.referenceCin) setReferenceCin(editingInfo.referenceCin);
       if (editingInfo.dateDelivranceCin) setDateDelivranceCin(editingInfo.dateDelivranceCin.split('T')[0]);
       if (editingInfo.dateValiditeCin) setDateValiditeCin(editingInfo.dateValiditeCin.split('T')[0]);
+      if (editingInfo.dateNaissance) setDateNaissance(editingInfo.dateNaissance.split('T')[0]);
       if (editingInfo.whatsapp) setWhatsapp(editingInfo.whatsapp);
       if (editingInfo.tel) setTel(editingInfo.tel);
       setDocument(null);
@@ -91,6 +93,7 @@ export default function ClientBeneficiaireInfosForm() {
       dateValiditeDoc: toISODateString(dateValiditeDoc),
       dateDelivranceCin: dateDelivranceCin ? toISODateString(dateDelivranceCin) : undefined,
       dateValiditeCin: dateValiditeCin ? toISODateString(dateValiditeCin) : undefined,
+      dateNaissance: dateNaissance ? toISODateString(dateNaissance) : undefined,
       whatsapp: whatsapp || undefined,
       tel: tel || undefined,
       document: document || undefined,
@@ -112,6 +115,7 @@ export default function ClientBeneficiaireInfosForm() {
     setIsSubmitting(false);
     setDocument(null);
     setCin(null);
+    setDateNaissance('');
   };
 
   const handleEdit = (info: ClientBeneficiaireInfo) => {
@@ -261,6 +265,17 @@ export default function ClientBeneficiaireInfosForm() {
                 <input type="date" value={dateValiditeCin} onChange={(e) => setDateValiditeCin(e.target.value)}
                        className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm" />
               </div>
+              <div className="lg:col-span-1">
+                <label className="block text-xs font-semibold text-gray-500 mb-2">
+                  Date de naissance
+                </label>
+                <input
+                  type="date"
+                  value={dateNaissance}
+                  onChange={(e) => setDateNaissance(e.target.value)}
+                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none text-sm"
+                />
+              </div>
             </div>
           </section>
 
@@ -365,6 +380,11 @@ export default function ClientBeneficiaireInfosForm() {
                         <span className="block font-medium">Validité CIN</span>
                         {formatDate(info.dateValiditeCin)}
                       </div>
+                    )}
+                    {info.dateNaissance && (
+                      <p className="text-[10px] text-gray-400 mt-0.5">
+                        Né(e) le : {formatDate(info.dateNaissance)}
+                      </p>
                     )}
                     <div className="flex items-center gap-2 ml-4">
                       {info.document && (

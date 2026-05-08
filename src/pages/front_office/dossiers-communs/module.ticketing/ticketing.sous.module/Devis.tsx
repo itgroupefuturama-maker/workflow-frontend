@@ -12,7 +12,7 @@ import AnnulationDevisModal from '../../../../../components/modals/AnnulationDev
 import { API_URL } from '../../../../../service/env';
 import { TicketingHeader } from './components.billet/TicketingHeader';
 import { devisListeItems } from './components.billet/utils/ticketingHeaderItems';
-import { PdfDownloadButton } from '../../module.parametre/sections/pdf.generation/components/PdfDownloadButton';
+import { PdfDownloadButton } from '../../module.pdf/pdf.generation/components/PdfDownloadButton';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -200,7 +200,7 @@ export default function Devis () {
         <div className="flex h-full min-h-0 overflow-hidden">
           {/* ── Colonne principale ── */}
           <div className="flex-1 min-w-0 flex flex-col min-h-0"> 
-            <div className="shrink-0 px-4 pt-2 bg-white">
+            <div className="shrink-0 px-4 bg-white">
               <TicketingHeader items={devisListeItems(enteteId)} />
             </div>
             {loading && (
@@ -299,10 +299,21 @@ export default function Devis () {
                                   Devis annulé
                                 </button>
                               )}
-                              <FiChevronRight
+                              {/* Bouton Voir liste Billet - Toujours actif */}
+                              <button
+                                disabled= { devis.statut == 'ANNULER' || devis.statut == 'DEVIS_A_APPROUVER'}
+                                  onClick={() => navigate(`/dossiers-communs/ticketing/pages/billet/${devis.id}?prospectionEnteteId=${devis.data?.entete?.id}`)}
+                                  className={`p-2.5 rounded-full transition-colors flex items-center gap-2 font-medium ${
+                                    devis.statut === 'DEVIS_APPROUVE'
+                                      ? 'bg-slate-100 text-slate-800 hover:bg-slate-200 cursor-pointer'
+                                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                  }`}
+                                >
+                                <FiChevronRight
                                   size={16}
                                   className={`text-slate-400 transition-transform `}
                                 />
+                              </button>
                             </div>
 
                             {/* Contenu détaillé (visible quand ouvert) */}
@@ -424,22 +435,11 @@ export default function Devis () {
                                 <p className="text-sm text-slate-400 italic mt-4">Aucune ligne dans ce devis</p>
                               )}
                               <div className="mt-6 flex flex-wrap justify-end gap-3 items-center">
-                                {/* Bouton Voir liste Billet - Toujours actif */}
-                                <button
-                                disabled= { devis.statut == 'ANNULER' || devis.statut == 'DEVIS_A_APPROUVER'}
-                                  onClick={() => navigate(`/dossiers-communs/ticketing/pages/billet/${devis.id}?prospectionEnteteId=${devis.data?.entete?.id}`)}
-                                  className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-2 font-medium ${
-                                    devis.statut === 'DEVIS_APPROUVE'
-                                      ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
-                                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                  }`}
-                                >
-                                  <FiList size={16} />
-                                </button>
+                                
 
                                 
                                 {/* Bouton Voir/Télécharger PDF - Toujours actif */}
-                                <button
+                                {/* <button
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     handleDownloadPdf(devis.id, devis.reference);
@@ -458,14 +458,14 @@ export default function Devis () {
                                       PDF
                                     </>
                                   )}
-                                </button>
+                                </button> */}
 
                                 {/* Séparateur */}
-                                <div className="w-px h-6 bg-gray-300 mx-1" />
+                                {/* <div className="w-px h-6 bg-gray-300 mx-1" /> */}
 
-                                <button
+                                {/* <button
                                   onClick={() => {
-                                    if (devis.statut === 'CREER') {   // adapte selon le statut où le bouton doit être actif
+                                    if (devis.statut === 'CREER') {   
                                       handleApprouverDirection(devis.id, devis.reference);
                                     }
                                   }}
@@ -488,7 +488,7 @@ export default function Devis () {
                                       Envoyer Direction
                                     </>
                                   )}
-                                </button>
+                                </button> */}
 
                                 {/* Bouton Devis à approuver */}
                                 <button

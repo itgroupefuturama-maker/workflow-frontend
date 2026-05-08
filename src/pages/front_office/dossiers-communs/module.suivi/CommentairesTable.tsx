@@ -1,178 +1,143 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../../../app/store';
+import { MessageSquare, Send, Edit2, Trash2, X, Check, Clock } from 'lucide-react';
 import {
   createCommentaire,
   updateCommentaire,
   deleteCommentaire,
-  type Commentaire,
   fetchCommentairesByPrestation,
+  type Commentaire,
 } from '../../../../app/front_office/commentaireSlice';
 
-interface Props {
-  prestationId: string;
-}
-
-const CommentairesTable: React.FC<Props> = ({ prestationId }) => {
+const CommentairesTable: React.FC<{ prestationId: string }> = ({ prestationId }) => {
   const dispatch = useDispatch<AppDispatch>();
-
   const { list: commentaires } = useSelector((state: RootState) => state.commentaire);
 
   const [newComment, setNewComment] = useState('');
-  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
-  const [editingCommentText, setEditingCommentText] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingText, setEditingText] = useState('');
 
   useEffect(() => {
-    if (prestationId) {
-      dispatch(fetchCommentairesByPrestation(prestationId));
-    }
+    if (prestationId) dispatch(fetchCommentairesByPrestation(prestationId));
   }, [dispatch, prestationId]);
 
   const handleCreate = async () => {
-    if (!newComment.trim() || !prestationId) return;
-    try {
-      await dispatch(createCommentaire({ commentaire: newComment.trim(), prestationId })).unwrap();
-      setNewComment('');
-    } catch {
-      alert('Erreur création commentaire');
-    }
-  };
-
-  const startEditing = (comment: Commentaire) => {
-    setEditingCommentId(comment.id);
-    setEditingCommentText(comment.commentaire);
-  };
-
-  const cancelEditing = () => {
-    setEditingCommentId(null);
-    setEditingCommentText('');
-  };
-
-  const handleUpdate = async () => {
-    if (!editingCommentId || !editingCommentText.trim()) return;
-    try {
-      await dispatch(updateCommentaire({ id: editingCommentId, commentaire: editingCommentText.trim() })).unwrap();
-      cancelEditing();
-    } catch {
-      alert('Erreur modification commentaire');
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm('Supprimer ce commentaire ?')) return;
-    try {
-      await dispatch(deleteCommentaire(id)).unwrap();
-    } catch {
-      alert('Erreur suppression commentaire');
-    }
+    if (!newComment.trim()) return;
+    await dispatch(createCommentaire({ commentaire: newComment.trim(), prestationId })).unwrap();
+    setNewComment('');
   };
 
   return (
-    <div className="bg-white overflow-hidden border border-gray-200 rounded-bl-xl rounded-r-xl shadow-sm">
-      <div className="px-6 py-4">
-        <h3 className="text-slate-800 font-semibold text-lg flex items-center gap-2">
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-          </svg>
-          Commentaires
-        </h3>
+    <div className="bg-white border border-slate-300 rounded-xl shadow-sm overflow-hidden">
+      {/* Header Minimaliste */}
+      <div className="px-5 py-4 border-b border-slate-300 flex items-center justify-between bg-slate-200">
+        <div className="flex items-center gap-2">
+          <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
+            <MessageSquare size={18} />
+          </div>
+          <h3 className="font-bold text-slate-700 text-sm">Commentaires</h3>
+          <span className="px-2 py-0.5 bg-slate-300 text-slate-600 text-[10px] font-bold rounded-full">
+            {commentaires.length}
+          </span>
+        </div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-gray-50 border-b-2 border-gray-200">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Date</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Commentaire</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Utilisateur</th>
-              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {commentaires.map((comment, index) => (
-              <tr
-                key={comment.id}
-                className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-blue-50 transition-colors duration-150`}
-              >
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-medium">
-                  {new Date(comment.createdAt).toLocaleDateString('fr-FR')}
-                </td>
-                <td className="px-4 py-3 text-sm text-gray-700">
-                  {editingCommentId === comment.id ? (
-                    <input
-                      className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
-                      value={editingCommentText}
-                      onChange={(e) => setEditingCommentText(e.target.value)}
-                    />
-                  ) : (
-                    <span className="line-clamp-2">{comment.commentaire}</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-sm">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                    {comment.User.prenom}
+      {/* Liste des commentaires style "Timeline" */}
+      <div className="divide-y divide-slate-100 max-h-[400px] overflow-y-auto">
+        {commentaires.length > 0 ? (
+          commentaires.map((comment) => (
+            <div key={comment.id} className="group p-4 hover:bg-slate-50/50 transition-colors">
+              <div className="flex items-start gap-3">
+                {/* Avatar Initiales */}
+                <div className="w-8 h-8 rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center shrink-0">
+                  <span className="text-[10px] font-bold text-indigo-700">
+                    {comment.User.prenom.charAt(0).toUpperCase()}
                   </span>
-                </td>
-                <td className="px-4 py-3 text-center">
-                  {editingCommentId === comment.id ? (
-                    <div className="flex gap-2 justify-center">
-                      <button
-                        onClick={handleUpdate}
-                        className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
-                        title="Valider"
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-slate-900">{comment.User.prenom}</span>
+                      <span className="flex items-center gap-1 text-[11px] text-slate-400 font-medium">
+                        <Clock size={12} />
+                        {new Date(comment.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
+                      </span>
+                    </div>
+
+                    {/* Actions au Hover */}
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button 
+                        onClick={() => { setEditingId(comment.id); setEditingText(comment.commentaire); }}
+                        className="p-1 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded"
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
+                        <Edit2 size={14} />
                       </button>
-                      <button
-                        onClick={cancelEditing}
-                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Annuler"
+                      <button 
+                        onClick={() => confirm('Supprimer ?') && dispatch(deleteCommentaire(comment.id))}
+                        className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded"
                       >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
+                        <Trash2 size={14} />
                       </button>
+                    </div>
+                  </div>
+
+                  {editingId === comment.id ? (
+                    <div className="mt-2 flex flex-col gap-2">
+                      <textarea
+                        className="w-full p-2 text-sm border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        value={editingText}
+                        onChange={(e) => setEditingText(e.target.value)}
+                        autoFocus
+                      />
+                      <div className="flex justify-end gap-2">
+                        <button onClick={() => setEditingId(null)} className="px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100 rounded">
+                          Annuler
+                        </button>
+                        <button 
+                          onClick={async () => {
+                            await dispatch(updateCommentaire({ id: comment.id, commentaire: editingText })).unwrap();
+                            setEditingId(null);
+                          }}
+                          className="px-2 py-1 text-xs font-medium bg-blue-600 text-white rounded hover:bg-blue-700"
+                        >
+                          Enregistrer
+                        </button>
+                      </div>
                     </div>
                   ) : (
-                    <div className="flex gap-2 justify-center">
-                      <button
-                        onClick={() => startEditing(comment)}
-                        className="px-3 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                      >
-                        Modifier
-                      </button>
-                      <button
-                        onClick={() => handleDelete(comment.id)}
-                        className="px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        Supprimer
-                      </button>
-                    </div>
+                    <p className="text-sm text-slate-600 leading-relaxed break-words">
+                      {comment.commentaire}
+                    </p>
                   )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                </div>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="py-10 text-center text-slate-400 text-sm italic">
+            Aucun commentaire pour le moment.
+          </div>
+        )}
       </div>
 
-      {/* Ajout */}
-      <div className="bg-gray-50 px-6 py-4 border-t border-gray-200">
-        <div className="flex gap-3">
+      {/* Input de saisie style "Messenger/Linear" */}
+      <div className="p-4 bg-white border-t border-slate-100">
+        <div className="relative flex items-center">
           <input
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-            placeholder="Ajouter un commentaire..."
-            className="flex-1 px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+            placeholder="Écrire un message..."
+            className="w-full pl-4 pr-12 py-2.5 bg-slate-200 border-transparent focus:bg-slate-200 focus:border-blue-500 focus:ring-0 rounded-xl text-sm transition-all outline-none"
           />
           <button
             onClick={handleCreate}
-            className="px-6 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-colors shadow-sm hover:shadow-md"
+            disabled={!newComment.trim()}
+            className="absolute right-2 p-1.5 text-blue-500 hover:bg-blue-300 disabled:text-slate-400 rounded-xl transition-colors"
           >
-            Ajouter
+            <Send size={18}/>
           </button>
         </div>
       </div>

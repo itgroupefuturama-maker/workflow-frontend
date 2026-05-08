@@ -18,6 +18,7 @@ import axios from '../../../../../service/Axios';
 import { createPortal } from 'react-dom';
 import SuiviTabSection from '../../module.suivi/SuiviTabSection';
 import { ChevronDown } from 'lucide-react';
+import { fetchServicesByType, selectServicesByType } from '../../../../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
 
 export default function ProspectionDetail() {
   const { enteteId } = useParams<{ enteteId: string }>();
@@ -62,11 +63,8 @@ export default function ProspectionDetail() {
       error: errorLignes,
   } = useSelector((state: RootState) => state.prospectionsLignes);
 
-  const {
-    items: servicesDisponibles,
-    loading: loadingServices,
-    error: errorServices,
-  } = useSelector((state: RootState) => state.serviceSpecifique);
+  const servicesDisponibles = useSelector(selectServicesByType("TICKET"));
+  const loadingServices = useSelector((state: RootState) => state.serviceSpecifique.loading);
 
   const { data: fournisseurs, loading: fournisseursLoading } = useSelector(
     (state: RootState) => state.fournisseurs
@@ -75,6 +73,7 @@ export default function ProspectionDetail() {
   const loading = loadingLignes || loadingServices || loadingDest || loadingPays;
 
   const [newLine, setNewLine] = useState<any>(null);
+  
 
   const [collapsedGroups, setCollapsedGroups] = useState({
     infosVol: false,
@@ -90,7 +89,6 @@ export default function ProspectionDetail() {
     setCollapsedGroups(prev => ({ ...prev, [group]: !prev[group] }));
   };
 
-
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
@@ -100,6 +98,7 @@ export default function ProspectionDetail() {
   useEffect(() => {
     if (enteteId) {
       dispatch(fetchProspectionLignes(enteteId));
+      // dispatch(fetchServicesByType("TICKET"));
     }
     if (destinations.length === 0) {
       dispatch(fetchDestinations());
@@ -411,7 +410,7 @@ export default function ProspectionDetail() {
       ).unwrap();
 
       // Optionnel : toast de succès
-      alert("Commission appliquée mise à jour avec succès");
+      // alert("Commission appliquée mise à jour avec succès");
       closeModal();
     } catch (err: any) {
       console.error(err);
@@ -744,15 +743,13 @@ export default function ProspectionDetail() {
     return <div className="p-8 text-center text-red-600">ID en-tête manquant</div>;
   }
 
-  
-
   return (
     <div className="h-full flex flex-col min-h-0">
       <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange}>
         <div className="flex h-full min-h-0 overflow-hidden">
           {/* ── Colonne principale ── */}
           <div className="flex-1 min-w-0 flex flex-col min-h-0">
-            <div className="shrink-0 px-4 bg-white">
+            <div className="shrink-0 px-4 bg-slate-200 rounded-t-xl">
               <div className='flex items-center justify-between'>
                 <TicketingHeader items={prospectionDetailItems(enteteId)} />
 
@@ -792,7 +789,7 @@ export default function ProspectionDetail() {
                       {/* Navigation & Consultation */}
                       <button
                         onClick={() => navigate(`/dossiers-communs/ticketing/pages/devis/${enteteId}`)}
-                        className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-blue-700 bg-blue-50/50 border border-blue-100 rounded-lg hover:bg-blue-100 hover:text-blue-800 transition-all active:scale-95"
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-blue-700 bg-blue-50/50 border border-blue-300 rounded-lg hover:bg-blue-100 hover:text-blue-800 transition-all active:scale-95"
                       >
                         <FiFileText size={15} />
                         Voir les devis
@@ -807,7 +804,7 @@ export default function ProspectionDetail() {
                         className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all active:scale-95 ${
                           lignes.length === 0 || !!newLine || loadingLignes
                             ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                            : 'text-emerald-700 bg-emerald-50/50 border border-emerald-100 hover:bg-emerald-100 hover:text-emerald-800'
+                            : 'text-emerald-700 bg-emerald-50/50 border border-emerald-300 hover:bg-emerald-100 hover:text-emerald-800'
                         }`}
                       >
                         <FiCheckSquare size={15} />
@@ -850,12 +847,12 @@ export default function ProspectionDetail() {
               </div>
             </div>
 
-            <div className='px-4 border-b border-neutral-50'>
+            <div className='px-4 bg-slate-200 rounded-b-xl'>
               <header className="mb-2">
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden transition-all duration-300">
+                <div className="bg-white rounded-lg shadow-sm shadow-slate-100 border border-slate-200 overflow-hidden transition-all duration-300">
                   {/* Top Bar - La partie toujours visible */}
                   <div 
-                    className={`px-6 py-4 flex items-center justify-between cursor-pointer hover:bg-slate-50/50 transition-colors ${isOpen ? 'border-b border-slate-100' : ''}`}
+                    className={`px-4 py-2 flex items-center justify-between cursor-pointer hover:bg-slate-50/50 transition-colors ${isOpen ? 'border-b border-slate-100' : ''}`}
                     onClick={handleToggle}
                   >
                     <div className="flex items-center gap-4 min-w-0">
@@ -872,7 +869,7 @@ export default function ProspectionDetail() {
                         
                         {/* Sous-titre visible uniquement quand c'est réduit pour garder l'info essentielle */}
                         {!isOpen && (
-                          <p className="text-xs text-slate-500 mt-1 truncate">
+                          <p className="text-xs text-slate-500 mt-2 truncate">
                             {entete?.fournisseur?.libelle} • {entete?.typeVol} • {entete?.commissionAppliquer}% Commission
                           </p>
                         )}
@@ -942,37 +939,36 @@ export default function ProspectionDetail() {
               </header>
 
               <div className="flex items-center justify-between">
-                <div>
-                  <nav className="flex" aria-label="Tabs">
-                    <button
-                      onClick={() => setActiveTabSousSection('lignes')}
-                      className={`px-6 py-2 text-sm font-semibold rounded-t-lg transition-all ${
-                        activeTabSousSection === 'lignes'
-                          ? 'bg-[#4A77BE] text-white shadow-sm'
-                          : 'bg-white text-[#1E3A8A] hover:bg-[#f2f7fe] border-t border-l border-r border-slate-200'
-                      }`}
-                    >
-                      Liste des billets
-                    </button>
-                    <button
-                      onClick={() => setActiveTabSousSection('suivi')}
-                      className={`px-6 py-2 text-sm font-semibold rounded-t-lg transition-all ${
-                        activeTabSousSection === 'suivi'
-                          ? 'bg-[#4A77BE] text-white shadow-sm'
-                          : 'bg-white text-[#1E3A8A] hover:bg-[#f2f7fe] border-t border-l border-r border-slate-200'
-                      }`}
-                    >
-                      Suivi
-                    </button>
-                  </nav>
-                </div>
+                <nav className="flex mb-2 gap-1" aria-label="Tabs">
+                  <button
+                    onClick={() => setActiveTabSousSection('lignes')}
+                    className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+                      activeTabSousSection === 'lignes'
+                        ? 'bg-white text-slate-800 shadow-sm ring-1 ring-slate-200/50'
+                        : 'text-slate-500 hover:text-slate-700 bg-slate-300'
+                    }`}
+                  >
+                    Lignes de prospection
+                  </button>
+                  
+                  <button
+                    onClick={() => setActiveTabSousSection('suivi')}
+                    className={`px-10 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+                      activeTabSousSection === 'suivi'
+                        ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/50'
+                        : 'text-slate-500 hover:text-slate-700 bg-slate-300'
+                    }`}
+                  >
+                    Suivi
+                  </button>
+                </nav>
               </div>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto pb-4 px-4">
+            <div className="flex-1 min-h-0 overflow-y-auto py-4">
               {activeTabSousSection === 'lignes' && (
-                <section className="bg-white shadow-sm border border-slate-200 overflow-hidden">
-                  <div className="bg-white border-b border-gray-200">
+                <section className="bg-white shadow-sm border border-slate-300 overflow-hidden">
+                  <div className="bg-white border-b border-gray-300">
                     {/* Mode indicator bar */}
                     {selectionMode && (
                       <div className="bg-green-50 border-b border-green-200 px-6 py-2">
@@ -991,7 +987,7 @@ export default function ProspectionDetail() {
                     )}
 
                     {/* Main action bar */}
-                    <div className="px-6 py-4">
+                    <div className="px-6 py-2">
                       <div className="flex flex-wrap justify-between items-center gap-4">
                         {/* Titre */}
                         <div>

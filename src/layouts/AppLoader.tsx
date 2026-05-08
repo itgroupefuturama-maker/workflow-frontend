@@ -45,6 +45,9 @@ import { fetchTypesChambre } from "../app/front_office/parametre_hotel/typeChamb
 import { fetchAttestationParams } from "../app/front_office/parametre_attestation/attestationParamsSlice";
 import { fetchCurrentUser } from "../app/front_office/parametre_utilisateur/userSlice";
 import { fetchDevises } from "../app/front_office/parametre-global/deviseSlice";
+import { fetchAssociationsPaysVoyage } from "../app/front_office/parametre_ticketing/associationsPaysVoyageSlice";
+import { fetchLiensSondage, fetchTemplates, fetchTemplatesRerappel, fetchTextesVoyage } from "../app/front_office/parametre_sav/savParamsSlice";
+import { fetchCadeauParams, fetchMessageParams } from "../app/front_office/paramatre_anniversaire/annivParamsSlice";
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -107,11 +110,20 @@ export default function AppLoader({ children }: { children: React.ReactNode }) {
     dispatch(fetchAttestationParams());
 
     // Front office — communs
+    dispatch(fetchAssociationsPaysVoyage());
     dispatch(fetchPays());
     dispatch(fetchRaisonsAnnulation());
     dispatch(fetchExigences());
     dispatch(fetchServicesByType("TICKET"));
     dispatch(fetchServicesByType("HOTEL"));
+
+    // Front office — SAV
+    dispatch(fetchTextesVoyage());
+    dispatch(fetchLiensSondage());
+    dispatch(fetchTemplates());
+    dispatch(fetchTemplatesRerappel());
+    dispatch(fetchMessageParams());
+    dispatch(fetchCadeauParams());
 
   }, [dispatch, token]); // ← token en dépendance : refetch si reconnexion
 

@@ -10,10 +10,10 @@ import FournisseurAlerteBadge from '../../../../../components/fournisseurAlerteB
 import { FiArrowRight, FiClock } from 'react-icons/fi';
 import DossierActifCard from '../../../../../components/CarteDossierActif/DossierActifCard';
 import SuiviTabSection from '../../module.suivi/SuiviTabSection';
-import BeneficiaireListPage from '../../module.client.beneficiaire/BeneficiaireListPage';
-import { useAttestationPdf } from '../../module.parametre/sections/pdf.generation/hooks/usePdfGenerator';
-import type { AttestationPdfMode, AttestationPdfSelection } from '../../module.parametre/sections/pdf.generation/types/attestation.types';
-import type { PdfDesignId } from '../../module.parametre/sections/pdf.generation/types/pdf-design.types';
+import BeneficiaireListPage from '../../module.client.beneficiaire/BeneficiaireListPageForClientFacture';
+import { useAttestationPdf } from '../../module.pdf/pdf.generation/hooks/usePdfGenerator';
+import type { AttestationPdfMode, AttestationPdfSelection } from '../../module.pdf/pdf.generation/types/attestation.types';
+import type { PdfDesignId } from '../../module.pdf/pdf.generation/types/pdf-design.types';
 import { ModalAttestationPdfSelector } from './components.attestation/ModalAttestationPdfSelector';
 
 const PageViewAttestation = () => {
@@ -183,14 +183,14 @@ const PageViewAttestation = () => {
   }, [location.state?.targetTab]);
 
   return (
-    <div className="h-full flex flex-col min-h-0 z-20">
+    <div className="h-full flex flex-col min-h-0">
       <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange}>
         {activeTab === 'prospection' ? (
           <div className="flex h-full min-h-0 overflow-hidden">
             {/* ── Colonne principale ── */}
             <div className="flex-1 min-w-0 flex flex-col min-h-0">
               {/* ── Header fixe — ne scrolle PAS ── */}
-              <div className="shrink-0 px-4 pt-2 bg-white">
+              <div className="shrink-0 px-4 bg-slate-200 rounded-t-xl">
                 <div className='flex items-center justify-between'>
                   <AttestationHeader
                     numeroAttestation={dossierActif?.numero}
@@ -275,28 +275,34 @@ const PageViewAttestation = () => {
                 </div>
               )}
 
-              <div className='px-4 border-b border-neutral-50'>
+              <div className='px-4 bg-slate-200 rounded-b-xl'>
                 <DossierActifCard gradient="from-rose-400 via-pink-400 to-rose-500" />
                 <div className="flex items-center justify-between">
                   {/* Bouton + formulaire création */}
-                  <div>
-                    <nav className="flex" aria-label="Tabs">
+                  <div className="flex items-center justify-between">
+                    <nav className="flex  mb-2 gap-1" aria-label="Tabs">
                       <button
                         onClick={() => setActiveTabSousSection('lignes')}
-                        className={`px-6 py-2 text-sm font-semibold rounded-t-lg transition-all ${
+                        className={`px-4 py-1.5 text-sm font-medium rounded-sm transition-all duration-200 ${
                           activeTabSousSection === 'lignes'
-                            ? 'bg-[#4A77BE] text-white shadow-sm'
-                            : 'bg-white text-[#1E3A8A] hover:bg-[#f2f7fe] border-t border-l border-r border-slate-200'
+                            ? 'bg-white text-slate-800 shadow-sm ring-1 ring-slate-200/50'
+                            : 'text-slate-500 hover:text-slate-700 bg-slate-300'
                         }`}
                       >
-                        Listes des attestations({items.length})
+                        Liste des attestations
+                        <span className={`ml-2 px-1.5 py-0.5 rounded-md text-[10px] ${
+                          activeTabSousSection === 'lignes' ? 'bg-slate-100 text-slate-600' : 'bg-slate-300 text-slate-500'
+                        }`}>
+                          {items.length}
+                        </span>
                       </button>
+                      
                       <button
                         onClick={() => setActiveTabSousSection('suivi')}
-                        className={`px-6 py-2 text-sm font-semibold rounded-t-lg transition-all ${
+                        className={`px-10 py-1.5 text-sm font-medium rounded-sm transition-all duration-200 ${
                           activeTabSousSection === 'suivi'
-                            ? 'bg-[#4A77BE] text-white shadow-sm'
-                            : 'bg-white text-[#1E3A8A] hover:bg-[#f2f7fe] border-t border-l border-r border-slate-200'
+                            ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/50'
+                            : 'text-slate-500 hover:text-slate-700 bg-slate-300'
                         }`}
                       >
                         Suivi
@@ -306,8 +312,7 @@ const PageViewAttestation = () => {
                 </div>
               </div>
 
-              <div className="flex-1 min-h-0 overflow-y-auto pb-4 px-4">
-
+              <div className="flex-1 min-h-0 overflow-y-auto py-4">
                 {activeTabSousSection === 'lignes' && (
                   <div className="">
                     {loading ? (
@@ -321,9 +326,9 @@ const PageViewAttestation = () => {
                         <p className="text-sm mt-2">{error}</p>
                       </div>
                     ) : (
-                      <div className="bg-white rounded-br-xl rounded-bl-xl rounded-tr-xl shadow overflow-hidden border border-gray-200">
+                      <div className="bg-white rounded-xl shadow overflow-hidden border border-slate-300">
                         <div className="overflow-x-auto">
-                          <table className="min-w-full divide-y divide-gray-200">
+                          <table className="min-w-full divide-y divide-slate-300">
                             <thead className="bg-gray-50">
                               <tr>
                                 <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -405,7 +410,7 @@ const PageViewAttestation = () => {
                                           timeStyle: 'short',
                                         })}
                                       </td>
-                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                      <td className="px-6 py-4 whitespace-nowrap text-[13px] text-gray-500">
                                         <div className="flex items-center gap-2">
                                           <button
                                             onClick={() => handleRowClick(item.id)}

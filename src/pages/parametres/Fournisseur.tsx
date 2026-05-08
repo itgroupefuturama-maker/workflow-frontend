@@ -15,6 +15,9 @@ import type { Fournisseur } from '../../app/back_office/fournisseursSlice';
 import { FiPlus, FiX, FiCheckCircle, FiAlertCircle, FiLoader, FiTag, FiTruck, FiArrowLeft} from 'react-icons/fi';
 import AuditModal from '../../components/AuditModal';
 import { useNavigate } from 'react-router-dom';
+import { ActionButtons, EmptyRow, LoadingRow, SectionHeader, TableWrapper } from '../../layouts/Utilitaire';
+import { fetchVisaConsultats } from '../../app/front_office/parametre_visa/visaConsultatSlice';
+import CreateVisaConsultatModal from '../front_office/dossiers-communs/module.visa/components/CreateVisaConsultatModal';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -24,8 +27,12 @@ const FournisseurPage = () => {
   const { data: fournisseurs, loading, error: globalError } = useSelector((state: RootState) => state.fournisseurs);
   const { data: transactions } = useSelector((state: RootState) => state.transactions);
 
+  const [showConsultatModal, setShowConsultatModal] = useState(false);
+  const visaConsultats = useSelector((s: RootState) => s.visaConsultat);
+
   useEffect(() => {
     dispatch(fetchFournisseurs());
+    dispatch(fetchVisaConsultats());
   }, [dispatch]);
 
   const [activeModal, setActiveModal] = useState<'none' | 'form'>('none');
@@ -280,6 +287,24 @@ const FournisseurPage = () => {
         )}
       </div>
 
+      <div className='mt-5'>
+        <div className='flex justify-between'>
+          <div className='text-xl font-bold text-gray-800'>Liste des consulats</div>
+          <SectionHeader label="Ajouter un Consulat Visa" onAdd={() => setShowConsultatModal(true)} />
+        </div>
+        <TableWrapper headers={['Nom du consulat', 'Créé le']}>
+          {visaConsultats.loading ? <LoadingRow /> : visaConsultats.data.length === 0 ? <EmptyRow colSpan={3} /> :
+            visaConsultats.data.map(item => (
+              <tr key={item.id} className="hover:bg-gray-50">
+                <td className="px-4 py-3 font-medium capitalize">{item.nom}</td>
+                <td className="px-4 py-3 text-gray-400">{new Date(item.createdAt).toLocaleDateString('fr-FR')}</td>
+                <td className="px-4 py-3"><ActionButtons /></td>
+              </tr>
+            ))
+          }
+        </TableWrapper>
+      </div>
+
       {/* MODALE DE FORMULAIRE */}
       {activeModal === 'form' && (
         <div className="fixed inset-0 z-120 flex items-center justify-center bg-gray-900/60 backdrop-blur-sm p-4">
@@ -407,6 +432,8 @@ const FournisseurPage = () => {
         isOpen={!!auditEntityId}
         onClose={() => setAuditEntityId(null)}
       />
+
+      {showConsultatModal && <CreateVisaConsultatModal onClose={() => setShowConsultatModal(false)} />}
     </div>
   );
 };

@@ -52,7 +52,7 @@ const LigneCard = ({ ligne, enteteStatut, onReserver, onConfirmer }: LigneCardPr
   const canConfirmer = ligne.statut === 'FAIT' && enteteStatut === 'BC_CLIENT_A_APPROUVER';
 
   return (
-    <div className="border border-neutral-200 overflow-hidden bg-white shadow-sm">
+    <div className="border border-neutral-300 overflow-hidden bg-white shadow-sm">
       {/* ── Barre titre ── */}
       <div className="flex items-center justify-between px-5 py-3 bg-neutral-50 border-b border-neutral-100">
         <div className="flex items-center gap-3">
@@ -622,11 +622,11 @@ const HotelReservationDetail = () => {
           {/* ── Colonne principale ── */}
           <div className="flex-1 min-w-0 flex flex-col min-h-0">
             {/* ── Header fixe — ne scrolle PAS ── */}
-            <div className="shrink-0 px-4 pt-2 bg-white">
+            <div className="shrink-0 px-4 bg-slate-200 rounded-lg">
               <div className="flex justify-between">
                 <HotelHeader numerohotel={entete?.HotelProspectionEntete.numeroEntete} navigate={navigate} isDetail={true} />
                 {/* ── Titre + actions ── */}
-                <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+                <div className="flex items-center justify-between flex-wrap gap-3">
                   <div className="flex items-center gap-2 flex-wrap justify-end">
                     <ActionButton label="BC Approuver" enabled={canApprouverBillet} variant="success"
                       onClick={() => { setApprouverForm({ totalHotel, totalCommission }); setShowApprouverModal(true); }}
@@ -673,8 +673,8 @@ const HotelReservationDetail = () => {
                 </div>
               </div>
 
-              <div className='rounded-lg border border-slate-200 pl-2 pr-2 mb-2'>
-                <div className='cursor-pointer pl-4 ' onClick={handleToggle}>
+              <div className='rounded-lg bg-white border border-slate-200 pl-2 pr-2 mb-2'>
+                <div className='cursor-pointer p-2 ' onClick={handleToggle}>
                   <div className='flex items-center gap-2 justify-between'>
                     <div className='flex items-center gap-2'>
                       <h1 className="text-xl font-bold text-neutral-800 uppercase">
@@ -725,28 +725,49 @@ const HotelReservationDetail = () => {
                 </div>
               </div>
 
-              <nav className="flex mb-0" aria-label="Tabs">
-                {(['lignes', 'suivi'] as const).map(tab => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTabSousSection(tab)}
-                    className={`px-6 py-2 text-sm font-semibold rounded-t-lg transition-all ${
-                      activeTabSousSection === tab
-                        ? 'bg-[#4A77BE] text-white shadow-sm'
-                        : 'bg-white text-[#1E3A8A] hover:bg-[#f2f7fe] border-t border-l border-r border-slate-200'
-                    }`}
-                  >
-                    {tab === 'lignes' ? `Lignes de réservation (${entete?.hotelLigne.length ?? 0})` : 'Suivi'}
-                  </button>
-                ))}
+              <nav className="flex py-2 rounded-xl w-fit gap-2" aria-label="Tabs">
+                {(['lignes', 'suivi'] as const).map((tab) => {
+                  const isActive = activeTabSousSection === tab;
+                  const count = entete?.hotelLigne.length ?? 0;
+
+                  return (
+                    <button
+                      key={tab}
+                      onClick={() => setActiveTabSousSection(tab)}
+                      className={`
+                        relative flex items-center gap-2 px-4 py-1.5 text-sm font-medium rounded-lg transition-all duration-200
+                        ${isActive 
+                          ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/50' 
+                          : 'text-slate-500 hover:text-slate-700 hover:bg-white/40 bg-slate-100'
+                        }
+                      `}
+                    >
+                      <span>
+                        {tab === 'lignes' ? 'Lignes de réservation' : 'Suivi'}
+                      </span>
+
+                      {tab === 'lignes' && (
+                        <span className={`
+                          inline-flex items-center justify-center px-1.5 py-0.5 rounded-md text-[10px] font-bold
+                          ${isActive 
+                            ? 'bg-blue-50 text-blue-600' 
+                            : 'bg-slate-200 text-slate-500'
+                          }
+                        `}>
+                          {count}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </nav>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto pb-4 px-4">
+            <div className="flex-1 min-h-0 overflow-y-auto py-2">
               {/* ── Onglets internes ── */}
               {selectedDetail && (
                 <div>
-                  <div className="bg-white border border-slate-100 rounded-b-lg rounded-tr-lg">
+                  <div className="">
                     {/* ── Lignes ── */}
                     {activeTabSousSection === 'lignes' && (
                       <div className="space-y-4">

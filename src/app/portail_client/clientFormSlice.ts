@@ -1,9 +1,18 @@
-import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
-import axios from 'axios';
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import { API_URL_PORTAIL } from '../../service/env';
+import axios from 'axios';
 
-export interface CreateClientFormPayload {
-  userId: string;
+export interface ClientAssuranceFormPayload {
+  nom: string;
+  prenom: string;
+  dateNaissance: string;
+  numero: string;
+  email: string;
+  adresse: string;
+  numeroPassport: string;
+}
+
+export interface ClientFormPayload {
   nom: string;
   prenom: string;
   sexe: string;
@@ -45,27 +54,22 @@ export interface ClientBeneficiairePerson {
   email: string;
   adresse: string;
   paysResidence: string;
-  typePerson: string;
+  typePerson: 'CONJOINT' | 'ENFANT';
   clientBeneficiaireFormId: string;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface CreateClientBeneficiairePersonPayload {
+// ── Types ──────────────────────────────────────────────
+export interface UserDocument {
+  id: string;
+  idVisadocClient: string;
+  nomDoc: string;
+  pj: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
   userId: string;
-  nom: string;
-  prenom: string;
-  sexe: string;
-  dateNaissance: string;
-  lieuNaissance: string;
-  nationalite: string;
-  etatCivil: string;
-  numero: string;
-  email: string;
-  adresse: string;
-  paysResidence: string;
-  typePerson: string;
-  clientBeneficiaireFormId: string;
 }
 
 export interface ClientBeneficiaireForm {
@@ -97,217 +101,331 @@ export interface ClientBeneficiaireForm {
   dateDelivranceDoc: string;
   dateValiditeDoc: string;
   status: string;
+  createdAt: string;
+  updatedAt: string;
+  userId: string;
   clientBeneficiairePerson: ClientBeneficiairePerson[];
 }
 
-export interface UserDocument {
-  id: string;
-  type: string;
-  nomDoc: string;
-  pj: string;
-  status: string;
+export interface ClientPersonPayload {
+  nom: string;
+  prenom: string;
+  sexe: string;
+  dateNaissance: string;
+  lieuNaissance: string;
+  nationalite: string;
+  etatCivil: string;
+  numero: string;
+  email: string;
+  adresse: string;
+  paysResidence: string;
+  typePerson: 'CONJOINT' | 'ENFANT';
+  clientBeneficiaireFormId: string;
 }
 
-export interface VisaData {
-  id: string;
-  visaType: string;
-  visaDescription: string;
-  pays: string;
-  clientBeneficiaireForm: ClientBeneficiaireForm[];
-}
-
-export interface ClientFormData {
+export interface ClientAssuranceForm {
   id: string;
   nom: string;
-  userType: 'VISA' | 'ASSURANCE' | string;
+  prenom: string;
+  dateNaissance: string;
+  numero: string;
+  email: string;
+  adresse: string;
+  numeroPassport: string;
+  createdAt: string;
+  updatedAt: string;
+  assuranceId: string;
+}
+
+export interface ClientAssurance {
+  id: string;
+  idAssuranceLigne: string;
+  zoneDestination: string;
+  destination: string;
+  assureur: string;
+  createdAt: string;
+  updatedAt: string;
+  userId: string;
+  clientAssuranceForms: ClientAssuranceForm[];
+}
+
+export interface ClientData {
+  id: string;
+  nom: string;
   actif: boolean;
   isValidate: boolean;
   createdAt: string;
+  clientBeneficiaireForms: ClientBeneficiaireForm[];
   userDocument: UserDocument[];
-  visa: VisaData | null;
-  assurance: any | null;
-  selectedClientBeneficiaireForm: ClientBeneficiaireForm | null;
+  sharedClientBeneficiaireForms: ClientBeneficiaireForm[];
+  userType: 'VISA' | 'ASSURANCE';           
+  assurance?: ClientAssurance;              
+  clientAssuranceForms?: ClientAssuranceForm[]; 
+  visa?: {
+    id: string;
+    idVisaAbstract: string;
+    visaType: string;
+    visaDescription: string;
+    pays: string;
+  };
 }
 
-interface ClientFormState {
-  data: ClientFormData | null;
+interface ClientState {
+  data: ClientData | null;
   loading: boolean;
   error: string | null;
-  creating: boolean;
-  createError: string | null;
-  creatingPerson: boolean;
-  createPersonError: string | null;
-  uploadingDocId: string | null;   // ← id du doc en cours d'upload
-  uploadError: string | null;
 }
 
-const initialState: ClientFormState = {
+const initialState: ClientState = {
   data: null,
   loading: false,
   error: null,
-  creating: false,
-  createError: null,
-  creatingPerson: false,
-  createPersonError: null,
-  uploadingDocId: null,
-  uploadError: null,
 };
 
-export const fetchClientFormByVisaAbstract = createAsyncThunk(
-  'clientForm/fetchByVisaAbstract',
-  async (idVisaAbstract: string, { rejectWithValue }) => {
+// ── Thunk ──────────────────────────────────────────────
+export const fetchClientInfo = createAsyncThunk(
+  'client/fetchClientInfo',
+  async (userId: string, { rejectWithValue }) => {
     try {
-      const response = await axios.get(
-        `${API_URL_PORTAIL}/client-form/visa-abstract/${idVisaAbstract}`
-      );
-      if (response.data?.success) {
-        return response.data.data as ClientFormData;
-      }
-      return rejectWithValue('Réponse invalide du serveur');
+      const response = await axios.get(`${API_URL_PORTAIL}/client-form/visa-abstract/${userId}`);
+      return response.data.data as ClientData;
     } catch (err: any) {
-      return rejectWithValue(err?.response?.data?.message || err.message || 'Erreur serveur');
+      return rejectWithValue(
+        err.response?.data?.message || 'Erreur lors de la récupération des données.'
+      );
     }
   }
 );
 
 export const createClientForm = createAsyncThunk(
-  'clientForm/create',
-  async (payload: CreateClientFormPayload, { rejectWithValue }) => {
-    try {
-      const response = await axios.post(
-        `${API_URL_PORTAIL}/client-form`,
-        payload
-      );
-      if (response.data?.success) {
-        return response.data.data;
-      }
-      return rejectWithValue('Réponse invalide du serveur');
-    } catch (err: any) {
-      return rejectWithValue(
-        err?.response?.data?.message || err.message || 'Erreur serveur'
-      );
-    }
-  }
-);
-
-export const createClientBeneficiairePerson = createAsyncThunk(
-  'clientForm/createPerson',
-  async (payload: CreateClientBeneficiairePersonPayload, { rejectWithValue }) => {
-    try {
-      const response = await axios.post(
-        `${API_URL_PORTAIL}/client-person`,
-        payload
-      );
-      if (response.data?.success) {
-        return response.data.data;
-      }
-      return rejectWithValue('Réponse invalide du serveur');
-    } catch (err: any) {
-      return rejectWithValue(
-        err?.response?.data?.message || err.message || 'Erreur serveur'
-      );
-    }
-  }
-);
-
-export const uploadDocumentPj = createAsyncThunk(
-  'clientForm/uploadDocumentPj',
+  'client/createClientForm',
   async (
-    { documentId, file }: { documentId: string; file: File },
-    { rejectWithValue }
+    { beneficiaireId, userId, payload }: { beneficiaireId: string; userId: string; payload: ClientFormPayload },
+    { dispatch, rejectWithValue }
+  ) => {
+    try {
+      await axios.post(`${API_URL_PORTAIL}/client-form`, {
+        ...payload,
+        userId,
+      });
+      // Rafraîchit les données après création
+      dispatch(fetchClientInfo(beneficiaireId));
+    } catch (err: any) {
+      return rejectWithValue(
+        err.response?.data?.message || "Erreur lors de la création du formulaire."
+      );
+    }
+  }
+);
+
+export const uploadDocument = createAsyncThunk(
+  'client/uploadDocument',
+  async (
+    { userId, documentId, file }: { userId: string; documentId: string; file: File },
+    { dispatch, rejectWithValue }
   ) => {
     try {
       const formData = new FormData();
       formData.append('pj', file);
 
-      const response = await axios.patch(
-        `${API_URL_PORTAIL}/document/${documentId}`,
-        formData,
-        {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
+      await axios.patch(`${API_URL_PORTAIL}/document/${documentId}`, formData, {  // 👈 PATCH + id dans l'URL
+        
+      });
 
-      if (response.data?.success) {
-        return { documentId, pj: response.data.data?.pj || 'uploaded' };
-      }
-      return rejectWithValue('Réponse invalide du serveur');
+      dispatch(fetchClientInfo(userId));
     } catch (err: any) {
       return rejectWithValue(
-        err?.response?.data?.message || "Erreur lors de l'envoi du document."
+        err.response?.data?.message || "Erreur lors de l'envoi du document."
       );
     }
   }
 );
 
-const clientFormSlice = createSlice({
-  name: 'clientForm',
+// ── Thunk ──────────────────────────────────────────────
+export const createClientPerson = createAsyncThunk(
+  'client/createClientPerson',
+  async (
+    { beneficiaireId, userId, payload }: { beneficiaireId: string; userId: string; payload: ClientPersonPayload },
+    { dispatch, rejectWithValue }
+  ) => {
+    try {
+      await axios.post(`${API_URL_PORTAIL}/client-person`, {
+        ...payload,
+        userId,
+      });
+      dispatch(fetchClientInfo(beneficiaireId));
+    } catch (err: any) {
+      return rejectWithValue(
+        err.response?.data?.message || "Erreur lors de l'ajout de la personne."
+      );
+    }
+  }
+);
+
+export const updateClientForm = createAsyncThunk(
+  'client/updateClientForm',
+  async (
+    { userId, id, payload }: { userId: string; id: string; payload: ClientFormPayload },
+    { dispatch, rejectWithValue }
+  ) => {
+    try {
+      await axios.patch(`${API_URL_PORTAIL}/client-form/${id}`, {
+        ...payload
+      });
+      dispatch(fetchClientInfo(userId));
+    } catch (err: any) {
+      return rejectWithValue(
+        err.response?.data?.message || "Erreur lors de la mise à jour du formulaire."
+      );
+    }
+  }
+);
+
+export const updateClientPerson = createAsyncThunk(
+  'client/updateClientPerson',
+  async (
+    { beneficiaireId, id, payload }: { beneficiaireId: string; id: string; payload: Omit<ClientPersonPayload, 'clientBeneficiaireFormId'> },
+    { dispatch, rejectWithValue }
+  ) => {
+    try {
+      await axios.patch(`${API_URL_PORTAIL}/client-person/${id}`, {
+        ...payload,
+      });
+      dispatch(fetchClientInfo(beneficiaireId));
+    } catch (err: any) {
+      return rejectWithValue(
+        err.response?.data?.message || "Erreur lors de la mise à jour de la personne."
+      );
+    }
+  }
+);
+
+export const createClientAssuranceForm = createAsyncThunk(
+  'client/createClientAssuranceForm',
+  async (
+    { beneficiaireId, userId, payload }: { beneficiaireId: string; userId: string; payload: ClientAssuranceFormPayload },
+    { dispatch, rejectWithValue }
+  ) => {
+    try {
+      const body = { ...payload, userId };
+      console.log('🔍 payload envoyé:', JSON.stringify(body, null, 2));
+      console.log('🔍 URL:', `${API_URL_PORTAIL}/client-assurance-form`);
+      
+      const response = await axios.post(
+        `${API_URL_PORTAIL}/client-assurance-form`, 
+        body,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        }
+      );
+
+      console.log(response);
+      
+      dispatch(fetchClientInfo(beneficiaireId));
+    } catch (err: any) {
+      console.log('❌ erreur complète:', err.response?.data);
+      console.log('❌ status:', err.response?.status);
+      return rejectWithValue(
+        err.response?.data?.message || "Erreur lors de la création du formulaire d'assurance."
+      );
+    }
+  }
+);
+
+// ── Slice ──────────────────────────────────────────────
+const clientSlice = createSlice({
+  name: 'client',
   initialState,
   reducers: {
-    resetClientForm(state) {
+    clearClientData(state) {
       state.data = null;
       state.error = null;
-      state.loading = false;
     },
   },
   extraReducers: (builder) => {
     builder
-      .addCase(fetchClientFormByVisaAbstract.pending, (state) => {
+      .addCase(fetchClientInfo.pending, (state) => {
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchClientFormByVisaAbstract.fulfilled, (state, action) => {
+      .addCase(fetchClientInfo.fulfilled, (state, action) => {
         state.loading = false;
         state.data = action.payload;
       })
-      .addCase(fetchClientFormByVisaAbstract.rejected, (state, action) => {
+      .addCase(fetchClientInfo.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       })
       .addCase(createClientForm.pending, (state) => {
-        state.creating = true;
-        state.createError = null;
-    })
-    .addCase(createClientForm.fulfilled, (state) => {
-        state.creating = false;
-    })
-    .addCase(createClientForm.rejected, (state, action) => {
-        state.creating = false;
-        state.createError = action.payload as string;
-    })
-    .addCase(createClientBeneficiairePerson.pending, (state) => {
-        state.creatingPerson = true;
-        state.createPersonError = null;
-    })
-    .addCase(createClientBeneficiairePerson.fulfilled, (state) => {
-        state.creatingPerson = false;
-    })
-    .addCase(createClientBeneficiairePerson.rejected, (state, action) => {
-        state.creatingPerson = false;
-        state.createPersonError = action.payload as string;
-    })
-    .addCase(uploadDocumentPj.pending, (state, action) => {
-        state.uploadingDocId = action.meta.arg.documentId;
-        state.uploadError = null;
-    })
-    .addCase(uploadDocumentPj.fulfilled, (state, action) => {
-        state.uploadingDocId = null;
-        // Mettre à jour le pj dans userDocument directement dans le store
-        if (state.data) {
-        const doc = state.data.userDocument.find(
-            (d) => d.id === action.payload.documentId
-        );
-        if (doc) doc.pj = action.payload.pj;
-        }
-    })
-    .addCase(uploadDocumentPj.rejected, (state, action) => {
-        state.uploadingDocId = null;
-        state.uploadError = action.payload as string;
-    });
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(createClientForm.fulfilled, (state) => {
+        state.loading = false;
+      })
+      .addCase(createClientForm.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      .addCase(uploadDocument.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(uploadDocument.fulfilled, (state) => {
+        state.loading = false;
+      })
+      .addCase(uploadDocument.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      .addCase(createClientPerson.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(createClientPerson.fulfilled, (state) => {
+        state.loading = false;
+      })
+      .addCase(createClientPerson.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      .addCase(updateClientForm.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateClientForm.fulfilled, (state) => {
+        state.loading = false;
+      })
+      .addCase(updateClientForm.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      .addCase(updateClientPerson.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(updateClientPerson.fulfilled, (state) => {
+        state.loading = false;
+      })
+      .addCase(updateClientPerson.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      .addCase(createClientAssuranceForm.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(createClientAssuranceForm.fulfilled, (state) => {
+        state.loading = false;
+      })
+      .addCase(createClientAssuranceForm.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      });
   },
 });
 
-export const { resetClientForm } = clientFormSlice.actions;
-export default clientFormSlice.reducer;
+export const { clearClientData } = clientSlice.actions;
+export default clientSlice.reducer;

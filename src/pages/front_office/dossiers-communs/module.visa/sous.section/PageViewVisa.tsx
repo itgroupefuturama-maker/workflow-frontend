@@ -7,7 +7,7 @@ import { fetchProspectionEntetes } from '../../../../../app/front_office/paramet
 import { fetchVisaEntetes } from '../../../../../app/front_office/parametre_visa/visaEnteteSlice';
 import ProspectionTab from '../components/ProspectionTab';
 import VisaTab from '../components/VisaTab';
-import BeneficiaireListPage from '../../module.client.beneficiaire/BeneficiaireListPage';
+import BeneficiaireListPage from '../../module.client.beneficiaire/BeneficiaireListPageForClientFacture';
 
 const PageViewVisa = () => {
   const dispatch = useDispatch<AppDispatch>();

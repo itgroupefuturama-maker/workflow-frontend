@@ -1,4 +1,4 @@
-import { FiCheck } from "react-icons/fi";
+import { FiCheck, FiChevronRight } from "react-icons/fi";
 
 export const HotelHeader = ({ numerohotel, navigate, isDetail = false, isBenchmarking = false, isDevis = false }) => {
 
@@ -24,53 +24,61 @@ export const HotelHeader = ({ numerohotel, navigate, isDetail = false, isBenchma
   ];
 
   return (
-    <header className="mb-2">
-      <div className="flex items-center ">
+    <header className="my-4">
+      <nav className="flex items-center ">
         {steps.map((step, index) => {
           const isLast      = index === steps.length - 1;
-          const isActive    = isLast && !step.done;
+          
+          // CORRECTION DE LA LOGIQUE isActive :
+          // Si c'est le dernier élément et qu'il n'est pas marqué comme "done", il est actif.
+          const isActive    = !step.done; 
+          
           const isClickable = !!step.onClick;
 
           return (
             <div key={index} className="flex items-center">
-              <div
+              <button
+                disabled={!isClickable}
                 onClick={isClickable ? step.onClick : undefined}
                 className={`
-                  relative flex items-center gap-2 px-5 py-2.5 text-sm font-semibold
-                  transition-all select-none
-                  ${index === 0 ? 'rounded-l-lg' : ''}
-                  ${isLast ? 'rounded-r-lg' : ''}
-                  ${isActive
-                    ? 'bg-amber-400 text-white shadow-md cursor-default'
-                    : step.done
-                      ? 'bg-stone-200 text-stone-500 hover:bg-stone-300 cursor-pointer'
-                      : 'bg-stone-100 text-stone-400 cursor-default'
+                  relative flex items-center gap-2.5 px-4 py-2 text-sm font-medium
+                  rounded-lg transition-all duration-200 group
+                  ${isActive 
+                    ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/50' 
+                    : isClickable 
+                      ? 'text-slate-500 hover:text-slate-800 hover:bg-white/50 bg-slate-300' 
+                      : 'text-slate-400 cursor-default bg-slate-300'
                   }
                 `}
-                style={{
-                  clipPath: index === 0
-                    ? 'polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%)'
-                    : 'polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%, 10px 50%)',
-                  marginLeft: index === 0 ? 0 : '-1px',
-                }}
               >
-                {step.done ? (
-                  <span className="h-5 w-5 rounded-full bg-stone-300 text-stone-500 flex items-center justify-center shrink-0">
-                    <FiCheck size={11} strokeWidth={3} />
-                  </span>
-                ) : (
-                  <span className={`h-5 w-5 rounded-full flex items-center justify-center text-[11px] font-bold shrink-0 ${
-                    isActive ? 'bg-white/30 text-white' : 'bg-stone-200 text-stone-400'
-                  }`}>
-                    {index + 1}
-                  </span>
-                )}
-                <span className="whitespace-nowrap">{step.label}</span>
-              </div>
+                {/* Badge Numérique ou Check */}
+                <div className={`
+                  flex items-center justify-center w-5 h-5 rounded-md text-[10px] font-bold transition-all
+                  ${step.done 
+                    ? 'bg-emerald-100 text-emerald-600' 
+                    : isActive 
+                      ? 'bg-indigo-600 text-white shadow-indigo-200/40 shadow-lg' 
+                      : 'bg-slate-300 text-slate-500'
+                  }
+                `}>
+                  {step.done ? <FiCheck size={12} strokeWidth={4} /> : index + 1}
+                </div>
+
+                <span className={`whitespace-nowrap ${isActive ? 'font-bold text-slate-900' : ''}`}>
+                  {step.label}
+                </span>
+              </button>
+
+              {/* Séparateur Chevron */}
+              {!isLast && (
+                <div className="mx-1 text-slate-600">
+                  <FiChevronRight size={14} />
+                </div>
+              )}
             </div>
           );
         })}
-      </div>
+      </nav>
     </header>
   );
 };

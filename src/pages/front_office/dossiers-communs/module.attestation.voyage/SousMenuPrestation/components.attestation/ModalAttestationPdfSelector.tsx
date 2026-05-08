@@ -1,8 +1,8 @@
 import { useState, useMemo } from 'react';
 import { FiX, FiDownload, FiEye, FiChevronDown, FiChevronRight } from 'react-icons/fi';
-import type { AttestationEnteteItem, AttestationPdfMode, AttestationPdfSelection } from '../../../module.parametre/sections/pdf.generation/types/attestation.types';
-import type { PdfDesignId } from '../../../module.parametre/sections/pdf.generation/types/pdf-design.types';
-import { PDF_DESIGNS } from '../../../module.parametre/sections/pdf.generation/config/pdf-designs';
+import type { AttestationEnteteItem, AttestationPdfMode, AttestationPdfSelection } from '../../../module.pdf/pdf.generation/types/attestation.types';
+import type { PdfDesignId } from '../../../module.pdf/pdf.generation/types/pdf-design.types';
+import { PDF_DESIGNS } from '../../../module.pdf/pdf.generation/config/pdf-designs';
 
 interface Props {
   isOpen: boolean;

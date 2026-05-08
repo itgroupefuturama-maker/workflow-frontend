@@ -42,11 +42,12 @@ export default function PreferencesModal({
 
   // Configuration des thèmes basée sur tes types de cartes
   const clientThemes: Record<string, { bg: string, text: string, icon: string, sub: string }> = {
-    SIMPLE: { bg: 'bg-slate-800', text: 'text-white', icon: 'bg-white/20', sub: 'text-slate-300' },
+    SIMPLE: { bg: 'bg-blue-200', text: 'text-slate-700', icon: 'bg-white/20', sub: 'text-slate-800' },
     BRONZE: { bg: 'bg-orange-700', text: 'text-white', icon: 'bg-white/20', sub: 'text-orange-200' },
     SILVER: { bg: 'bg-slate-400', text: 'text-slate-800', icon: 'bg-white/20', sub: 'text-slate-700' },
     GOLD:   { bg: 'bg-gradient-to-br from-yellow-400 via-amber-400 to-yellow-600', text: 'text-yellow-900', icon: 'bg-white/20', sub: 'text-amber-900/80' },
     VIP:    { bg: 'bg-purple-700', text: 'text-white', icon: 'bg-white/20', sub: 'text-purple-200' },
+    PLATINIUM: { bg: 'bg-slate-600', text: 'text-white', icon: 'bg-white/20', sub: 'text-slate-300' },
   };
 
   const t = clientThemes[clientType || 'SIMPLE'] || clientThemes.SIMPLE;

@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import type { BilletLigne, ServiceProspectionLigne, ServiceSpecifique } from '../../../../../../app/front_office/billetSlice';
 import { FiFilter, FiX } from 'react-icons/fi';
 import { API_URL } from '../../../../../../service/env';
+import type { BilletPassagerData } from '../../../module.pdf/pdf.generation/generators/billet-passager.generator';
+import { useBilletPassagerPdf } from '../../../module.pdf/pdf.generation/hooks/usePdfGenerator';
+import type { BilletStyleId } from '../../../module.pdf/pdf.generation/types/pdf-design.types';
+import { BILLET_STYLES } from '../../../module.pdf/pdf.generation/config/billet-styles';
 
 // --- Sous-composant pour les cellules de prix (évite la répétition et les erreurs de rendu) ---
 const PriceCell = ({ value, isCurrency = false, className = "" }: { value: number, isCurrency?: boolean, className?: string }) => (
@@ -20,33 +24,41 @@ interface BilletTableProps {
   handleReprogrammer: (ligne: BilletLigne) => void;   // ← CHANGEMENT ICI : une seule ligne
   handleRemove: (ligne: BilletLigne) => void;
   serviceById: Map<string, ServiceSpecifique>;
+  handleReporter: (ligne: BilletLigne) => void; 
 }
 
-const PassagersCell = ({ billets }: { billets: BilletLigne['billet'] }) => {
-  const [expanded, setExpanded] = useState(false);
+interface PassagersCellProps {
+  billets: BilletLigne['billet'];
+  handleReporter: (ligne: BilletLigne) => void;
+}
 
-  const handleDownloadPdf = async (pjBillet: string, nomFichier: string) => {
-    try {
-      const url = `${API_URL}/${pjBillet}`;
-      const response = await fetch(url);
-      
-      if (!response.ok) throw new Error('Fichier introuvable');
-      
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
-      
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = nomFichier || 'billet.pdf';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      // Libérer la mémoire
-      URL.revokeObjectURL(blobUrl);
-    } catch (err) {
-      alert('Impossible de télécharger le fichier');
-    }
+const PassagersCell: React.FC<PassagersCellProps> = ({ billets, handleReporter }) => {
+  const [expanded, setExpanded]   = useState(false);
+  const [styleId, setStyleId]     = useState<BilletStyleId>('elegant');
+  const { generate, preview, loading: pdfLoading } = useBilletPassagerPdf();
+
+  // Helper pour construire BilletPassagerData depuis un billet
+  const buildBilletData = (b: BilletLigne['billet'][0], ligne?: any): BilletPassagerData => {
+    const info = b.clientbeneficiaireInfo;
+    return {
+      nom:            info.nom,
+      prenom:         info.prenom,
+      nationalite:    info.nationalite,
+      typeDoc:        info.typeDoc,
+      referenceDoc:   info.referenceDoc,
+      dateValiditeDoc:info.dateValiditeDoc,
+      // Les infos vol viennent de la ligne parente si disponibles
+      // Sinon on met des valeurs par défaut depuis le billet
+      numeroVol:      '—',
+      itineraire:     '—',
+      classe:         '—',
+      typePassager:   info.clientType ?? '—',
+      dateDepart:     new Date().toISOString(),
+      heureDepart:    '—',
+      heureArrive:    '—',
+      numeroBillet:   b.numeroBillet,
+      reservation:    null,
+    };
   };
 
   if (!billets || billets.length === 0) {
@@ -112,6 +124,10 @@ const PassagersCell = ({ billets }: { billets: BilletLigne['billet'] }) => {
                     <p className="font-semibold text-slate-700">{info.typeDoc || '—'}</p>
                   </div>
                   <div>
+                    <span className="text-slate-400 uppercase tracking-wide text-[9px] font-bold">Statut</span>
+                    <p className="font-semibold text-slate-700">{b.statut || '—'}</p>
+                  </div>
+                  <div>
                     <span className="text-slate-400 uppercase tracking-wide text-[9px] font-bold">Référence</span>
                     <p className="font-mono font-semibold text-slate-700">{info.referenceDoc || '—'}</p>
                   </div>
@@ -142,40 +158,132 @@ const PassagersCell = ({ billets }: { billets: BilletLigne['billet'] }) => {
 
                 {/* PJ Billet */}
                 {b.pjBillet ? (
-                  <div className='space-x-2'>
-                    <a
-                      href={`${API_URL}/${b.pjBillet}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-[11px] font-medium hover:bg-blue-100 transition-colors mt-1"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      Voir Billet
-                    </a>
-                    <button
-                      type="button"
-                      onClick={() => handleDownloadPdf(
-                        b.pjBillet!,
-                        b.numeroBillet ? `billet-${b.numeroBillet}.pdf` : 'billet.pdf'
-                      )}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-[11px] font-medium hover:bg-blue-100 transition-colors mt-1"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
-                      Télécharger
-                    </button>
+                  <div className="space-y-2">
+                    {/* Sélecteur de style billet */}
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {Object.values(BILLET_STYLES).map((s) => (
+                        <button
+                          key={s.id}
+                          onClick={() => setStyleId(s.id as BilletStyleId)}
+                          className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium border transition-colors ${
+                            styleId === s.id
+                              ? 'border-slate-700 bg-slate-700 text-white'
+                              : 'border-slate-200 bg-white text-slate-600 hover:border-slate-400'
+                          }`}
+                        >
+                          <span
+                            className="w-2.5 h-2.5 rounded-full shrink-0"
+                            style={{ backgroundColor: s.preview }}
+                          />
+                          {s.label}
+                        </button>
+                      ))}
+                    </div>
 
+                    {/* Actions */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <button
+                        disabled={b.statut !== 'PLANIFIE'}
+                        onClick={() => handleReporter(b)}
+                        className={`
+                          flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all
+                          ${b.statut !== 'PLANIFIE'
+                            ? 'bg-gray-50 text-gray-400 border border-gray-200 cursor-not-allowed'
+                            : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-600 hover:text-white active:scale-95'}
+                        `}
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Reporter
+                      </button>
+                      {/* Aperçu billet généré */}
+                      <button
+                        onClick={() => preview(buildBilletData(b), styleId)}
+                        disabled={pdfLoading}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5
+                          bg-indigo-50 text-indigo-700 border border-indigo-200
+                          rounded-lg text-[11px] font-medium hover:bg-indigo-100
+                          disabled:opacity-50 transition-colors"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        Aperçu
+                      </button>
+
+                      {/* Télécharger billet généré */}
+                      <button
+                        onClick={() => generate(buildBilletData(b), styleId)}
+                        disabled={pdfLoading}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5
+                          bg-blue-50 text-blue-700 border border-blue-200
+                          rounded-lg text-[11px] font-medium hover:bg-blue-100
+                          disabled:opacity-50 transition-colors"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        {pdfLoading ? '…' : 'Billet PDF'}
+                      </button>
+
+                      {/* Voir PJ serveur (existant) */}
+                      {/* <a
+                        href={`${API_URL}/${b.pjBillet}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5
+                          bg-slate-50 text-slate-600 border border-slate-200
+                          rounded-lg text-[11px] font-medium hover:bg-slate-100
+                          transition-colors"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                        </svg>
+                        PJ Serveur
+                      </a> */}
+                    </div>
                   </div>
                 ) : (
-                  <span className="inline-flex items-center gap-1 text-slate-400 text-[10px] italic mt-1">
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    Pas de PJ billet
-                  </span>
+                  // Même affichage qu'avant si pas de PJ
+                  // Mais on propose quand même de générer le billet PDF
+                  <div className="space-y-1.5">
+                    <span className="inline-flex items-center gap-1 text-slate-400 text-[10px] italic">
+                      Pas de PJ billet
+                    </span>
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {Object.values(BILLET_STYLES).map((s) => (
+                        <button
+                          key={s.id}
+                          onClick={() => setStyleId(s.id as BilletStyleId)}
+                          className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium border transition-colors ${
+                            styleId === s.id
+                              ? 'border-slate-700 bg-slate-700 text-white'
+                              : 'border-slate-200 bg-white text-slate-600 hover:border-slate-400'
+                          }`}
+                        >
+                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.preview }} />
+                          {s.label}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => preview(buildBilletData(b), styleId)}
+                      disabled={pdfLoading}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5
+                        bg-indigo-50 text-indigo-700 border border-indigo-200
+                        rounded-lg text-[11px] font-medium hover:bg-indigo-100
+                        disabled:opacity-50 transition-colors"
+                    >
+                      Générer billet
+                    </button>
+                  </div>
                 )}
               </div>
             )}
@@ -191,10 +299,8 @@ const PassagersCell = ({ billets }: { billets: BilletLigne['billet'] }) => {
 // ────────────────────────────────────────────────
 const ServicesSpecifiquesCell = ({
   services,
-  serviceById,
 }: {
   services: ServiceProspectionLigne[] | undefined;
-  serviceById: Map<string, ServiceSpecifique>;
 }) => {
   if (!services || services.length === 0) {
     return <span className="text-slate-400 text-xs">—</span>;
@@ -203,31 +309,25 @@ const ServicesSpecifiquesCell = ({
   return (
     <div className="flex flex-row gap-1">
       {services.map((svc) => {
-      const serviceDef = serviceById.get(svc.serviceSpecifiqueId);
-      // console.log(
-      //   `Recherche service pour ID: ${svc.serviceSpecifiqueId} → trouvé ? `,
-      //   !!serviceDef,
-      //   serviceDef?.libelle || "(non trouvé)"
-      // );
-
-      const displayName = serviceDef?.libelle 
-        ? serviceDef.libelle 
-        : `Svc (${svc.serviceSpecifiqueId.slice(-6)})`;
+        const libelle = svc.serviceSpecifique?.libelle ?? '—';
+        const valeur =
+          svc.valeur === 'true'  ? 'Oui' :
+          svc.valeur === 'false' ? 'Non' :
+          svc.valeur;
 
         return (
           <span
             key={svc.id}
             className="px-2 py-0.5 bg-indigo-50 text-indigo-700 text-xs font-medium rounded border border-indigo-200"
-            title={`ID: ${svc.serviceSpecifiqueId}`}
+            title={svc.serviceSpecifique?.code ?? ''}
           >
-            {displayName}: {svc.valeur === 'true' ? 'Oui' : svc.valeur === 'false' ? 'Non' : svc.valeur}
+            {libelle} : {valeur}
           </span>
         );
       })}
     </div>
   );
 };
-
 
 const BilletTable: React.FC<BilletTableProps> = ({
   lignes,
@@ -237,6 +337,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
   handleOpenEmission,
   handleReprogrammer,
   handleRemove,
+  handleReporter,
   serviceById,
 }) => {
   const [sortOriginAsc, setSortOriginAsc] = useState(true);
@@ -275,6 +376,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
     setCollapsedGroups(prev => ({ ...prev, [group]: !prev[group] }));
   };
 
+
   if (lignes.length === 0) {
     return (
       <div className="p-12 text-center text-slate-500">
@@ -285,15 +387,15 @@ const BilletTable: React.FC<BilletTableProps> = ({
 
   return (
     <div className="overflow-x-auto">
-      <div className="bg-white overflow-hidden border border-slate-200">
+      <div className="bg-white overflow-hidden border border-slate-300">
         {/* Titre + icône filtre */}
-        <div className="border-b pl-5 pr-5 pb-1.5 pt-1.5 border-slate-200 flex items-center justify-between">
-          <h2 className="text-xl font-semibold text-slate-800 flex items-center gap-2">
+        <div className="border-b p-3 border-slate-300 flex items-center justify-between">
+          <h2 className="text-[13px] font-semibold text-slate-800 flex items-center gap-2">
             Lignes du billet
           </h2>
           <button
             onClick={toggleSortOrigin}
-            className="flex items-center gap-2 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 rounded-xl border border-slate-200 transition-all text-xs font-semibold"
+            className="flex items-center gap-2 px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-600 hover:text-slate-800 rounded-xl border border-slate-300 transition-all text-xs font-semibold"
             title="Trier par Origin Ligne"
           >
             <FiFilter size={14} />
@@ -309,7 +411,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
         </div>
 
         {/* Dans le div header, après le titre */}
-        <div className="px-5 py-2 bg-slate-50 border-b border-slate-200 flex items-center gap-2 flex-wrap">
+        <div className="px-5 py-2 bg-slate-200 border-b border-slate-300 flex items-center gap-2 flex-wrap">
           <span className="text-xs font-semibold text-slate-500 uppercase mr-1">Groupes :</span>
           {([
             { key: 'infosVol',       label: '✈️ Infos Vol',       color: 'slate'  },
@@ -344,8 +446,8 @@ const BilletTable: React.FC<BilletTableProps> = ({
             onClick={() => setCollapsedGroups(prev => Object.fromEntries(Object.keys(prev).map(k => [k, true])) as any)}
             className={`ml-auto text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
                 Object.values(collapsedGroups).every(v => v === true)
-                ? 'opacity-40 cursor-not-allowed border-slate-200 text-slate-400'
-                : 'border-red-200 text-red-600 hover:bg-red-50'
+                ? 'opacity-40 cursor-not-allowed border-white text-slate-700'
+                : 'border-red-200 text-red-500 hover:bg-red-50'
             }`}
           >
             Tout replier
@@ -357,7 +459,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
             onClick={() => setCollapsedGroups(prev => Object.fromEntries(Object.keys(prev).map(k => [k, false])) as any)}
             className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
                 Object.values(collapsedGroups).every(v => v === false)
-                ? 'opacity-40 cursor-not-allowed border-slate-200 text-slate-400'
+                ? 'opacity-40 cursor-not-allowed border-white text-slate-700'
                 : 'border-blue-200 text-blue-600 hover:bg-blue-50'
             }`}
           >
@@ -367,7 +469,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
 
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200">
-            <thead className="bg-slate-50 sticky top-0 z-10 text-xs">
+            <thead className="bg-slate-200 sticky top-0 z-10 text-xs">
               {/* Ligne 1 — groupes */}
               <tr className="border-b-2 border-slate-300">
                 {/* Colonnes fixes (rowSpan=2) */}
@@ -375,7 +477,8 @@ const BilletTable: React.FC<BilletTableProps> = ({
                 <th rowSpan={2} className="px-4 py-3 text-left font-semibold text-slate-700 uppercase bg-slate-100">Origin Ligne</th>
                 <th rowSpan={2} className="px-4 py-3 text-left font-semibold text-slate-700 uppercase bg-slate-100">Fournisseur</th>
                 <th rowSpan={2} className="px-4 py-3 text-left font-semibold text-slate-700 uppercase bg-slate-100">N° Résa</th>
-                <th rowSpan={2} className="px-4 py-3 text-right font-semibold text-slate-700 uppercase bg-slate-100">Taux</th>
+                <th rowSpan={2} className="px-4 py-3 text-right font-semibold text-slate-700 uppercase bg-slate-100">Taux Prospection</th>
+                <th rowSpan={2} className="px-4 py-3 text-right font-semibold text-slate-700 uppercase bg-slate-100">Taux Resa</th>
                 <th rowSpan={2} className="px-4 py-3 text-center font-semibold text-slate-700 uppercase bg-slate-100">Statut</th>
                 <th rowSpan={2} className="px-4 py-3 text-center font-semibold text-slate-700 uppercase bg-slate-100">Nb pax</th>
 
@@ -391,6 +494,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   </div>
                 </th>
 
+                {/* ********************** Prix Prospection ********************** */}
                 {/* Groupe PU Cie Devise */}
                 <th
                   colSpan={collapsedGroups.puCieDevise ? 1 : 3}
@@ -398,7 +502,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-emerald-700 border-x border-emerald-500 cursor-pointer hover:bg-emerald-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
-                    🏢 PU Cie Devise
+                    🏢 PU Cie Devise Prospection
                     <span className="text-xs">{collapsedGroups.puCieDevise ? '▶' : '▼'}</span>
                   </div>
                 </th>
@@ -410,7 +514,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-emerald-800 border-x border-emerald-600 cursor-pointer hover:bg-emerald-700 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
-                    🏢 PU Cie Ariary
+                    🏢 PU Cie Ariary Prospection
                     <span className="text-xs">{collapsedGroups.puCieAriary ? '▶' : '▼'}</span>
                   </div>
                 </th>
@@ -422,7 +526,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-blue-700 border-x border-blue-500 cursor-pointer hover:bg-blue-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
-                    👤 PU Client Devise
+                    👤 PU Client Devise Prospection
                     <span className="text-xs">{collapsedGroups.puClientDevise ? '▶' : '▼'}</span>
                   </div>
                 </th>
@@ -434,7 +538,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-blue-800 border-x border-blue-600 cursor-pointer hover:bg-blue-700 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
-                    👤 PU Client Ariary
+                    👤 PU Client Ariary Prospection
                     <span className="text-xs">{collapsedGroups.puClientAriary ? '▶' : '▼'}</span>
                   </div>
                 </th>
@@ -446,7 +550,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-teal-700 border-x border-teal-500 cursor-pointer hover:bg-teal-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
-                    🏢 Mt Cie Devise
+                    🏢 Mt Cie Devise Prospection
                     <span className="text-xs">{collapsedGroups.mtCieDevise ? '▶' : '▼'}</span>
                   </div>
                 </th>
@@ -458,7 +562,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-teal-800 border-x border-teal-600 cursor-pointer hover:bg-teal-700 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
-                    🏢 Mt Cie Ariary
+                    🏢 Mt Cie Ariary Prospection
                     <span className="text-xs">{collapsedGroups.mtCieAriary ? '▶' : '▼'}</span>
                   </div>
                 </th>
@@ -470,7 +574,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-indigo-700 border-x border-indigo-500 cursor-pointer hover:bg-indigo-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
-                    👤 Mt Client Devise
+                    👤 Mt Client Devise Prospection
                     <span className="text-xs">{collapsedGroups.mtClientDevise ? '▶' : '▼'}</span>
                   </div>
                 </th>
@@ -482,7 +586,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-indigo-800 border-x border-indigo-600 cursor-pointer hover:bg-indigo-700 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
-                    👤 Mt Client Ariary
+                    👤 Mt Client Ariary Prospection
                     <span className="text-xs">{collapsedGroups.mtClientAriary ? '▶' : '▼'}</span>
                   </div>
                 </th>
@@ -494,7 +598,117 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-violet-700 border-x border-violet-500 cursor-pointer hover:bg-violet-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
-                    🎫 Mt Réservation
+                    🎫 Mt Total CIE Prospection
+                    <span className="text-xs">{collapsedGroups.mtResa ? '▶' : '▼'}</span>
+                  </div>
+                </th>
+
+                {/* ****************************** Prix Reservation ****************************** */}
+
+                {/* Groupe PU Cie Devise */}
+                <th
+                  colSpan={collapsedGroups.puCieDevise ? 1 : 3}
+                  onClick={() => toggleGroup('puCieDevise')}
+                  className="px-4 py-2 text-center font-bold text-white uppercase bg-emerald-700 border-x border-emerald-500 cursor-pointer hover:bg-emerald-600 transition-colors select-none"
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    🏢 PU Cie Devise Réservation
+                    <span className="text-xs">{collapsedGroups.puCieDevise ? '▶' : '▼'}</span>
+                  </div>
+                </th>
+
+                {/* Groupe PU Cie Ariary */}
+                <th
+                  colSpan={collapsedGroups.puCieAriary ? 1 : 3}
+                  onClick={() => toggleGroup('puCieAriary')}
+                  className="px-4 py-2 text-center font-bold text-white uppercase bg-emerald-800 border-x border-emerald-600 cursor-pointer hover:bg-emerald-700 transition-colors select-none"
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    🏢 PU Cie Ariary Réservation
+                    <span className="text-xs">{collapsedGroups.puCieAriary ? '▶' : '▼'}</span>
+                  </div>
+                </th>
+
+                {/* Groupe PU Client Devise */}
+                <th
+                  colSpan={collapsedGroups.puClientDevise ? 1 : 3}
+                  onClick={() => toggleGroup('puClientDevise')}
+                  className="px-4 py-2 text-center font-bold text-white uppercase bg-blue-700 border-x border-blue-500 cursor-pointer hover:bg-blue-600 transition-colors select-none"
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    👤 PU Client Devise Réservation
+                    <span className="text-xs">{collapsedGroups.puClientDevise ? '▶' : '▼'}</span>
+                  </div>
+                </th>
+
+                {/* Groupe PU Client Ariary */}
+                <th
+                  colSpan={collapsedGroups.puClientAriary ? 1 : 3}
+                  onClick={() => toggleGroup('puClientAriary')}
+                  className="px-4 py-2 text-center font-bold text-white uppercase bg-blue-800 border-x border-blue-600 cursor-pointer hover:bg-blue-700 transition-colors select-none"
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    👤 PU Client Ariary Réservation
+                    <span className="text-xs">{collapsedGroups.puClientAriary ? '▶' : '▼'}</span>
+                  </div>
+                </th>
+
+                {/* Groupe Mt Cie Devise */}
+                <th
+                  colSpan={collapsedGroups.mtCieDevise ? 1 : 3}
+                  onClick={() => toggleGroup('mtCieDevise')}
+                  className="px-4 py-2 text-center font-bold text-white uppercase bg-teal-700 border-x border-teal-500 cursor-pointer hover:bg-teal-600 transition-colors select-none"
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    🏢 Mt Cie Devise Réservation
+                    <span className="text-xs">{collapsedGroups.mtCieDevise ? '▶' : '▼'}</span>
+                  </div>
+                </th>
+
+                {/* Groupe Mt Cie Ariary */}
+                <th
+                  colSpan={collapsedGroups.mtCieAriary ? 1 : 3}
+                  onClick={() => toggleGroup('mtCieAriary')}
+                  className="px-4 py-2 text-center font-bold text-white uppercase bg-teal-800 border-x border-teal-600 cursor-pointer hover:bg-teal-700 transition-colors select-none"
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    🏢 Mt Cie Ariary Réservation
+                    <span className="text-xs">{collapsedGroups.mtCieAriary ? '▶' : '▼'}</span>
+                  </div>
+                </th>
+
+                {/* Groupe Mt Client Devise */}
+                <th
+                  colSpan={collapsedGroups.mtClientDevise ? 1 : 3}
+                  onClick={() => toggleGroup('mtClientDevise')}
+                  className="px-4 py-2 text-center font-bold text-white uppercase bg-indigo-700 border-x border-indigo-500 cursor-pointer hover:bg-indigo-600 transition-colors select-none"
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    👤 Mt Client Devise Réservation
+                    <span className="text-xs">{collapsedGroups.mtClientDevise ? '▶' : '▼'}</span>
+                  </div>
+                </th>
+
+                {/* Groupe Mt Client Ariary */}
+                <th
+                  colSpan={collapsedGroups.mtClientAriary ? 1 : 3}
+                  onClick={() => toggleGroup('mtClientAriary')}
+                  className="px-4 py-2 text-center font-bold text-white uppercase bg-indigo-800 border-x border-indigo-600 cursor-pointer hover:bg-indigo-700 transition-colors select-none"
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    👤 Mt Client Ariary Réservation
+                    <span className="text-xs">{collapsedGroups.mtClientAriary ? '▶' : '▼'}</span>
+                  </div>
+                </th>
+
+                {/* Groupe Mt Réservation */}
+                <th
+                  colSpan={collapsedGroups.mtResa ? 1 : 3}
+                  onClick={() => toggleGroup('mtResa')}
+                  className="px-4 py-2 text-center font-bold text-white uppercase bg-violet-700 border-x border-violet-500 cursor-pointer hover:bg-violet-600 transition-colors select-none"
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    🎫 Mt Réservation Réservation
                     <span className="text-xs">{collapsedGroups.mtResa ? '▶' : '▼'}</span>
                   </div>
                 </th>
@@ -651,6 +865,108 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   <th className="px-4 py-2 text-center text-xs text-violet-400 italic bg-violet-50">— replié —</th>
                 )}
 
+
+                {/* ********************** Prix resa ******************* */}
+
+                {/* PU Cie Devise */}
+                {!collapsedGroups.puCieDevise ? (
+                  <>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50">Billet</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50">Service</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50">Pénalité</th>
+                  </>
+                ) : (
+                  <th className="px-4 py-2 text-center text-xs text-emerald-400 italic bg-emerald-50">— replié —</th>
+                )}
+
+                {/* PU Cie Ariary */}
+                {!collapsedGroups.puCieAriary ? (
+                  <>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100">Billet Ar</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100">Service Ar</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100">Pénalité Ar</th>
+                  </>
+                ) : (
+                  <th className="px-4 py-2 text-center text-xs text-emerald-500 italic bg-emerald-100">— replié —</th>
+                )}
+
+                {/* PU Client Devise */}
+                {!collapsedGroups.puClientDevise ? (
+                  <>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-blue-700 bg-blue-50">Billet</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-blue-700 bg-blue-50">Service</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-blue-700 bg-blue-50">Pénalité</th>
+                  </>
+                ) : (
+                  <th className="px-4 py-2 text-center text-xs text-blue-400 italic bg-blue-50">— replié —</th>
+                )}
+
+                {/* PU Client Ariary */}
+                {!collapsedGroups.puClientAriary ? (
+                  <>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-blue-800 bg-blue-100">Billet Ar</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-blue-800 bg-blue-100">Service Ar</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-blue-800 bg-blue-100">Pénalité Ar</th>
+                  </>
+                ) : (
+                  <th className="px-4 py-2 text-center text-xs text-blue-500 italic bg-blue-100">— replié —</th>
+                )}
+
+                {/* Mt Cie Devise */}
+                {!collapsedGroups.mtCieDevise ? (
+                  <>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-teal-700 bg-teal-50">Billet</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-teal-700 bg-teal-50">Service</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-teal-700 bg-teal-50">Pénalité</th>
+                  </>
+                ) : (
+                  <th className="px-4 py-2 text-center text-xs text-teal-400 italic bg-teal-50">— replié —</th>
+                )}
+
+                {/* Mt Cie Ariary */}
+                {!collapsedGroups.mtCieAriary ? (
+                  <>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-teal-800 bg-teal-100">Billet Ar</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-teal-800 bg-teal-100">Service Ar</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-teal-800 bg-teal-100">Pénalité Ar</th>
+                  </>
+                ) : (
+                  <th className="px-4 py-2 text-center text-xs text-teal-500 italic bg-teal-100">— replié —</th>
+                )}
+
+                {/* Mt Client Devise */}
+                {!collapsedGroups.mtClientDevise ? (
+                  <>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-indigo-700 bg-indigo-50">Billet</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-indigo-700 bg-indigo-50">Service</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-indigo-700 bg-indigo-50">Pénalité</th>
+                  </>
+                ) : (
+                  <th className="px-4 py-2 text-center text-xs text-indigo-400 italic bg-indigo-50">— replié —</th>
+                )}
+
+                {/* Mt Client Ariary */}
+                {!collapsedGroups.mtClientAriary ? (
+                  <>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-indigo-800 bg-indigo-100">Billet Ar</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-indigo-800 bg-indigo-100">Service Ar</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-indigo-800 bg-indigo-100">Pénalité Ar</th>
+                  </>
+                ) : (
+                  <th className="px-4 py-2 text-center text-xs text-indigo-500 italic bg-indigo-100">— replié —</th>
+                )}
+
+                {/* Mt Réservation */}
+                {!collapsedGroups.mtResa ? (
+                  <>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-700 bg-violet-50">Billet</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-700 bg-violet-50">Service</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-700 bg-violet-50">Pénalité</th>
+                  </>
+                ) : (
+                  <th className="px-4 py-2 text-center text-xs text-violet-400 italic bg-violet-50">— replié —</th>
+                )}
+
                 {/* Commissions */}
                 {!collapsedGroups.commissions ? (
                   <>
@@ -692,6 +1008,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                       <td className="px-4 py-3 text-xs text-slate-600">{ligne.referenceLine}</td>
                       <td className="px-4 py-3 font-medium text-slate-800">{fournisseurLibelle}</td>
                       <td className="px-4 py-3 text-xs text-slate-600">{ligne.reservation || '—'}</td>
+                      <td className="px-4 py-3 text-right font-medium">{ligne.prospectionLigne.tauxEchange || '—'}</td>
                       <td className="px-4 py-3 text-right font-medium">{ligne.resaTauxEchange || '—'}</td>
                       <td className="px-4 py-3 text-center text-xs">{ligne.statusLigne == 'ANNULER' ? 'ANNULÉ' : ligne.statusLigne == 'CLOTURER' ? 'CLÔTURÉ' : ligne.statusLigne == 'MODIFIER' ? 'MODIFIÉ' : ligne.statusLigne == 'CREER' ? 'CRÉÉ' : ligne.statusLigne || '—'}</td>
                       <td className="px-4 py-3 text-center font-medium">{ligne.prospectionLigne.nombre || '—'}</td>
@@ -720,6 +1037,130 @@ const BilletTable: React.FC<BilletTableProps> = ({
                         </td>
                       )}
 
+                      {/* **************************** Prix Prospection **************************** */}
+
+                      {/* ===== SECTION PRIX PROSPECTION (depuis ligne.prospectionLigne) ===== */}
+
+                      {/* PU Cie Devise - Prospection */}
+                      {!collapsedGroups.puCieDevise ? (
+                        <>
+                          <PriceCell value={p?.puBilletCompagnieDevise} isCurrency />
+                          <PriceCell value={p?.puServiceCompagnieDevise} isCurrency />
+                          <PriceCell value={p?.puPenaliteCompagnieDevise} isCurrency />
+                        </>
+                      ) : (
+                        <td className="px-4 py-3 text-center text-xs text-emerald-600 bg-emerald-50 font-semibold">
+                          {p?.puBilletCompagnieDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+                        </td>
+                      )}
+
+                      {/* PU Cie Ariary - Prospection */}
+                      {!collapsedGroups.puCieAriary ? (
+                        <>
+                          <PriceCell value={p?.puBilletCompagnieAriary} isCurrency />
+                          <PriceCell value={p?.puServiceCompagnieAriary} isCurrency />
+                          <PriceCell value={p?.puPenaliteCompagnieAriary} isCurrency />
+                        </>
+                      ) : (
+                        <td className="px-4 py-3 text-center text-xs text-emerald-700 bg-emerald-100 font-semibold">
+                          {p?.puBilletCompagnieAriary?.toLocaleString('fr-FR')} Ar
+                        </td>
+                      )}
+
+                      {/* PU Client Devise - Prospection */}
+                      {/* ⚠️ ProspectionLigne n'a PAS de puBilletClientDevise séparé,
+                          il a montantBilletClientDevise — à adapter selon votre modèle */}
+                      {!collapsedGroups.puClientDevise ? (
+                        <>
+                          <PriceCell value={p?.montantBilletClientDevise} isCurrency />
+                          <PriceCell value={p?.montantServiceClientDevise} isCurrency />
+                          <PriceCell value={p?.montantPenaliteClientDevise} isCurrency />
+                        </>
+                      ) : (
+                        <td className="px-4 py-3 text-center text-xs text-blue-600 bg-blue-50 font-semibold">
+                          {p?.montantBilletClientDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+                        </td>
+                      )}
+
+                      {/* PU Client Ariary - Prospection */}
+                      {!collapsedGroups.puClientAriary ? (
+                        <>
+                          <PriceCell value={p?.montantBilletClientAriary} isCurrency />
+                          <PriceCell value={p?.montantServiceClientAriary} isCurrency />
+                          <PriceCell value={p?.montantPenaliteClientAriary} isCurrency />
+                        </>
+                      ) : (
+                        <td className="px-4 py-3 text-center text-xs text-blue-700 bg-blue-100 font-semibold">
+                          {p?.montantBilletClientAriary?.toLocaleString('fr-FR')} Ar
+                        </td>
+                      )}
+
+                      {/* Mt Cie Devise - Prospection */}
+                      {!collapsedGroups.mtCieDevise ? (
+                        <>
+                          <PriceCell value={p?.montantBilletCompagnieDevise} isCurrency />
+                          <PriceCell value={p?.montantServiceCompagnieDevise} isCurrency />
+                          <PriceCell value={p?.montantPenaliteCompagnieDevise} isCurrency />
+                        </>
+                      ) : (
+                        <td className="px-4 py-3 text-center text-xs text-teal-600 bg-teal-50 font-semibold">
+                          {p?.montantBilletCompagnieDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+                        </td>
+                      )}
+
+                      {/* Mt Cie Ariary - Prospection */}
+                      {!collapsedGroups.mtCieAriary ? (
+                        <>
+                          <PriceCell value={p?.montantBilletCompagnieAriary} className="font-medium text-emerald-700" />
+                          <PriceCell value={p?.montantServiceCompagnieAriary} className="font-medium text-emerald-700" />
+                          <PriceCell value={p?.montantPenaliteCompagnieAriary} className="font-medium text-emerald-700" />
+                        </>
+                      ) : (
+                        <td className="px-4 py-3 text-center text-xs text-teal-700 bg-teal-100 font-semibold">
+                          {p?.montantBilletCompagnieAriary?.toLocaleString('fr-FR')} Ar
+                        </td>
+                      )}
+
+                      {/* Mt Client Devise - Prospection */}
+                      {!collapsedGroups.mtClientDevise ? (
+                        <>
+                          <PriceCell value={p?.montantBilletClientDevise} isCurrency />
+                          <PriceCell value={p?.montantServiceClientDevise} isCurrency />
+                          <PriceCell value={p?.montantPenaliteClientDevise} isCurrency />
+                        </>
+                      ) : (
+                        <td className="px-4 py-3 text-center text-xs text-indigo-600 bg-indigo-50 font-semibold">
+                          {p?.montantBilletClientDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+                        </td>
+                      )}
+
+                      {/* Mt Client Ariary - Prospection */}
+                      {!collapsedGroups.mtClientAriary ? (
+                        <>
+                          <PriceCell value={p?.montantBilletClientAriary} className="font-medium text-emerald-700" />
+                          <PriceCell value={p?.montantServiceClientAriary} className="font-medium text-emerald-700" />
+                          <PriceCell value={p?.montantPenaliteClientAriary} className="font-medium text-emerald-700" />
+                        </>
+                      ) : (
+                        <td className="px-4 py-3 text-center text-xs text-indigo-700 bg-indigo-100 font-semibold">
+                          {p?.montantBilletClientAriary?.toLocaleString('fr-FR')} Ar
+                        </td>
+                      )}
+
+                      {/* Mt Réservation - Prospection (commission + total) */}
+                      {!collapsedGroups.mtResa ? (
+                        <>
+                          <PriceCell value={p?.montantBilletCompagnieAriary} className="font-medium text-violet-700" />
+                          <PriceCell value={p?.montantServiceCompagnieAriary} className="font-medium text-violet-700" />
+                          <PriceCell value={p?.montantPenaliteCompagnieAriary} className="font-medium text-violet-700" />
+                        </>
+                      ) : (
+                        <td className="px-4 py-3 text-center text-xs text-violet-600 bg-violet-50 font-semibold">
+                          {p?.montantBilletCompagnieAriary?.toLocaleString('fr-FR')} Ar
+                        </td>
+                      )}
+
+                      {/* **************************** Prix Resa **************************** */}
                       {/* PU Cie Devise */}
                       {!collapsedGroups.puCieDevise ? (
                         <>
@@ -823,6 +1264,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                           {ligne.puResaMontantBilletClientAriary?.toLocaleString('fr-FR')} Ar
                         </td>
                       )}
+                      
 
                       {/* Mt Réservation */}
                       {!collapsedGroups.mtResa ? (
@@ -868,12 +1310,11 @@ const BilletTable: React.FC<BilletTableProps> = ({
                       <td className="px-4 py-3">
                         <ServicesSpecifiquesCell 
                           services={ligne.prospectionLigne?.serviceProspectionLigne} 
-                          serviceById={serviceById} 
                         />
                       </td>
 
                       <td className="px-4 py-3 align-top">
-                        <PassagersCell billets={ligne.billet} />
+                        <PassagersCell billets={ligne.billet} handleReporter={handleReporter} />
                       </td>
 
                       <td className="px-4 py-3 text-center min-w-[220px]">

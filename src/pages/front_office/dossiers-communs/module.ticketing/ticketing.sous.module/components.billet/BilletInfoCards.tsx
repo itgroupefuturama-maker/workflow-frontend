@@ -27,9 +27,9 @@ const InfoItemCompact = ({
     <div className="flex flex-col py-1.5 transition-colors group">
       <div className="flex items-center gap-1.5 mb-0.5">
         {Icon && <Icon size={10} className="text-slate-300" />}
-        <span className="text-[9px] font-bold uppercase tracking-tighter text-slate-400">{label}</span>
+        <span className="text-[11px] font-bold uppercase tracking-tighter text-slate-400">{label}</span>
       </div>
-      <p className={`text-[11px] font-semibold truncate ${highlight ? highlightColors[highlight] : 'text-slate-700'}`}>
+      <p className={`text-[13px] ml-4 font-bold truncate ${highlight ? highlightColors[highlight] : 'text-slate-700'}`}>
         {value ?? '—'}
       </p>
     </div>
@@ -48,7 +48,7 @@ const BilletInfoCards: React.FC<BilletInfoCardsProps> = ({ billet, clientFacture
   const isAnnule = !!billet?.raisonAnnul;
 
   return (
-    <div className="bg-white rounded-lg border border-slate-200 shadow-sm transition-all duration-200 overflow-hidden">
+    <div className="bg-white rounded-lg border border-slate-200 shadow-sm shadow-slate-100 transition-all duration-200 overflow-hidden">
       
       {/* Header Ultra-Compact */}
       <div 
@@ -58,14 +58,14 @@ const BilletInfoCards: React.FC<BilletInfoCardsProps> = ({ billet, clientFacture
         <div className="flex items-center gap-3 min-w-0">
           <div className="flex items-center gap-2">
             <Plane size={14} className={isAnnule ? 'text-red-400' : 'text-indigo-500'} />
-            <span className="text-xs font-black text-slate-800 tracking-tight whitespace-nowrap">
+            <span className="text-[13px] font-black text-slate-800 tracking-tight whitespace-nowrap">
               {billet?.numeroBillet || 'N/A'}
             </span>
           </div>
 
           <div className="h-4 w-px bg-slate-200 hidden sm:block" />
 
-          <div className="hidden sm:flex items-center gap-3 truncate text-[10px]">
+          <div className="hidden sm:flex items-center gap-3 truncate text-[13px]">
             <span className="text-slate-500 font-medium truncate max-w-[150px]">
               {clientFacture?.libelle}
             </span>
@@ -77,7 +77,7 @@ const BilletInfoCards: React.FC<BilletInfoCardsProps> = ({ billet, clientFacture
 
         <div className="flex items-center gap-4">
           {isAnnule && (
-            <span className="text-[9px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded border border-red-100">ANNULÉ</span>
+            <span className="text-[13px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded border border-red-100">ANNULÉ</span>
           )}
           <div className="text-slate-400">
             {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
@@ -88,7 +88,7 @@ const BilletInfoCards: React.FC<BilletInfoCardsProps> = ({ billet, clientFacture
       {/* Contenu Déplié */}
       <div className={`overflow-hidden transition-all duration-200 ${isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
         {isAnnule && (
-          <div className="px-4 py-2 bg-red-50/50 border-b border-red-100 text-[10px] text-red-700 flex items-center gap-2">
+          <div className="px-4 py-2 bg-red-50/50 border-b border-red-100 text-[13px] text-red-700 flex items-center gap-2">
             <XCircle size={12} />
             <strong>Motif:</strong> {billet.raisonAnnul}
           </div>

@@ -7,76 +7,13 @@ import {
   envoyerAssuranceDevis,
   approuverAssuranceDevis,
   createAssuranceEntete,
-  genererDevisDirection,
-  genererDevisClient,
 } from '../../../../../../app/front_office/parametre_assurance/assuranceProspectionSlice';
 import TabContainer from '../../../../../../layouts/TabContainer';
 import { AssuranceHeader } from '../../components/AssuranceHeader';
-import { API_URL } from '../../../../../../service/env';
-
-/* ── helpers ── */
-const fmtDate = (d: string | null) =>
-  d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
-const fmtNum = (n: number | null | undefined) =>
-  n != null ? n.toLocaleString('fr-FR') : '—';
-
-/* ── atoms ── */
-const Spinner = ({ size = 6 }: { size?: number }) => (
-  <svg className={`animate-spin h-${size} w-${size} text-gray-400`} viewBox="0 0 24 24" fill="none">
-    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-  </svg>
-);
-
-const Badge = ({ status }: { status: string }) => {
-  const colors: Record<string, string> = {
-    ACTIF:   'bg-emerald-50 text-emerald-700 border-emerald-200',
-    créé:   'bg-blue-50 text-blue-700 border-blue-200 uppercase',
-    DEVIS:   'bg-amber-50 text-amber-700 border-amber-200 uppercase',
-    ENVOYE:  'bg-violet-50 text-violet-700 border-violet-200 uppercase',
-    APPROUVE:'bg-emerald-50 text-emerald-700 border-emerald-200 uppercase',
-    INACTIF: 'bg-gray-100 text-gray-500 border-gray-200 uppercase',
-  };
-  const cls = colors[status] ?? 'bg-gray-100 text-gray-500 border-gray-200';
-  return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold border ${cls}`}>
-      <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
-      {status}
-    </span>
-  );
-};
-
-const Card = ({ title, children, action }: {
-  title: string;
-  children: React.ReactNode;
-  action?: React.ReactNode;
-}) => (
-  <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-    <div className="px-5 py-3 border-b border-gray-100 bg-gray-50 flex items-center justify-between">
-      <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">{title}</p>
-      {action}
-    </div>
-    <div className="px-5 py-4">{children}</div>
-  </div>
-);
-
-const DataRow = ({ label, value }: { label: string; value: React.ReactNode }) => (
-  <div className="flex items-center justify-between py-2 border-b border-gray-50 last:border-0">
-    <span className="text-sm text-gray-500">{label}</span>
-    <span className="text-sm font-medium text-gray-900 text-right">{value ?? '—'}</span>
-  </div>
-);
-
-const Th = ({ children }: { children: React.ReactNode }) => (
-  <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-widest text-gray-400 bg-gray-50 border-b border-gray-100">
-    {children}
-  </th>
-);
-const Td = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
-  <td className={`px-4 py-3 text-sm text-gray-700 border-b border-gray-50 ${className}`}>
-    {children}
-  </td>
-);
+import { Badge, InfoCard, SectionTitle, Spinner,  } from '../../components/atoms';
+import { fmtDate, fmtNum } from '../../utils/formatters';
+import { ArrowLeft, CheckCircle, Clock, Download, Eye, FileText, Info, Send, ShieldCheck } from 'lucide-react';
+import { useAssurancePdf } from '../../../module.pdf/pdf.generation/hooks/usePdfGenerator';
 
 /* ── page ── */
 const PageDetailProspectionAssurance = () => {
@@ -94,8 +31,20 @@ const PageDetailProspectionAssurance = () => {
       { id: 'assurance',        label: 'Listes des assurance' },
     ];
 
-    const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'prospection');
+  const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'prospection');
 
+  const { generate: generatePdf, preview: previewPdf, loading: pdfLoading } = useAssurancePdf();
+
+  // ── Remplacer handleDevisDirection et handleDevisClient ──────────────
+  const handleDevisDirection = () => {
+    if (!devisDetail) return;
+    generatePdf(devisDetail, 'direction', undefined, `${devis.reference}-direction.pdf`);
+  };
+
+  const handleDevisClient = () => {
+    if (!devisDetail) return;
+    generatePdf(devisDetail, 'client', undefined, `${devis.reference}-client.pdf`);
+  };
 
   useEffect(() => {
     if (enteteId) dispatch(fetchAssuranceDevisDetail(enteteId));
@@ -140,29 +89,29 @@ const PageDetailProspectionAssurance = () => {
     }
   };
 
-  const handleDevisDirection = async () => {
-    if (!enteteId) return;
-    const res = await dispatch(genererDevisDirection(enteteId));
-    if (genererDevisDirection.fulfilled.match(res)) {
-      const url = `${API_URL}/${res.payload}`;
-      window.open(url, '_blank');
-    }
-  };
+  // const handleDevisDirection = async () => {
+  //   if (!enteteId) return;
+  //   const res = await dispatch(genererDevisDirection(enteteId));
+  //   if (genererDevisDirection.fulfilled.match(res)) {
+  //     const url = `${API_URL}/${res.payload}`;
+  //     window.open(url, '_blank');
+  //   }
+  // };
 
-  const handleDevisClient = async () => {
-    if (!enteteId) return;
-    const res = await dispatch(genererDevisClient(enteteId));
-    if (genererDevisClient.fulfilled.match(res)) {
-      const url = `${API_URL}/${res.payload}`;
-      window.open(url, '_blank');
-    }
-  };
+  // const handleDevisClient = async () => {
+  //   if (!enteteId) return;
+  //   const res = await dispatch(genererDevisClient(enteteId));
+  //   if (genererDevisClient.fulfilled.match(res)) {
+  //     const url = `${API_URL}/${res.payload}`;
+  //     window.open(url, '_blank');
+  //   }
+  // };
 
   /* ── états ── */
   if (loadingDevis) return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="flex flex-col items-center gap-3 text-gray-400">
-        <Spinner size={8} />
+        <Spinner/>
         <p className="text-sm">Chargement…</p>
       </div>
     </div>
@@ -183,247 +132,241 @@ const PageDetailProspectionAssurance = () => {
 
   /* ── logique des boutons selon le statut ── */
   const canEnvoyer  = devis.statut === 'CREER';
-  const canApprouver = devis.statut === 'ENVOYE';
 
   return (
     <div className="h-full flex flex-col min-h-0">
       <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange}>
-        <div className="flex h-full min-h-0 overflow-hidden">
-          {/* ── Colonne principale ── */}
-          <div className="flex-1 min-w-0 flex flex-col min-h-0">
-            {/* ── Header fixe — ne scrolle PAS ── */}
-            <div className="shrink-0 px-4 pt-2 bg-white">
-              <AssuranceHeader numeroassurance={devis.reference} nomPassager= {''} navigate={navigate} isDetail={true} isProspection={true}/>
+        <div className="flex flex-col h-full bg-slate-50/50">
+          {/* ── Header fixe — ne scrolle PAS ── */}
+          <div className="shrink-0 px-4 pt-2 bg-slate-200 rounded-t-xl">
+            <AssuranceHeader numeroassurance={devis.reference} nomPassager= {''} navigate={navigate} isDetail={true} isProspection={true}/>
+          </div>
+          {/* ── TOPBAR ACTIONS ── */}
+          <div className="bg-slate-200 rounded-b-xl border-b border-slate-200 px-6 py-3 flex items-center justify-between sticky top-0 z-20">
+            <div className="flex items-center gap-4">
+              <button onClick={() => navigate(-1)} className="bg-white p-2 hover:text-slate-600 rounded-xl transition-colors text-slate-300">
+                <ArrowLeft size={20} />
+              </button>
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <h1 className="font-black text-slate-900">Détail Prospection</h1>
+                  <Badge status={devis.statut} />
+                </div>
+                <p className="text-xs text-slate-600 font-medium">Réf: <span className=" text-slate-600">{devis.reference}</span> • Dossier: {numeroDos}</p>
+              </div>
             </div>
-            {/* ── Topbar ── */}
-            <div className="px-4 bg-white border-b border-gray-200 shadow-sm">
-              <div className="py-3 flex items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => navigate(-1)}
-                    className="h-8 w-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-100 text-sm transition"
-                  >←</button>
-                  <div>
-                    <h1 className="text-sm font-bold text-gray-900">Détail prospection</h1>
-                    <p className="text-xs text-gray-400">{numeroDos} · <span className="font-mono">{devis.reference}</span></p>
+
+            <div className="flex items-center gap-3">
+              {/* Groupe Exports */}
+              {/* Groupe Exports — remplace l'existant */}
+              <div className="flex bg-slate-300 p-1 rounded-xl gap-1">
+
+                {/* Direction */}
+                <button
+                  onClick={() => devisDetail && previewPdf(devisDetail, 'direction')}
+                  disabled={pdfLoading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-slate-700
+                    text-xs font-bold rounded-lg border border-slate-200 shadow-sm
+                    hover:bg-slate-50 disabled:opacity-50 transition-all"
+                  title="Aperçu direction"
+                >
+                  <Eye size={13} className="text-slate-400" />Direction
+                </button>
+                <button
+                  onClick={handleDevisDirection}
+                  disabled={pdfLoading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-slate-700
+                    text-xs font-bold rounded-lg border border-slate-200 shadow-sm
+                    hover:bg-slate-50 disabled:opacity-50 transition-all"
+                  title="Télécharger direction"
+                >
+                  <Download size={14} className="text-slate-400" /> 
+                </button>
+
+                <div className="w-px bg-slate-300 mx-0.5" />
+
+                {/* Client */}
+                <button
+                  onClick={() => devisDetail && previewPdf(devisDetail, 'client')}
+                  disabled={pdfLoading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-slate-700
+                    text-xs font-bold rounded-lg border border-slate-200 shadow-sm
+                    hover:bg-slate-50 disabled:opacity-50 transition-all"
+                  title="Aperçu client"
+                >
+                  <Eye size={13} className="text-teal-500" />Client
+                </button>
+                <button
+                  onClick={handleDevisClient}
+                  disabled={pdfLoading}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-white text-slate-700
+                    text-xs font-bold rounded-lg border border-slate-200 shadow-sm
+                    hover:bg-slate-50 disabled:opacity-50 transition-all"
+                  title="Télécharger client"
+                >
+                  <Download size={14} className="text-teal-500" />
+                </button>
+              </div>
+
+              <div className="w-px h-8 bg-slate-300 mx-2" />
+
+              {/* Groupe Workflow */}
+              <div className="flex items-center gap-2">
+                <button 
+                  disabled={!canEnvoyer} 
+                  onClick={handleEnvoyer}
+                  className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-xl border border-indigo-100 hover:bg-indigo-100 disabled:opacity-40 transition-all"
+                >
+                  <Send size={14} /> Envoyer
+                </button>
+                <button 
+                  disabled={devis.statut !== 'DEVIS_A_APPROUVER'}
+                  onClick={handleApprouver}
+                  className="flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-xl border border-emerald-100 hover:bg-emerald-100 transition-all disabled:opacity-40"
+                >
+                  <CheckCircle size={14} /> Approuver
+                </button>
+                <button 
+                  disabled={devis.statut !== 'DEVIS_APPROUVE'}
+                  onClick={handleCreateEntete}
+                  className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-xl hover:bg-slate-800 shadow-lg shadow-slate-200 disabled:opacity-30 transition-all"
+                >
+                  <ShieldCheck size={14} /> Créer Assurance
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-y-auto mt-4">
+            <div className="space-y-2">
+              
+              {/* ── HEADER KPI ── */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <InfoCard>
+                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Total Général</p>
+                  <p className="text-xl font-black text-slate-800">{fmtNum(devis.totalGeneral)} <span className="text-sm font-medium opacity-70">Ar</span></p>
+                </InfoCard>
+                <InfoCard>
+                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Client Facturé</p>
+                  <p className="text-sm font-bold text-slate-800 truncate">{prospectionAssurance.clientFacture}</p>
+                </InfoCard>
+                <InfoCard>
+                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Fournisseur</p>
+                  <p className="text-sm font-bold text-slate-800">{prospectionAssurance.fournisseur.libelle}</p>
+                </InfoCard>
+                <InfoCard>
+                  <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-1">Évolution Suivi</p>
+                  <Badge status={suivi?.evolution || 'N/A'} />
+                </InfoCard>
+              </div>
+
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                {/* ── COLONNE GAUCHE (Tableau) ── */}
+                <div className="xl:col-span-2 space-y-6">
+                  <div className="bg-white border border-slate-300 rounded-2xl overflow-hidden shadow-sm">
+                    <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
+                      <SectionTitle icon={FileText} title="Détail des lignes de calcul" badge={assuranceProspectionLignes.length} />
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50 text-[10px] font-black uppercase tracking-tighter text-slate-400 border-b border-slate-100">
+                            <th className="px-4 py-3">Période</th>
+                            <th className="px-4 py-3 text-center">Durée</th>
+                            <th className="px-4 py-3 bg-indigo-50/30 text-indigo-600">Devis</th>
+                            <th className="px-4 py-3 bg-indigo-50/30 text-indigo-600">Prix</th>
+                            <th className="px-4 py-3 bg-emerald-50/30 text-emerald-600 text-right">Montants en Ariary (Ar)</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100">
+                          {assuranceProspectionLignes.map((ligne) => (
+                            <tr key={ligne.id} className="hover:bg-slate-50/50 transition-colors group">
+                              <td className="px-4 py-3">
+                                <div className="flex flex-col">
+                                  <span className="text-xs font-bold text-slate-700">{fmtDate(ligne.dateDepart)}</span>
+                                  <span className="text-[10px] text-slate-400 font-medium">au {fmtDate(ligne.dateRetour)}</span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                <span className="px-2 py-1 bg-slate-100 text-slate-600 rounded-lg font-mono font-bold text-[10px]">
+                                  {ligne.duree}j
+                                </span>
+                              </td>
+                              <td className="text-[9px] font-bold text-slate-400 text-center">
+                                 {ligne.assuranceTarifPlein.devise}
+                              </td>
+                              {/* Colonne Devise */}
+                              <td className="px-4 py-3 bg-indigo-50/10">
+                                <div className="grid grid-cols-2 gap-x-4 text-[10px]">
+                                    <span className="text-slate-400 italic font-medium">Assureur:</span>
+                                    <span className="text-right font-bold">{ligne.assuranceTarifPlein.prixAssureurDevise.toLocaleString()}</span>
+                                    <span className="text-slate-400 italic font-medium">Commission:</span>
+                                    <span className="text-right font-bold text-indigo-600">{ligne.assuranceTarifPlein.commissionDevise.toLocaleString()}</span>
+                                    <span className="border-t border-indigo-100 mt-1 pt-1 text-slate-500 font-black italic">Prix Client:</span>
+                                    <span className="border-t border-indigo-100 mt-1 pt-1 text-right font-black text-indigo-700">{ligne.assuranceTarifPlein.prixClientDevise.toLocaleString()}</span>
+                                </div>
+                              </td>
+                              {/* Colonne Ariary */}
+                              <td className="px-4 py-3 bg-emerald-50/10">
+                                <div className="flex flex-col items-end gap-0.5">
+                                  <span className="text-[9px] font-bold text-slate-400 uppercase">Net: {ligne.assuranceTarifPlein.prixAssureurAriary.toLocaleString()}</span>
+                                  <span className="text-[11px] font-black text-emerald-700">{ligne.assuranceTarifPlein.prixClientAriary.toLocaleString()} Ar</span>
+                                  <span className="text-[9px] text-emerald-500 font-medium italic">Taux: {fmtNum(ligne.tauxChange)}</span>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 </div>
 
-                {/* ── Actions ── */}
-                  <div className="flex items-center gap-3">
-                    {suivi && (
-                      <Badge status={suivi.evolution || ''} />
-                    )}
-
-                    {/* Séparateur */}
-                    <div className="h-6 w-px bg-gray-200" />
-
-                    {/* ── Groupe 1 : Génération PDF ── */}
-                    <div className="flex items-center gap-1.5 bg-gray-100 rounded-lg p-1">
-                      <button
-                        onClick={handleDevisDirection}
-                        disabled={actioning}
-                        title="Générer le devis direction"
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed text-gray-700 text-xs font-semibold rounded-md transition shadow-sm border border-gray-200"
-                      >
-                        {actioning ? <Spinner size={3} /> : (
-                          <svg className="w-3.5 h-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                        )}
-                        PDF Direction
-                      </button>
-
-                      <button
-                        onClick={handleDevisClient}
-                        disabled={actioning}
-                        title="Générer le devis client"
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed text-gray-700 text-xs font-semibold rounded-md transition shadow-sm border border-gray-200"
-                      >
-                        {actioning ? <Spinner size={3} /> : (
-                          <svg className="w-3.5 h-3.5 text-teal-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                        )}
-                        PDF Client
-                      </button>
+                {/* ── COLONNE DROITE (Infos & Suivi) ── */}
+                <div className="space-y-6">
+                  {/* Carte Suivi Workflow */}
+                  <InfoCard>
+                    <SectionTitle icon={Clock} title="Suivi Chronologique" />
+                    <div className="space-y-4 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-px before:bg-slate-100">
+                      <div className="flex items-center gap-4 relative">
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center z-10 ${suivi.dateEnvoieDevis ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                          <Send size={12} />
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-bold text-slate-700 leading-none">Envoi au Client</p>
+                          <p className="text-[10px] text-slate-400 mt-1">{suivi.dateEnvoieDevis ? fmtDate(suivi.dateEnvoieDevis) : 'En attente...'}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 relative">
+                        <div className={`w-6 h-6 rounded-full flex items-center justify-center z-10 ${suivi.dateApprobation ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'}`}>
+                          <CheckCircle size={12} />
+                        </div>
+                        <div>
+                          <p className="text-[11px] font-bold text-slate-700 leading-none">Approbation</p>
+                          <p className="text-[10px] text-slate-400 mt-1">{suivi.dateApprobation ? fmtDate(suivi.dateApprobation) : 'Non approuvé'}</p>
+                        </div>
+                      </div>
                     </div>
+                  </InfoCard>
 
-                    {/* Séparateur */}
-                    <div className="h-6 w-px bg-gray-200" />
-
-                    {/* ── Groupe 2 : Workflow ── */}
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={handleEnvoyer}
-                        disabled={actioning || !canEnvoyer}
-                        title={!canEnvoyer ? 'Devis déjà envoyé ou approuvé' : 'Envoyer le devis'}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-violet-50 hover:bg-violet-100 border border-violet-200 disabled:opacity-40 disabled:cursor-not-allowed text-violet-700 text-xs font-semibold rounded-lg transition"
-                      >
-                        {actioning ? <Spinner size={3} /> : (
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                          </svg>
-                        )}
-                        Envoyer
-                      </button>
-
-                      <button
-                        onClick={handleApprouver}
-                        disabled={actioning}
-                        title={!canApprouver ? "Impossible d'approuver dans cet état" : 'Approuver le devis'}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 disabled:opacity-40 disabled:cursor-not-allowed text-emerald-700 text-xs font-semibold rounded-lg transition"
-                      >
-                        {actioning ? <Spinner size={3} /> : (
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                        )}
-                        Approuver
-                      </button>
-
-                      <button
-                        onClick={handleCreateEntete}
-                        disabled={actioning || devis.statut !== 'DEVIS_APPROUVE'}
-                        title={devis.statut !== 'DEVIS_APPROUVE' ? "Le devis doit être approuvé avant de créer l'assurance" : "Créer l'assurance"}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 border border-indigo-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg transition shadow-sm"
-                      >
-                        {actioning ? <Spinner size={3} /> : (
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                          </svg>
-                        )}
-                        Créer assurance
-                      </button>
+                  {/* Détails Techniques */}
+                  <InfoCard>
+                    <SectionTitle icon={Info} title="Informations Complémentaires" />
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center py-2 border-b border-slate-50">
+                        <span className="text-xs text-slate-400 font-medium">Référence Interne</span>
+                        <span className="text-xs font-mono font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded">{devis.reference}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-2 border-b border-slate-50">
+                        <span className="text-xs text-slate-400 font-medium">Code Fournisseur</span>
+                        <span className="text-xs font-bold text-slate-700 underline decoration-slate-200 underline-offset-4">{prospectionAssurance.fournisseur.code}</span>
+                      </div>
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-xs text-slate-400 font-medium">Date Création</span>
+                        <span className="text-xs font-bold text-slate-700">{fmtDate(prospectionAssurance.createdAt)}</span>
+                      </div>
                     </div>
-                  </div>
-              </div>
-            </div>
-
-            <div className="flex-1 min-h-0 overflow-y-auto pb-4 px-4">
-
-              {/* ── Feedbacks ── */}
-              <div className=" px-6 pt-4 space-y-2">
-                {actionSuccess && (
-                  <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl px-4 py-3">
-                    ✓ {actionSuccess}
-                  </div>
-                )}
-                {actionError && (
-                  <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-3">
-                    ⚠️ {actionError}
-                  </div>
-                )}
-              </div>
-
-              {/* ── Content ── */}
-              <div className="">
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
-
-                  {/* ── Colonne gauche ── */}
-                  <div className="lg:col-span-2 space-y-4">
-
-                    {/* Lignes */}
-                    <Card title={`Lignes de prospection · ${assuranceProspectionLignes.length}`}>
-                      {assuranceProspectionLignes.length === 0 ? (
-                        <p className="text-sm text-gray-400 italic">Aucune ligne.</p>
-                      ) : (
-                        <div className="overflow-hidden rounded-lg border border-gray-200 -mx-1">
-                          <table className="w-full">
-                            <thead>
-                              <tr>
-                                <Th>Départ</Th>
-                                <Th>Retour</Th>
-                                <Th>Durée</Th>
-                                <Th>Taux change</Th>
-                                <Th>Réf. devis</Th>
-                                <Th>Date devis</Th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {assuranceProspectionLignes.map((ligne) => (
-                                <tr key={ligne.id} className="hover:bg-gray-50 transition">
-                                  <Td>{fmtDate(ligne.dateDepart)}</Td>
-                                  <Td>{fmtDate(ligne.dateRetour)}</Td>
-                                  <Td>
-                                    <span className="font-mono bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs font-semibold">
-                                      {ligne.duree} j
-                                    </span>
-                                  </Td>
-                                  <Td>{fmtNum(ligne.tauxChange)} Ar</Td>
-                                  <Td className="text-gray-400 italic text-xs">{ligne.referenceDevis ?? '—'}</Td>
-                                  <Td className="text-gray-400 text-xs">{fmtDate(ligne.dateDevis)}</Td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </Card>
-
-                    {/* Suivi */}
-                    <Card title="Suivi">
-                      {suivi && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8">
-                          <DataRow label="Évolution"        value={<Badge status={suivi.evolution || 'EN_ATTENTE'} />} />
-                          <DataRow label="Statut"           value={<Badge status={suivi.statut} />} />
-                          <DataRow label="Entité"           value={suivi.entity} />
-                          <DataRow label="Envoi devis"      value={fmtDate(suivi.dateEnvoieDevis)} />
-                          <DataRow label="Approbation"      value={fmtDate(suivi.dateApprobation)} />
-                          <DataRow label="Réf. BC client"   value={suivi.referenceBcClient} />
-                          <DataRow label="Création BC"      value={fmtDate(suivi.dateCreationBc)} />
-                          <DataRow label="Soumis BC"        value={fmtDate(suivi.dateSoumisBc)} />
-                          <DataRow label="Approbation BC"   value={fmtDate(suivi.dateApprobationBc)} />
-                          <DataRow label="Réf. facture"     value={suivi.referenceFacClient} />
-                          <DataRow label="Création facture" value={fmtDate(suivi.dateCreationFac)} />
-                          <DataRow label="Règlement"        value={fmtDate(suivi.dateReglement)} />
-                          <DataRow label="Annulation"       value={fmtDate(suivi.dateAnnulation)} />
-                        </div>
-                      )}
-                    </Card>
-                  </div>
-
-                  {/* ── Colonne droite ── */}
-                  <div className="space-y-4">
-
-                    {/* Devis */}
-                    <Card title="Devis">
-                      <DataRow label="Référence" value={
-                        <span className="font-mono font-bold text-indigo-700">{devis.reference}</span>
-                      } />
-                      <DataRow label="Statut"    value={<Badge status={devis.statut} />} />
-                      <DataRow label="Total"     value={
-                        <span className="text-base font-bold text-indigo-700">{fmtNum(devis.totalGeneral)} Ar</span>
-                      } />
-                      <DataRow label="Créé le"   value={fmtDate(devis.createdAt)} />
-                      {/* {devis.url1 && (
-                        <DataRow label="URL 1" value={
-                          <a href={devis.url1} target="_blank" rel="noreferrer" className="text-indigo-600 text-xs underline">Voir</a>
-                        } />
-                      )}
-                      {devis.url2 && (
-                        <DataRow label="URL 2" value={
-                          <a href={devis.url2} target="_blank" rel="noreferrer" className="text-indigo-600 text-xs underline">Voir</a>
-                        } /> */}
-                      {/* )} */}
-                    </Card>
-
-                    {/* Prospection */}
-                    <Card title="Prospection">
-                      <DataRow label="N° dossier"        value={prospectionAssurance.prestation.numeroDos} />
-                      <DataRow label="Client"            value={prospectionAssurance.clientFacture} />
-                      <DataRow label="N° dossier commun" value={`#${prospectionAssurance.numeroDossierCommun}`} />
-                      <DataRow label="Statut"            value={<Badge status={prospectionAssurance.prestation.status == 'CREER' ? 'créé' : prospectionAssurance.prestation.status} />} />
-                      <DataRow label="Fournisseur"       value={
-                        <div className="text-right">
-                          <p className="text-sm font-medium text-gray-900">{prospectionAssurance.fournisseur.libelle}</p>
-                          <p className="text-xs text-gray-400 font-mono">{prospectionAssurance.fournisseur.code}</p>
-                        </div>
-                      } />
-                      <DataRow label="Créé le" value={fmtDate(prospectionAssurance.createdAt)} />
-                    </Card>
-
-                  </div>
+                  </InfoCard>
                 </div>
               </div>
             </div>

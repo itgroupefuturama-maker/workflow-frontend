@@ -2,11 +2,6 @@ import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../../../../app/store';
 import {
-  createAssuranceProspection,
-  createAssuranceProspectionLigne,
-  createAssuranceDevis,
-  fetchAssuranceProspections,
-  type AssuranceProspectionLigne,
   type AssuranceProspectionEntete,
   clearCreateError,
 } from '../../../../../app/front_office/parametre_assurance/assuranceProspectionSlice';
@@ -15,247 +10,63 @@ import { AssuranceHeader } from './AssuranceHeader';
 import DossierActifCard from '../../../../../components/CarteDossierActif/DossierActifCard';
 import InfoMessage from '../../../../../components/InfoMessage/InfoMessage';
 import SuiviTabSection from '../../module.suivi/SuiviTabSection';
+import ModalCreationProspection from '../modals/ModalCreationProspection';
+import ModalCreationDevis, { type DevisModalData } from '../modals/ModalCreationDevis';
+import ModalAjoutLigne, { type LigneModalData } from '../modals/ModalAjoutLigne';
+import { fmtDate } from '../utils/formatters';
+import { Badge, Spinner, Td, Th } from './atoms';
+import { ArrowRight, ChevronDown, ClipboardCheck, FileText, Layers, Plus } from 'lucide-react';
 
-/* ── helpers ── */
-const fmtDate = (d: string | null) =>
-  d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
-
-/* ── atoms ── */
-const Badge = ({ status }: { status: string }) => {
-  const colors: Record<string, string> = {
-    ACTIF:   'bg-emerald-50 text-emerald-700 border-emerald-200',
-    créé:   'bg-blue-50 text-blue-700 border-blue-200',
-    INACTIF: 'bg-gray-100 text-gray-500 border-gray-200',
-  };
-  const cls = colors[status] ?? 'bg-gray-100 text-gray-500 border-gray-200';
-  return (
-    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold border uppercase ${cls}`}>
-      <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
-      {status}
-    </span>
-  );
-};
-
-const Spinner = ({ size = 5 }: { size?: number }) => (
-  <svg className={`animate-spin h-${size} w-${size} text-gray-400`} viewBox="0 0 24 24" fill="none">
-    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-  </svg>
-);
-
-const Th = ({ children }: { children: React.ReactNode }) => (
-  <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-widest text-gray-400 bg-gray-50 border-b border-gray-100">
-    {children}
-  </th>
-);
-const Td = ({ children, className = '' }: { children: React.ReactNode; className?: string }) => (
-  <td className={`px-4 py-3 text-sm text-gray-700 border-b border-gray-50 ${className}`}>
-    {children}
-  </td>
-);
-
-const Input = ({ label, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { label: string }) => (
-  <div className="flex flex-col gap-1">
-    <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">{label}</label>
-    <input
-      {...props}
-      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition placeholder:text-gray-300"
-    />
-  </div>
-);
-
-const Select = ({ label, children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement> & { label: string }) => (
-  <div className="flex flex-col gap-1">
-    <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">{label}</label>
-    <select
-      {...props}
-      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition"
-    >
-      {children}
-    </select>
-  </div>
-);
-
-const Modal = ({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm p-4">
-    <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 bg-gray-50">
-        <h3 className="text-sm font-bold text-gray-900">{title}</h3>
-        <button
-          onClick={onClose}
-          className="h-7 w-7 flex items-center justify-center rounded-lg hover:bg-gray-200 text-gray-400 transition text-lg leading-none"
-        >×</button>
-      </div>
-      <div className="px-5 py-5">{children}</div>
-    </div>
-  </div>
-);
-
-/* ── type local pour la modal ligne ── */
-type LigneModalState = { enteteId: string; numeroDos: string } | null;
 
 /* ── composant principal ── */
 const AssuranceProspectionListe = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
 
-  const { list, loading, creating, error, createError } = useSelector((s: RootState) => s.assuranceProspection);
-  const { data: fournisseurs }                          = useSelector((s: RootState) => s.fournisseurs);
-  const { params }                                      = useSelector((s: RootState) => s.assuranceParams);
+  const { list, loading, error } = useSelector((s: RootState) => s.assuranceProspection);
 
   const dossierActif = useSelector((s: RootState) => s.dossierCommun.currentClientFactureId);
   const prestationId = dossierActif?.dossierCommunColab
     ?.find((colab) => colab.module?.nom?.toLowerCase() === 'assurance')
     ?.prestation?.[0]?.id ?? '';
 
-  const [expanded,      setExpanded]      = useState<Record<string, boolean>>({});
-  const [openCreate,    setOpenCreate]    = useState(false);
-  const [fournisseurId, setFournisseurId] = useState('');
+  console.log(`le prestation id est :`, prestationId);
 
-  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
-
+  const [expanded,             setExpanded]             = useState<Record<string, boolean>>({});
+  const [openCreate,           setOpenCreate]           = useState(false);
+  const [sortOrder,            setSortOrder]            = useState<'desc' | 'asc'>('desc');
   const [activeTabSousSection, setActiveTabSousSection] = useState('lignes');
+  const [ligneModal,           setLigneModal]           = useState<LigneModalData | null>(null);
+  const [devisModal,           setDevisModal]           = useState<DevisModalData | null>(null);
 
-  // modal ajout ligne — stocke l'enteteId + numeroDos pour le titre
-  const [ligneModal, setLigneModal] = useState<LigneModalState>(null);
-  const [ligneForm,  setLigneForm]  = useState({
-    assuranceParamsId: '',
-    dateDepart:        '',
-    dateRetour:        '',
-    duree:             '',
-    tauxChange:        '',
-  });
-
-  type DevisModalState = {
-    enteteId:   string;
-    numeroDos:  string;
-    lignes:     AssuranceProspectionLigne[];
-    } | null;
-
-    const [devisModal,        setDevisModal]        = useState<DevisModalState>(null);
-    const [selectedLigneIds,  setSelectedLigneIds]  = useState<string[]>([]);
-
-    /* ── calcul du total général ── */
-    const calcTotal = (lignes: AssuranceProspectionLigne[], ids: string[]) =>
-    lignes
-        .filter(l => ids.includes(l.id))
-        .reduce((sum, l) => {
-        const tarifPlein = l.assuranceTarifPlein;
-        const prix = tarifPlein?.prixClientAriary ?? 0;
-        return sum + prix;
-        }, 0);
-
-    const toggleLigneId = (id: string) =>
-        setSelectedLigneIds(p =>
-            p.includes(id) ? p.filter(x => x !== id) : [...p, id]
-        );
-
-  const toggle  = (id: string) => setExpanded(p => ({ ...p, [id]: !p[id] }));
-  const setL    = (k: string, v: string) => setLigneForm(p => ({ ...p, [k]: v }));
-
-  /* ── calcul auto de la durée ── */
-  const handleDateChange = (k: 'dateDepart' | 'dateRetour', v: string) => {
-    setLigneForm(p => {
-      const next = { ...p, [k]: v };
-      if (next.dateDepart && next.dateRetour) {
-        const diff = Math.round(
-          (new Date(next.dateRetour).getTime() - new Date(next.dateDepart).getTime())
-          / (1000 * 60 * 60 * 24)
-        );
-        next.duree = diff > 0 ? String(diff) : '';
-      }
-      return next;
-    });
-  };
-
-  /* ── submit création prospection ── */
-  const handleCreateProspection = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!prestationId) return;
-    const res = await dispatch(createAssuranceProspection({ prestationId, fournisseurId }));
-    if (createAssuranceProspection.fulfilled.match(res)) {
-      setOpenCreate(false);
-      setFournisseurId('');
-      dispatch(fetchAssuranceProspections(prestationId));
-    }
-  };
-
-  /* ── submit ajout ligne ── */
-  const handleCreateLigne = async (e: React.FormEvent) => {
-    e.preventDefault();
-    dispatch(clearCreateError());
-    if (!ligneModal) return;
-    const res = await dispatch(createAssuranceProspectionLigne({
-      assuranceProspectionEnteteId: ligneModal.enteteId,
-      assuranceParamsId:            ligneForm.assuranceParamsId,
-      dateDepart:                   new Date(ligneForm.dateDepart).toISOString(),
-      dateRetour:                   new Date(ligneForm.dateRetour).toISOString(),
-      duree:                        Number(ligneForm.duree),
-      tauxChange:                   Number(ligneForm.tauxChange),
-    }));
-    if (createAssuranceProspectionLigne.fulfilled.match(res)) {
-      setLigneModal(null);
-      setLigneForm({ assuranceParamsId: '', dateDepart: '', dateRetour: '', duree: '', tauxChange: '' });
-      dispatch(fetchAssuranceProspections(prestationId));
-    }
-  };
+  const toggle = (id: string) => setExpanded(p => ({ ...p, [id]: !p[id] }));
 
   const handleOpenDevis = (entete: AssuranceProspectionEntete) => {
     const lignes = entete.assuranceProspectionLigne ?? [];
-    // pré-sélectionne toutes les lignes par défaut
-    setSelectedLigneIds(lignes.map(l => l.id));
     setDevisModal({ enteteId: entete.id, numeroDos: entete.prestation.numeroDos, lignes });
-    };
+  };
 
-    const handleCreateDevis = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!devisModal || selectedLigneIds.length === 0) return;
-    const total = calcTotal(devisModal.lignes, selectedLigneIds);
-    const res = await dispatch(createAssuranceDevis({
-        assuranceProspectionEnteteId: devisModal.enteteId,
-        assuranceProspectionLigneIds: selectedLigneIds,
-        totalGeneral:                 total,
-    }));
-    if (createAssuranceDevis.fulfilled.match(res)) {
-        setDevisModal(null);
-        setSelectedLigneIds([]);
-        dispatch(fetchAssuranceProspections(prestationId));
-    }
-    };
-
-  if (loading) return <div className="flex justify-center items-center py-16"><Spinner size={8} /></div>;
-  if (error) return <InfoMessage title={error} icon="info" />;
+  if (loading) return <div className="flex justify-center items-center py-16"><Spinner/></div>;
+  if (error)   return <InfoMessage title={error} icon="info" />;
 
   return (
     <div className="flex h-full min-h-0 overflow-hidden">
+      {/* ── Colonne principale ── */}
       <div className="flex-1 min-w-0 flex flex-col min-h-0">
-        <div className="shrink-0 px-4 py-2 bg-white">
-          <div className='flex items-center justify-between'>
-            <AssuranceHeader
-              numeroassurance={prestationId}
-              nomPassager={''}
-              navigate={navigate}
-              isDetail={false}
-              isProspection={true}
-              isDevis={false}
-            />
-
+        {/* ── Header ── */}
+        <div className="shrink-0 px-4 bg-slate-200 rounded-t-xl">
+          <div className="flex items-center justify-between">
+            <AssuranceHeader numeroassurance={prestationId} nomPassager={''} navigate={navigate} isDetail={false} isProspection={true} isDevis={false} />
             <div className="flex items-center gap-2">
-              {/* Bouton tri */}
               <button
                 onClick={() => setSortOrder(o => o === 'desc' ? 'asc' : 'desc')}
                 className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-all"
               >
-                <svg
-                  width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-                  className={`transition-transform duration-200 ${sortOrder === 'asc' ? 'rotate-180' : ''}`}
-                >
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} className={`transition-transform duration-200 ${sortOrder === 'asc' ? 'rotate-180' : ''}`}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h13M3 8h9M3 12h5m10-4v12m0 0l-4-4m4 4l4-4" />
                 </svg>
                 {sortOrder === 'desc' ? 'Plus récent' : 'Plus ancien'}
               </button>
-
-              {/* Bouton créer (inchangé) */}
               <button
                 onClick={() => setOpenCreate(true)}
                 disabled={!prestationId}
@@ -267,400 +78,223 @@ const AssuranceProspectionListe = () => {
           </div>
         </div>
 
-        <div className='px-4 border-b border-neutral-50'>
+        {/* ── Tabs sous-section ── */}
+        <div className="px-4 border-b border-neutral-50 bg-slate-200 rounded-b-xl">
           <DossierActifCard gradient="from-green-400 via-green-400 to-green-500" />
-          {/* ── Header ── */}
-          <div className="flex items-center justify-between">
-            {/* Tab headers */}
-            <div>
-              <nav className="flex" aria-label="Tabs">
-                <button
-                  onClick={() => setActiveTabSousSection('lignes')}
-                  className={`px-6 py-2 text-sm font-semibold rounded-t-lg transition-all ${
-                    activeTabSousSection === 'lignes'
-                      ? 'bg-[#4A77BE] text-white shadow-sm'
-                      : 'bg-white text-[#1E3A8A] hover:bg-[#f2f7fe] border-t border-l border-r border-slate-200'
-                  }`}
-                >
-                  Prospections assurance ({list.length})
-                </button>
-                <button
-                  onClick={() => setActiveTabSousSection('suivi')}
-                  className={`px-6 py-2 text-sm font-semibold rounded-t-lg transition-all ${
-                    activeTabSousSection === 'suivi'
-                      ? 'bg-[#4A77BE] text-white shadow-sm'
-                      : 'bg-white text-[#1E3A8A] hover:bg-[#f2f7fe] border-t border-l border-r border-slate-200'
-                  }`}
-                >
-                  Suivi
-                </button>
-              </nav>
-            </div>
-          </div>
+          <nav className="flex p-1 rounded-lg mb-2">
+            {[{ id: 'lignes', label: 'Prospections assurance', count: list.length }, { id: 'suivi', label: 'Suivi' }].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTabSousSection(tab.id)}
+                className={`px-4 py-1.5 text-sm font-medium rounded-sm transition-all duration-200 ${
+                  activeTabSousSection === tab.id
+                    ? 'bg-white text-slate-800 shadow-sm ring-1 ring-slate-200/50'
+                    : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+                }`}
+              >
+                {tab.label}
+                {tab.count !== undefined && (
+                  <span className={`ml-2 px-1.5 py-0.5 rounded-md text-[10px] ${activeTabSousSection === tab.id ? 'bg-slate-100 text-slate-600' : 'bg-slate-200/50 text-slate-500'}`}>
+                    {tab.count}
+                  </span>
+                )}
+              </button>
+            ))}
+          </nav>
         </div>
-        
-        <div className="flex-1 min-h-0 overflow-y-auto pb-4 px-4">
-          {/* ── Table ── */}
+
+        {/* ── Contenu ── */}
+        <div className="flex-1 min-h-0 overflow-y-auto py-2">
           {activeTabSousSection === 'lignes' && (
-            <div className="bg-white space-y-4 overflow-hidden">
+            <div className="bg-white space-y-4">
               {list.length === 0 ? (
-                <div className="bg-white border border-dashed border-gray-200 rounded-xl px-5 py-10 text-center text-sm text-gray-400 italic">
-                  Aucune prospection trouvée.
+                <div className="bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl px-5 py-12 text-center">
+                  <div className="inline-flex p-3 bg-white rounded-full shadow-sm mb-3 text-slate-400">
+                    <FileText size={24} />
+                  </div>
+                  <p className="text-sm text-slate-500 font-medium">Aucune prospection enregistrée pour le moment.</p>
                 </div>
               ) : (
-                <div className="bg-white border border-gray-200 rounded-br-xl rounded-bl-xl rounded-tr-xl shadow-sm overflow-hidden">
-                  <table className="w-full">
+                <div className="bg-white border border-slate-300 rounded-xl shadow-sm overflow-hidden">
+                  <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr>
-                        <Th></Th>
-                        <Th>N° Dossier</Th>
-                        <Th>Fournisseur</Th>
-                        <Th>Lignes</Th>
+                      <tr className="bg-slate-50/50 border-b border-slate-300">
+                        <Th className="w-10"></Th>
+                        <Th>Dossier & Fournisseur</Th>
+                        <Th>Contenu</Th>
                         <Th>Statut</Th>
-                        <Th>Créé le</Th>
-                        <Th></Th>
+                        <Th>Date</Th>
+                        <Th className="text-right pr-6">Actions</Th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="divide-y divide-slate-300">
                       {[...list]
-                        .sort((a, b) => {
-                          const dateA = new Date(a.createdAt).getTime();
-                          const dateB = new Date(b.createdAt).getTime();
-                          return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
-                        })
-                        .map((entete) => (
-                        <React.Fragment key={entete.id}>
+                        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                        .map(entete => {
+                          const isExpanded = expanded[entete.id];
+                          const hasLines = entete.assuranceProspectionLigne?.length > 0;
 
-                          {/* ── Ligne principale ── */}
-                          <tr className="hover:bg-gray-50 transition cursor-pointer" onClick={() => toggle(entete.id)}>
-                            <Td>
-                              <svg
-                                className={`h-4 w-4 text-gray-400 transition-transform ${expanded[entete.id] ? 'rotate-180' : ''}`}
-                                fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                          return (
+                            <React.Fragment key={entete.id}>
+                              <tr 
+                                className={`group hover:bg-slate-50/80 transition-all cursor-pointer ${isExpanded ? 'bg-indigo-50/20' : ''}`}
+                                onClick={() => toggle(entete.id)}
                               >
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                              </svg>
-                            </Td>
-                            <Td><span className="font-semibold text-gray-900">{entete.prestation.numeroDos}</span></Td>
-                            <Td>
-                              <div>
-                                <p className="font-medium text-gray-800">{entete.fournisseur.libelle}</p>
-                                <p className="text-xs text-gray-400 font-mono">{entete.fournisseur.code}</p>
-                              </div>
-                            </Td>
-                            <Td>
-                              <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-semibold">
-                                {entete.assuranceProspectionLigne?.length ?? 0} ligne{(entete.assuranceProspectionLigne?.length ?? 0) > 1 ? 's' : ''}
-                              </span>
-                            </Td>
-                            <Td><Badge status={entete.prestation.status == 'CREER' ? 'créé' : entete.prestation.status} /></Td>
-                            <Td className="text-gray-400 text-xs">{fmtDate(entete.createdAt)}</Td>
-                            <Td>
-                                <div className="flex items-center gap-2">
-                                    {/* ── Bouton ajout ligne ── */}
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            dispatch(clearCreateError()); // ← ajoute cette ligne
-                                            setLigneModal({ enteteId: entete.id, numeroDos: entete.prestation.numeroDos });
-                                        }}
-                                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-indigo-200 hover:bg-indigo-50 text-indigo-600 text-xs font-semibold rounded-lg transition"
-                                    >
-                                    + Ligne
-                                    </button>
-
-                                    {/* ── Bouton devis ── */}
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            dispatch(clearCreateError());
-                                            handleOpenDevis(entete);
-                                        }}
-                                        disabled={!entete.assuranceProspectionLigne?.length}
-                                        title={!entete.assuranceProspectionLigne?.length ? 'Aucune ligne disponible' : 'Créer un devis'}
-                                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-amber-200 hover:bg-amber-50 text-amber-600 text-xs font-semibold rounded-lg transition disabled:opacity-40 disabled:cursor-not-allowed"
-                                    >
-                                        📋 Devis
-                                    </button>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            navigate(`/dossiers-communs/assurance/detailsProspection/${entete.id}`, {
-                                            state: { numeroDos: entete.prestation.numeroDos }
-                                            });
-                                        }}
-                                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-gray-200 hover:bg-gray-100 text-gray-600 text-xs font-semibold rounded-lg transition"
-                                    >
-                                        👁 Détail
-                                    </button>
-                                </div>
-                            </Td>
-                          </tr>
-
-                          {/* ── Lignes expandées ── */}
-                          {expanded[entete.id] && (
-                            <tr className="bg-gray-50">
-                              <td colSpan={7} className="px-6 py-4 border-b border-gray-100">
-                                <div className="flex items-center gap-2 mb-3">
-                                  <p className="text-[11px] font-bold uppercase tracking-widest text-indigo-500">Lignes de prospection</p>
-                                  <span className="text-xs bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full font-semibold">
-                                    {entete.assuranceProspectionLigne?.length ?? 0}
-                                  </span>
-                                </div>
-                                {!entete.assuranceProspectionLigne || entete.assuranceProspectionLigne.length === 0 ? (
-                                  <p className="text-xs text-gray-400 italic">Aucune ligne. Cliquez sur "+ Ligne" pour en ajouter une.</p>
-                                ) : (
-                                  <div className="overflow-hidden rounded-lg border border-gray-200">
-                                    <table className="w-full text-xs">
-                                      <thead>
-                                        <tr className="bg-indigo-50">
-                                          <th className="px-3 py-2 text-left font-semibold text-indigo-600">Zone</th>
-                                          <th className="px-3 py-2 text-left font-semibold text-indigo-600">Départ</th>
-                                          <th className="px-3 py-2 text-left font-semibold text-indigo-600">Retour</th>
-                                          <th className="px-3 py-2 text-left font-semibold text-indigo-600">Durée</th>
-                                          <th className="px-3 py-2 text-left font-semibold text-indigo-600">Taux change</th>
-                                          <th className="px-3 py-2 text-left font-semibold text-indigo-600">Réf. devis</th>
-                                          <th className="px-3 py-2 text-left font-semibold text-indigo-600">Date devis</th>
-                                        </tr>
-                                      </thead>
-                                      <tbody>
-                                        {entete.assuranceProspectionLigne.map((ligne) => (
-                                          <tr key={ligne.id} className="bg-white border-t border-gray-100 hover:bg-gray-50">
-                                            <td className="px-3 py-2 font-semibold text-gray-800">{ligne.assuranceParams.zoneDestination}</td>
-                                            <td className="px-3 py-2 text-gray-700">{fmtDate(ligne.dateDepart)}</td>
-                                            <td className="px-3 py-2 text-gray-700">{fmtDate(ligne.dateRetour)}</td>
-                                            <td className="px-3 py-2">
-                                              <span className="font-mono bg-gray-100 text-gray-700 px-2 py-0.5 rounded font-semibold">{ligne.duree} j</span>
-                                            </td>
-                                            <td className="px-3 py-2 text-gray-700">{ligne.tauxChange.toLocaleString('fr-FR')} Ar</td>
-                                            <td className="px-3 py-2 text-gray-500 italic">{ligne.referenceDevis ?? '—'}</td>
-                                            <td className="px-3 py-2 text-gray-500">{fmtDate(ligne.dateDevis)}</td>
-                                          </tr>
-                                        ))}
-                                      </tbody>
-                                    </table>
+                                <Td>
+                                  <ChevronDown 
+                                    size={16} 
+                                    className={`text-slate-300 transition-transform duration-200 ${isExpanded ? 'rotate-180 text-indigo-500' : ''}`} 
+                                  />
+                                </Td>
+                                <Td>
+                                  <div className="flex flex-col">
+                                    <span className="font-bold text-slate-900 leading-tight">{entete.prestation.numeroDos}</span>
+                                    <span className="text-[11px] text-slate-500 font-medium">{entete.fournisseur.libelle}</span>
                                   </div>
-                                )}
-                              </td>
-                            </tr>
-                          )}
+                                </Td>
+                                <Td>
+                                  <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-indigo-50 border border-indigo-100 rounded-full">
+                                    <div className={`w-1 h-1 rounded-full ${hasLines ? 'bg-indigo-500' : 'bg-slate-300'}`} />
+                                    <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-tight">
+                                      {entete.assuranceProspectionLigne?.length ?? 0} Ligne(s)
+                                    </span>
+                                  </div>
+                                </Td>
+                                <Td><Badge status={entete.prestation.status === 'CREER' ? 'créé' : entete.prestation.status} /></Td>
+                                <Td className="text-[11px] font-medium text-slate-400 uppercase">{fmtDate(entete.createdAt)}</Td>
+                                
+                                {/* ACTIONS COLONNE */}
+                                <Td className="pr-6">
+                                  <div className="flex items-center justify-end gap-2" onClick={e => e.stopPropagation()}>
+                                    
+                                    {/* 1. Bouton Action Métier : Devis (Plus visible car c'est l'objectif) */}
+                                    <button
+                                      onClick={() => { dispatch(clearCreateError()); handleOpenDevis(entete); }}
+                                      disabled={!hasLines}
+                                      className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 disabled:bg-slate-100 disabled:text-slate-400 text-white text-[11px] font-bold rounded-lg transition-all shadow-sm shadow-amber-100"
+                                    >
+                                      <ClipboardCheck size={13} />
+                                      Devis
+                                    </button>
 
-                        </React.Fragment>
-                      ))}
+                                    {/* 2. Bouton Ajout Ligne (Style discret/secondaire) */}
+                                    <button
+                                      onClick={() => { dispatch(clearCreateError()); setLigneModal({ enteteId: entete.id, numeroDos: entete.prestation.numeroDos, fournisseurId: entete.fournisseur.id }); }}
+                                      className="p-1.5 bg-white border border-slate-200 text-slate-600 hover:border-indigo-400 hover:text-indigo-600 rounded-lg transition-colors shadow-xs"
+                                      title="Ajouter une ligne"
+                                    >
+                                      <Plus size={16} strokeWidth={3} />
+                                    </button>
+
+                                    <div className="w-px h-4 bg-slate-200 mx-1" />
+
+                                    {/* 3. Bouton Navigation (Style Icon-only ou Ghost) */}
+                                    <button
+                                      onClick={() => navigate(`/dossiers-communs/assurance/detailsProspection/${entete.id}`, { state: { numeroDos: entete.prestation.numeroDos } })}
+                                      className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
+                                      title="Voir les détails"
+                                    >
+                                      <ArrowRight size={18} />
+                                    </button>
+                                  </div>
+                                </Td>
+                              </tr>
+
+                              {/* DÉTAILS DES LIGNES (EXPANDED) */}
+                              {isExpanded && (
+                                <tr className="bg-slate-50/50">
+                                  <td colSpan={7} className="border-b border-slate-100">
+
+                                    {!hasLines ? (
+                                      <div className="bg-white border border-slate-200 rounded-xl p-4 text-center">
+                                        <p className="text-xs text-slate-400 italic">Aucune donnée. Utilisez le bouton <span className="font-bold text-slate-600">+</span> pour ajouter une ligne de calcul.</p>
+                                      </div>
+                                    ) : (
+                                      <div className="overflow-hidden border-t border-slate-200">
+                                        <table className="w-full text-[11px] tabular-nums">
+                                          <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-100">
+                                            <tr>
+                                              <th className="px-3 py-2">Zone</th>
+                                              <th className="px-3 py-2">Période</th>
+                                              <th className="px-3 py-2 text-center">Durée</th>
+                                              <th className="px-3 py-2 text-right">Taux Change</th>
+                                              <th className="px-3 py-2 text-right">Borne Jours</th>
+                                              <th className="px-3 py-2 text-right">Devis</th>
+                                              <th className="px-3 py-2 text-right">Prix Assureur Devise</th>
+                                              <th className="px-3 py-2 text-right">Prix Assureur Ariary</th>
+                                              <th className="px-3 py-2 text-right">Commission Devise</th>
+                                              <th className="px-3 py-2 text-right">Commission Ariary</th>
+                                              <th className="px-3 py-2 text-right">Prix Client Devise</th>
+                                              <th className="px-3 py-2 text-right">Prix Client Ariary</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody className="divide-y divide-slate-50">
+                                            {entete.assuranceProspectionLigne.map(ligne => (
+                                              <tr key={ligne.id} className="hover:bg-slate-50/50 transition-colors">
+                                                <td className="px-3 py-2 font-bold text-slate-700">
+                                                  {ligne.assuranceParams?.zoneDestination ?? '—'}
+                                                </td>
+                                                <td className="px-3 py-2 text-slate-500">
+                                                  {fmtDate(ligne.dateDepart)} — {fmtDate(ligne.dateRetour)}
+                                                </td>
+                                                <td className="px-3 py-2 text-center">
+                                                  <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md font-bold">
+                                                    {ligne.duree ?? '—'}jours
+                                                  </span>
+                                                </td>
+                                                <td className="px-3 py-2 text-right font-medium text-slate-600">
+                                                  {ligne.tauxChange?.toLocaleString() ?? '—'} Ar
+                                                </td>
+                                                <td className="px-3 py-2 text-right font-mono text-indigo-500 font-bold uppercase">
+                                                  {ligne.assuranceTarifPlein?.borneInf ?? '—'} à {ligne.assuranceTarifPlein?.borneSup ?? '—'}
+                                                </td>
+                                                <td className="px-3 py-2 text-right text-slate-400">
+                                                  {ligne.assuranceTarifPlein?.devise ?? '—'}
+                                                </td>
+                                                <td className="px-3 py-2 text-right text-slate-400">
+                                                  {ligne.assuranceTarifPlein?.prixAssureurDevise?.toLocaleString() ?? '—'}
+                                                </td>
+                                                <td className="px-3 py-2 text-right text-slate-400">
+                                                  {ligne.assuranceTarifPlein?.prixAssureurAriary?.toLocaleString() ?? '—'}
+                                                </td>
+                                                <td className="px-3 py-2 text-right text-slate-400">
+                                                  {ligne.assuranceTarifPlein?.commissionDevise?.toLocaleString() ?? '—'}
+                                                </td>
+                                                <td className="px-3 py-2 text-right text-slate-400">
+                                                  {ligne.assuranceTarifPlein?.commissionAriary?.toLocaleString() ?? '—'}
+                                                </td>
+                                                <td className="px-3 py-2 text-right text-slate-400">
+                                                  {ligne.assuranceTarifPlein?.prixClientDevise?.toLocaleString() ?? '—'}
+                                                </td>
+                                                <td className="px-3 py-2 text-right text-slate-400">
+                                                  {ligne.assuranceTarifPlein?.prixClientAriary?.toLocaleString() ?? '—'}
+                                                </td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    )}
+                                  </td>
+                                </tr>
+                              )}
+                            </React.Fragment>
+                          );
+                        })}
                     </tbody>
                   </table>
                 </div>
               )}
             </div>
           )}
-          {/* ── Onglet Suivi ── */}
-          {activeTabSousSection === 'suivi' && (
-            <SuiviTabSection
-              prestationId={prestationId}
-            />
-          )}
+
+          {activeTabSousSection === 'suivi' && <SuiviTabSection prestationId={prestationId} />}
         </div>
 
-        {/* ── Modal création prospection ── */}
-        {openCreate && (
-          <Modal title="Nouvelle prospection assurance" onClose={() => setOpenCreate(false)}>
-            <form onSubmit={handleCreateProspection} className="space-y-4">
-              {/* <div className="flex flex-col gap-1">
-                <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Prestation</label>
-                <div className="px-3 py-2 text-sm border border-gray-100 rounded-lg bg-gray-50 text-gray-500 font-mono truncate">
-                  {prestationId}
-                </div>
-              </div> */}
-              <Select label="Fournisseur" value={fournisseurId} onChange={e => setFournisseurId(e.target.value)} required>
-                <option value="">— Sélectionner un fournisseur —</option>
-                {fournisseurs?.map((f: any) => (
-                  <option key={f.id} value={f.id}>{f.libelle} ({f.code})</option>
-                ))}
-              </Select>
-              {createError && <p className="text-xs text-red-500">⚠️ {createError}</p>}
-              <div className="flex justify-end pt-2">
-                <button
-                  type="submit"
-                  disabled={creating || !fournisseurId}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-semibold rounded-lg transition"
-                >
-                  {creating ? <Spinner size={3} /> : null}
-                  {creating ? 'Création…' : 'Créer la prospection'}
-                </button>
-              </div>
-            </form>
-          </Modal>
-        )}
-
-          {/* ── Modal création devis ── */}
-        {devisModal && (
-          <Modal
-              title={`Créer un devis — ${devisModal.numeroDos}`}
-              onClose={() => setDevisModal(null)}
-          >
-              <form onSubmit={handleCreateDevis} className="space-y-4">
-
-              {/* ── Sélection des lignes ── */}
-              <div>
-                  <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 block mb-2">
-                  Lignes à inclure
-                  </label>
-                  {devisModal.lignes.length === 0 ? (
-                  <p className="text-xs text-gray-400 italic">Aucune ligne disponible.</p>
-                  ) : (
-                  <div className="space-y-2">
-                      {devisModal.lignes.map((ligne) => {
-                      const tarifPlein = ligne?.assuranceTarifPlein;
-                      const prixLigne  = tarifPlein?.prixClientAriary;
-                      const checked    = selectedLigneIds.includes(ligne.id);
-
-                      return (
-                          <label
-                          key={ligne.id}
-                          className={`flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg border cursor-pointer transition ${
-                              checked
-                              ? 'bg-indigo-50 border-indigo-200'
-                              : 'bg-white border-gray-200 hover:bg-gray-50'
-                          }`}
-                          >
-                          <div className="flex items-center gap-2.5">
-                              <input
-                              type="checkbox"
-                              checked={checked}
-                              onChange={() => toggleLigneId(ligne.id)}
-                              className="h-3.5 w-3.5 accent-indigo-600"
-                              />
-                              <div>
-                              <p className="text-xs font-semibold text-gray-800">
-                                  {ligne.assuranceParams.zoneDestination}
-                              </p>
-                              <p className="text-[10px] text-gray-400">
-                                  {new Date(ligne.dateDepart).toLocaleDateString('fr-FR')} →{' '}
-                                  {new Date(ligne.dateRetour).toLocaleDateString('fr-FR')} · {ligne.duree} j
-                              </p>
-                              </div>
-                          </div>
-                          <span className="text-xs font-bold text-indigo-700 shrink-0">
-                              {prixLigne.toLocaleString('fr-FR')} Ar
-                          </span>
-                          </label>
-                      );
-                      })}
-                  </div>
-                  )}
-              </div>
-
-              {/* ── Total calculé ── */}
-              <div className="flex items-center justify-between px-4 py-3 bg-gray-50 rounded-xl border border-gray-200">
-                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-widest">Total général</span>
-                  <span className="text-base font-bold text-indigo-700">
-                  {calcTotal(devisModal.lignes, selectedLigneIds).toLocaleString('fr-FR')} Ar
-                  </span>
-              </div>
-
-              {createError && <p className="text-xs text-red-500">⚠️ {createError}</p>}
-
-              <div className="flex justify-end pt-2">
-                  <button
-                  type="submit"
-                  disabled={creating || selectedLigneIds.length === 0}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-60 text-white text-xs font-semibold rounded-lg transition"
-                  >
-                  {creating ? <Spinner size={3} /> : '📋'}
-                  {creating ? 'Création…' : 'Créer le devis'}
-                  </button>
-              </div>
-              </form>
-          </Modal>
-        )}
-
-        {/* ── Modal ajout ligne ── */}
-        {ligneModal && (
-          <Modal
-            title={`Nouvelle ligne — ${ligneModal.numeroDos}`}
-            onClose={() => setLigneModal(null)}
-          >
-            <form onSubmit={handleCreateLigne} className="space-y-4">
-              <Select
-                label="Paramètre assurance (zone)"
-                value={ligneForm.assuranceParamsId}
-                onChange={e => setL('assuranceParamsId', e.target.value)}
-                required
-              >
-                <option value="">— Sélectionner un paramètre —</option>
-                {params?.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.zoneDestination} · {p.fournisseur.libelle}
-                  </option>
-                ))}
-              </Select>
-
-              <div className="grid grid-cols-2 gap-3">
-                <Input
-                  label="Date de départ"
-                  type="date"
-                  value={ligneForm.dateDepart}
-                  onChange={e => handleDateChange('dateDepart', e.target.value)}
-                  required
-                />
-                <Input
-                  label="Date de retour"
-                  type="date"
-                  value={ligneForm.dateRetour}
-                  onChange={e => handleDateChange('dateRetour', e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <Input
-                  label="Durée (jours)"
-                  type="number"
-                  placeholder="Calculé automatiquement"
-                  value={ligneForm.duree}
-                  onChange={e => setL('duree', e.target.value)}
-                  required
-                />
-                <Input
-                  label="Taux de change (Ar)"
-                  type="number"
-                  placeholder="ex: 4500"
-                  value={ligneForm.tauxChange}
-                  onChange={e => setL('tauxChange', e.target.value)}
-                  required
-                />
-              </div>
-
-              {createError && (
-                  <div className="p-3 bg-red-50 border border-red-100 rounded-lg">
-                      <p className="text-xs text-red-500">⚠️ {createError}</p>
-
-                      <p className="text-xs text-red-500 mt-2">Veuillez crée de nouveau bornes pour ce paramètre. <span className="text-indigo-600 cursor-pointer" 
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/dossiers-communs/assurance/parametres`, { 
-                              state: { targetTab: 'tarifPlein' }
-                            });
-                        }}
-                        >Cliquer ici
-                        </span>
-                      </p>
-                  </div>
-              )}
-
-              <div className="flex justify-end pt-2">
-                <button
-                  type="submit"
-                  disabled={creating || !ligneForm.assuranceParamsId}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-semibold rounded-lg transition"
-                >
-                  {creating ? <Spinner size={3} /> : null}
-                  {creating ? 'Ajout…' : 'Ajouter la ligne'}
-                </button>
-              </div>
-            </form>
-          </Modal>
-        )}
+        {/* ── Modals ── */}
+        {openCreate  && <ModalCreationProspection prestationId={prestationId} onClose={() => setOpenCreate(false)} />}
+        {devisModal  && <ModalCreationDevis data={devisModal} prestationId={prestationId} onClose={() => setDevisModal(null)} />}
+        {ligneModal  && <ModalAjoutLigne    data={ligneModal} prestationId={prestationId} onClose={() => setLigneModal(null)} />}
 
       </div>
     </div>

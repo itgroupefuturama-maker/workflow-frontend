@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import axios from '../../../service/Axios';
+import type { RootState } from '../../store';
 
 // ─── Types ────────────────────────────────────────────────
 export type TypeService = 'TICKET' | 'HOTEL';
@@ -185,3 +186,8 @@ const serviceSpecifiqueSlice = createSlice({
 });
 
 export default serviceSpecifiqueSlice.reducer;
+export const selectServicesByType = (type: TypeService) =>
+  (state: RootState) => state.serviceSpecifique.itemsByType?.[type] ?? [];
+
+export const selectServicesLoadingByType =
+  (state: RootState) => state.serviceSpecifique.loading;

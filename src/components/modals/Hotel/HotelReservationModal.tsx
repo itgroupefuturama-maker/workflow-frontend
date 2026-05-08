@@ -982,12 +982,12 @@ const HotelReservationModal: React.FC<HotelReservationModalProps> = ({
                         </div>
                       </div>
 
-                      <div>
+                      {/* <div>
                         <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Payload JSON à envoyer</p>
                         <pre className="bg-gray-900 text-green-400 p-4 rounded text-xs overflow-x-auto font-mono whitespace-pre-wrap">
                           {JSON.stringify(buildPayload(), null, 2)}
                         </pre>
-                      </div>
+                      </div> */}
 
                       <div className="bg-amber-50 border border-amber-200 rounded p-4 flex items-start gap-3">
                         <span className="text-base">⚠️</span>

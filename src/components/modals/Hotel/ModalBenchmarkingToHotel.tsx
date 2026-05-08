@@ -323,10 +323,10 @@ const ModalBenchmarkingToHotel: React.FC<Props> = ({
 
         {/* ── Confirmation overlay ── */}
         {showConfirmation && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
+          <div className="fixed inset-0 bg-blue-500/10 backdrop-blur-sm flex items-center justify-center z-60 p-4">
             <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden">
-              <div className="bg-gray-950 px-6 py-5">
-                <p className="text-gray-500 text-xs uppercase tracking-widest mb-1">Confirmation</p>
+              <div className="bg-blue-800 px-6 py-5">
+                <p className="text-white text-xs uppercase tracking-widest mb-1">Confirmation</p>
                 <h3 className="text-white font-bold text-base">Vérifier avant de soumettre</h3>
               </div>
 
@@ -340,8 +340,8 @@ const ModalBenchmarkingToHotel: React.FC<Props> = ({
                     <p className="text-xs text-gray-400 uppercase tracking-wide mb-1">Benchmarkings</p>
                     <p className="text-sm font-semibold text-gray-900">{selectedLigneIds.length}</p>
                   </div>
-                  <div className="col-span-2 bg-gray-950 rounded-lg p-3">
-                    <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Total général</p>
+                  <div className="col-span-2 bg-blue-800 rounded-lg p-3">
+                    <p className="text-xs text-white uppercase tracking-wide mb-1">Total général</p>
                     <p className="text-lg font-mono font-bold text-white">
                       {totalGeneralAuto.toLocaleString('fr-FR')} Ar
                     </p>

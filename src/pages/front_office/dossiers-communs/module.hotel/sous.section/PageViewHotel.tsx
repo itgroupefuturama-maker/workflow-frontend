@@ -6,7 +6,7 @@ import { HotelHeader } from '../components/HotelHeader';
 import { createBenchmarking, createHotelEnteteFromBenchmarking, createHotelProspectionEntete, fetchHotelProspectionEntetes, setSelectedEntete, type HotelProspectionEntete } from '../../../../../app/front_office/parametre_hotel/hotelProspectionEnteteSlice';
 import React from 'react';
 import ModalBenchmarkingForm from '../components/ModalBenchmarkingForm';
-import { FiArrowRight, FiClock } from 'react-icons/fi';
+import { FiArrowRight, FiClock, FiPlus } from 'react-icons/fi';
 import TabContainer from '../../../../../layouts/TabContainer';
 import { fetchHotelReservations } from '../../../../../app/front_office/parametre_hotel/hotelReservationEnteteSlice';
 import HotelReservationsList from './sous.section.page/HotelReservationsList';
@@ -15,15 +15,14 @@ import { clearCommentaireFournisseur, fetchLastCommentaireFournisseur } from '..
 import FournisseurAlerteBadge from '../../../../../components/fournisseurAlerteBadget/FournisseurAlerteBadge';
 import DossierActifCard from '../../../../../components/CarteDossierActif/DossierActifCard';
 import SuiviTabSection from '../../module.suivi/SuiviTabSection';
-import BeneficiaireListPage from '../../module.client.beneficiaire/BeneficiaireListPage';
-import { Heart } from 'lucide-react';
-import ModalPreferencesClient from '../components/ModalPreferencesClient';
+import BeneficiaireListPage from '../../module.client.beneficiaire/BeneficiaireListPageForClientFacture';
 import PanneauPreferencesClient from '../components/PanneauPreferencesClient';
 import { setShowPreferences, togglePreferences } from '../../../../../app/uiSlice';
-import type { HotelPdfSelection, HotelProspectionEnteteItem } from '../../module.parametre/sections/pdf.generation/types/hotel.types';
-import { useHotelPdf } from '../../module.parametre/sections/pdf.generation/hooks/usePdfGenerator';
-import type { PdfAudience, PdfDesignId } from '../../module.parametre/sections/pdf.generation/types/pdf-design.types';
+import type { HotelPdfSelection, HotelProspectionEnteteItem } from '../../module.pdf/pdf.generation/types/hotel.types';
+import { useHotelPdf } from '../../module.pdf/pdf.generation/hooks/usePdfGenerator';
+import type { PdfAudience, PdfDesignId } from '../../module.pdf/pdf.generation/types/pdf-design.types';
 import { ModalHotelPdfSelector } from '../components/ModalHotelPdfSelector';
+import { selectServicesByType } from '../../../../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
 
 const PageViewHotel = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -61,9 +60,12 @@ const PageViewHotel = () => {
 
   const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'prospection');
 
-  const {
-      items: services,
-    } = useSelector((state: RootState) => state.serviceSpecifique);
+  const servicesDisponibles = useSelector(selectServicesByType("HOTEL"));
+  const loadingServices = useSelector((state: RootState) => state.serviceSpecifique.loading);
+
+  // const {
+  //     items: services,
+  //   } = useSelector((state: RootState) => state.serviceSpecifique);
 
   const dossierActif = useSelector((state: RootState) => state.dossierCommun.currentClientFactureId);
   const clientFactureId = dossierActif?.clientfacture?.id;
@@ -247,7 +249,7 @@ const PageViewHotel = () => {
             {/* ── Colonne principale ── */}
             <div className="flex-1 min-w-0 flex flex-col min-h-0">
               {/* ── Header fixe — ne scrolle PAS ── */}
-              <div className="shrink-0 px-4 pt-2 bg-white">
+              <div className="shrink-0 px-4 bg-slate-200 rounded-t-lg">
                 <div className='flex items-center justify-between'>
                   <HotelHeader numerohotel={dossierActif?.numero} navigate={navigate} isBenchmarking={true}/>
 
@@ -304,7 +306,7 @@ const PageViewHotel = () => {
                 </div>
               </div>
 
-              <div className='px-4 border-b border-neutral-50'>
+              <div className='px-4 bg-slate-200 rounded-b-lg'>
                 {formError && (
                   <div className="mb-6 p-4 bg-red-50 border-l-4 ">
                     {formError}
@@ -313,25 +315,32 @@ const PageViewHotel = () => {
 
                 <DossierActifCard gradient="from-orange-400 via-red-400 to-orange-500 " />
 
-                <div className='flex items-center justify-between'> 
-                  <div>
-                    <nav className="flex" aria-label="Tabs">
+                <div className="flex items-center justify-between">
+                  {/* Bouton + formulaire création */}
+                  <div className="flex items-center justify-between">
+                    <nav className="flex p-1 bg-slate-100/80 rounded-lg mb-2" aria-label="Tabs">
                       <button
                         onClick={() => setActiveTabSousSection('lignes')}
-                        className={`px-6 py-2 text-sm font-semibold rounded-t-lg transition-all ${
+                        className={`px-4 py-1.5 text-sm font-medium rounded-sm transition-all duration-200 ${
                           activeTabSousSection === 'lignes'
-                            ? 'bg-[#4A77BE] text-white shadow-sm'
-                            : 'bg-white text-[#1E3A8A] hover:bg-[#f2f7fe] border-t border-l border-r border-slate-200'
+                            ? 'bg-white text-slate-800 shadow-sm ring-1 ring-slate-200/50'
+                            : 'text-slate-500 hover:text-slate-700'
                         }`}
                       >
-                        Liste des Benchmarking ({entetes.length})
+                        Liste des Benchmarking
+                        <span className={`ml-2 px-1.5 py-0.5 rounded-md text-[10px] ${
+                          activeTabSousSection === 'lignes' ? 'bg-slate-100 text-slate-600' : 'bg-slate-200/50 text-slate-500'
+                        }`}>
+                          {entetes.length}
+                        </span>
                       </button>
+                      
                       <button
                         onClick={() => setActiveTabSousSection('suivi')}
-                        className={`px-6 py-2 text-sm font-semibold rounded-t-lg transition-all ${
+                        className={`px-10 py-1.5 text-sm font-medium rounded-sm transition-all duration-200 ${
                           activeTabSousSection === 'suivi'
-                            ? 'bg-[#4A77BE] text-white shadow-sm'
-                            : 'bg-white text-[#1E3A8A] hover:bg-[#f2f7fe] border-t border-l border-r border-slate-200'
+                            ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/50'
+                            : 'text-slate-500 hover:text-slate-700'
                         }`}
                       >
                         Suivi
@@ -341,7 +350,7 @@ const PageViewHotel = () => {
                 </div>
               </div>
 
-              <div className="flex-1 min-h-0 overflow-y-auto pb-4 px-4">
+              <div className="flex-1 min-h-0 overflow-y-auto py-4">
                 {activeTabSousSection === 'lignes' && (
                   <div className="bg-white space-y-4 overflow-hidden">
                     {entetesLoading ? (
@@ -365,7 +374,7 @@ const PageViewHotel = () => {
                         <p className="text-sm text-neutral-500">Aucune entête de prospection trouvée</p>
                       </div>
                     ) : (
-                      <div className="bg-white border border-neutral-200 rounded-br-xl rounded-bl-xl rounded-tr-xl overflow-hidden">
+                      <div className="bg-white border border-slate-300 rounded-br-xl rounded-bl-xl rounded-tr-xl overflow-hidden">
                         <table className="min-w-full ">
                           <thead>
                             <tr className="border-b border-neutral-200 bg-neutral-50">
@@ -468,6 +477,19 @@ const PageViewHotel = () => {
                                           PDF
                                         </button>
 
+                                        
+
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSelectedEnteteForHotel(entete);
+                                            setShowToHotelModal(true);
+                                          }}
+                                          className="text-xs font-medium bg-orange-500 text-white px-4 py-2 rounded-md hover:bg-orange-600 transition-colors flex items-center gap-1.5 cursor-pointer"
+                                        >
+                                          Transformer / devis
+                                        </button>
+
                                         <button
                                           disabled={entete.isDevis !== true}
                                           onClick={(e) => {
@@ -489,22 +511,12 @@ const PageViewHotel = () => {
                                         <button
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            setSelectedEnteteForHotel(entete);
-                                            setShowToHotelModal(true);
-                                          }}
-                                          className="text-xs font-medium bg-orange-500 text-white px-4 py-2 rounded-md hover:bg-orange-600 transition-colors flex items-center gap-1.5 cursor-pointer"
-                                        >
-                                          Transformer / devis
-                                        </button>
-
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
                                             openBenchmarkingModal(entete.id);
                                           }}
-                                          className="text-xs font-medium bg-white text-neutral-900 px-4 py-2 rounded-md hover:bg-orange-100 transition-colors cursor-pointer"
+                                          className="text-xs flex items-center gap-1.5 font-medium bg-white text-neutral-900 px-4 py-2 rounded-md hover:bg-orange-100 transition-colors cursor-pointer"
                                         >
-                                          Nouveau benchmarking
+                                          <FiPlus size={12} />
+                                          Ajouter Ligne
                                         </button>
                                       </div>
                                     </td>
@@ -703,7 +715,7 @@ const PageViewHotel = () => {
                       setSelectedEnteteIdForBench(null);
                     }}
                     onSubmit={handleCreateBenchmarking}
-                    services={services.map((s) => ({ id: s.id, service: s.libelle }))} // ← mapping ici
+                    services={servicesDisponibles.map((s) => ({ id: s.id, service: s.libelle }))} // ← mapping ici
                     enteteId={selectedEnteteIdForBench}
                     loading={false}
                   />

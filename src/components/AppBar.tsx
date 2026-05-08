@@ -132,9 +132,11 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
   const profilsActifs = user?.profiles?.filter((p) => p.status === 'ACTIF')?.map((p) => p.profile.profil) || [];
   const modulesAccessibles = user?.profiles?.filter((p) => p.status === 'ACTIF')?.flatMap((p) => p.profile.modules.map((m) => m.module.nom)) || [];
 
+  const collapsed = useSelector((state: RootState) => state.ui.sidebarCollapsed);
+
   return (
     <>
-      <header className={`stick p-1 top-0 px-4 sm:px-10 bg-slate-700 border-b border-slate-600`}>
+      <header className={`stick p-1 top-0 px-4 bg-slate-700 border-b border-slate-600`}>
         <div className="h-10 flex items-center justify-between gap-4">
 
           {/* ── Gauche : Logo + Accueil ── */}
@@ -143,13 +145,17 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
               <div className="h-8 w-8 rounded-lg overflow-hidden border border-gray-100 shadow-sm">
                 <img src={logo} alt="Logo" className="h-full w-full object-cover" />
               </div>
-              <span className="font-bold text-slate-100 text-sm tracking-tight hidden sm:block">
-                AL BOURAQ
-              </span>
+              {!collapsed ? (
+                <span className="font-bold text-slate-100 text-sm tracking-tight hidden sm:block">
+                  AL BOURAQ TRAVEL
+                </span>
+              ) : (
+                null
+              )}
             </Link>
 
             {!isBackOffice && paths.length > 0 && (
-              <nav className="ml-17 hidden md:flex items-center text-sm font-medium">
+              <nav className="ml-3 hidden md:flex items-center text-sm font-medium">
                 <div className="h-4 w-px bg-slate-600 mx-2" />
                 <button
                   onClick={() => navigate("/")}

@@ -80,6 +80,16 @@ import clientBeneficiaireDetailReducer from './front_office/parametre_baseDonnee
 import userReducer from './front_office/parametre_utilisateur/userSlice';
 import deviseReducer from './front_office/parametre-global/deviseSlice';
 import clientFormReducer from './portail_client/clientFormSlice';
+import savSondageReducer from './front_office/parametre_sav/savSondageSlice';
+import savRappelReducer from './front_office/parametre_sav/savRappelSlice';
+import savParamsReducer from './front_office/parametre_sav/savParamsSlice';
+import annivParamsReducer from './front_office/paramatre_anniversaire/annivParamsSlice';
+import annivClientsReducer from './front_office/paramatre_anniversaire/annivClientsSlice';
+import milesTransactionReducer from './front_office/paramatre_anniversaire/milesTransactionSlice';
+import compagnieClientsReducer from './front_office/parametre_miles_compagnie/compagnieClientsSlice';
+import passagerListeReducer from './front_office/parametre_liste_passager/passagerListeSlice';
+import clientMilesReducer from './front_office/parametre_client_beneficiaire/clientMilesSlice';
+import clientProfilageReducer from './front_office/parametre_baseDonnee/clientProfilageSlice';
 
 import {
   FLUSH,
@@ -173,6 +183,28 @@ const appReducer = combineReducers({
   // Portail-client
   clientBeneficiaireInfos: clientBeneficiaireInfosReducer,
   clientForm: clientFormReducer,
+
+  // SAV
+  savSondage: savSondageReducer,
+  savRappel:  savRappelReducer,
+  savParams: savParamsReducer,
+
+  // Anniversaire
+  annivClients: annivClientsReducer,
+  annivParams:  annivParamsReducer,
+  milesTransaction: milesTransactionReducer,
+
+  // Miles Compagnie client
+  compagnieClients: compagnieClientsReducer,
+
+  // Passager Liste
+  passagerListe: passagerListeReducer,
+
+  // Miles Client
+  clientMiles: clientMilesReducer,
+
+  // Client Profilage
+  clientProfilage: clientProfilageReducer,
 });
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

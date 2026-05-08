@@ -198,7 +198,7 @@ function DossierCommun() {
         <div className="shrink-0 mb-5">
           <div className="flex items-center justify-between mb-4">
             <div className='flex space-x-5 items-center'>
-              <div className="bg-slate-300 flex items-center gap-2 px-4 py-2 text-slate-700 hover:bg-slate-400 hover:text-white rounded-lg transition-all group cursor-pointer" 
+              <div className="bg-white flex items-center gap-2 px-4 py-2 text-slate-700 hover:text-slate-900 rounded-lg transition-all group cursor-pointer" 
                 onClick={() => navigate('/')}
               >
                 <FiArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />

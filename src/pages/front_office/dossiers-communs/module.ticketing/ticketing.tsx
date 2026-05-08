@@ -85,8 +85,6 @@ const HomePageTicketing = () => {
         })
       ).unwrap();
 
-      // Optionnel : toast de succès
-      alert("Commission appliquée mise à jour avec succès");
       closeModal();
     } catch (err: any) {
       console.error(err);
@@ -135,8 +133,6 @@ const HomePageTicketing = () => {
           typeVol: newEntete.typeVol,
         })
       ).unwrap();
-
-      alert("En-tête créé avec succès !");
       closeCreateModal();
       // La liste est déjà mise à jour via le slice (push optimiste)
     } catch (err: any) {

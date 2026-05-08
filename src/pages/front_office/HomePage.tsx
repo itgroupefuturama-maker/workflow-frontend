@@ -1,25 +1,69 @@
 import { useNavigate } from 'react-router-dom';
-import { FiFolder, FiCheckCircle, FiTag, FiFileText, FiLock, FiSettings, FiHome, FiArrowRight, FiMapPin, FiShield, FiDatabase } from 'react-icons/fi';
+import { FiFolder, FiCheckCircle, FiTag, FiFileText, FiLock, FiSettings, FiHome, FiArrowRight, FiMapPin, FiShield, FiDatabase, FiMessageSquare, FiUsers, FiPlusCircle, FiList, FiUserCheck, FiUser } from 'react-icons/fi';
 
-const ALL_MODULES = [
-  { label: 'Dossier',            desc: 'Accédez à vos fichiers partagés',        path: '/dossiers-communs',                     defaultTab: null ,            icon: FiFolder,      color: 'blue',   locked: false },
-  { label: 'To Do List',         desc: 'Gérez vos tâches quotidiennes',           path: '/dossiers-communs/todolist',           defaultTab: null ,            icon: FiCheckCircle, color: 'teal',  locked: false },
-  { label: 'Ticketing',          desc: 'Suivez vos demandes et tickets',          path: '/dossiers-communs/ticketing/pages',    defaultTab: 'prospection' ,   icon: FiTag,         color: 'amber',  locked: false },
-  { label: 'Attestation Voyage', desc: 'Générez vos attestations',                path: '/dossiers-communs/attestation/pages',  defaultTab: 'prospection' ,   icon: FiFileText,    color: 'rose',   locked: false },
-  { label: 'Paramètre',          desc: 'Commentaires et configurations',          path: '/dossiers-communs/parametre',          defaultTab: null ,            icon: FiSettings,    color: 'violet', locked: false },
-  { label: 'Hôtel',              desc: 'Gestion des réservations',                path: '/dossiers-communs/hotel/pages',        defaultTab: 'prospection' ,   icon: FiHome,        color: 'orange', locked: false },
-  { label: 'Assurance',          desc: 'Contrats et garanties',                   path: '/dossiers-communs/assurance/pages',    defaultTab: 'prospection' ,   icon: FiShield,        color: 'green',   locked: false  },
-  { label: 'Visa',               desc: 'Gestion des visas',                       path: '/dossiers-communs/visa/pages',         defaultTab: 'prospection' ,   icon: FiMapPin,      color: 'indigo',   locked: false  },
-  { label: 'Base de Données',     desc: 'Consultation information',               path: '/dossiers-communs/base-donnee',        defaultTab: null ,            icon: FiDatabase,      color: 'cyan',   locked: false  },
-  // { label: 'Location',           desc: 'Véhicules et matériel',                   path: '',                              icon: FiLock,        color: 'gray',   locked: true  },
-  // { label: 'Activité',           desc: 'Excursions et loisirs',                   path: '',                              icon: FiLock,        color: 'gray',   locked: true  },
-  // { label: 'Guidage',            desc: 'Planning des guides',                     path: '',                              icon: FiLock,        color: 'gray',   locked: true  },
-  { label: 'Résultats Stats',    desc: 'Analyses de données',                     path: '',                              icon: FiLock,        color: 'gray',   locked: true  },
-  { label: 'Tableau de bord',    desc: "Vue d'ensemble",                          path: '',                              icon: FiLock,        color: 'gray',   locked: true  },
-  { label: 'Miles',              desc: 'Fidélité voyageurs',                      path: '',                              icon: FiLock,        color: 'gray',   locked: true  },
-  { label: 'Contrôle',           desc: 'Audit et vérification',                   path: '',                              icon: FiLock,        color: 'gray',   locked: true  },
-  { label: 'Profil',             desc: 'Paramètres utilisateur',                  path: '',                              icon: FiLock,        color: 'gray',   locked: true  },
-  { label: 'SAV',                desc: 'Service après-vente',                     path: '',                              icon: FiLock,        color: 'gray',   locked: true  },
+const CATEGORIES = [
+  {
+    key: 'workspace',
+    label: 'Espace de travail',
+    desc: 'Ressources partagées, tâches quotidiennes et consultation des données.',
+    icon: FiHome,
+    iconColor: 'text-blue-500',
+    iconBg: 'bg-blue-500/10',
+    modules: [
+      { label: 'Dossier',               desc: 'Accédez à vos fichiers partagés',                  path: '/dossiers-communs',                            defaultTab: null,       icon: FiFolder,               color: 'blue'  },
+      { label: 'To Do List',            desc: 'Gérez vos tâches quotidiennes',                    path: '/dossiers-communs/todolist',                   defaultTab: null,       icon: FiCheckCircle,          color: 'teal'  },
+      // { label: 'Base de Données',       desc: 'Consultation information',                         path: '/dossiers-communs/base-donnee',                defaultTab: null,       icon: FiDatabase,             color: 'cyan'  },
+      { label: 'SAV',                   desc: 'Service après-vente',                              path: '/dossiers-communs/pageSAV',                    defaultTab: null,       icon: FiPlusCircle,           color: 'blue'  },
+      { label: 'SMS Anniversaire',      desc: 'Fidélité voyageurs, Miles Al Bouraq Travel',       path: '/dossiers-communs/pageAnniversaire',           defaultTab: null,       icon: FiMessageSquare,        color: 'roseSombre'  },
+      { label: 'Liste Passage',         desc: 'Liste des passagers',                              path: '/dossiers-communs/pageListePassage',           defaultTab: null,       icon: FiList,                 color: 'turquoise'  },
+      { label: 'Miles Compagnie',       desc: 'Miles compagnie',                                  path: '/dossiers-communs/pageMilesCompagnie',         defaultTab: null,       icon: FiFileText,             color: 'fluo'  },
+      { label: 'Client Bénéficiaire',   desc: 'Consultation information & Base de données',       path: '/dossiers-communs/AllClientBeneficiairePage',  defaultTab: null,       icon: FiUserCheck,            color: 'cyan'  },
+      { label: 'Profilage',             desc: 'Voir les profilages des clients Bénéficiaires',    path: '/dossiers-communs/pageProfilage',              defaultTab: null,       icon: FiUser,                 color: 'teal', },
+    ],
+  },
+  {
+    key: 'prestation',
+    label: 'Modules prestation',
+    desc: 'Gestion complète des prestations clients : tickets, hébergements, assurances, visas et documents.',
+    icon: FiTag,
+    iconColor: 'text-rose-500',
+    iconBg: 'bg-rose-500/10',
+    modules: [
+      { label: 'Ticketing',          desc: 'Suivez vos demandes et tickets', path: '/dossiers-communs/ticketing/pages',   defaultTab: 'prospection', icon: FiTag,      color: 'amber'  },
+      { label: 'Hôtel',              desc: 'Gestion des réservations',        path: '/dossiers-communs/hotel/pages',       defaultTab: 'prospection', icon: FiHome,     color: 'orange' },
+      { label: 'Assurance',          desc: 'Contrats et garanties',           path: '/dossiers-communs/assurance/pages',   defaultTab: 'prospection', icon: FiShield,   color: 'green'  },
+      { label: 'Visa',               desc: 'Gestion des visas',               path: '/dossiers-communs/visa/pages',        defaultTab: 'prospection', icon: FiMapPin,   color: 'indigo' },
+      { label: 'Attestation Voyage', desc: 'Générez vos attestations',        path: '/dossiers-communs/attestation/pages', defaultTab: 'prospection', icon: FiFileText, color: 'rose'   },
+    ],
+  },
+  {
+    key: 'parametres',
+    label: 'Paramètres globaux de l\'application',
+    desc: 'Configurations générales, modèles PDF, gestion des commentaires et des utilisateurs.',
+    icon: FiSettings,
+    iconColor: 'text-violet-500',
+    iconBg: 'bg-violet-500/10',
+    modules: [
+      { label: 'Paramètre Application',   desc: 'Réglage et configurations',              path: '/dossiers-communs/parametre',                defaultTab: null, icon: FiSettings,  color: 'violet' },
+      { label: 'Paramètre Pdf',           desc: 'Ajouter vos modèle, Logo et Cachet',     path: '/dossiers-communs/parametrePdf',             defaultTab: null, icon: FiFileText,  color: 'violet'   },
+      { label: 'Gestion Commentaire',     desc: 'Ajouter vos commentaire et modification',path: '/dossiers-communs/parametreCommentaire',     defaultTab: null, icon: FiMessageSquare,  color: 'violet'   },
+      { label: 'Paramètre Utilisateur',   desc: 'Gestion de votre profil',                path: '/dossiers-communs/parametreUtilisateur',     defaultTab: null, icon: FiUsers,  color: 'violet'   },
+      { label: 'Gestion Couleurs',        desc: 'Palettes et thèmes écran',               path: '/dossiers-communs/couleurs',                 defaultTab: null, icon: FiSettings, color: 'violet' },
+    ],
+  },
+  {
+    key: 'locked',
+    label: 'En cours de développement',
+    desc: 'Ces modules seront disponibles prochainement.',
+    icon: FiLock,
+    iconColor: 'text-gray-400',
+    iconBg: 'bg-gray-100',
+    modules: [
+      { label: 'Résultats Stats', desc: 'Analyses de données',    path: '', defaultTab: null, icon: FiLock, color: 'gray', locked: true },
+      { label: 'Tableau de bord', desc: "Vue d'ensemble",         path: '', defaultTab: null, icon: FiLock, color: 'gray', locked: true },
+      { label: 'Contrôle',        desc: 'Audit et vérification',  path: '', defaultTab: null, icon: FiLock, color: 'gray', locked: true },
+    ],
+  },
 ];
 
 const COLOR_MAP: Record<string, {
@@ -28,134 +72,49 @@ const COLOR_MAP: Record<string, {
   iconText: string;
   border: string;
   glow: string;
-  badge: string;
   arrow: string;
 }> = {
-  blue:   { gradient: 'from-blue-500 to-blue-600',    iconBg: 'bg-blue-500/10',   iconText: 'text-blue-500',   border: 'border-blue-100 hover:border-blue-300',   glow: 'hover:shadow-blue-100',   badge: 'bg-blue-50 text-blue-600',   arrow: 'text-blue-400' },
-  green:  { gradient: 'from-emerald-500 to-green-600',iconBg: 'bg-emerald-500/10',iconText: 'text-emerald-500',border: 'border-green-100 hover:border-green-300',  glow: 'hover:shadow-green-100',  badge: 'bg-green-50 text-green-600', arrow: 'text-green-400' },
-  amber:  { gradient: 'from-amber-400 to-orange-500', iconBg: 'bg-amber-500/10',  iconText: 'text-amber-500',  border: 'border-amber-100 hover:border-amber-300',  glow: 'hover:shadow-amber-100',  badge: 'bg-amber-50 text-amber-600', arrow: 'text-amber-400' },
-  rose:   { gradient: 'from-rose-500 to-pink-600',    iconBg: 'bg-rose-500/10',   iconText: 'text-rose-500',   border: 'border-rose-100 hover:border-rose-300',    glow: 'hover:shadow-rose-100',   badge: 'bg-rose-50 text-rose-600',   arrow: 'text-rose-400' },
-  violet: { gradient: 'from-violet-500 to-purple-600',iconBg: 'bg-violet-500/10', iconText: 'text-violet-500', border: 'border-violet-100 hover:border-violet-300', glow: 'hover:shadow-violet-100', badge: 'bg-violet-50 text-violet-600',arrow: 'text-violet-400' },
-  orange: { gradient: 'from-orange-400 to-red-500',   iconBg: 'bg-orange-500/10', iconText: 'text-orange-500', border: 'border-orange-100 hover:border-orange-300', glow: 'hover:shadow-orange-100', badge: 'bg-orange-50 text-orange-600',arrow: 'text-orange-400' },
-  teal: { gradient: 'from-teal-500 to-emerald-600', iconBg: 'bg-teal-500/10', iconText: 'text-teal-500', border: 'border-teal-100 hover:border-teal-300', glow: 'hover:shadow-teal-100', badge: 'bg-teal-50 text-teal-600', arrow: 'text-teal-400' },
-  indigo: {
-    gradient: 'from-blue-700 to-blue-700',
-    iconBg: 'bg-blue-700/10',
-    iconText: 'text-blue-700',
-    border: 'border-blue-100 hover:border-blue-300',
-    glow: 'hover:shadow-blue-100',
-    badge: 'bg-blue-50 text-blue-600',
-    arrow: 'text-blue-700'
-  },
-
-  cyan: {
-    gradient: 'from-cyan-400 to-cyan-600',
-    iconBg: 'bg-cyan-500/10',
-    iconText: 'text-cyan-500',
-    border: 'border-cyan-100 hover:border-cyan-300',
-    glow: 'hover:shadow-cyan-100',
-    badge: 'bg-cyan-50 text-cyan-600',
-    arrow: 'text-cyan-400'
-  },
-
-  lime: {
-    gradient: 'from-lime-400 to-green-500',
-    iconBg: 'bg-lime-500/10',
-    iconText: 'text-lime-500',
-    border: 'border-lime-100 hover:border-lime-300',
-    glow: 'hover:shadow-lime-100',
-    badge: 'bg-lime-50 text-lime-600',
-    arrow: 'text-lime-400'
-  },
-
-  red: {
-    gradient: 'from-red-500 to-rose-600',
-    iconBg: 'bg-red-500/10',
-    iconText: 'text-red-500',
-    border: 'border-red-100 hover:border-red-300',
-    glow: 'hover:shadow-red-100',
-    badge: 'bg-red-50 text-red-600',
-    arrow: 'text-red-400'
-  },
-
-  yellow: {
-    gradient: 'from-yellow-400 to-amber-500',
-    iconBg: 'bg-yellow-500/10',
-    iconText: 'text-yellow-500',
-    border: 'border-yellow-100 hover:border-yellow-300',
-    glow: 'hover:shadow-yellow-100',
-    badge: 'bg-yellow-50 text-yellow-600',
-    arrow: 'text-yellow-400'
-  },
-  gray:   { gradient: 'from-gray-300 to-gray-400',    iconBg: 'bg-gray-100',      iconText: 'text-gray-300',   border: 'border-gray-100',                          glow: '',                        badge: '',                           arrow: '' },
+  blue:       { gradient: 'from-blue-500 to-blue-600',     iconBg: 'bg-blue-500/10',    iconText: 'text-blue-500',    border: 'border-slate-300 hover:border-blue-300',    glow: 'hover:shadow-blue-100',   arrow: 'text-blue-400'   },
+  green:      { gradient: 'from-emerald-500 to-green-600', iconBg: 'bg-emerald-500/10', iconText: 'text-emerald-500', border: 'border-slate-300 hover:border-green-300',   glow: 'hover:shadow-green-100',  arrow: 'text-green-400'  },
+  amber:      { gradient: 'from-amber-400 to-orange-500',  iconBg: 'bg-amber-500/10',   iconText: 'text-amber-500',   border: 'border-slate-300 hover:border-amber-300',   glow: 'hover:shadow-amber-100',  arrow: 'text-amber-400'  },
+  rose:       { gradient: 'from-rose-500 to-pink-600',     iconBg: 'bg-rose-500/10',    iconText: 'text-rose-500',    border: 'border-slate-300 hover:border-rose-300',     glow: 'hover:shadow-rose-100',   arrow: 'text-rose-400'   },
+  violet:     { gradient: 'from-violet-500 to-purple-600', iconBg: 'bg-violet-500/10',  iconText: 'text-violet-500',  border: 'border-slate-300 hover:border-violet-300', glow: 'hover:shadow-violet-100', arrow: 'text-violet-400' },
+  orange:     { gradient: 'from-orange-400 to-red-500',    iconBg: 'bg-orange-500/10',  iconText: 'text-orange-500',  border: 'border-slate-300 hover:border-orange-300', glow: 'hover:shadow-orange-100', arrow: 'text-orange-400' },
+  teal:       { gradient: 'from-teal-500 to-emerald-600',  iconBg: 'bg-teal-500/10',    iconText: 'text-teal-500',    border: 'border-slate-300 hover:border-teal-300',     glow: 'hover:shadow-teal-100',   arrow: 'text-teal-400'   },
+  indigo:     { gradient: 'from-indigo-500 to-blue-700',   iconBg: 'bg-indigo-500/10',  iconText: 'text-indigo-600',  border: 'border-slate-300 hover:border-indigo-300', glow: 'hover:shadow-indigo-100', arrow: 'text-indigo-500' },
+  cyan:       { gradient: 'from-cyan-400 to-cyan-600',     iconBg: 'bg-cyan-500/10',    iconText: 'text-cyan-500',    border: 'border-slate-300 hover:border-cyan-300',     glow: 'hover:shadow-cyan-100',   arrow: 'text-cyan-400'   },
+  gray:       { gradient: 'from-gray-300 to-gray-400',     iconBg: 'bg-gray-100',       iconText: 'text-gray-300',    border: 'border-gray-300',                           glow: '',                        arrow: ''                },
+  roseSombre: { gradient: 'from-rose-700 to-pink-900',     iconBg: 'bg-rose-700/10',    iconText: 'text-rose-700',    border: 'border-slate-300 hover:border-rose-300',     glow: 'hover:shadow-rose-200',   arrow: 'text-rose-400'   },
+  turquoise:  { gradient: 'from-blue-700 to-blue-900',     iconBg: 'bg-blue-700/10',    iconText: 'text-blue-700',    border: 'border-slate-300 hover:border-blue-300',     glow: 'hover:shadow-blue-200',   arrow: 'text-blue-400'   },
+  fluo:       { gradient: 'from-green-700 to-green-900',   iconBg: 'bg-green-700/10',   iconText: 'text-green-700',   border: 'border-slate-300 hover:border-green-300',   glow: 'hover:shadow-green-200',  arrow: 'text-green-400'  },
 };
 
-// Compteur de modules actifs
-const ACTIVE_COUNT = ALL_MODULES.filter(m => !m.locked).length;
+const ACTIVE_COUNT = CATEGORIES.filter(c => c.key !== 'locked').reduce((sum, c) => sum + c.modules.length, 0);
 
 function HomePage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-slate-50">
+    <div className="min-h-screen relative overflow-hidden bg-slate-500">
 
-      {/* ══════════════════════════════════════════
-          FOND DÉCORATIF
-      ══════════════════════════════════════════ */}
-
-      {/* Gradient de base */}
+      {/* ── Fond décoratif ── */}
       <div className="absolute inset-0 bg-linear-to-br from-slate-100 via-white to-blue-50/40 pointer-events-none" />
-
-      {/* Grande forme floue haut-gauche */}
       <div className="absolute -top-40 -left-40 w-[500px] h-[500px] bg-linear-to-br from-blue-400/10 to-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-
-      {/* Grande forme floue bas-droite */}
       <div className="absolute -bottom-40 -right-40 w-[600px] h-[600px] bg-linear-to-tl from-violet-400/10 to-purple-500/8 rounded-full blur-3xl pointer-events-none" />
-
-      {/* Forme médiane centre */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[400px] bg-linear-to-r from-sky-300/5 to-indigo-300/5 rounded-full blur-3xl pointer-events-none" />
-
-      {/* Grille de points subtile */}
       <div
         className="absolute inset-0 pointer-events-none opacity-[0.025]"
-        style={{
-          backgroundImage: 'radial-gradient(circle, #475569 1px, transparent 1px)',
-          backgroundSize: '28px 28px',
-        }}
+        style={{ backgroundImage: 'radial-gradient(circle, #475569 1px, transparent 1px)', backgroundSize: '28px 28px' }}
       />
 
-      {/* Ligne décorative diagonale haut-droite */}
-      <svg className="absolute top-0 right-0 w-96 h-96 opacity-[0.04] pointer-events-none" viewBox="0 0 400 400">
-        <line x1="400" y1="0" x2="0" y2="400" stroke="#3b82f6" strokeWidth="1.5" />
-        <line x1="400" y1="40" x2="40" y2="400" stroke="#3b82f6" strokeWidth="1" />
-        <line x1="400" y1="80" x2="80" y2="400" stroke="#3b82f6" strokeWidth="0.5" />
-        <circle cx="380" cy="20" r="4" fill="#6366f1" />
-        <circle cx="340" cy="60" r="2" fill="#6366f1" />
-        <circle cx="300" cy="20" r="3" fill="#3b82f6" />
-      </svg>
+      {/* ── Contenu ── */}
+      <div className="relative max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-16">
 
-      {/* Cercles discrets bas-gauche */}
-      <svg className="absolute bottom-10 left-10 w-48 h-48 opacity-[0.06] pointer-events-none" viewBox="0 0 200 200">
-        <circle cx="100" cy="100" r="80" stroke="#8b5cf6" strokeWidth="1" fill="none" />
-        <circle cx="100" cy="100" r="55" stroke="#8b5cf6" strokeWidth="1" fill="none" />
-        <circle cx="100" cy="100" r="30" stroke="#8b5cf6" strokeWidth="1" fill="none" />
-      </svg>
-
-      {/* ══════════════════════════════════════════
-          CONTENU
-      ══════════════════════════════════════════ */}
-      <div className="relative z-10 max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 pt-16 sm:pt-20 pb-16">
-
-        {/* ── Header ── */}
+        {/* Header */}
         <div className="mb-10 sm:mb-12">
-          {/* Petite pastille au-dessus */}
-          <div className="inline-flex items-center gap-2 bg-white border border-blue-100 rounded-full px-3 py-1 mb-4 shadow-sm">
+          <div className="inline-flex items-center gap-2 bg-white border border-blue-500 rounded-full px-3 py-1 mb-4 shadow-sm">
             <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-            <span className="text-xs font-medium text-blue-600">
-              {ACTIVE_COUNT} modules actifs
-            </span>
+            <span className="text-xs font-medium text-blue-600">{ACTIVE_COUNT} modules actifs</span>
           </div>
-
           <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-2 tracking-tight">
             Liste des modules
           </h1>
@@ -164,81 +123,92 @@ function HomePage() {
           </p>
         </div>
 
-        {/* ── Grille ── */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-
-          {ALL_MODULES.map((mod) => {
-            const c = COLOR_MAP[mod.color];
-            const Icon = mod.icon;
-
-            /* ── Carte verrouillée ── */
-            if (mod.locked) {
-              return (
-                <div
-                  key={mod.label}
-                  className="relative shadow-lg bg-white/60 backdrop-blur-sm rounded-2xl p-5 sm:p-6 border border-gray-100 cursor-not-allowed overflow-hidden"
-                >
-                  <span className="absolute top-3 right-3 text-[10px] font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                    En cours
-                  </span>
-                  <div className="w-11 h-11 bg-gray-100 rounded-xl flex items-center justify-center mb-4">
-                    <FiLock className="text-gray-300" size={18} />
-                  </div>
-                  <h3 className="text-sm font-semibold text-gray-400 mb-1">{mod.label}</h3>
-                  <p className="text-xs text-gray-300 leading-relaxed">{mod.desc}</p>
-                </div>
-              );
-            }
-
-            /* ── Carte active ── */
+        {/* Catégories */}
+        <div className="space-y-10">
+          {CATEGORIES.map((category) => {
+            const CatIcon = category.icon;
             return (
-              <div
-                key={mod.path}
-                onClick={() => navigate(mod.path, { 
-                  state: mod.defaultTab ? { targetTab: mod.defaultTab } : undefined 
-                })}
-                className={`
-                  group relative shadow-lg bg-white/80 backdrop-blur-sm rounded-2xl p-5 sm:p-6
-                  cursor-pointer border ${c.border}
-                  transition-all duration-300
-                  hover:shadow-xl ${c.glow} hover:-translate-y-1.5
-                  overflow-hidden
-                `}
-              >
-                {/* Barre colorée en haut */}
-                <div className={`absolute top-0 left-0 right-0 h-0.5 bg-linear-to-r ${c.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-t-2xl`} />
+              <div key={category.key}>
 
-                {/* Blob décoratif interne */}
-                <div className={`absolute -top-6 -right-6 w-24 h-24 bg-linear-to-br ${c.gradient} opacity-[0.06] rounded-full group-hover:scale-150 group-hover:opacity-[0.10] transition-all duration-500`} />
-
-                <div className="relative z-10">
-                  {/* Icône */}
-                  <div className={`w-13 h-13 sm:w-13 sm:h-13 ${c.iconBg} rounded-xl flex items-center justify-center mb-4 transition-all duration-300 group-hover:scale-105`}>
-                    <Icon className={`${c.iconText} transition-all duration-300`} size={30} />
+                {/* En-tête de catégorie */}
+                <div className="flex items-start gap-3 mb-4 pb-3 border-b border-slate-100">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${category.iconBg}`}>
+                    <CatIcon className={category.iconColor} size={15} />
                   </div>
-
-                  {/* Texte */}
-                  <h3 className="text-sm sm:text-base font-semibold text-slate-800 mb-1 leading-snug">
-                    {mod.label}
-                  </h3>
-                  <p className="text-xs text-slate-400 leading-relaxed mb-4">
-                    {mod.desc}
-                  </p>
-
-                  {/* Lien bas de carte */}
-                  <div className={`flex items-center gap-1 text-xs font-medium ${c.arrow} opacity-0 group-hover:opacity-100 transition-all duration-300 -translate-x-1 group-hover:translate-x-0`}>
-                    <span>Accéder</span>
-                    <FiArrowRight size={12} />
+                  <div>
+                    <h2 className="text-sm font-semibold text-slate-800 mb-0.5">{category.label}</h2>
+                    <p className="text-xs text-slate-400">{category.desc}</p>
                   </div>
+                </div>
+
+                {/* Grille de modules */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {category.modules.map((mod) => {
+                    const c = COLOR_MAP[mod.color];
+                    const Icon = mod.icon;
+                    const isLocked = (mod as any).locked;
+
+                    if (isLocked) {
+                      return (
+                        <div
+                          key={mod.label}
+                          className="relative shadow-sm bg-white/60 backdrop-blur-sm rounded-2xl p-5 border border-gray-100 cursor-not-allowed overflow-hidden"
+                        >
+                          <span className="absolute top-3 right-3 text-[10px] font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                            En cours
+                          </span>
+                          <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center mb-4">
+                            <FiLock className="text-gray-300" size={16} />
+                          </div>
+                          <h3 className="text-sm font-semibold text-gray-400 mb-1">{mod.label}</h3>
+                          <p className="text-xs text-gray-300 leading-relaxed">{mod.desc}</p>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div
+                        key={mod.path}
+                        onClick={() => navigate(mod.path, {
+                          state: mod.defaultTab ? { targetTab: mod.defaultTab } : undefined,
+                        })}
+                        className={`
+                          group relative shadow-sm bg-white/80 backdrop-blur-sm rounded-2xl p-5
+                          cursor-pointer border ${c.border}
+                          transition-all duration-300
+                          hover:shadow-xl ${c.glow} hover:-translate-y-1.5
+                          overflow-hidden
+                        `}
+                      >
+                        {/* Barre colorée en haut au hover */}
+                        <div className={`absolute top-0 left-0 right-0 h-0.5 bg-linear-to-r ${c.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-t-2xl`} />
+
+                        {/* Blob décoratif */}
+                        <div className={`absolute -top-6 -right-6 w-24 h-24 bg-linear-to-br ${c.gradient} opacity-[0.06] rounded-full group-hover:scale-150 group-hover:opacity-[0.10] transition-all duration-500`} />
+
+                        <div className="relative z-10">
+                          <div className={`w-11 h-11 ${c.iconBg} rounded-xl flex items-center justify-center mb-4 transition-all duration-300 group-hover:scale-105`}>
+                            <Icon className={`${c.iconText}`} size={22} />
+                          </div>
+                          <h3 className="text-sm font-semibold text-slate-800 mb-1">{mod.label}</h3>
+                          <p className="text-xs text-slate-400 leading-relaxed mb-4">{mod.desc}</p>
+                          <div className={`flex items-center gap-1 text-xs font-medium ${c.arrow} opacity-0 group-hover:opacity-100 transition-all duration-300 -translate-x-1 group-hover:translate-x-0`}>
+                            <span>Accéder</span>
+                            <FiArrowRight size={11} />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );
           })}
         </div>
 
-        {/* ── Footer discret ── */}
+        {/* Footer */}
         <p className="text-center text-xs text-slate-300 mt-12">
-          {ALL_MODULES.filter(m => m.locked).length} modules en cours de développement
+          6 modules en cours de développement
         </p>
       </div>
     </div>

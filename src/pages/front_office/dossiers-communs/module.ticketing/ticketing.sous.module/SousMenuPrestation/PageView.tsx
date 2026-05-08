@@ -9,7 +9,7 @@ import DossierActifCard from '../../../../../../components/CarteDossierActif/Dos
 import { TicketingHeader } from '../components.billet/TicketingHeader';
 import { billetListeItems, prospectionListeItems } from '../components.billet/utils/ticketingHeaderItems';
 import SuiviTabSection from '../../../module.suivi/SuiviTabSection';
-import BeneficiaireListPage from '../../../module.client.beneficiaire/BeneficiaireListPage';
+import BeneficiaireListPage from '../../../module.client.beneficiaire/BeneficiaireListPageForClientFacture';
 
 interface PrestationContext {
   prestationId: string;
@@ -86,7 +86,7 @@ export default function PageView() {
           <div className="flex h-full min-h-0 overflow-hidden">
             {/* ── Colonne principale ── */}
             <div className="flex-1 min-w-0 flex flex-col min-h-0">
-              <div className="shrink-0 px-4 bg-white">
+              <div className="shrink-0 px-4 bg-slate-200 rounded-t-xl">
                 <div className='flex items-center justify-between'>
                   <TicketingHeader items={prospectionListeItems()} />
                   <div className="flex items-center gap-2">
@@ -111,43 +111,47 @@ export default function PageView() {
               </div>
 
               {/* ── Carte dossier actif ── */}
-              <div className='px-4 border-b border-neutral-50'>
+              <div className='px-4 bg-slate-200 rounded-b-xl'>
                 <DossierActifCard gradient="from-orange-400 via-red-400 to-orange-500 " />
 
-                <div className='flex items-center justify-between'> 
-                  <div>
-                    <nav className="flex" aria-label="Tabs">
-                      <button
-                        onClick={() => setActiveTabSousSection('lignes')}
-                        className={`px-6 py-2 text-sm font-semibold rounded-t-lg transition-all ${
-                          activeTabSousSection === 'lignes'
-                            ? 'bg-[#4A77BE] text-white shadow-sm'
-                            : 'bg-white text-[#1E3A8A] hover:bg-[#f2f7fe] border-t border-l border-r border-slate-200'
-                        }`}
-                      >
-                        Liste des Benchmarking ({entetes.length})
-                      </button>
-                      <button
-                        onClick={() => setActiveTabSousSection('suivi')}
-                        className={`px-6 py-2 text-sm font-semibold rounded-t-lg transition-all ${
-                          activeTabSousSection === 'suivi'
-                            ? 'bg-[#4A77BE] text-white shadow-sm'
-                            : 'bg-white text-[#1E3A8A] hover:bg-[#f2f7fe] border-t border-l border-r border-slate-200'
-                        }`}
-                      >
-                        Suivi
-                      </button>
-                    </nav>
-                  </div>
+                <div className="flex items-center justify-between">
+                  <nav className="flex gap-1 my-2" aria-label="Tabs">
+                    <button
+                      onClick={() => setActiveTabSousSection('lignes')}
+                      className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+                        activeTabSousSection === 'lignes'
+                          ? 'bg-white text-slate-800 shadow-sm ring-1 ring-slate-200/50'
+                          : 'text-slate-500 hover:text-slate-700 bg-slate-300'
+                      }`}
+                    >
+                      Benchmarking
+                      <span className={`ml-2 px-1.5 py-0.5 rounded-md text-[10px] ${
+                        activeTabSousSection === 'lignes' ? 'bg-slate-100 text-slate-600' : 'bg-slate-200/50 text-slate-500'
+                      }`}>
+                        {entetes.length}
+                      </span>
+                    </button>
+                    
+                    <button
+                      onClick={() => setActiveTabSousSection('suivi')}
+                      className={`px-10 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+                        activeTabSousSection === 'suivi'
+                          ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/50'
+                          : 'text-slate-500 hover:text-slate-700 bg-slate-300'
+                      }`}
+                    >
+                      Suivi
+                    </button>
+                  </nav>
                 </div>
               </div>
 
-              <div className="flex-1 min-h-0 overflow-y-auto pb-4 px-4">
+              <div className="flex-1 min-h-0 overflow-y-auto py-4">
                 {/* ── États de chargement ── */}
                 {activeTabSousSection === 'lignes' && (
                   <div className="bg-white space-y-4 overflow-hidden">
                     {loadingEntetes ? (
-                      <div className="flex flex-col items-center justify-center py-14 bg-white rounded-2xl border border-slate-100">
+                      <div className="flex flex-col items-center justify-center py-14 bg-white rounded-2xl border border-slate-200">
                         <div className="w-10 h-10 bg-linear-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center mb-3 animate-pulse">
                           <FiTag className="text-white" size={18} />
                         </div>
@@ -173,11 +177,11 @@ export default function PageView() {
                       </div>
                     ) : (
                       /* ── Tableau entêtes ── */
-                      <div className="bg-white rounded-br-xl rounded-bl-xl rounded-tr-xl shadow-sm border border-slate-200 overflow-hidden">
+                      <div className="bg-white rounded-xl shadow-sm border border-slate-300 overflow-hidden">
                         <div className="overflow-x-auto">
                           <table className="min-w-full divide-y divide-slate-100">
                             <thead>
-                              <tr className="bg-slate-50">
+                              <tr className="bg-slate-200">
                                 {['N° En-tête', 'Type Vol', 'Fournisseur', 'Crédit', 'Comm. proposée', 'Comm. appliquée', 'Créé le', 'Actions'].map(h => (
                                   <th key={h} className="px-5 py-3.5 text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">
                                     {h}
@@ -266,7 +270,7 @@ export default function PageView() {
             {/* ── Colonne principale ── */}
             <div className="flex-1 min-w-0 flex flex-col min-h-0">
               {/* ── Header fixe — ne scrolle PAS ── */}
-              <div className="shrink-0 px-4 bg-white">
+              <div className="shrink-0 px-4 bg-slate-200 rounded-t-xl">
                 <div className='flex items-center justify-between'>
                   <TicketingHeader items={billetListeItems()} />
                   <button
@@ -281,37 +285,41 @@ export default function PageView() {
                   </button>
                 </div>
               </div>
-              <div className='px-4 border-b border-neutral-50'>
+              <div className='px-4 bg-slate-200 rounded-b-xl'>
                 <DossierActifCard gradient="from-amber-400 via-orange-400 to-amber-500" />
                 <div className="flex items-center justify-between">
-                  <div>
-                    <nav className="flex" aria-label="Tabs">
-                      <button
-                        onClick={() => setActiveTabSousSection('lignes')}
-                        className={`px-6 py-2 text-sm font-semibold rounded-t-lg transition-all ${
-                          activeTabSousSection === 'lignes'
-                            ? 'bg-[#4A77BE] text-white shadow-sm'
-                            : 'bg-white text-[#1E3A8A] hover:bg-[#f2f7fe] border-t border-l border-r border-slate-200'
-                        }`}
-                      >
-                        Liste des billets
-                      </button>
-                      <button
-                        onClick={() => setActiveTabSousSection('suivi')}
-                        className={`px-6 py-2 text-sm font-semibold rounded-t-lg transition-all ${
-                          activeTabSousSection === 'suivi'
-                            ? 'bg-[#4A77BE] text-white shadow-sm'
-                            : 'bg-white text-[#1E3A8A] hover:bg-[#f2f7fe] border-t border-l border-r border-slate-200'
-                        }`}
-                      >
-                        Suivi
-                      </button>
-                    </nav>
-                  </div>
+                  <nav className="flex my-2 gap-1" aria-label="Tabs">
+                    <button
+                      onClick={() => setActiveTabSousSection('lignes')}
+                      className={`px-4 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+                        activeTabSousSection === 'lignes'
+                          ? 'bg-white text-slate-800 shadow-sm ring-1 ring-slate-200/50'
+                          : 'text-slate-500 hover:text-slate-700 bg-slate-300' 
+                      }`}
+                    >
+                      Liste des billets
+                      <span className={`ml-2 px-1.5 py-0.5 rounded-md text-[10px] ${
+                        activeTabSousSection === 'lignes' ? 'bg-slate-100 text-slate-600' : 'bg-slate-200/50 text-slate-500'
+                      }`}>
+                        {entetes.length}
+                      </span>
+                    </button>
+                    
+                    <button
+                      onClick={() => setActiveTabSousSection('suivi')}
+                      className={`px-10 py-1.5 text-sm font-medium rounded-lg transition-all duration-200 ${
+                        activeTabSousSection === 'suivi'
+                          ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/50'
+                          : 'text-slate-500 hover:text-slate-700 bg-slate-300'
+                      }`}
+                    >
+                      Suivi
+                    </button>
+                  </nav>
                 </div>
               </div>
               
-              <div className="flex-1 min-h-0 overflow-y-auto pb-4 px-4">
+              <div className="flex-1 min-h-0 overflow-y-auto py-4">
                 {activeTabSousSection === 'lignes' && (
                   <div className="bg-white space-y-4 overflow-hidden">
                     {loadingBillets ? (
@@ -335,11 +343,11 @@ export default function PageView() {
                       </div>
                     ) : (
                       /* ── Tableau billets ── */
-                      <div className="bg-white rounded-br-xl rounded-bl-xl rounded-tr-xl shadow-sm border border-slate-200 overflow-hidden">
+                      <div className="bg-white rounded-br-xl rounded-xl shadow-sm border border-slate-300 overflow-hidden">
                         <div className="overflow-x-auto">
                           <table className="min-w-full divide-y divide-slate-100">
                             <thead>
-                              <tr className="bg-slate-50">
+                              <tr className="bg-slate-200">
                                 {['N° Billet', 'N° Devis', 'N° En-tête', 'Statut', 'Comm. appl.', 'Nb lignes', 'Créé le', 'Actions'].map(h => (
                                   <th key={h} className="px-5 py-3.5 text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">
                                     {h}

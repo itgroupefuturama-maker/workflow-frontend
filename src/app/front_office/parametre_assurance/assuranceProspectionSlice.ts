@@ -52,13 +52,14 @@ export interface AssuranceProspectionLigne {
   tauxChange: number;
   createdAt: string;
   assuranceTarifPlein:   AssuranceTarifPlein;
+  assuranceTarifReduit:  AssuranceTarifReduit | null;
   assuranceParams: {
     id: string;
     zoneDestination: string;
     status: string;
     dateApplication: string;
     assuranceDocParams:    AssuranceDoc[];
-    assuranceTarifReduit:  AssuranceTarifReduit[];
+    
   };
 }
 
@@ -122,6 +123,7 @@ export interface AssuranceDevisDetail {
     dateDevis: string | null;
     assuranceParamsId: string;
     createdAt: string;
+    assuranceTarifPlein: AssuranceTarifPlein;
   }[];
   suivi: {
     id: string;

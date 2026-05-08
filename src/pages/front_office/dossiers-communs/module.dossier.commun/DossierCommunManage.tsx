@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { FiArrowLeft, FiUsers, FiCheck, FiTrash2, FiX, FiPackage, FiUser, FiFileText } from "react-icons/fi";
+import { FiArrowLeft, FiUsers, FiCheck, FiTrash2, FiX, FiPackage, FiUser } from "react-icons/fi";
 import { useSelector, useDispatch } from "react-redux";
 import { useState, useEffect } from "react";
 import type { RootState, AppDispatch } from "../../../../app/store";
@@ -19,13 +19,8 @@ export default function DossierCommunManage() {
 
   // Sélecteurs
   const { data: dossiers } = useSelector((state: RootState) => state.dossierCommun);
-  const { data: allClientsFactures } = useSelector((state: RootState) => state.clientFactures);
-  const { list: infosList, loadingList: loadingInfos } = useSelector((state: RootState) => state.clientBeneficiaireInfos);
 
   const dossier = dossiers.find((d) => d.numero === Number(id));
-
-  // Trouver l'objet client facturé complet pour avoir la liste des bénéficiaires parents
-  const clientFactureComplet = allClientsFactures.find(c => c.id === dossier?.clientfacture.id);
 
   // === GESTION DES COLABS (RESPONSABLES) ===
   const [currentColabs, setCurrentColabs] = useState<{ moduleId: string; userId: string }[]>([]);

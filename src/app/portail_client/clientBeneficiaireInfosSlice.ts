@@ -16,6 +16,7 @@ export interface ClientBeneficiaireInfo {
   dateValiditeDoc: string;
   dateDelivranceCin?: string | null;
   dateValiditeCin?: string | null;
+  dateNaissance?: string | null;
   whatsapp?: string | null;
   tel?: string | null;
   cin?: string | null;
@@ -81,6 +82,7 @@ export const createClientBeneficiaireInfos = createAsyncThunk<
     dateValiditeDoc: string;
     dateDelivranceCin?: string;
     dateValiditeCin?: string;
+    dateNaissance?: string;
     whatsapp?: string;
     tel?: string;
     document?: File;
@@ -103,6 +105,7 @@ export const createClientBeneficiaireInfos = createAsyncThunk<
     if (payload.referenceCin) formData.append('referenceCin', payload.referenceCin);
     formData.append('dateDelivranceDoc', payload.dateDelivranceDoc);
     formData.append('dateValiditeDoc', payload.dateValiditeDoc);
+    if (payload.dateNaissance) formData.append('dateNaissance', payload.dateNaissance);
     if (payload.dateDelivranceCin) formData.append('dateDelivranceCin', payload.dateDelivranceCin);
     if (payload.dateValiditeCin) formData.append('dateValiditeCin', payload.dateValiditeCin);
     if (payload.whatsapp) formData.append('whatsapp', payload.whatsapp);
@@ -141,6 +144,7 @@ export const updateClientBeneficiaireInfo = createAsyncThunk<
     dateValiditeDoc: string;
     dateDelivranceCin?: string;
     dateValiditeCin?: string;
+    dateNaissance?: string;
     whatsapp?: string;
     tel?: string;
     document?: File;  // Nouveau fichier ou undefined (pas de suppression pour l'instant)
@@ -162,6 +166,7 @@ export const updateClientBeneficiaireInfo = createAsyncThunk<
     if (payload.referenceCin) formData.append('referenceCin', payload.referenceCin);
     formData.append('dateDelivranceDoc', payload.dateDelivranceDoc);
     formData.append('dateValiditeDoc', payload.dateValiditeDoc);
+    if (payload.dateNaissance) formData.append('dateNaissance', payload.dateNaissance);
     if (payload.dateDelivranceCin) formData.append('dateDelivranceCin', payload.dateDelivranceCin);
     if (payload.dateValiditeCin) formData.append('dateValiditeCin', payload.dateValiditeCin);
     if (payload.whatsapp) formData.append('whatsapp', payload.whatsapp);

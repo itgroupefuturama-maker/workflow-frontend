@@ -1,9 +1,9 @@
 import { useState, useMemo } from 'react';
 import { FiX, FiDownload, FiEye, FiChevronDown, FiChevronRight } from 'react-icons/fi';
-import { normalizeDevisToEntete, type HotelPdfInput, type HotelProspectionEnteteItem } from '../../module.parametre/sections/pdf.generation/types/hotel.types';
-import type { HotelPdfSelection } from '../../module.parametre/sections/pdf.generation/types/hotel.types';
-import type { PdfAudience, PdfDesignId } from '../../module.parametre/sections/pdf.generation/types/pdf-design.types';
-import { PDF_DESIGNS } from '../../module.parametre/sections/pdf.generation/config/pdf-designs';
+import { normalizeDevisToEntete, type HotelPdfInput, type HotelProspectionEnteteItem } from '../../module.pdf/pdf.generation/types/hotel.types';
+import type { HotelPdfSelection } from '../../module.pdf/pdf.generation/types/hotel.types';
+import type { PdfAudience, PdfDesignId } from '../../module.pdf/pdf.generation/types/pdf-design.types';
+import { PDF_DESIGNS } from '../../module.pdf/pdf.generation/config/pdf-designs';
 
 interface Props {
   isOpen: boolean;

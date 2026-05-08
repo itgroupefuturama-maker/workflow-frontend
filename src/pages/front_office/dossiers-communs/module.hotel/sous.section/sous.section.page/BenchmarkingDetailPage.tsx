@@ -458,7 +458,7 @@ const BenchmarkingDetailPage = () => {
           {/* ── Colonne principale ── */}
           <div className="flex-1 min-w-0 flex flex-col min-h-0 ">
             {/* ── Header fixe — ne scrolle PAS ── */}
-            <div className="shrink-0 px-4 pt-2 border-b border-neutral-200 bg-white">
+            <div className="shrink-0 px-4 bg-slate-200 rounded-lg">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-1 ">
                 <HotelHeader
                   numerohotel={detail?.numero}
@@ -610,9 +610,9 @@ const BenchmarkingDetailPage = () => {
               </div>
             </div>
 
-            <div className="flex-1 min-h-0 overflow-y-auto py-4 px-4">
+            <div className="flex-1 min-h-0 overflow-y-auto py-4">
               {/* Liste des lignes de benchmarking */}
-              <div className="bg-white border border-neutral-200 rounded-lg overflow-hidden">
+              <div className="bg-white border border-neutral-300 rounded-lg overflow-hidden">
                 <div className="px-6 py-4 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   {/* Titre + compteur */}
                   <div>

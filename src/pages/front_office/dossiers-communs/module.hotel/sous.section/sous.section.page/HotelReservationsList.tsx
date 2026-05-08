@@ -72,7 +72,7 @@ const HotelReservationsList = ({ prestationId, dossierNumero }: Props) => {
     <div className="flex h-full min-h-0 overflow-hidden">
       <div className="flex-1 min-w-0 flex flex-col min-h-0">
         {/* ── Header fixe — ne scrolle PAS ── */}
-        <div className="shrink-0 px-4 pt-2 bg-white">
+        <div className="shrink-0 px-4 bg-slate-200 rounded-t-lg">
           <div className='flex items-center justify-between'>
             <HotelHeader numerohotel={dossierNumero} navigate={navigate} isBenchmarking={false} />
             <button
@@ -87,28 +87,30 @@ const HotelReservationsList = ({ prestationId, dossierNumero }: Props) => {
             </button> 
           </div>
         </div>
-        <div className='px-4'>
+        <div className='px-4 bg-slate-200 rounded-b-lg'>
           <DossierActifCard gradient="from-orange-400 via-red-400 to-orange-500 " />
           {/* ── Header page ── */}
           <div className='flex items-center justify-between'> 
-            <div>
-              <nav className="flex" aria-label="Tabs">
+            {/* Bouton + formulaire création */}
+            <div className="flex items-center justify-between">
+              <nav className="flex p-1 bg-slate-100/80 rounded-lg mb-2" aria-label="Tabs">
                 <button
                   onClick={() => setActiveTabSousSection('lignes')}
-                  className={`px-6 py-2 text-sm font-semibold rounded-t-lg transition-all ${
+                  className={`px-4 py-1.5 text-sm font-medium rounded-sm transition-all duration-200 ${
                     activeTabSousSection === 'lignes'
-                      ? 'bg-[#4A77BE] text-white shadow-sm'
-                      : 'bg-white text-[#1E3A8A] hover:bg-[#f2f7fe] border-t border-l border-r border-slate-200'
+                      ? 'bg-white text-slate-800 shadow-sm ring-1 ring-slate-200/50'
+                      : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
-                  Liste des Réservations Hôtel
+                  Liste des Réservations
                 </button>
+                
                 <button
                   onClick={() => setActiveTabSousSection('suivi')}
-                  className={`px-6 py-2 text-sm font-semibold rounded-t-lg transition-all ${
+                  className={`px-10 py-1.5 text-sm font-medium rounded-sm transition-all duration-200 ${
                     activeTabSousSection === 'suivi'
-                      ? 'bg-[#4A77BE] text-white shadow-sm'
-                      : 'bg-white text-[#1E3A8A] hover:bg-[#f2f7fe] border-t border-l border-r border-slate-200'
+                      ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/50'
+                      : 'text-slate-500 hover:text-slate-700'
                   }`}
                 >
                   Suivi
@@ -130,7 +132,7 @@ const HotelReservationsList = ({ prestationId, dossierNumero }: Props) => {
             </button>
           </div>
         </div>
-        <div className="flex-1 min-h-0 overflow-y-auto pb-4 px-4">
+        <div className="flex-1 min-h-0 overflow-y-auto py-4">
           {activeTabSousSection === 'lignes' && (
             <div className="flex-1 min-h-0 overflow-y-auto">
               {/* ── États ── */}
@@ -159,7 +161,7 @@ const HotelReservationsList = ({ prestationId, dossierNumero }: Props) => {
                     const commission   = entete.hotelLigne.reduce((s, l) => s + (l.commissionUnitaire || 0), 0);
 
                     return (
-                      <div key={entete.id} className="bg-white border border-neutral-200 overflow-hidden shadow-sm">
+                      <div key={entete.id} className="bg-white border border-neutral-300 overflow-hidden shadow-sm">
 
                         {/* ── En-tête de la carte ── */}
                         <div

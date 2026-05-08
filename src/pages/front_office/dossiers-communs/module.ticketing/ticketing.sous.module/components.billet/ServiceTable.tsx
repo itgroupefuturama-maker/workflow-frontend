@@ -30,8 +30,8 @@ const ServiceTable: React.FC<ServiceTableProps> = ({
 
   return (
     <div className="bg-white overflow-hidden border border-slate-200">
-      <div className="p-5 border-b border-slate-200">
-        <h2 className="text-xl font-semibold text-slate-800">
+      <div className="px-3 py-5 border-b border-slate-200">
+        <h2 className="text-[13px] font-semibold text-slate-800">
           Lignes du {isService ? 'Service' : 'Spécifique'}
         </h2>
       </div>

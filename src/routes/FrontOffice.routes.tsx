@@ -42,9 +42,20 @@ import PageDetailAssurance from "../pages/front_office/dossiers-communs/module.a
 import PageDetailPassagerAssurance from "../pages/front_office/dossiers-communs/module.assurance/sous.section/sous.section.page/PageDetailPassagerAssurance";
 import HomePageBaseDonnee from "../pages/front_office/dossiers-communs/module.base.donnee/HomePageBaseDonnee";
 import PageDetailClient from "../pages/front_office/dossiers-communs/module.base.donnee/sous.section/PageDetailClient";
-import SuccesCreateCompte from "../pages/front_office/dossiers-communs/module.calendar/succesCreateCompte";
 import SpecificationClient from "../pages/front_office/dossiers-communs/module.dossier.commun/specification.client/specificationClient";
-import PageFormulairePassager from "../pages/front_office/dossiers-communs/module.visa/sous.section/sous.section.page/PageFormulairePassager";
+// import PageFormulairePassager from "../pages/front_office/dossiers-communs/module.visa/sous.section/sous.section.page/PageFormulairePassager";
+import ParametrePdf from "../pages/front_office/dossiers-communs/module.pdf/Parametre.pdf";
+import ParametreCommentaire from "../pages/front_office/dossiers-communs/module.commentaire/Parametre.commentaire";
+import ParametreUtilisateur from "../pages/front_office/dossiers-communs/module.utilisateur/Parametre.utilisateur";
+// import PageFormulairePassagerAssurance from "../pages/front_office/dossiers-communs/module.assurance/components/PageFormulairePassagerAssurance";
+import ClientInfoPage from "../pages/front_office/dossiers-communs/module.portail.client/ClientInfoPage";
+import PageSAV from "../pages/front_office/dossiers-communs/module.sav/PageSAV";
+import ColorSettingsPage from "../pages/front_office/dossiers-communs/module.theme/ColorSettingsPage";
+import PageAnniversaire from "../pages/front_office/dossiers-communs/module.anniversaire/PageAnniversaire";
+import PageListePassage from "../pages/front_office/dossiers-communs/module.liste.passage/PageListePassage";
+import PageMilesCompagnie from "../pages/front_office/dossiers-communs/module.miles.compagnie/PageMilesCompagnie";
+import AllClientBeneficiairePage from "../pages/front_office/dossiers-communs/module.client.beneficiaire/PageAllClientBeneficiaire";
+import PageProfilage from "../pages/front_office/dossiers-communs/module.profilage/PageProfilage";
 
 export function frontOfficeRoutes() {
   return (
@@ -55,12 +66,25 @@ export function frontOfficeRoutes() {
       <Route path="dossiers-communs/todolist" element={<ToDoList />} />
       <Route path="dossiers-communs/specification-client/:id" element={<SpecificationClient />} />
 
+      <Route path="dossiers-communs/parametrePdf" element={<ParametrePdf />} />
+      <Route path="dossiers-communs/parametreCommentaire" element={<ParametreCommentaire />} />
+      <Route path="dossiers-communs/parametreUtilisateur" element={<ParametreUtilisateur />} />
+
+      <Route path="dossiers-communs/pageAnniversaire" element={<PageAnniversaire />} />
+      <Route path="dossiers-communs/pageListePassage" element={<PageListePassage />} />
+      <Route path="dossiers-communs/pageMilesCompagnie" element={<PageMilesCompagnie />} />
+      <Route path="dossiers-communs/AllClientBeneficiairePage" element={<AllClientBeneficiairePage />} />
+      <Route path="dossiers-communs/pageProfilage" element={<PageProfilage />} />
+
       {/* <Route path="dossiers-communs/ticketing/list" element={<TicketingPage />} /> */}
       <Route path="dossiers-communs/nouveau" element={<DossierCommunForm />} />
       {/* Plus de route imbriquée pour prestation */}
       <Route path="dossiers-communs/dossier-detail" element={<DossierCommunDetail />} />
       <Route path="dossiers-communs/:id/gerer" element={<DossierCommunManage />} />
 
+      <Route path="dossiers-communs/pageSAV" element={<PageSAV />} />
+
+      <Route path="/dossiers-communs/couleurs" element={<ColorSettingsPage />} />
 
       <Route path="dossiers-communs/ticketing" element={<HomePageTicketing />}>
         {/* Les routes enfants s'affichent à l'endroit où tu mettrais <Outlet /> dans PrestationDetail */}
@@ -105,7 +129,8 @@ export function frontOfficeRoutes() {
         <Route path="details/:enteteId" element={<PageDetailProspection />} />
         <Route path="visa-detail/:visaEnteteId" element={<PageDetailVisa />} />
         <Route path="passager/:passagerId" element={<PageDetailPassager />} />
-        <Route path="formulaire-passager/:passagerId" element={<PageFormulairePassager />} />
+        {/* <Route path="formulaire-passager/:passagerId" element={<PageFormulairePassager />} /> */}
+        <Route path="client-info/:userId" element={<ClientInfoPage />} />
       </Route>
 
       <Route path="dossiers-communs/assurance" element={<HomePageAssurance />}>
@@ -116,10 +141,13 @@ export function frontOfficeRoutes() {
         <Route path="detailsProspection/:enteteId" element={<PageDetailProspectionAssurance />} />
         <Route path="detailsAssurance/:ligneId" element={<PageDetailAssurance />} />
         <Route path="passager/:passagerId" element={<PageDetailPassagerAssurance />} />
+        {/* <Route path="formulaire-passager/:passagerId" element={<PageFormulairePassagerAssurance />} /> */}
+        <Route path="client-info/:userId" element={<ClientInfoPage />} />
       </Route>
 
       <Route path="dossiers-communs/base-donnee" element={<HomePageBaseDonnee />}/>   
       <Route path="dossiers-communs/base-donnee/details/:clientId" element={<PageDetailClient />} />
+      
     </>
   );
 }

@@ -30,9 +30,10 @@ export interface AnnulationEmissionPayload {
 
 export interface ServiceSpecifique {
   id: string;
-  code: string;                    // ex: "SP-1", "SP-2"
-  libelle: string;                 // ex: "Choix Siège", "Pet"
-  type: 'SERVICE' | 'SPECIFIQUE';
+  code: string;
+  libelle: string;
+  type: 'SERVICE' | 'SPECIFIQUE' | null;  // ← null possible (ex: SP-12)
+  typeService: string;                     // ← champ manquant !
   createdAt: string;
   updatedAt: string;
 }
@@ -150,12 +151,10 @@ export interface ServiceProspectionLigne {
   id: string;
   prospectionLigneId: string;
   serviceSpecifiqueId: string;
-  valeur: string;                  // "true", "false", "23Kg", "rien", etc.
+  valeur: string;
   createdAt: string;
   updatedAt: string;
-
-  // Relation incluse (très utile pour l'affichage)
-  serviceSpecifique?: ServiceSpecifique;  // ← souvent présent dans la réponse
+  serviceSpecifique: ServiceSpecifique;   // ← plus optionnel, toujours présent
 }
 
 export interface BilletLigne {
@@ -223,6 +222,7 @@ export interface BilletLigne {
     billetLigneId: string;
     pjBillet: string | null;
     servicePreference: string[];
+    statut: string;
     numeroBillet: string | null;
     createdAt: string;
     updatedAt: string;
@@ -588,6 +588,19 @@ export const reprogrammerLigne = createAsyncThunk(
   }
 );
 
+export const reporterLigne = createAsyncThunk(
+  'billet/reporter',
+  async (billetId: string, { rejectWithValue }) => {
+    try {
+      const res = await axios.patch(`/billet/${billetId}/reporter`);
+      if (!res.data?.success) throw new Error('Échec report');
+      return res.data;
+    } catch (err: any) {
+      return rejectWithValue(err.response?.data?.message || 'Erreur report');
+    }
+  }
+);
+
 const billetSlice = createSlice({
   name: 'billet',
   initialState,
@@ -754,6 +767,18 @@ const billetSlice = createSlice({
     .addCase(annulerEmissionBillet.rejected, (state, action) => {
       state.loading = false;
       state.error = action.payload as string || 'Échec annulation émission';
+    })
+
+    .addCase(reporterLigne.pending, (state) => {
+      state.loading = true;
+      state.error = null;
+    })
+    .addCase(reporterLigne.fulfilled, (state) => {
+      state.loading = false;
+    })
+    .addCase(reporterLigne.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.payload as string;
     });
   },
 });

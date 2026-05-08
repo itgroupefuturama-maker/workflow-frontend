@@ -96,6 +96,7 @@ export interface AssuranceProspectionLigne {
   createdAt:                   string;
   updatedAt:                   string;
   assuranceParams:             AssuranceParams;
+  assuranceTarifPlein:        AssuranceTarifPlein;
 }
 
 export interface AssuranceEnteteRef {
@@ -142,6 +143,22 @@ export interface AssuranceLigneDetail {
   assuranceEntete:            AssuranceEnteteRef;
   assuranceProspectionLigne:  AssuranceProspectionLigne;
   clientBeneficiaire: ClientBeneficiaire;
+  
+}
+
+export interface AssuranceTarifPlein {
+  id: string;
+  borneInf: number;
+  borneSup: number;
+  prixAssureurDevise: number;
+  commissionDevise: number;
+  prixClientDevise: number;
+  prixAssureurAriary: number;
+  commissionAriary: number;
+  prixClientAriary: number;
+  devise: string;
+  assuranceParamsId: string;
+  createdAt: string;
 }
 
 // ── State ──────────────────────────────────────────────────────────────────

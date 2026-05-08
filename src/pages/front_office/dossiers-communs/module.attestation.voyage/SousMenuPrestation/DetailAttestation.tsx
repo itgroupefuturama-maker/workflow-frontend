@@ -137,7 +137,7 @@ const DetailAttestation = () => {
         <div className="flex h-full min-h-0 overflow-hidden">
           {/* ── Colonne principale ── */}
           <div className="flex-1 min-w-0 flex flex-col min-h-0">
-            <div className="shrink-0 px-4 pt-2 bg-white">
+            <div className="shrink-0 px-4 bg-slate-200 rounded-t-xl">
               <div className='flex items-center justify-between'>
                 {/* Header */}
                 <AttestationHeader
@@ -161,21 +161,8 @@ const DetailAttestation = () => {
               </div>
             </div>
               
-            <div className='px-4 border-b border-neutral-50'>
-              <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden mb-2">
-                {/* Barre de titre simplifiée */}
-                <div className="px-4 py-2 bg-gray-50/50 border-b border-gray-100 flex justify-between items-center">
-                  <div className="flex items-center gap-3">
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Détail En-tête</span>
-                    <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-[11px] font-mono font-bold">
-                      #{selectedEntete.numeroEntete}
-                    </span>
-                  </div>
-                  <div className="text-[11px] text-gray-500">
-                    Màj : {new Date(selectedEntete.updatedAt).toLocaleDateString('fr-FR')}
-                  </div>
-                </div>
-
+            <div className='px-4 bg-slate-200 rounded-b-xl'>
+              <div className="bg-white border border-gray-200 rounded-lg shadow-sm shadow-slate-200 overflow-hidden mb-2">
                 {/* Contenu compact en une seule rangée (Flex) ou grille serrée */}
                 <div className="p-4 grid grid-cols-2 md:grid-cols-4 gap-6 items-center">
                   {/* Groupe 1 : Dossier & Fournisseur */}
@@ -222,38 +209,42 @@ const DetailAttestation = () => {
               </div>
 
               {/* Tabs header */}
-              <div className="flex justify-between">
-                <nav className="flex" aria-label="Tabs">
-                  <button
-                    onClick={() => setActiveTab('lignes')}
-                    className={`px-6 py-2 text-sm font-semibold rounded-t-lg transition-all ${
-                      activeTab === 'lignes'
-                        ? 'bg-[#4A77BE] text-white shadow-sm'
-                        : 'bg-[#ffffff] text-[#1E3A8A] hover:bg-[#f2f7fe] border-t border-l border-r border-slate-200'}`}
-                  >
-                    Lignes d'attestation
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('suivi')}
-                    className={`px-6 py-2 text-sm font-semibold rounded-t-lg transition-all ${
-                      activeTab === 'suivi'
-                        ? 'bg-[#4A77BE] text-white shadow-sm'
-                        : 'bg-[#ffffff] text-[#1E3A8A] hover:bg-[#f2f7fe] border-t border-l border-r border-slate-200'}`}
-                  >
-                    Suivi
-                  </button>
-                </nav>
+              <div className="flex items-center justify-between">
+                {/* Bouton + formulaire création */}
+                <div className="flex items-center justify-between">
+                  <nav className="flex p-1 rounded-lg mb-2 gap-1" aria-label="Tabs">
+                    <button
+                      onClick={() => setActiveTab('lignes')}
+                      className={`px-4 py-1.5 text-sm font-medium rounded-sm transition-all duration-200 ${
+                        activeTab === 'lignes'
+                          ? 'bg-white text-slate-800 shadow-sm ring-1 ring-slate-200/50'
+                          : 'text-slate-500 hover:text-slate-700 bg-slate-300'
+                      }`}
+                    >
+                      Liste des attestations
+                    </button>
+                    
+                    <button
+                      onClick={() => setActiveTab('suivi')}
+                      className={`px-10 py-1.5 text-sm font-medium rounded-sm transition-all duration-200 ${
+                        activeTab === 'suivi'
+                          ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/50'
+                          : 'text-slate-500 hover:text-slate-700 bg-slate-300'
+                      }`}
+                    >
+                      Suivi
+                    </button>
+                  </nav>
+                </div>
               </div>
             </div>
       
-            <div className="flex-1 min-h-0 overflow-y-auto pb-4 px-4">
+            <div className="flex-1 min-h-0 overflow-y-auto py-2">
               {/* Onglets */}
               {selectedDetail && (
                 <div className=" overflow-hidden">
-                  
-
                   {/* Contenu onglets */}
-                  <div className="bg-white border border-slate-100">
+                  <div className="">
                     {activeTab === 'lignes' && (
                       <>
                         {selectedDetail.attestationLigne.length === 0 ? (
@@ -266,12 +257,12 @@ const DetailAttestation = () => {
                             <p className="text-xs mt-1">Cliquez sur « Ajouter une ligne » pour commencer</p>
                           </div>
                         ) : (
-                          <div className="divide-y divide-slate-100">
+                          <div className="divide-y divide-slate-300">
                             {selectedDetail.attestationLigne.map((ligne, index) => {
                               const passagers = ligne.attestationPassager ?? [];
 
                               return (
-                                <div key={ligne.id} className="p-5 hover:bg-slate-50 transition-colors">
+                                <div key={ligne.id} className="p-5 hover:bg-slate-50 transition-colors border border-slate-300">
 
                                   {/* ── En-tête ligne ── */}
                                   <div className="flex items-center justify-between mb-4">
@@ -326,7 +317,7 @@ const DetailAttestation = () => {
                                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
 
                                     {/* Colonne 1 : Informations vol */}
-                                    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                                    <div className="bg-white rounded-xl border border-slate-300 overflow-hidden">
                                       <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-100">
                                         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Informations vol</p>
                                       </div>
@@ -362,7 +353,7 @@ const DetailAttestation = () => {
                                     </div>
 
                                     {/* Colonne 2 : Itinéraire & Horaires */}
-                                    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                                    <div className="bg-white rounded-xl border border-slate-300 overflow-hidden">
                                       <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-100">
                                         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Itinéraire & Horaires</p>
                                       </div>
@@ -427,7 +418,7 @@ const DetailAttestation = () => {
                                     </div>
 
                                     {/* Colonne 3 : Passagers */}
-                                    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                                    <div className="bg-white rounded-xl border border-slate-300 overflow-hidden">
                                       <div className="px-4 py-2.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
                                         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Passagers</p>
                                         <span className="text-[10px] font-semibold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">

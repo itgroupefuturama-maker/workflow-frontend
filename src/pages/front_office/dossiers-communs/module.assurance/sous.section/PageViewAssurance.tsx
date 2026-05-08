@@ -7,7 +7,7 @@ import { fetchAssuranceProspections } from '../../../../../app/front_office/para
 import { fetchAssuranceEntetes } from '../../../../../app/front_office/parametre_assurance/assuranceEnteteSlice';
 import AssuranceProspectionListe from '../components/AssuranceProspectionListe';
 import AssuranceEnteteListe from '../components/AssuranceEnteteListe';
-import BeneficiaireListPage from '../../module.client.beneficiaire/BeneficiaireListPage';
+import BeneficiaireListPage from '../../module.client.beneficiaire/BeneficiaireListPageForClientFacture';
 
 const PageViewAssurance = () => {
   const dispatch = useDispatch<AppDispatch>();
