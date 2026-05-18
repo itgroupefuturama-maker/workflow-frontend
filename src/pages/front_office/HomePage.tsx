@@ -12,13 +12,14 @@ const CATEGORIES = [
     modules: [
       { label: 'Dossier',               desc: 'Accédez à vos fichiers partagés',                  path: '/dossiers-communs',                            defaultTab: null,       icon: FiFolder,               color: 'blue'  },
       { label: 'To Do List',            desc: 'Gérez vos tâches quotidiennes',                    path: '/dossiers-communs/todolist',                   defaultTab: null,       icon: FiCheckCircle,          color: 'teal'  },
-      // { label: 'Base de Données',       desc: 'Consultation information',                         path: '/dossiers-communs/base-donnee',                defaultTab: null,       icon: FiDatabase,             color: 'cyan'  },
+      { label: 'Base de Connaissance',  desc: 'Consultation information',                         path: '/dossiers-communs/base-connaissance',          defaultTab: null,       icon: FiDatabase,             color: 'cyan'  },
       { label: 'SAV',                   desc: 'Service après-vente',                              path: '/dossiers-communs/pageSAV',                    defaultTab: null,       icon: FiPlusCircle,           color: 'blue'  },
       { label: 'SMS Anniversaire',      desc: 'Fidélité voyageurs, Miles Al Bouraq Travel',       path: '/dossiers-communs/pageAnniversaire',           defaultTab: null,       icon: FiMessageSquare,        color: 'roseSombre'  },
-      { label: 'Liste Passage',         desc: 'Liste des passagers',                              path: '/dossiers-communs/pageListePassage',           defaultTab: null,       icon: FiList,                 color: 'turquoise'  },
+      { label: 'Liste Passager',        desc: 'Liste des passagers',                              path: '/dossiers-communs/pageListePassage',           defaultTab: null,       icon: FiList,                 color: 'turquoise'  },
       { label: 'Miles Compagnie',       desc: 'Miles compagnie',                                  path: '/dossiers-communs/pageMilesCompagnie',         defaultTab: null,       icon: FiFileText,             color: 'fluo'  },
       { label: 'Client Bénéficiaire',   desc: 'Consultation information & Base de données',       path: '/dossiers-communs/AllClientBeneficiairePage',  defaultTab: null,       icon: FiUserCheck,            color: 'cyan'  },
       { label: 'Profilage',             desc: 'Voir les profilages des clients Bénéficiaires',    path: '/dossiers-communs/pageProfilage',              defaultTab: null,       icon: FiUser,                 color: 'teal', },
+      { label: 'Gestion des Document Client',             desc: 'Voir les listes de documents utilisateur : Passport, CIN, etc.',          path: '/dossiers-communs/pagePassport',               defaultTab: null,       icon: FiUser,                 color: 'teal', },
     ],
   },
   {

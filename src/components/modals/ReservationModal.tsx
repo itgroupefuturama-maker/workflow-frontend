@@ -71,6 +71,9 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
   const totalService = formData.puResaServiceCompagnieDevise * nombrePassagers;
   const totalPenalite = formData.puResaPenaliteCompagnieDevise * nombrePassagers;
 
+  const [preuveResa, setPreuveResa] = useState<File | null>(null);
+  const [preuveResaPreview, setPreuveResaPreview] = useState<string | null>(null);
+
   const isFormValid =
     formData.reservation.trim() !== '' &&
     selectedPassagers.length === nombrePassagers &&  // ← exact, pas juste > 0
@@ -103,6 +106,16 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
 
   // Préférences dispo : on récupère depuis le store pour les services actifs
   const servicesStore = useSelector((state: RootState) => state.serviceSpecifique.items);
+
+  const handlePreuveResaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setPreuveResa(file);
+    if (file) {
+      setPreuveResaPreview(URL.createObjectURL(file));
+    } else {
+      setPreuveResaPreview(null);
+    }
+  };
 
   const fmt = (val?: number | null, suffix = '') =>
     val != null ? `${Number(val).toFixed(2)}${suffix}` : '—';
@@ -247,6 +260,7 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
       puResaMontantBilletCompagnieDevise: formData.puResaMontantBilletCompagnieDevise,
       puResaMontantServiceCompagnieDevise: formData.puResaMontantServiceCompagnieDevise,
       puResaMontantPenaliteCompagnieDevise: formData.puResaMontantPenaliteCompagnieDevise,
+      preuveResa, // ← NOUVEAU
     };
 
     onSubmit(payload);
@@ -598,6 +612,83 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
                             </div>
                           )}
                         </div>
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* 1b. Preuve de réservation */}
+                  <section className="border border-gray-200 rounded-lg overflow-hidden">
+                    <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
+                      <div className="flex items-center gap-3">
+                        <div className="w-7 h-7 bg-gray-900 text-white rounded flex items-center justify-center text-sm font-semibold">
+                          ✉
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="text-sm font-semibold text-gray-900">Preuve de réservation</h3>
+                          <p className="text-xs text-gray-500 mt-0.5">Image optionnelle (capture, confirmation…)</p>
+                        </div>
+                        {preuveResa && (
+                          <span className="text-xs text-green-700 bg-green-100 border border-green-200 px-2 py-0.5 rounded-full font-medium">
+                            Fichier sélectionné
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="p-5">
+                      <div className="flex flex-col sm:flex-row gap-5 items-start">
+                        {/* Zone de drop / input */}
+                        <label className="flex-1 cursor-pointer group">
+                          <div className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                            preuveResa
+                              ? 'border-green-400 bg-green-50'
+                              : 'border-gray-300 hover:border-gray-400 bg-gray-50 hover:bg-white'
+                          }`}>
+                            <div className="flex flex-col items-center gap-2">
+                              {preuveResa ? (
+                                <svg className="w-8 h-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                              ) : (
+                                <svg className="w-8 h-8 text-gray-400 group-hover:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3 16.5V18a2.25 2.25 0 002.25 2.25h13.5A2.25 2.25 0 0021 18v-1.5M16.5 3.75h-9A2.25 2.25 0 005.25 6v9" />
+                                </svg>
+                              )}
+                              <p className="text-sm font-medium text-gray-700">
+                                {preuveResa ? preuveResa.name : 'Cliquez pour choisir une image'}
+                              </p>
+                              <p className="text-xs text-gray-400">PNG, JPG, WEBP — max 5 Mo</p>
+                            </div>
+                          </div>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handlePreuveResaChange}
+                          />
+                        </label>
+
+                        {/* Aperçu */}
+                        {preuveResaPreview ? (
+                          <div className="relative shrink-0">
+                            <img
+                              src={preuveResaPreview}
+                              alt="Aperçu preuve"
+                              className="w-40 h-40 object-cover rounded-lg border border-gray-200 shadow-sm"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => { setPreuveResa(null); setPreuveResaPreview(null); }}
+                              className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 shadow"
+                            >
+                              <FiX size={12} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="w-40 h-40 shrink-0 rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center bg-gray-50">
+                            <span className="text-xs text-gray-400 text-center px-2">Aperçu ici</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </section>

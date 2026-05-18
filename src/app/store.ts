@@ -90,6 +90,7 @@ import compagnieClientsReducer from './front_office/parametre_miles_compagnie/co
 import passagerListeReducer from './front_office/parametre_liste_passager/passagerListeSlice';
 import clientMilesReducer from './front_office/parametre_client_beneficiaire/clientMilesSlice';
 import clientProfilageReducer from './front_office/parametre_baseDonnee/clientProfilageSlice';
+import knowledgeBaseReducer from './front_office/parametre_base_connaissance/knowledgeBaseSlice';
 
 import {
   FLUSH,
@@ -205,6 +206,9 @@ const appReducer = combineReducers({
 
   // Client Profilage
   clientProfilage: clientProfilageReducer,
+
+  // Paramètre Base Connaissance
+  knowledgeBase: knowledgeBaseReducer,
 });
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

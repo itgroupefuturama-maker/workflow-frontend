@@ -56,6 +56,9 @@ import PageListePassage from "../pages/front_office/dossiers-communs/module.list
 import PageMilesCompagnie from "../pages/front_office/dossiers-communs/module.miles.compagnie/PageMilesCompagnie";
 import AllClientBeneficiairePage from "../pages/front_office/dossiers-communs/module.client.beneficiaire/PageAllClientBeneficiaire";
 import PageProfilage from "../pages/front_office/dossiers-communs/module.profilage/PageProfilage";
+import PageBaseConnaissance from "../pages/front_office/dossiers-communs/module.base.connaissance/PageBaseConnaissance";
+import PagePassport from "../pages/front_office/dossiers-communs/module.passport/PagePassport";
+import ClientBeneficiaireInfosForm from "../pages/parametres/client.beneficaire/ClientBeneficiaireInfosForm";
 
 export function frontOfficeRoutes() {
   return (
@@ -65,6 +68,8 @@ export function frontOfficeRoutes() {
       <Route path="dossiers-communs/liste-by-module/:module" element={<ListeDossierByModule />} />
       <Route path="dossiers-communs/todolist" element={<ToDoList />} />
       <Route path="dossiers-communs/specification-client/:id" element={<SpecificationClient />} />
+
+      <Route path="dossiers-communs/client-beneficiaire/:id/infos" element={<ClientBeneficiaireInfosForm />} />
 
       <Route path="dossiers-communs/parametrePdf" element={<ParametrePdf />} />
       <Route path="dossiers-communs/parametreCommentaire" element={<ParametreCommentaire />} />
@@ -85,6 +90,10 @@ export function frontOfficeRoutes() {
       <Route path="dossiers-communs/pageSAV" element={<PageSAV />} />
 
       <Route path="/dossiers-communs/couleurs" element={<ColorSettingsPage />} />
+
+      <Route path="/dossiers-communs/base-connaissance" element={<PageBaseConnaissance />} />
+
+      <Route path="/dossiers-communs/pagePassport" element={<PagePassport />} />
 
       <Route path="dossiers-communs/ticketing" element={<HomePageTicketing />}>
         {/* Les routes enfants s'affichent à l'endroit où tu mettrais <Outlet /> dans PrestationDetail */}

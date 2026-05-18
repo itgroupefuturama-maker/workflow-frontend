@@ -248,6 +248,7 @@ const PassagersCell: React.FC<PassagersCellProps> = ({ billets, handleReporter }
                         </svg>
                         PJ Serveur
                       </a> */}
+
                     </div>
                   </div>
                 ) : (
@@ -743,6 +744,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                 <th rowSpan={2} className="px-4 py-3 text-left font-semibold text-slate-700 uppercase bg-slate-100 min-w-[300px]">
                   Passagers & Billets
                 </th>
+                <th rowSpan={2} className="px-4 py-3 text-center font-semibold text-slate-700 uppercase bg-slate-100 min-w-[220px]">Preuve</th>
                 <th rowSpan={2} className="px-4 py-3 text-center font-semibold text-slate-700 uppercase bg-slate-100 min-w-[220px]">Actions</th>
               </tr>
 
@@ -992,6 +994,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
               {sortedLignes.map((ligne, index) => {
                 const p = ligne.prospectionLigne;
                 const fournisseurLibelle = billet?.prospectionEntete?.fournisseur?.libelle || '—';
+                const prospectionEntete = billet?.prospectionEntete;
 
                 // Calculs simples par ligne (plus de group)
                 const isReserved = !!ligne.reservation?.trim();
@@ -1315,6 +1318,48 @@ const BilletTable: React.FC<BilletTableProps> = ({
 
                       <td className="px-4 py-3 align-top">
                         <PassagersCell billets={ligne.billet} handleReporter={handleReporter} />
+                      </td>
+
+                      {/* Preuve client — image séparée car pas un simple texte */}
+                      <td className='flex flex-row gap-2 '>
+                        <div>
+                          <p className="text-[10px] uppercase tracking-wide text-slate-400 font-medium mb-1">Preuve client</p>
+                          {prospectionEntete?.preuveClient ? (
+                            <a
+                              href={`${API_URL}/${prospectionEntete.preuveClient}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-block"
+                            >
+                              <img
+                                src={`${API_URL}/${prospectionEntete.preuveClient}`}
+                                alt="Preuve client"
+                                className="h-10 w-16 object-cover rounded border border-slate-200 hover:opacity-80 transition-opacity cursor-pointer"
+                              />
+                            </a>
+                          ) : (
+                            <p className="text-sm text-slate-400 italic">—</p>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-[10px] uppercase tracking-wide text-slate-400 font-medium mb-1">Preuve Resa</p>
+                          {ligne.preuveResa ? (
+                            <a
+                              href={`${API_URL}/${ligne.preuveResa}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-block"
+                            >
+                              <img
+                                src={`${API_URL}/${ligne.preuveResa}`}
+                                alt="Preuve resa"
+                                className="h-10 w-16 object-cover rounded border border-slate-200 hover:opacity-80 transition-opacity cursor-pointer"
+                              />
+                            </a>
+                          ) : (
+                            <p className="text-sm text-slate-400 italic">—</p>
+                          )}
+                        </div>
                       </td>
 
                       <td className="px-4 py-3 text-center min-w-[220px]">

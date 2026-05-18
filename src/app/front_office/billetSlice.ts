@@ -59,6 +59,7 @@ export interface ReservationPayload {
   puResaMontantPenaliteCompagnieDevise: number;
   conditionModif?: string | null;
   conditionAnnul?: string | null;
+  preuveResa?: File | null;
 }
 
 export interface Fournisseur {
@@ -92,6 +93,7 @@ export interface ProspectionEntete {
   typeVol: string;
   commissionPropose: number;
   commissionAppliquer: number;
+  preuveClient: string | null;
   createdAt: string;
   updatedAt: string;
   prestation: Prestation;
@@ -213,6 +215,7 @@ export interface BilletLigne {
   emissionMontantPenaliteClientAriary?: number;
   emissionCommissionEnDevise?: number;
   emissionCommissionEnAriary?: number;
+  preuveResa: string;
   prospectionLigne: ProspectionLigne;
   createdAt: string;
   updatedAt: string;
@@ -348,15 +351,41 @@ export const addReservationToLigne = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const response = await axios.put(`/billet/ligne/${ligneId}/addreservation`, payload);
-      console.log(`la reponse du serveur: ${response.data}`);
+      const formData = new FormData();
+
+      // Champs JSON sérialisés
+      formData.append('passagers', JSON.stringify(payload.passagers));
+      formData.append('nombre', payload.nombre.toString());
+      formData.append('reservation', payload.reservation);
+      formData.append('puResaBilletCompagnieDevise', payload.puResaBilletCompagnieDevise.toString());
+      formData.append('puResaServiceCompagnieDevise', payload.puResaServiceCompagnieDevise.toString());
+      formData.append('puResaPenaliteCompagnieDevise', payload.puResaPenaliteCompagnieDevise.toString());
+      formData.append('devise', payload.devise);
+      formData.append('resaTauxEchange', payload.resaTauxEchange.toString());
+      formData.append('puResaMontantBilletCompagnieDevise', payload.puResaMontantBilletCompagnieDevise.toString());
+      formData.append('puResaMontantServiceCompagnieDevise', payload.puResaMontantServiceCompagnieDevise.toString());
+      formData.append('puResaMontantPenaliteCompagnieDevise', payload.puResaMontantPenaliteCompagnieDevise.toString());
+      if (payload.conditionModif != null) formData.append('conditionModif', payload.conditionModif);
+      if (payload.conditionAnnul != null) formData.append('conditionAnnul', payload.conditionAnnul);
+
+      // Fichier image optionnel
+      if (payload.preuveResa) {
+        formData.append('preuveResa', payload.preuveResa);
+      }
+
+      const response = await axios.put(
+        `/billet/ligne/${ligneId}/addreservation`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+
       if (!response.data?.success) {
         throw new Error('Échec de la réservation');
       }
-      return response.data; // ou juste { ligneId } si tu veux minimal
+      return response.data;
     } catch (err: any) {
       return rejectWithValue(
-        err.response?.data?.message || 'Erreur lors de l\'ajout de la réservation'
+        err.response?.data?.message || "Erreur lors de l'ajout de la réservation"
       );
     }
   }

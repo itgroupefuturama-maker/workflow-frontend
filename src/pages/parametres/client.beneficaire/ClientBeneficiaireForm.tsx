@@ -48,8 +48,6 @@ const ClientBeneficiaireFormPage = () => {
   const scrollAssocRef = useRef<HTMLDivElement>(null);
   const scrollAvailRef = useRef<HTMLDivElement>(null);
 
-  
-
   const currentBeneficiaire = beneficiaires.find(b => b.id === id);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -163,7 +161,6 @@ const ClientBeneficiaireFormPage = () => {
   if (!currentBeneficiaire) {
     return <div className="p-8 text-center text-gray-500">Chargement...</div>;
   }
-
 
   return (
     <div className="min-h-screen bg-gray-50/50 pb-20 px-6">

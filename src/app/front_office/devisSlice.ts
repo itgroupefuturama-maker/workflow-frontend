@@ -29,11 +29,31 @@ export interface Devis {
   prospectionEnteteId: string;
   totalGeneral: number;
   url: string | null;
+  urlPdfCom: string | null;
   data: {
-    entete: Entete;           // tu peux typer plus finement si besoin
-    lignes: Ligne[];         // idem
+    entete: Entete;
+    lignes: Ligne[];
     dateCreation: string;
     totalGeneral: number;
+  };
+  prospectionEntete: {        // ← AJOUTER
+    id: string;
+    preuveClient: string | null;
+    numeroEntete: string;
+    credit: string;
+    typeVol: string;
+    commissionPropose: number;
+    commissionAppliquer: number;
+    fournisseur: {
+      id: string;
+      code: string;
+      libelle: string;
+    };
+    prestation: {
+      id: string;
+      numeroDos: string;
+      status: string;
+    };
   };
 }
 
@@ -44,6 +64,7 @@ export interface Entete {
     numeroEntete: string;
     commissionPropose: string;
     commissionAppliquer: string;
+    preuveClient: string;
     prestation: {
         id: string;
         numeroDos: string;
@@ -188,14 +209,24 @@ export const updateApprouverDevisStatut = createAsyncThunk(
 );
 // Thunk : Changer le statut de l'entête (ex: vers "A Approuver")
 export const updateValidateDevisStatut = createAsyncThunk(
-  'billet/updateEnteteStatut',
+  'devis/updateValidateStatut',
   async (
-    { enteteId }: { enteteId: string},
+    { enteteId, preuveClient }: { enteteId: string; preuveClient?: File | null },
     { rejectWithValue }
   ) => {
     try {
-      const response = await axios.put(`/devis/${enteteId}/approuver`);
-      console.log(enteteId);
+      let response;
+
+      if (preuveClient) {
+        const formData = new FormData();
+        formData.append('preuveClient', preuveClient);
+        response = await axios.put(`/devis/${enteteId}/approuver`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+        });
+      } else {
+        response = await axios.put(`/devis/${enteteId}/approuver`);
+      }
+
       if (!response.data?.success) {
         throw new Error('Échec du changement de statut');
       }

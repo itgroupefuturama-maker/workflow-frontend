@@ -8,7 +8,7 @@ export interface ClientBeneficiaireInfo {
   nom: string;
   nationalite: string;
   clientType: 'ADULTE' | 'ENFANT' | 'BEBE' | 'JEUNE' | null; // ← peut être null
-  typeDoc: 'LAISSE_PASSER' | 'PASSEPORT';
+  typeDoc: 'LAISSE_PASSER' | 'PASSEPORT' | 'CIN';
   referenceDoc: string;
   document: string | null;       // ← c'est la référence doc maintenant (pas un File)
   referenceCin?: string | null;
@@ -75,7 +75,7 @@ export const createClientBeneficiaireInfos = createAsyncThunk<
     nom: string;
     nationalite: string;
     clientType: 'ADULTE' | 'ENFANT' | 'BEBE' | 'JEUNE';
-    typeDoc: 'LAISSE_PASSER' | 'PASSEPORT';
+    typeDoc: 'LAISSE_PASSER' | 'PASSEPORT' | 'CIN';
     referenceDoc: string;
     referenceCin?: string;
     dateDelivranceDoc: string;
@@ -137,7 +137,7 @@ export const updateClientBeneficiaireInfo = createAsyncThunk<
     nom: string;
     nationalite: string;
     clientType: 'ADULTE' | 'ENFANT' | 'BEBE' | 'JEUNE';
-    typeDoc: 'LAISSE_PASSER' | 'PASSEPORT';
+    typeDoc: 'LAISSE_PASSER' | 'PASSEPORT' | 'CIN';
     referenceDoc: string;
     referenceCin?: string;
     dateDelivranceDoc: string;
@@ -185,6 +185,23 @@ export const updateClientBeneficiaireInfo = createAsyncThunk<
       return { success: true, data: response.data.data };
     }
     return rejectWithValue(response.data.message || 'Échec mise à jour');
+  } catch (error: any) {
+    return rejectWithValue(error.response?.data?.message || 'Erreur réseau');
+  }
+});
+
+// Thunk : Récupérer TOUS les infos (toutes bénéficiaires)
+export const fetchAllClientBeneficiaireInfos = createAsyncThunk<
+  ClientBeneficiaireInfo[],
+  void,
+  { rejectValue: string }
+>('clientBeneficiaireInfos/fetchAll', async (_, { rejectWithValue }) => {
+  try {
+    const response = await axiosInstance.get('/clientbeneficiaire-infos');
+    if (response.data.success) {
+      return response.data.data;
+    }
+    return rejectWithValue(response.data.message || 'Échec récupération');
   } catch (error: any) {
     return rejectWithValue(error.response?.data?.message || 'Erreur réseau');
   }
@@ -245,6 +262,18 @@ const clientBeneficiaireInfosSlice = createSlice({
       .addCase(createClientBeneficiaireInfos.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+      })
+      .addCase(fetchAllClientBeneficiaireInfos.pending, (state) => {
+        state.loadingList = true;
+        state.error = null;
+      })
+      .addCase(fetchAllClientBeneficiaireInfos.fulfilled, (state, action) => {
+        state.loadingList = false;
+        state.list = action.payload;
+      })
+      .addCase(fetchAllClientBeneficiaireInfos.rejected, (state, action) => {
+        state.loadingList = false;
+        state.error = action.payload || 'Erreur';
       });
   },
 });

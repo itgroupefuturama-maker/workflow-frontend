@@ -120,7 +120,7 @@ const Billet = () => {
   const handleTabChange = (id: string) => {
     if (id === 'prospection') {
       // On remonte au parent (PageView) en passant le state pour l'onglet
-      navigate(`/dossiers-communs/ticketing/pages`, { 
+      navigate(`/dossiers-communs/ticketing/pages`, {
         state: { targetTab: 'prospection' }
       });
     } else {

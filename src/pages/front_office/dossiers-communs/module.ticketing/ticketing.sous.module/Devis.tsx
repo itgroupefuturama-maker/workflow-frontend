@@ -38,6 +38,12 @@ export default function Devis () {
     { id: 'billet', label: 'Listes des billets' }
   ];
 
+  const [showValidateModal, setShowValidateModal] = useState(false);
+  const [pendingValidateId, setPendingValidateId] = useState<string | null>(null);
+  const [preuveClient, setPreuveClient] = useState<File | null>(null);
+  const [preuveClientPreview, setPreuveClientPreview] = useState<string | null>(null);
+  const [validateLoading, setValidateLoading] = useState(false);
+
   const [activeTab, setActiveTab] = useState('prospection');
   
   // FONCTION DE NAVIGATION INTERCEPTÉE
@@ -54,64 +60,13 @@ export default function Devis () {
 
   useEffect(() => {
     if (enteteId) {
+      console.log('Fetching devis for entete:', enteteId);
       dispatch(fetchDevisByEntete(enteteId));
     }
   }, [enteteId, dispatch]);
 
   const toggleDevis = (devisId: string) => {
     setOpenDevisId(openDevisId === devisId ? null : devisId);
-  };
-
-  const handleDownloadPdf = async (devisId: string, reference: string) => {
-    setPdfLoading((prev) => ({ ...prev, [devisId]: true }));
-
-    try {
-      // const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:6060';
-      // const apiBaseUrl = 'http://192.168.1.125:5001';
-      // Appel POST avec axios – exactement comme le style de ton slice
-      const response = await axios.post(`/devis/${devisId}/pdf/save`, {
-        // Body → souvent vide suffit, mais tu peux passer des options si besoin
-        // format: 'A4',
-        // orientation: 'portrait',
-        // etc.
-      }, {
-        // options axios supplémentaires si nécessaire
-        headers: {
-          'Content-Type': 'application/json',
-          // 'Authorization': `Bearer ${token}`,   // décommente si besoin
-        },
-        // timeout: 45000,   // optionnel – utile si la génération PDF est longue
-      });
-
-      const result = response.data;
-
-      // Vérification plus robuste (structure que tu attends)
-      if (result?.success && result?.data?.filepath) {
-        const pdfUrl = `${API_URL}/${result.data.filepath}`;
-        window.open(pdfUrl, '_blank');
-      } else {
-        console.warn('Réponse inattendue :', result);
-        throw new Error(
-          result?.message ||
-          'Structure invalide : success ou data.filepath manquant'
-        );
-      }
-    } catch (err: any) {
-      console.error('Erreur génération PDF :', err);
-
-      // Meilleur message d'erreur pour l'utilisateur
-      let errorMsg = 'Erreur inconnue lors de la génération du PDF';
-
-      if (err.response?.data?.message) {
-        errorMsg = err.response.data.message;
-      } else if (err.message) {
-        errorMsg = err.message;
-      }
-
-      alert(`Erreur pour le devis ${reference} :\n${errorMsg}`);
-    } finally {
-      setPdfLoading((prev) => ({ ...prev, [devisId]: false }));
-    }
   };
 
   const handleAsAapprouved = async (billetId: string) => {
@@ -124,13 +79,32 @@ export default function Devis () {
     }
   };
   
-  const handleAsValidate = async (billetId: string) => {
-    if (!enteteId) return;
+  const handleAsValidate = (billetId: string) => {
+    setPendingValidateId(billetId);
+    setPreuveClient(null);
+    setPreuveClientPreview(null);
+    setShowValidateModal(true);
+  };
+
+  const handleConfirmValidate = async () => {
+    if (!pendingValidateId || !enteteId) return;
+    setValidateLoading(true);
     try {
-      await dispatch(updateValidateDevisStatut({ enteteId: billetId })).unwrap();
+      await dispatch(
+        updateValidateDevisStatut({
+          enteteId: pendingValidateId,
+          preuveClient,
+        })
+      ).unwrap();
       dispatch(fetchDevisByEntete(enteteId));
+      setShowValidateModal(false);
+      setPendingValidateId(null);
+      setPreuveClient(null);
+      setPreuveClientPreview(null);
     } catch (err: any) {
       alert('Erreur lors du changement de statut');
+    } finally {
+      setValidateLoading(false);
     }
   };
 
@@ -230,6 +204,7 @@ export default function Devis () {
                     <div className="space-y-6">
                       {devisList.map((devis) => {
                         const entete = devis.data?.entete || {};
+                        const prospectionEntete = devis.prospectionEntete || {}; // ← AJOUTER
                         const lignes = devis.data?.lignes || [];
                         const lignesCount = lignes.length;
                         const isLoadingPdf = pdfLoading[devis.id] || false;
@@ -321,17 +296,38 @@ export default function Devis () {
                               {/* Infos entête */}
                               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 py-4 border-b border-slate-100">
                                 {[
-                                  { label: 'Fournisseur',           value: entete.fournisseur?.libelle },
-                                  { label: 'Type de vol',            value: entete.typeVol },
-                                  { label: 'Crédit',                 value: entete.credit },
-                                  { label: 'Commission proposée',    value: entete.commissionPropose != null ? `${entete.commissionPropose} %` : null },
-                                  { label: 'Commission appliquée',   value: entete.commissionAppliquer != null ? `${entete.commissionAppliquer} %` : null },
+                                  { label: 'Fournisseur',         value: entete.fournisseur?.libelle },
+                                  { label: 'Type de vol',         value: entete.typeVol },
+                                  { label: 'Crédit',              value: entete.credit },
+                                  { label: 'Commission proposée', value: entete.commissionPropose != null ? `${entete.commissionPropose} %` : null },
+                                  { label: 'Commission appliquée',value: entete.commissionAppliquer != null ? `${entete.commissionAppliquer} %` : null },
                                 ].map(({ label, value }) => (
                                   <div key={label}>
                                     <p className="text-[10px] uppercase tracking-wide text-slate-400 font-medium mb-1">{label}</p>
                                     <p className="text-sm text-slate-700 font-medium">{value || '—'}</p>
                                   </div>
                                 ))}
+
+                                {/* Preuve client — image séparée car pas un simple texte */}
+                                <div>
+                                  <p className="text-[10px] uppercase tracking-wide text-slate-400 font-medium mb-1">Preuve client</p>
+                                  {prospectionEntete?.preuveClient ? (
+                                    <a
+                                      href={`${API_URL}/${prospectionEntete.preuveClient}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-block"
+                                    >
+                                      <img
+                                        src={`${API_URL}/${prospectionEntete.preuveClient}`}
+                                        alt="Preuve client"
+                                        className="h-10 w-16 object-cover rounded border border-slate-200 hover:opacity-80 transition-opacity cursor-pointer"
+                                      />
+                                    </a>
+                                  ) : (
+                                    <p className="text-sm text-slate-400 italic">—</p>
+                                  )}
+                                </div>
                               </div>
 
                               {/* Tableau des lignes */}
@@ -463,7 +459,7 @@ export default function Devis () {
                                 {/* Séparateur */}
                                 {/* <div className="w-px h-6 bg-gray-300 mx-1" /> */}
 
-                                {/* <button
+                                <button
                                   onClick={() => {
                                     if (devis.statut === 'CREER') {   
                                       handleApprouverDirection(devis.id, devis.reference);
@@ -488,7 +484,7 @@ export default function Devis () {
                                       Envoyer Direction
                                     </>
                                   )}
-                                </button> */}
+                                </button>
 
                                 {/* Bouton Devis à approuver */}
                                 <button
@@ -620,6 +616,134 @@ export default function Devis () {
                 lignes={selectedDevisForCancel?.data?.lignes || []} // Ajout du ? au cas où
                 loading={annulationLoading}
               />
+            )}
+
+            {showValidateModal && (
+              <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+                  
+                  {/* Header */}
+                  <div className="bg-gray-50 border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                    <div>
+                      <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+                        <FiCheck size={18} />
+                        Approuver le devis
+                      </h3>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        Vous pouvez joindre une preuve d'accord client (optionnel)
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setShowValidateModal(false);
+                        setPendingValidateId(null);
+                        setPreuveClient(null);
+                        setPreuveClientPreview(null);
+                      }}
+                      className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 p-1.5 rounded transition-colors"
+                    >
+                      <FiX size={18} />
+                    </button>
+                  </div>
+
+                  {/* Body */}
+                  <div className="p-6 space-y-4">
+                    <p className="text-sm text-gray-700">
+                      Confirmez-vous l'approbation du devis par le client ?
+                    </p>
+
+                    {/* Upload zone */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-700 mb-2">
+                        Preuve client <span className="text-gray-400 font-normal">(image optionnelle)</span>
+                      </label>
+
+                      <label className="cursor-pointer group block">
+                        <div className={`border-2 border-dashed rounded-lg p-5 text-center transition-colors ${
+                          preuveClient
+                            ? 'border-green-400 bg-green-50'
+                            : 'border-gray-300 hover:border-gray-400 bg-gray-50 hover:bg-white'
+                        }`}>
+                          <div className="flex flex-col items-center gap-2">
+                            {preuveClient ? (
+                              <FiCheckCircle size={28} className="text-green-500" />
+                            ) : (
+                              <svg className="w-7 h-7 text-gray-400 group-hover:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3 16.5V18a2.25 2.25 0 002.25 2.25h13.5A2.25 2.25 0 0021 18v-1.5" />
+                              </svg>
+                            )}
+                            <p className="text-sm font-medium text-gray-700">
+                              {preuveClient ? preuveClient.name : 'Cliquez pour choisir une image'}
+                            </p>
+                            <p className="text-xs text-gray-400">PNG, JPG, WEBP — max 5 Mo</p>
+                          </div>
+                        </div>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0] || null;
+                            setPreuveClient(file);
+                            setPreuveClientPreview(file ? URL.createObjectURL(file) : null);
+                          }}
+                        />
+                      </label>
+                    </div>
+
+                    {/* Aperçu */}
+                    {preuveClientPreview && (
+                      <div className="relative inline-block">
+                        <img
+                          src={preuveClientPreview}
+                          alt="Aperçu preuve client"
+                          className="w-full max-h-40 object-cover rounded-lg border border-gray-200 shadow-sm"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => { setPreuveClient(null); setPreuveClientPreview(null); }}
+                          className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 shadow"
+                        >
+                          <FiX size={12} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Footer */}
+                  <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
+                    <button
+                      onClick={() => {
+                        setShowValidateModal(false);
+                        setPendingValidateId(null);
+                        setPreuveClient(null);
+                        setPreuveClientPreview(null);
+                      }}
+                      disabled={validateLoading}
+                      className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      onClick={handleConfirmValidate}
+                      disabled={validateLoading}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {validateLoading ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          En cours...
+                        </>
+                      ) : (
+                        <>
+                          <FiCheck size={16} />
+                          Confirmer l'approbation
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         </div>
