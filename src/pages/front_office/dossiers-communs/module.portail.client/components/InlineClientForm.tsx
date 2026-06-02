@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import type { RootState, AppDispatch } from "../../../../../app/store";
-import { createClientForm, createClientPerson } from "../../../../../app/portail_client/clientFormSlice";
+import { createClientForm, createClientPerson, fetchClientInfo } from "../../../../../app/portail_client/clientFormSlice";
 import type { ClientFormPayload } from "../../../../../app/portail_client/clientFormSlice";
 import { ChevronRight, ChevronLeft, Loader2, X, CheckCircle, User } from "lucide-react";
 import { useParams } from "react-router-dom";
@@ -92,9 +92,10 @@ interface Props {
     paysResidence: string;
     typePerson: string;
   }>;
+  userIdClient: string;
 }
 
-const InlineClientForm = ({ initialData, prefillPersons = [] }: Props) => {
+const InlineClientForm = ({ initialData, prefillPersons = [], userIdClient }: Props) => {
   const dispatch = useDispatch<AppDispatch>();
   const { userId } = useParams<{ userId: string }>();
   const { loading, error } = useSelector((s: RootState) => s.user);
@@ -114,22 +115,26 @@ const InlineClientForm = ({ initialData, prefillPersons = [] }: Props) => {
 
   const handleSubmit = async () => {
     // 1. Créer le formulaire principal
-    const result = await dispatch(createClientForm({ userId: userId!, payload: form }));
+    // console.log('id tonga eto ********************', userIdClient);
+    
+    const result = await dispatch(createClientForm({ userId: userIdClient!, payload: form , beneficiaireId: userId }));
     if (!createClientForm.fulfilled.match(result)) return;
 
     const newFormId = (result.payload as any)?.id;
+
+    dispatch(fetchClientInfo(userId!));
 
     // 2. Si des personnes sont à pré-créer et qu'on a l'id du nouveau form
     if (prefillPersons.length > 0 && newFormId) {
       setCreatingPersons(true);
       for (const person of prefillPersons) {
         await dispatch(createClientPerson({
-          userId: userId!,
+          userId: userIdClient!,
           payload: {
             ...person,
-            userId: userId!,
+            userId: userIdClient!,
             dateNaissance: person.dateNaissance?.split('T')[0] ?? '',
-            clientBeneficiaireFormId: newFormId,
+            clientBeneficiaireFormId: userId,
           },
         }));
       }

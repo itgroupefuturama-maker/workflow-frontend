@@ -91,6 +91,7 @@ import passagerListeReducer from './front_office/parametre_liste_passager/passag
 import clientMilesReducer from './front_office/parametre_client_beneficiaire/clientMilesSlice';
 import clientProfilageReducer from './front_office/parametre_baseDonnee/clientProfilageSlice';
 import knowledgeBaseReducer from './front_office/parametre_base_connaissance/knowledgeBaseSlice';
+import controleReducer from './front_office/parametre_controle/controleSlice';
 
 import {
   FLUSH,
@@ -209,6 +210,9 @@ const appReducer = combineReducers({
 
   // Paramètre Base Connaissance
   knowledgeBase: knowledgeBaseReducer,
+
+  // Paramètre Contrôle
+  controle: controleReducer,
 });
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -59,6 +59,7 @@ import PageProfilage from "../pages/front_office/dossiers-communs/module.profila
 import PageBaseConnaissance from "../pages/front_office/dossiers-communs/module.base.connaissance/PageBaseConnaissance";
 import PagePassport from "../pages/front_office/dossiers-communs/module.passport/PagePassport";
 import ClientBeneficiaireInfosForm from "../pages/parametres/client.beneficaire/ClientBeneficiaireInfosForm";
+import PageControle from "../pages/front_office/dossiers-communs/module.controle/PageControle";
 
 export function frontOfficeRoutes() {
   return (
@@ -94,6 +95,8 @@ export function frontOfficeRoutes() {
       <Route path="/dossiers-communs/base-connaissance" element={<PageBaseConnaissance />} />
 
       <Route path="/dossiers-communs/pagePassport" element={<PagePassport />} />
+
+      <Route path="/dossiers-communs/pageControle" element={<PageControle />} />
 
       <Route path="dossiers-communs/ticketing" element={<HomePageTicketing />}>
         {/* Les routes enfants s'affichent à l'endroit où tu mettrais <Outlet /> dans PrestationDetail */}

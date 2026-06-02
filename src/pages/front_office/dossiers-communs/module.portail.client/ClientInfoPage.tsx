@@ -32,7 +32,7 @@ const ClientInfoPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  console.log(`userId: ${userId}`);
+  console.log(`userId @@@@@@@@@@: ${userId}`);
   const { data: client, loading, error } = useSelector((state: RootState) => state.clientForm);
   const numeroDos  = location.state?.numeroDos  ?? '—';
 
@@ -336,8 +336,8 @@ const ClientInfoPage = () => {
                         !lastB ? (
 
                           showInlineForm ? (
-                            // Formulaire inline (vide ou pré-rempli)
-                            <InlineClientForm initialData={prefillData ?? undefined} prefillPersons={prefillPersons} />
+                            // *****************************) Formulaire inline (vide ou pré-rempli *****************************)
+                            <InlineClientForm initialData={prefillData ?? undefined} prefillPersons={prefillPersons} userIdClient={client?.id} />
                           ) : (
                             // État vide — bouton pour démarrer
                             <div className="bg-white rounded-2xl border border-dashed border-gray-200 p-16 flex flex-col items-center justify-center text-center shadow-sm">

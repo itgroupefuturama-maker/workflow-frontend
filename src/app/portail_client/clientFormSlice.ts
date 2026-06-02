@@ -209,7 +209,7 @@ export const createClientForm = createAsyncThunk(
         userId,
       });
       // Rafraîchit les données après création
-      dispatch(fetchClientInfo(beneficiaireId));
+      // dispatch(fetchClientInfo(beneficiaireId));
     } catch (err: any) {
       return rejectWithValue(
         err.response?.data?.message || "Erreur lors de la création du formulaire."
