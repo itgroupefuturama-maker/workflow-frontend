@@ -1,26 +1,46 @@
 import { useNavigate } from 'react-router-dom';
-import { FiFolder, FiCheckCircle, FiTag, FiFileText, FiLock, FiSettings, FiHome, FiArrowRight, FiMapPin, FiShield, FiDatabase, FiMessageSquare, FiUsers, FiPlusCircle, FiList, FiUserCheck, FiUser } from 'react-icons/fi';
+import { FiFolder, FiCheckCircle, FiTag, FiFileText, FiLock, FiSettings, FiHome, FiArrowRight, FiMapPin, FiShield, FiDatabase, FiMessageSquare, FiUsers, FiPlusCircle, FiList, FiUserCheck, FiUser, FiHeadphones } from 'react-icons/fi';
 
 const CATEGORIES = [
   {
     key: 'workspace',
     label: 'Espace de travail',
-    desc: 'Ressources partagées, tâches quotidiennes et consultation des données.',
+    desc: 'Ressources partagées, tâches quotidiennes et outils transversaux.',
     icon: FiHome,
-    iconColor: 'text-blue-500',
-    iconBg: 'bg-blue-500/10',
+    iconColor: 'text-blue-600',
+    iconBg: 'bg-blue-50',
     modules: [
-      { label: 'Dossier',                       desc: 'Accédez à vos fichiers partagés',                                  path: '/dossiers-communs',                            defaultTab: null,       icon: FiFolder,               color: 'blue'  },
-      { label: 'To Do List',                    desc: 'Gérez vos tâches quotidiennes',                                    path: '/dossiers-communs/todolist',                   defaultTab: null,       icon: FiCheckCircle,          color: 'teal'  },
-      { label: 'Base de Connaissance',          desc: 'Consultation information',                                         path: '/dossiers-communs/base-connaissance',          defaultTab: null,       icon: FiDatabase,             color: 'cyan'  },
-      { label: 'SAV',                           desc: 'Service après-vente',                                              path: '/dossiers-communs/pageSAV',                    defaultTab: null,       icon: FiPlusCircle,           color: 'blue'  },
-      { label: 'SMS Anniversaire',              desc: 'Fidélité voyageurs, Miles Al Bouraq Travel',                       path: '/dossiers-communs/pageAnniversaire',           defaultTab: null,       icon: FiMessageSquare,        color: 'roseSombre'  },
-      { label: 'Liste Passager',                desc: 'Liste des passagers',                                              path: '/dossiers-communs/pageListePassage',           defaultTab: null,       icon: FiList,                 color: 'turquoise'  },
-      { label: 'Miles Compagnie',               desc: 'Miles compagnie',                                                  path: '/dossiers-communs/pageMilesCompagnie',         defaultTab: null,       icon: FiFileText,             color: 'fluo'  },
-      { label: 'Client Bénéficiaire',           desc: 'Consultation information & Base de données',                       path: '/dossiers-communs/AllClientBeneficiairePage',  defaultTab: null,       icon: FiUserCheck,            color: 'cyan'  },
-      { label: 'Profilage',                     desc: 'Voir les profilages des clients Bénéficiaires',                    path: '/dossiers-communs/pageProfilage',              defaultTab: null,       icon: FiUser,                 color: 'teal'  },
-      { label: 'Gestion des Document Client',   desc: 'Voir les listes de documents utilisateur : Passport, CIN, etc.',   path: '/dossiers-communs/pagePassport',               defaultTab: null,       icon: FiUser,                 color: 'teal' },
-      { label: 'Contrôle',                      desc: 'Audit et vérification',                                            path: '/dossiers-communs/pageControle',               defaultTab: null,       icon: FiLock,                 color: 'teal' },
+      { label: 'Dossier',             desc: 'Accédez à vos fichiers partagés',    path: '/dossiers-communs',                         defaultTab: null, icon: FiFolder,      color: 'blue'  },
+      { label: 'To Do List',          desc: 'Gérez vos tâches quotidiennes',       path: '/dossiers-communs/todolist',                defaultTab: null, icon: FiCheckCircle, color: 'teal'  },
+      { label: 'Base de Connaissance',desc: 'Consultation information',            path: '/dossiers-communs/base-connaissance',       defaultTab: null, icon: FiDatabase,    color: 'cyan'  },
+      { label: 'Contrôle',            desc: 'Audit et vérification',               path: '/dossiers-communs/pageControle',            defaultTab: null, icon: FiLock,        color: 'slate' },
+    ],
+  },
+  {
+    key: 'clients',
+    label: 'Gestion des clients',
+    desc: 'Profils voyageurs, documents, fidélité et listes de passagers.',
+    icon: FiUsers,
+    iconColor: 'text-green-600',
+    iconBg: 'bg-green-50',
+    modules: [
+      { label: 'Client Bénéficiaire',         desc: 'Consultation & base de données',                    path: '/dossiers-communs/AllClientBeneficiairePage', defaultTab: null, icon: FiUserCheck,    color: 'green'     },
+      { label: 'Profilage',                   desc: 'Profilages des clients bénéficiaires',              path: '/dossiers-communs/pageProfilage',             defaultTab: null, icon: FiUser,         color: 'teal'      },
+      { label: 'Gestion des Document Client', desc: 'Passeport, CIN et autres pièces',                   path: '/dossiers-communs/pagePassport',              defaultTab: null, icon: FiFileText,     color: 'cyan'      },
+      { label: 'SMS Anniversaire',            desc: 'Fidélité voyageurs, Miles Al Bouraq Travel',        path: '/dossiers-communs/pageAnniversaire',          defaultTab: null, icon: FiMessageSquare,color: 'roseSombre'},
+      { label: 'Liste Passager',              desc: 'Liste des passagers',                               path: '/dossiers-communs/pageListePassage',          defaultTab: null, icon: FiList,         color: 'navy'      },
+      { label: 'Miles Compagnie',             desc: 'Gestion des miles compagnie',                       path: '/dossiers-communs/pageMilesCompagnie',        defaultTab: null, icon: FiFileText,     color: 'fluo'      },
+    ],
+  },
+  {
+    key: 'sav',
+    label: 'Service après-vente',
+    desc: 'Suivi des demandes et support client.',
+    icon: FiHeadphones,
+    iconColor: 'text-amber-600',
+    iconBg: 'bg-amber-50',
+    modules: [
+      { label: 'SAV', desc: 'Service après-vente', path: '/dossiers-communs/pageSAV', defaultTab: null, icon: FiPlusCircle, color: 'amber' },
     ],
   },
   {
@@ -28,8 +48,8 @@ const CATEGORIES = [
     label: 'Modules prestation',
     desc: 'Gestion complète des prestations clients : tickets, hébergements, assurances, visas et documents.',
     icon: FiTag,
-    iconColor: 'text-rose-500',
-    iconBg: 'bg-rose-500/10',
+    iconColor: 'text-orange-500',
+    iconBg: 'bg-orange-50',
     modules: [
       { label: 'Ticketing',          desc: 'Suivez vos demandes et tickets', path: '/dossiers-communs/ticketing/pages',   defaultTab: 'prospection', icon: FiTag,      color: 'amber'  },
       { label: 'Hôtel',              desc: 'Gestion des réservations',        path: '/dossiers-communs/hotel/pages',       defaultTab: 'prospection', icon: FiHome,     color: 'orange' },
@@ -40,17 +60,17 @@ const CATEGORIES = [
   },
   {
     key: 'parametres',
-    label: 'Paramètres globaux de l\'application',
+    label: "Paramètres globaux de l'application",
     desc: 'Configurations générales, modèles PDF, gestion des commentaires et des utilisateurs.',
     icon: FiSettings,
-    iconColor: 'text-violet-500',
-    iconBg: 'bg-violet-500/10',
+    iconColor: 'text-violet-600',
+    iconBg: 'bg-violet-50',
     modules: [
-      { label: 'Paramètre Application',   desc: 'Réglage et configurations',              path: '/dossiers-communs/parametre',                defaultTab: null, icon: FiSettings,  color: 'violet' },
-      { label: 'Paramètre Pdf',           desc: 'Ajouter vos modèle, Logo et Cachet',     path: '/dossiers-communs/parametrePdf',             defaultTab: null, icon: FiFileText,  color: 'violet'   },
-      { label: 'Gestion Commentaire',     desc: 'Ajouter vos commentaire et modification',path: '/dossiers-communs/parametreCommentaire',     defaultTab: null, icon: FiMessageSquare,  color: 'violet'   },
-      { label: 'Paramètre Utilisateur',   desc: 'Gestion de votre profil',                path: '/dossiers-communs/parametreUtilisateur',     defaultTab: null, icon: FiUsers,  color: 'violet'   },
-      { label: 'Gestion Couleurs',        desc: 'Palettes et thèmes écran',               path: '/dossiers-communs/couleurs',                 defaultTab: null, icon: FiSettings, color: 'violet' },
+      { label: 'Paramètre Application', desc: 'Réglage et configurations',               path: '/dossiers-communs/parametre',            defaultTab: null, icon: FiSettings,     color: 'violet' },
+      { label: 'Paramètre Pdf',         desc: 'Ajouter vos modèle, Logo et Cachet',      path: '/dossiers-communs/parametrePdf',         defaultTab: null, icon: FiFileText,     color: 'violet' },
+      { label: 'Gestion Commentaire',   desc: 'Ajouter vos commentaire et modification', path: '/dossiers-communs/parametreCommentaire', defaultTab: null, icon: FiMessageSquare,color: 'violet' },
+      { label: 'Paramètre Utilisateur', desc: 'Gestion de votre profil',                 path: '/dossiers-communs/parametreUtilisateur', defaultTab: null, icon: FiUsers,        color: 'violet' },
+      { label: 'Gestion Couleurs',      desc: 'Palettes et thèmes écran',                path: '/dossiers-communs/couleurs',             defaultTab: null, icon: FiSettings,     color: 'violet' },
     ],
   },
   {
@@ -61,8 +81,8 @@ const CATEGORIES = [
     iconColor: 'text-gray-400',
     iconBg: 'bg-gray-100',
     modules: [
-      { label: 'Résultats Stats', desc: 'Analyses de données',    path: '', defaultTab: null, icon: FiLock, color: 'gray', locked: true },
-      { label: 'Tableau de bord', desc: "Vue d'ensemble",         path: '', defaultTab: null, icon: FiLock, color: 'gray', locked: true },
+      { label: 'Résultats Stats', desc: 'Analyses de données', path: '', defaultTab: null, icon: FiLock, color: 'gray', locked: true },
+      { label: 'Tableau de bord', desc: "Vue d'ensemble",      path: '', defaultTab: null, icon: FiLock, color: 'gray', locked: true },
     ],
   },
 ];
@@ -75,19 +95,20 @@ const COLOR_MAP: Record<string, {
   glow: string;
   arrow: string;
 }> = {
-  blue:       { gradient: 'from-blue-500 to-blue-600',     iconBg: 'bg-blue-500/10',    iconText: 'text-blue-500',    border: 'border-slate-300 hover:border-blue-300',    glow: 'hover:shadow-blue-100',   arrow: 'text-blue-400'   },
-  green:      { gradient: 'from-emerald-500 to-green-600', iconBg: 'bg-emerald-500/10', iconText: 'text-emerald-500', border: 'border-slate-300 hover:border-green-300',   glow: 'hover:shadow-green-100',  arrow: 'text-green-400'  },
-  amber:      { gradient: 'from-amber-400 to-orange-500',  iconBg: 'bg-amber-500/10',   iconText: 'text-amber-500',   border: 'border-slate-300 hover:border-amber-300',   glow: 'hover:shadow-amber-100',  arrow: 'text-amber-400'  },
-  rose:       { gradient: 'from-rose-500 to-pink-600',     iconBg: 'bg-rose-500/10',    iconText: 'text-rose-500',    border: 'border-slate-300 hover:border-rose-300',     glow: 'hover:shadow-rose-100',   arrow: 'text-rose-400'   },
-  violet:     { gradient: 'from-violet-500 to-purple-600', iconBg: 'bg-violet-500/10',  iconText: 'text-violet-500',  border: 'border-slate-300 hover:border-violet-300', glow: 'hover:shadow-violet-100', arrow: 'text-violet-400' },
-  orange:     { gradient: 'from-orange-400 to-red-500',    iconBg: 'bg-orange-500/10',  iconText: 'text-orange-500',  border: 'border-slate-300 hover:border-orange-300', glow: 'hover:shadow-orange-100', arrow: 'text-orange-400' },
-  teal:       { gradient: 'from-teal-500 to-emerald-600',  iconBg: 'bg-teal-500/10',    iconText: 'text-teal-500',    border: 'border-slate-300 hover:border-teal-300',     glow: 'hover:shadow-teal-100',   arrow: 'text-teal-400'   },
-  indigo:     { gradient: 'from-indigo-500 to-blue-700',   iconBg: 'bg-indigo-500/10',  iconText: 'text-indigo-600',  border: 'border-slate-300 hover:border-indigo-300', glow: 'hover:shadow-indigo-100', arrow: 'text-indigo-500' },
-  cyan:       { gradient: 'from-cyan-400 to-cyan-600',     iconBg: 'bg-cyan-500/10',    iconText: 'text-cyan-500',    border: 'border-slate-300 hover:border-cyan-300',     glow: 'hover:shadow-cyan-100',   arrow: 'text-cyan-400'   },
-  gray:       { gradient: 'from-gray-300 to-gray-400',     iconBg: 'bg-gray-100',       iconText: 'text-gray-300',    border: 'border-gray-300',                           glow: '',                        arrow: ''                },
-  roseSombre: { gradient: 'from-rose-700 to-pink-900',     iconBg: 'bg-rose-700/10',    iconText: 'text-rose-700',    border: 'border-slate-300 hover:border-rose-300',     glow: 'hover:shadow-rose-200',   arrow: 'text-rose-400'   },
-  turquoise:  { gradient: 'from-blue-700 to-blue-900',     iconBg: 'bg-blue-700/10',    iconText: 'text-blue-700',    border: 'border-slate-300 hover:border-blue-300',     glow: 'hover:shadow-blue-200',   arrow: 'text-blue-400'   },
-  fluo:       { gradient: 'from-green-700 to-green-900',   iconBg: 'bg-green-700/10',   iconText: 'text-green-700',   border: 'border-slate-300 hover:border-green-300',   glow: 'hover:shadow-green-200',  arrow: 'text-green-400'  },
+  blue:       { gradient: 'from-blue-500 to-blue-600',      iconBg: 'bg-blue-50',       iconText: 'text-blue-600',    border: 'border-slate-200 hover:border-blue-300',    glow: 'hover:shadow-blue-100',    arrow: 'text-blue-500'    },
+  teal:       { gradient: 'from-teal-500 to-emerald-600',   iconBg: 'bg-teal-50',        iconText: 'text-teal-600',    border: 'border-slate-200 hover:border-teal-300',    glow: 'hover:shadow-teal-100',    arrow: 'text-teal-500'    },
+  cyan:       { gradient: 'from-cyan-400 to-cyan-600',      iconBg: 'bg-cyan-50',        iconText: 'text-cyan-600',    border: 'border-slate-200 hover:border-cyan-300',    glow: 'hover:shadow-cyan-100',    arrow: 'text-cyan-500'    },
+  slate:      { gradient: 'from-slate-400 to-slate-600',    iconBg: 'bg-slate-100',      iconText: 'text-slate-500',   border: 'border-slate-200 hover:border-slate-300',   glow: 'hover:shadow-slate-100',   arrow: 'text-slate-400'   },
+  green:      { gradient: 'from-emerald-500 to-green-600',  iconBg: 'bg-green-50',       iconText: 'text-green-600',   border: 'border-slate-200 hover:border-green-300',   glow: 'hover:shadow-green-100',   arrow: 'text-green-500'   },
+  roseSombre: { gradient: 'from-rose-700 to-pink-900',      iconBg: 'bg-fuchsia-50',     iconText: 'text-rose-700',    border: 'border-slate-200 hover:border-rose-300',    glow: 'hover:shadow-rose-100',    arrow: 'text-rose-500'    },
+  navy:       { gradient: 'from-blue-700 to-blue-900',      iconBg: 'bg-blue-50',        iconText: 'text-blue-700',    border: 'border-slate-200 hover:border-blue-300',    glow: 'hover:shadow-blue-100',    arrow: 'text-blue-600'    },
+  fluo:       { gradient: 'from-green-600 to-green-800',    iconBg: 'bg-green-50',       iconText: 'text-green-700',   border: 'border-slate-200 hover:border-green-300',   glow: 'hover:shadow-green-100',   arrow: 'text-green-600'   },
+  amber:      { gradient: 'from-amber-400 to-orange-500',   iconBg: 'bg-amber-50',       iconText: 'text-amber-600',   border: 'border-slate-200 hover:border-amber-300',   glow: 'hover:shadow-amber-100',   arrow: 'text-amber-500'   },
+  orange:     { gradient: 'from-orange-400 to-red-500',     iconBg: 'bg-orange-50',      iconText: 'text-orange-500',  border: 'border-slate-200 hover:border-orange-300',  glow: 'hover:shadow-orange-100',  arrow: 'text-orange-500'  },
+  indigo:     { gradient: 'from-indigo-500 to-blue-700',    iconBg: 'bg-indigo-50',      iconText: 'text-indigo-600',  border: 'border-slate-200 hover:border-indigo-300',  glow: 'hover:shadow-indigo-100',  arrow: 'text-indigo-500'  },
+  rose:       { gradient: 'from-rose-500 to-pink-600',      iconBg: 'bg-rose-50',        iconText: 'text-rose-500',    border: 'border-slate-200 hover:border-rose-300',    glow: 'hover:shadow-rose-100',    arrow: 'text-rose-400'    },
+  violet:     { gradient: 'from-violet-500 to-purple-600',  iconBg: 'bg-violet-50',      iconText: 'text-violet-600',  border: 'border-slate-200 hover:border-violet-300',  glow: 'hover:shadow-violet-100',  arrow: 'text-violet-500'  },
+  gray:       { gradient: 'from-gray-300 to-gray-400',      iconBg: 'bg-gray-100',       iconText: 'text-gray-300',    border: 'border-gray-200',                           glow: '',                         arrow: ''                 },
 };
 
 const ACTIVE_COUNT = CATEGORIES.filter(c => c.key !== 'locked').reduce((sum, c) => sum + c.modules.length, 0);
@@ -96,9 +117,9 @@ function HomePage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen relative overflow-hidden bg-slate-500">
+    <div className="min-h-screen relative overflow-hidden">
 
-      {/* ── Fond décoratif ── */}
+      {/* Fond décoratif */}
       <div className="absolute inset-0 bg-linear-to-br from-slate-100 via-white to-blue-50/40 pointer-events-none" />
       <div className="absolute -top-40 -left-40 w-[500px] h-[500px] bg-linear-to-br from-blue-400/10 to-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute -bottom-40 -right-40 w-[600px] h-[600px] bg-linear-to-tl from-violet-400/10 to-purple-500/8 rounded-full blur-3xl pointer-events-none" />
@@ -107,7 +128,7 @@ function HomePage() {
         style={{ backgroundImage: 'radial-gradient(circle, #475569 1px, transparent 1px)', backgroundSize: '28px 28px' }}
       />
 
-      {/* ── Contenu ── */}
+      {/* Contenu */}
       <div className="relative max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-16">
 
         {/* Header */}
@@ -209,7 +230,7 @@ function HomePage() {
 
         {/* Footer */}
         <p className="text-center text-xs text-slate-300 mt-12">
-          6 modules en cours de développement
+          2 modules en cours de développement
         </p>
       </div>
     </div>

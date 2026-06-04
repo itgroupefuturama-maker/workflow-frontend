@@ -87,35 +87,60 @@ export interface Controle {
   dateReglement: string;
   refReglement: string;
   fournisseurId: string;
+  consulatId: string | null;
   createdAt: string;
   updatedAt: string;
   module: Module;
-  fournisseur: fournisseur;
+  fournisseur: fournisseur | null;
+  consulat: { id: string; nom: string } | null;
   user: user;
   pjControle: PjControle[];
 }
 
+// ── Meta de pagination renvoyée par le serveur ────────────────────────────────
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+// ── Paramètres du thunk ───────────────────────────────────────────────────────
+export interface FetchControlesParams {
+  page: number;
+  limit: number;
+}
+
 interface ControleState {
   list: Controle[];
+  meta: PaginationMeta;
   loading: boolean;
   error: string | null;
 }
 
 const initialState: ControleState = {
   list: [],
+  meta: { total: 0, page: 1, limit: 10, totalPages: 1 },
   loading: false,
   error: null,
 };
 
 export const fetchControles = createAsyncThunk(
-  'controle/fetchAll',
-  async (_, { rejectWithValue }) => {
+  'controle/fetchPaginated',
+  async ({ page, limit }: FetchControlesParams, { rejectWithValue }) => {
     try {
-      const response = await axios.get('/controle');
+      const response = await axios.get('/controle/paginated', {
+        params: { page, limit },
+      });
       if (!response.data?.success) {
         return rejectWithValue(response.data?.message || 'Réponse invalide');
       }
-      return response.data.data as Controle[];
+      // response.data = { success, data: { data: [...], meta: {...} } }
+      const payload = response.data.data;
+      return {
+        data: payload.data as Controle[],
+        meta: payload.meta as PaginationMeta,
+      };
     } catch (err: any) {
       return rejectWithValue(
         err.response?.data?.message || err.message || 'Erreur lors du chargement'
@@ -130,6 +155,7 @@ const controleSlice = createSlice({
   reducers: {
     clearControles(state) {
       state.list = [];
+      state.meta = initialState.meta;
       state.error = null;
     },
   },
@@ -141,7 +167,8 @@ const controleSlice = createSlice({
       })
       .addCase(fetchControles.fulfilled, (state, action) => {
         state.loading = false;
-        state.list = action.payload;
+        state.list = action.payload.data;
+        state.meta = action.payload.meta;
       })
       .addCase(fetchControles.rejected, (state, action) => {
         state.loading = false;
