@@ -30,6 +30,9 @@ const CATEGORIES = [
       { label: 'SMS Anniversaire',            desc: 'Fidélité voyageurs, Miles Al Bouraq Travel',        path: '/dossiers-communs/pageAnniversaire',          defaultTab: null, icon: FiMessageSquare,color: 'roseSombre'},
       { label: 'Liste Passager',              desc: 'Liste des passagers',                               path: '/dossiers-communs/pageListePassage',          defaultTab: null, icon: FiList,         color: 'navy'      },
       { label: 'Miles Compagnie',             desc: 'Gestion des miles compagnie',                       path: '/dossiers-communs/pageMilesCompagnie',        defaultTab: null, icon: FiFileText,     color: 'fluo'      },
+      { label: 'Résultats Stats',             desc: 'Analyses de données',                               path: '/dossiers-communs/pageResultatStats',         defaultTab: null, icon: FiLock,         color: 'gray'      },
+      { label: 'Tableau de bord',             desc: "Vue d'ensemble",                                    path: '/dossiers-communs/pageTableauBord',           defaultTab: null, icon: FiLock,         color: 'gray'      },
+      { label: 'Etat de Vente',               desc: "Vue d'ensemble",                                    path: '/dossiers-communs/pageEtatVente',             defaultTab: null, icon: FiLock,         color: 'gray'      },
     ],
   },
   {
@@ -51,7 +54,7 @@ const CATEGORIES = [
     iconColor: 'text-orange-500',
     iconBg: 'bg-orange-50',
     modules: [
-      { label: 'Ticketing',          desc: 'Suivez vos demandes et tickets', path: '/dossiers-communs/ticketing/pages',   defaultTab: 'prospection', icon: FiTag,      color: 'amber'  },
+      { label: 'Ticketing',          desc: 'Suivez vos demandes et tickets', path: '/dossiers-communs/ticketing/pages',    defaultTab: 'prospection', icon: FiTag,      color: 'amber'  },
       { label: 'Hôtel',              desc: 'Gestion des réservations',        path: '/dossiers-communs/hotel/pages',       defaultTab: 'prospection', icon: FiHome,     color: 'orange' },
       { label: 'Assurance',          desc: 'Contrats et garanties',           path: '/dossiers-communs/assurance/pages',   defaultTab: 'prospection', icon: FiShield,   color: 'green'  },
       { label: 'Visa',               desc: 'Gestion des visas',               path: '/dossiers-communs/visa/pages',        defaultTab: 'prospection', icon: FiMapPin,   color: 'indigo' },
@@ -73,18 +76,18 @@ const CATEGORIES = [
       { label: 'Gestion Couleurs',      desc: 'Palettes et thèmes écran',                path: '/dossiers-communs/couleurs',             defaultTab: null, icon: FiSettings,     color: 'violet' },
     ],
   },
-  {
-    key: 'locked',
-    label: 'En cours de développement',
-    desc: 'Ces modules seront disponibles prochainement.',
-    icon: FiLock,
-    iconColor: 'text-gray-400',
-    iconBg: 'bg-gray-100',
-    modules: [
-      { label: 'Résultats Stats', desc: 'Analyses de données', path: '', defaultTab: null, icon: FiLock, color: 'gray', locked: true },
-      { label: 'Tableau de bord', desc: "Vue d'ensemble",      path: '', defaultTab: null, icon: FiLock, color: 'gray', locked: true },
-    ],
-  },
+  // {
+  //   key: 'locked',
+  //   label: 'En cours de développement',
+  //   desc: 'Ces modules seront disponibles prochainement.',
+  //   icon: FiLock,
+  //   iconColor: 'text-gray-400',
+  //   iconBg: 'bg-gray-100',
+  //   modules: [
+  //     { label: 'Résultats Stats', desc: 'Analyses de données', path: '', defaultTab: null, icon: FiLock, color: 'gray', locked: true },
+  //     { label: 'Tableau de bord', desc: "Vue d'ensemble",      path: '', defaultTab: null, icon: FiLock, color: 'gray', locked: true },
+  //   ],
+  // },
 ];
 
 const COLOR_MAP: Record<string, {

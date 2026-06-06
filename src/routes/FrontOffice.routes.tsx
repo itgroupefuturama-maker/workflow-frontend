@@ -60,6 +60,9 @@ import PageBaseConnaissance from "../pages/front_office/dossiers-communs/module.
 import PagePassport from "../pages/front_office/dossiers-communs/module.passport/PagePassport";
 import ClientBeneficiaireInfosForm from "../pages/parametres/client.beneficaire/ClientBeneficiaireInfosForm";
 import PageControle from "../pages/front_office/dossiers-communs/module.controle/PageControle";
+import PageResultatStats from "../pages/front_office/dossiers-communs/module.resultat.stats/PageResultatStats";
+import PageTableauBord from "../pages/front_office/dossiers-communs/module.tableau.bord/PageTableauBord";
+import PageEtatVente from "../pages/front_office/dossiers-communs/module.etat.vente/PageEtatVente";
 
 export function frontOfficeRoutes() {
   return (
@@ -75,6 +78,10 @@ export function frontOfficeRoutes() {
       <Route path="dossiers-communs/parametrePdf" element={<ParametrePdf />} />
       <Route path="dossiers-communs/parametreCommentaire" element={<ParametreCommentaire />} />
       <Route path="dossiers-communs/parametreUtilisateur" element={<ParametreUtilisateur />} />
+
+      <Route path="dossiers-communs/pageResultatStats" element={<PageResultatStats />} />
+      <Route path="dossiers-communs/pageTableauBord" element={<PageTableauBord />} />
+      <Route path="dossiers-communs/pageEtatVente" element={<PageEtatVente />} />
 
       <Route path="dossiers-communs/pageAnniversaire" element={<PageAnniversaire />} />
       <Route path="dossiers-communs/pageListePassage" element={<PageListePassage />} />

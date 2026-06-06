@@ -169,21 +169,20 @@ const PageControle = () => {
 
   const COLUMNS = [
     'Date transaction', 'Type', 'Statut transaction',
+    'Catégorie Prestation',
     'N° Dos. commun', 'N° Dos. prestation', 'Origine ligne',
     'Prestation', 'Commentaire', 'Partenaire', 'Prestataire',
-    'CM PU Devise', 'CM CU Devise', 'CM Devise', 'CM Taux change',
-    'CM PU Ariary', 'CM CU Ariary', 'CM M Devise', 'CM C Devise',
-    'CM M Ariary', 'CM C Ariary',
-    'FC PU Devise', 'FC CU Devise', 'FC Devise', 'FC Taux change',
-    'FC PU Ariary', 'FC CU Ariary', 'FC M Devise', 'FC C Devise',
-    'FC M Ariary', 'FC C Ariary',
+    'Com PU Devise', 'Com CU Devise', 'Com Devise', 'Com Taux change',
+    'Com PU Ariary', 'Com CU Ariary', 'Com M Devise', 'Com C Devise',
+    'Com M Ariary', 'Com C Ariary',
+    'Fac PU Devise', 'Fac CU Devise', 'Fac Devise', 'Fac Taux change',
+    'Fac PU Ariary', 'Fac CU Ariary', 'Fac M Devise', 'Fac C Devise',
+    'Fac M Ariary', 'Fac C Ariary',
     'Durée', 'Quantité',
     'Date BC', 'Réf. BC', 'Statut BC',
     'Date FC', 'Réf. FC', 'Statut FC',
     'Date règlement', 'Réf. règlement',
-    'Module code', 'Module nom', 'Module description', 'Module statut',
-    'Module date activation', 'Module date désactivation',
-    'Créé le', 'Mis à jour le', 'Pièces jointes',
+    'Pièces jointes',
   ];
 
   // ── Rendu ────────────────────────────────────────────────────────────────────
@@ -362,10 +361,13 @@ const PageControle = () => {
                       <td className="px-3 py-2.5 align-middle whitespace-nowrap">
                         <Badge label={item.transaction} color={item.transaction === 'VENTE' ? 'indigo' : 'amber'} />
                       </td>
-                      <td className="px-3 py-2.5 align-middle whitespace-nowrap">
-                        <Badge label={item.statutTransaction} color="gray" />
+                      <td className="px-3 py-2.5 uppercase">
+                        <Badge label={item.statutTransaction == 'ANNULER' ? 'Annulée' : item.statutTransaction == 'MODIFIER' ? 'Modifiée' : item.statutTransaction} color="gray" />
                       </td>
-                      <Td>{item.numDosCommun}</Td>
+                      <td className="px-3 py-2.5 align-middle whitespace-nowrap uppercase">
+                        <Badge label={item.module.nom} color="gray" />
+                      </td>
+                      <Td>N° {item.numDosCommun}</Td>
                       <Td>{item.numDosPrestation}</Td>
                       <Td mono muted>{item.origineLigne}</Td>
                       <Td>{item.prestation}</Td>
@@ -402,16 +404,6 @@ const PageControle = () => {
                       <td className="px-3 py-2.5 align-middle whitespace-nowrap"><Badge label={item.statusFc} color="gray" /></td>
                       <Td muted>{formatDate(item.dateReglement)}</Td>
                       <Td mono>{item.refReglement || '—'}</Td>
-                      <Td mono>{item.module.code}</Td>
-                      <Td>{item.module.nom}</Td>
-                      <Td muted>{item.module.description}</Td>
-                      <td className="px-3 py-2.5 align-middle whitespace-nowrap">
-                        <Badge label={item.module.status} color={item.module.status === 'ACTIF' ? 'green' : 'red'} />
-                      </td>
-                      <Td muted>{item.module.dateActivation ? formatDate(item.module.dateActivation) : '—'}</Td>
-                      <Td muted>{item.module.dateDesactivation ? formatDate(item.module.dateDesactivation) : '—'}</Td>
-                      <Td muted>{formatDate(item.createdAt)}</Td>
-                      <Td muted>{formatDate(item.updatedAt)}</Td>
                       <td className="px-3 py-2.5 align-middle">
                         {item.pjControle.length === 0 ? (
                           <span className="text-gray-400 text-xs italic">Aucune</span>
