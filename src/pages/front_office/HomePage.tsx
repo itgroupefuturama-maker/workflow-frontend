@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { FiFolder, FiCheckCircle, FiTag, FiFileText, FiLock, FiSettings, FiHome, FiArrowRight, FiMapPin, FiShield, FiDatabase, FiMessageSquare, FiUsers, FiPlusCircle, FiList, FiUserCheck, FiUser, FiHeadphones } from 'react-icons/fi';
+import { FiFolder, FiCheckCircle, FiTag, FiFileText, FiLock, FiSettings, FiHome, FiArrowRight, FiMapPin, FiShield, FiDatabase, FiMessageSquare, FiUsers, FiPlusCircle, FiList, FiUserCheck, FiUser, FiHeadphones, FiBarChart2, FiPieChart, FiTrendingUp } from 'react-icons/fi';
 
 const CATEGORIES = [
   {
@@ -10,10 +10,13 @@ const CATEGORIES = [
     iconColor: 'text-blue-600',
     iconBg: 'bg-blue-50',
     modules: [
-      { label: 'Dossier',             desc: 'Accédez à vos fichiers partagés',    path: '/dossiers-communs',                         defaultTab: null, icon: FiFolder,      color: 'blue'  },
-      { label: 'To Do List',          desc: 'Gérez vos tâches quotidiennes',       path: '/dossiers-communs/todolist',                defaultTab: null, icon: FiCheckCircle, color: 'teal'  },
-      { label: 'Base de Connaissance',desc: 'Consultation information',            path: '/dossiers-communs/base-connaissance',       defaultTab: null, icon: FiDatabase,    color: 'cyan'  },
-      { label: 'Contrôle',            desc: 'Audit et vérification',               path: '/dossiers-communs/pageControle',            defaultTab: null, icon: FiLock,        color: 'slate' },
+      { label: 'Dossier',             desc: 'Accédez à vos fichiers partagés',      path: '/dossiers-communs',                         defaultTab: null, icon: FiFolder,      color: 'blue'  },
+      { label: 'To Do List',          desc: 'Gérez vos tâches quotidiennes',        path: '/dossiers-communs/todolist',                defaultTab: null, icon: FiCheckCircle, color: 'teal'  },
+      { label: 'Base de Connaissance',desc: 'Consultation information',             path: '/dossiers-communs/base-connaissance',       defaultTab: null, icon: FiDatabase,    color: 'cyan'  },
+      { label: 'Contrôle',            desc: 'Audit et vérification',                path: '/dossiers-communs/pageControle',            defaultTab: null, icon: FiShield,     color: 'slate' },
+      { label: 'Résultats Stats',     desc: 'Analyses de données',                  path: '/dossiers-communs/pageResultatStatDossierCommun', icon: FiBarChart2,  color: 'indigo' },
+      { label: 'Tableau de bord',     desc: "Vue d'ensemble",                       path: '/dossiers-communs/pageTableauBord',             icon: FiPieChart,   color: 'blue'   },
+      { label: 'Etat de Vente',       desc: "Vue d'ensemble des ventes",            path: '/dossiers-communs/pageEtatVente',               icon: FiTrendingUp, color: 'teal'   },
     ],
   },
   {
@@ -24,15 +27,12 @@ const CATEGORIES = [
     iconColor: 'text-green-600',
     iconBg: 'bg-green-50',
     modules: [
-      { label: 'Client Bénéficiaire',         desc: 'Consultation & base de données',                    path: '/dossiers-communs/AllClientBeneficiairePage', defaultTab: null, icon: FiUserCheck,    color: 'green'     },
-      { label: 'Profilage',                   desc: 'Profilages des clients bénéficiaires',              path: '/dossiers-communs/pageProfilage',             defaultTab: null, icon: FiUser,         color: 'teal'      },
-      { label: 'Gestion des Document Client', desc: 'Passeport, CIN et autres pièces',                   path: '/dossiers-communs/pagePassport',              defaultTab: null, icon: FiFileText,     color: 'cyan'      },
-      { label: 'SMS Anniversaire',            desc: 'Fidélité voyageurs, Miles Al Bouraq Travel',        path: '/dossiers-communs/pageAnniversaire',          defaultTab: null, icon: FiMessageSquare,color: 'roseSombre'},
-      { label: 'Liste Passager',              desc: 'Liste des passagers',                               path: '/dossiers-communs/pageListePassage',          defaultTab: null, icon: FiList,         color: 'navy'      },
-      { label: 'Miles Compagnie',             desc: 'Gestion des miles compagnie',                       path: '/dossiers-communs/pageMilesCompagnie',        defaultTab: null, icon: FiFileText,     color: 'fluo'      },
-      { label: 'Résultats Stats',             desc: 'Analyses de données',                               path: '/dossiers-communs/pageResultatStats',         defaultTab: null, icon: FiLock,         color: 'gray'      },
-      { label: 'Tableau de bord',             desc: "Vue d'ensemble",                                    path: '/dossiers-communs/pageTableauBord',           defaultTab: null, icon: FiLock,         color: 'gray'      },
-      { label: 'Etat de Vente',               desc: "Vue d'ensemble",                                    path: '/dossiers-communs/pageEtatVente',             defaultTab: null, icon: FiLock,         color: 'gray'      },
+      { label: 'Client Bénéficiaire',         desc: 'Consultation & base de données',                    path: '/dossiers-communs/AllClientBeneficiairePage',         defaultTab: null, icon: FiUserCheck,    color: 'green'     },
+      { label: 'Profilage',                   desc: 'Profilages des clients bénéficiaires',              path: '/dossiers-communs/pageProfilage',                     defaultTab: null, icon: FiUser,         color: 'teal'      },
+      { label: 'Gestion des Document Client', desc: 'Passeport, CIN et autres pièces',                   path: '/dossiers-communs/pagePassport',                      defaultTab: null, icon: FiFileText,     color: 'cyan'      },
+      { label: 'SMS Anniversaire',            desc: 'Fidélité voyageurs, Miles Al Bouraq Travel',        path: '/dossiers-communs/pageAnniversaire',                  defaultTab: null, icon: FiMessageSquare,color: 'roseSombre'},
+      { label: 'Liste Passager',              desc: 'Liste des passagers',                               path: '/dossiers-communs/pageListePassage',                  defaultTab: null, icon: FiList,         color: 'navy'      },
+      { label: 'Miles Compagnie',             desc: 'Gestion des miles compagnie',                       path: '/dossiers-communs/pageMilesCompagnie',                defaultTab: null, icon: FiFileText,     color: 'fluo'      },
     ],
   },
   {

@@ -92,6 +92,7 @@ import clientMilesReducer from './front_office/parametre_client_beneficiaire/cli
 import clientProfilageReducer from './front_office/parametre_baseDonnee/clientProfilageSlice';
 import knowledgeBaseReducer from './front_office/parametre_base_connaissance/knowledgeBaseSlice';
 import controleReducer from './front_office/parametre_controle/controleSlice';
+import dashboardReducer from './front_office/parametre_dashboard/dashboardSlice';
 
 import {
   FLUSH,
@@ -213,6 +214,9 @@ const appReducer = combineReducers({
 
   // Paramètre Contrôle
   controle: controleReducer,
+
+  // Paramètre Dashboard
+  dashboard: dashboardReducer,
 });
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

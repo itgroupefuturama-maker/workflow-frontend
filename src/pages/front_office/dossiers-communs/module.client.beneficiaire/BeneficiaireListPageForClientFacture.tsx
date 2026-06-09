@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FiUsers, FiLoader, FiSearch, FiX, FiChevronDown} from 'react-icons/fi';
+import { FiUsers, FiLoader, FiSearch, FiX, FiChevronDown, FiList, FiGrid} from 'react-icons/fi';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../../../app/store';
 import { fetchClientFactureById, fetchPreferencesBeneficiaire } from '../../../../app/back_office/clientFacturesSlice';
@@ -21,12 +21,32 @@ const statutBadge = (statut: string) => ({
   CREER:   'bg-blue-50    text-blue-700   border border-blue-200',
 }[statut] ?? 'bg-slate-100 text-slate-600');
 
+const typeBadgeClass = (type: string) => ({
+  SIMPLE:    'bg-blue-50   text-blue-700   border-blue-200',
+  BRONZE:    'bg-orange-50 text-orange-700 border-orange-200',
+  SILVER:    'bg-slate-100 text-slate-600  border-slate-300',
+  GOLD:      'bg-amber-50  text-amber-700  border-amber-200',
+  VIP:       'bg-purple-50 text-purple-700 border-purple-200',
+  PLATINIUM: 'bg-slate-700 text-slate-100  border-slate-600',
+}[type] ?? 'bg-slate-100 text-slate-600 border-slate-200');
+
+const typeBadgeAvatar = (type: string) => ({
+  SIMPLE:    'bg-blue-100   text-blue-700',
+  BRONZE:    'bg-orange-100 text-orange-700',
+  SILVER:    'bg-slate-200  text-slate-600',
+  GOLD:      'bg-amber-100  text-amber-700',
+  VIP:       'bg-purple-100 text-purple-700',
+  PLATINIUM: 'bg-slate-700  text-slate-100',
+}[type] ?? 'bg-slate-100 text-slate-500');
+
 export default function BeneficiaireListPage({ clientFactureId }: Props) {
   const dispatch = useDispatch<AppDispatch>();
 
   const [clientOpen, setClientOpen] = useState(true);
 
   const [search, setSearch] = useState('');
+
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('table');
 
   const { currentDetail, loadingDetail, errorDetail, preferencesClientId } = useSelector(
     (state: RootState) => state.clientFactures
@@ -184,10 +204,21 @@ export default function BeneficiaireListPage({ clientFactureId }: Props) {
               </div>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400 bg-slate-50 border border-slate-200 px-2 py-0.5 rounded-full">
-              {beneficiaires.length} bénéficiaire{beneficiaires.length > 1 ? 's' : ''}
-            </span>
+          <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-0.5 gap-0.5">
+            {(['table', 'cards'] as const).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setViewMode(mode)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-medium transition-all
+                  ${viewMode === mode
+                    ? 'bg-white text-slate-800 border border-slate-200 shadow-sm'
+                    : 'text-slate-500 hover:text-slate-700'
+                  }`}
+              >
+                {mode === 'table' ? <FiList size={12} /> : <FiGrid size={12} />}
+                {mode === 'table' ? 'Tableau' : 'Cartes'}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -219,24 +250,91 @@ export default function BeneficiaireListPage({ clientFactureId }: Props) {
               Effacer la recherche
             </button>
           </div>
+        ) : viewMode === 'table' ? (
+
+          /* ── Vue Tableau ── */
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="bg-slate-50 border-b border-slate-200">
+                  <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2.5">
+                    Bénéficiaire
+                  </th>
+                  <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2.5">
+                    Code
+                  </th>
+                  <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2.5">
+                    Type
+                  </th>
+                  <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2.5">
+                    Statut
+                  </th>
+                  <th className="w-24" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {beneficiairesFiltres.map(({ clientBeneficiaireId, clientBeneficiaire }) => (
+                  <tr
+                    key={clientBeneficiaireId}
+                    onClick={() => dispatch(fetchPreferencesBeneficiaire(clientBeneficiaireId))}
+                    className="hover:bg-slate-50 cursor-pointer transition-colors group"
+                  >
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 ${typeBadgeAvatar(clientBeneficiaire.typeClient)}`}>
+                          {clientBeneficiaire.libelle.slice(0, 2).toUpperCase()}
+                        </div>
+                        <span className="font-medium text-slate-800 text-[13px] truncate max-w-[200px]">
+                          {clientBeneficiaire.libelle}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="font-mono text-[11px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                        {clientBeneficiaire.code}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${typeBadgeClass(clientBeneficiaire.typeClient)}`}>
+                        {clientBeneficiaire.typeClient === 'SIMPLE' ? 'Ponctuel' : clientBeneficiaire.typeClient}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${statutBadge(clientBeneficiaire.statut)}`}>
+                        {clientBeneficiaire.statut}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <button className="opacity-0 group-hover:opacity-100 transition-opacity text-[11px] font-medium text-indigo-600 hover:text-indigo-800 px-3 py-1 rounded-md border border-indigo-200 hover:bg-indigo-50">
+                        Détails
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
         ) : (
-          <div className="p-3 grid gap-3"
+
+          /* ── Vue Cartes ── */
+          <div
+            className="p-3 grid gap-3"
             style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))' }}
           >
             {beneficiairesFiltres.map(({ clientBeneficiaireId, clientBeneficiaire }) => {
               const type = clientBeneficiaire.typeClient;
 
-              // ── Thèmes par type de carte ──────────────────────────────
               const theme: Record<string, {
-                card: string;         // fond de la carte
-                chip: string;         // couleur puce
-                stripe: string;       // bande déco monde
-                label: string;        // texte du type
-                subtext: string;      // texte secondaire (code, libellé)
-                border: string;       // bordure carte
-                badgeBg: string;      // fond badge statut
-                badgeText: string;    // texte badge statut
-                prefBtn: string;      // bouton préférences
+                card: string;
+                chip: string;
+                stripe: string;
+                label: string;
+                subtext: string;
+                border: string;
+                badgeBg: string;
+                badgeText: string;
+                prefBtn: string;
               }> = {
                 SIMPLE: {
                   card:      'bg-gradient-to-br from-blue-200 to-blue-300',
@@ -315,27 +413,24 @@ export default function BeneficiaireListPage({ clientFactureId }: Props) {
                   className={`cursor-pointer relative rounded-xl overflow-hidden border ${t.border} shadow-lg transition-transform hover:scale-[1.02] hover:shadow-xl duration-300`}
                   style={{ aspectRatio: '1.586 / 1' }}
                 >
-                  {/* Fond avec grain de texture léger pour le côté "premium" */}
                   <div className={`absolute inset-0 ${t.card}`} />
                   <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
 
-                  {/* Motif monde plus discret */}
                   <div className={`absolute -right-10 -bottom-10 opacity-10 pointer-events-none ${t.label}`}>
                     <FiUsers size={180} />
                   </div>
 
                   <div className="relative z-10 h-full flex flex-col justify-between p-5">
                     <div className="flex justify-between items-start">
-                      <div className='flex flex-col'>
+                      <div className="flex flex-col">
                         <p className={`text-[10px] font-bold uppercase tracking-[0.15em] ${t.label} opacity-60`}>
-                          Statut : 
+                          Statut :
                         </p>
                         <p className={`text-[10px] uppercase ${t.label}`}>
                           {type === 'SIMPLE' ? 'Ponctuel' : type}
                         </p>
                       </div>
                       <button
-                        
                         className={`cursor-pointer px-3 py-1.5 text-[10px] font-bold rounded-md border backdrop-blur-md transition-all active:scale-95 ${t.prefBtn}`}
                       >
                         DÉTAILS
@@ -343,7 +438,7 @@ export default function BeneficiaireListPage({ clientFactureId }: Props) {
                     </div>
 
                     <div className="mt-2">
-                      <p className={`text-sm font-mono ${t.label} `}>
+                      <p className={`text-sm font-mono ${t.label}`}>
                         {clientBeneficiaire.code.match(/.{1,4}/g)?.join(' ') || clientBeneficiaire.code}
                       </p>
                     </div>
@@ -357,8 +452,6 @@ export default function BeneficiaireListPage({ clientFactureId }: Props) {
                           {clientBeneficiaire.libelle}
                         </p>
                       </div>
-
-                      
                     </div>
                   </div>
                 </div>

@@ -522,6 +522,7 @@ function DossierCommun() {
                           ))}
                       </div>
                     </td>
+                    
                   </tr>
                 ))}
               </tbody>

@@ -63,6 +63,7 @@ import PageControle from "../pages/front_office/dossiers-communs/module.controle
 import PageResultatStats from "../pages/front_office/dossiers-communs/module.resultat.stats/PageResultatStats";
 import PageTableauBord from "../pages/front_office/dossiers-communs/module.tableau.bord/PageTableauBord";
 import PageEtatVente from "../pages/front_office/dossiers-communs/module.etat.vente/PageEtatVente";
+import PageResultatStatDossierCommun from "../pages/front_office/dossiers-communs/module.resultat.stats/PageResultatStatDossierCommun";
 
 export function frontOfficeRoutes() {
   return (
@@ -79,7 +80,8 @@ export function frontOfficeRoutes() {
       <Route path="dossiers-communs/parametreCommentaire" element={<ParametreCommentaire />} />
       <Route path="dossiers-communs/parametreUtilisateur" element={<ParametreUtilisateur />} />
 
-      <Route path="dossiers-communs/pageResultatStats" element={<PageResultatStats />} />
+      <Route path="dossiers-communs/pageResultatStatDossierCommun" element={<PageResultatStatDossierCommun />} />
+      <Route path="/dashboard/stats/:numDosCommun" element={<PageResultatStats />} />
       <Route path="dossiers-communs/pageTableauBord" element={<PageTableauBord />} />
       <Route path="dossiers-communs/pageEtatVente" element={<PageEtatVente />} />
 
