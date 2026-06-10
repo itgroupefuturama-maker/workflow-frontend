@@ -9,7 +9,6 @@ import Prospection from "../pages/front_office/dossiers-communs/module.ticketing
 // import ParametreTicketing from "../pages/front_office/dossiers-communs/module.ticketing/ticketing.sous.module/ParamétreTicketing";
 import Devis from "../pages/front_office/dossiers-communs/module.ticketing/ticketing.sous.module/Devis";
 import Billet from "../pages/front_office/dossiers-communs/module.ticketing/ticketing.sous.module/Billet";
-import AccueilView from "../pages/front_office/dossiers-communs/module.ticketing/ticketing.sous.module/SousMenuPrestation/AccueilView";
 import ParametreView from "../pages/front_office/dossiers-communs/module.ticketing/ticketing.sous.module/SousMenuPrestation/ParametreView";
 import PageView from "../pages/front_office/dossiers-communs/module.ticketing/ticketing.sous.module/SousMenuPrestation/PageView";
 import DossierCommun from "../pages/front_office/dossiers-communs/module.dossier.commun/DossierCommun";
@@ -20,20 +19,17 @@ import Parametre from "../pages/front_office/dossiers-communs/module.parametre/P
 import HomePageHotel from "../pages/front_office/dossiers-communs/module.hotel/HomePage.hotel";
 import PageViewHotel from "../pages/front_office/dossiers-communs/module.hotel/sous.section/PageViewHotel";
 import ParametreViewHotel from "../pages/front_office/dossiers-communs/module.hotel/sous.section/ParametreViewHotel";
-import AccueilViewHotel from "../pages/front_office/dossiers-communs/module.hotel/sous.section/AccueilViewHotel";
 import ListeDossierByModule from "../pages/front_office/dossiers-communs/ListeDossierByModule";
 import BenchmarkingDetailPage from "../pages/front_office/dossiers-communs/module.hotel/sous.section/sous.section.page/BenchmarkingDetailPage";
 import HotelReservationDetail from "../pages/front_office/dossiers-communs/module.hotel/sous.section/sous.section.page/HotelReservationDetail";
 import PageHotelDevis from "../pages/front_office/dossiers-communs/module.hotel/sous.section/sous.section.page/PageHotelDevis";
 import HomePageTicketing from "../pages/front_office/dossiers-communs/module.ticketing/ticketing";
 import HomePageVisa from "../pages/front_office/dossiers-communs/module.visa/HomePage.visa";
-import AccueilViewVisa from "../pages/front_office/dossiers-communs/module.visa/sous.section/AccueilViewVisa";
 import ParametreViewVisa from "../pages/front_office/dossiers-communs/module.visa/sous.section/ParametreViewVisa";
 import PageViewVisa from "../pages/front_office/dossiers-communs/module.visa/sous.section/PageViewVisa";
 import PageDetailProspection from "../pages/front_office/dossiers-communs/module.visa/sous.section/sous.section.page/PageDetailProspection";
 import PageDetailVisa from "../pages/front_office/dossiers-communs/module.visa/sous.section/sous.section.page/PageDetailVisa";
 import HomePageAssurance from "../pages/front_office/dossiers-communs/module.assurance/HomePage.assurance";
-import AccueilViewAssurance from "../pages/front_office/dossiers-communs/module.assurance/sous.section/AccueilViewAssurance";
 import ParametreViewAssurance from "../pages/front_office/dossiers-communs/module.assurance/sous.section/ParametreViewAssurance";
 import PageViewAssurance from "../pages/front_office/dossiers-communs/module.assurance/sous.section/PageViewAssurance";
 import PageDetailPassager from "../pages/front_office/dossiers-communs/module.visa/sous.section/sous.section.page/PageDetailPassager";
@@ -64,6 +60,7 @@ import PageResultatStats from "../pages/front_office/dossiers-communs/module.res
 import PageTableauBord from "../pages/front_office/dossiers-communs/module.tableau.bord/PageTableauBord";
 import PageEtatVente from "../pages/front_office/dossiers-communs/module.etat.vente/PageEtatVente";
 import PageResultatStatDossierCommun from "../pages/front_office/dossiers-communs/module.resultat.stats/PageResultatStatDossierCommun";
+import AccueilView from "../pages/front_office/dossiers-communs/module.tableau.bord/AccueilView";
 
 export function frontOfficeRoutes() {
   return (
@@ -110,7 +107,7 @@ export function frontOfficeRoutes() {
       <Route path="dossiers-communs/ticketing" element={<HomePageTicketing />}>
         {/* Les routes enfants s'affichent à l'endroit où tu mettrais <Outlet /> dans PrestationDetail */}
         <Route index element={<Navigate to="accueil" replace />} />
-        <Route path="accueil" element={<AccueilView />} />
+        <Route path="accueil" element={<AccueilView module="ticketing"/>} />
         <Route path="parametres/:module" element={<ParametreView />} />
         <Route path="pages">
           <Route index element={<PageView />} />
@@ -125,7 +122,7 @@ export function frontOfficeRoutes() {
       {/* <Route path="dossiers-communs/ticketing/parametres" element={<ParametreTicketing />} /> */}
       <Route path="dossiers-communs/attestation" element={<Attestation />} >
         <Route index element={<Navigate to="accueil" replace />} />
-        <Route path="accueil" element={<AccueilView />} />
+        <Route path="accueil" element={<AccueilView module="attestation"/>} />
         <Route path="parametres/:module" element={<ParametreView />} />
         <Route path="pages" element={<PageViewAttestation />} />
         <Route path="details" element={<DetailAttestation />} />
@@ -134,7 +131,7 @@ export function frontOfficeRoutes() {
       <Route path="dossiers-communs/parametre" element={<Parametre />} />
       <Route path="dossiers-communs/hotel" element={<HomePageHotel />}>
         <Route index element={<Navigate to="accueil" replace />} />
-        <Route path="accueil" element={<AccueilViewHotel />} />
+        <Route path="accueil" element={<AccueilView module="hotel"/>} />
         <Route path="parametres" element={<ParametreViewHotel />} />
         <Route path="pages" element={<PageViewHotel />} />
         <Route path="details" element={<BenchmarkingDetailPage />} />
@@ -144,7 +141,7 @@ export function frontOfficeRoutes() {
 
       <Route path="dossiers-communs/visa" element={<HomePageVisa />}>
         <Route index element={<Navigate to="accueil" replace />} />
-        <Route path="accueil" element={<AccueilViewVisa />} />
+        <Route path="accueil" element={<AccueilView module="visa"/>} />
         <Route path="parametres" element={<ParametreViewVisa />} />
         <Route path="pages" element={<PageViewVisa />} />
         <Route path="details/:enteteId" element={<PageDetailProspection />} />
@@ -156,7 +153,7 @@ export function frontOfficeRoutes() {
 
       <Route path="dossiers-communs/assurance" element={<HomePageAssurance />}>
         <Route index element={<Navigate to="accueil" replace />} />
-        <Route path="accueil" element={<AccueilViewAssurance />} />
+        <Route path="accueil" element={<AccueilView module="assurance"/>} />
         <Route path="parametres" element={<ParametreViewAssurance />} />
         <Route path="pages" element={<PageViewAssurance />} />
         <Route path="detailsProspection/:enteteId" element={<PageDetailProspectionAssurance />} />

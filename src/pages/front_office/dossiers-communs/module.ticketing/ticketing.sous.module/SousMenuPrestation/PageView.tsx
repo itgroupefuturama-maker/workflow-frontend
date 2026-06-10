@@ -259,6 +259,7 @@ export default function PageView() {
                 {activeTabSousSection === 'suivi' && (
                   <SuiviTabSection
                     prestationId={prestationId}
+                    moduleName="ticketing"
                   />
                 )}
               </div>
@@ -423,6 +424,7 @@ export default function PageView() {
                 {activeTabSousSection === 'suivi' && (
                   <SuiviTabSection
                     prestationId={prestationId}
+                    moduleName="ticketing"
                   />
                 )}
               </div>

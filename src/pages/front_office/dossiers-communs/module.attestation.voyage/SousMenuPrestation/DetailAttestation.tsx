@@ -500,6 +500,7 @@ const DetailAttestation = () => {
                     {activeTab === 'suivi' && (
                       <SuiviTabSection
                         prestationId={prestationId}
+                        moduleName="attestation"
                       />
                     )}
                   </div>

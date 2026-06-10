@@ -301,6 +301,7 @@ const VisaTab = () => {
           {activeTabSousSection === 'suivi' && (
             <SuiviTabSection
               prestationId={prestationId}
+              moduleName="visa"
             />
           )}
         </div>

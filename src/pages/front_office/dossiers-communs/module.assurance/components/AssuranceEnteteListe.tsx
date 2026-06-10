@@ -213,151 +213,151 @@ const AssuranceEnteteListe = () => {
                         <p className="text-sm text-gray-400 italic px-5 py-4">Aucune ligne assurance.</p>
                       ) : (
                         <table className="w-full text-xs">
-  <thead>
-    <tr>
-      <Th>Zone · Fournisseur</Th>
-      <Th>Période</Th>
-      <Th>Durée</Th>
-      <Th>Tarif (Devise)</Th>
-      <Th>Tarif (Ariary)</Th>
-      <Th>Taux change</Th>
-      <Th>Statut ligne</Th>
-      <Th>N° police</Th>
-      <Th></Th>
-    </tr>
-  </thead>
-  <tbody>
-    {entete.assurance.map((ligne) => {
-      const tarif = ligne.assuranceProspectionLigne?.assuranceTarifPlein;
-      const devise = tarif?.devise ?? '—';
-      const tauxChange = ligne.assuranceProspectionLigne?.tauxChange;
+                          <thead>
+                            <tr>
+                              <Th>Zone · Fournisseur</Th>
+                              <Th>Période</Th>
+                              <Th>Durée</Th>
+                              <Th>Tarif (Devise)</Th>
+                              <Th>Tarif (Ariary)</Th>
+                              <Th>Taux change</Th>
+                              <Th>Statut ligne</Th>
+                              <Th>N° police</Th>
+                              <Th></Th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {entete.assurance.map((ligne) => {
+                              const tarif = ligne.assuranceProspectionLigne?.assuranceTarifPlein;
+                              const devise = tarif?.devise ?? '—';
+                              const tauxChange = ligne.assuranceProspectionLigne?.tauxChange;
 
-      return (
-        <React.Fragment key={ligne.id}>
-          <tr
-            className="hover:bg-gray-50 transition cursor-pointer"
-            onClick={() => toggleLigne(ligne.id)}
-          >
-            <Td>
-              <div>
-                <p className="font-medium text-gray-800">
-                  {ligne.assuranceProspectionLigne?.assuranceParams?.zoneDestination ?? '—'}
-                </p>
-                <p className="text-xs text-gray-400">
-                  {entete.assuranceProspectionEntete.fournisseur.libelle}
-                </p>
-              </div>
-            </Td>
+                              return (
+                                <React.Fragment key={ligne.id}>
+                                  <tr
+                                    className="hover:bg-gray-50 transition cursor-pointer"
+                                    onClick={() => toggleLigne(ligne.id)}
+                                  >
+                                    <Td>
+                                      <div>
+                                        <p className="font-medium text-gray-800">
+                                          {ligne.assuranceProspectionLigne?.assuranceParams?.zoneDestination ?? '—'}
+                                        </p>
+                                        <p className="text-xs text-gray-400">
+                                          {entete.assuranceProspectionEntete.fournisseur.libelle}
+                                        </p>
+                                      </div>
+                                    </Td>
 
-            <Td>
-              <span className="text-xs">
-                {fmtDate(ligne.assuranceProspectionLigne?.dateDepart)}
-                {' → '}
-                {fmtDate(ligne.assuranceProspectionLigne?.dateRetour)}
-              </span>
-            </Td>
+                                    <Td>
+                                      <span className="text-xs">
+                                        {fmtDate(ligne.assuranceProspectionLigne?.dateDepart)}
+                                        {' → '}
+                                        {fmtDate(ligne.assuranceProspectionLigne?.dateRetour)}
+                                      </span>
+                                    </Td>
 
-            <Td>
-              <span className="text-xs font-mono bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-semibold">
-                {ligne.assuranceProspectionLigne?.duree ?? '—'} j
-              </span>
-            </Td>
+                                    <Td>
+                                      <span className="text-xs font-mono bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-semibold">
+                                        {ligne.assuranceProspectionLigne?.duree ?? '—'} j
+                                      </span>
+                                    </Td>
 
-            {/* ── Prix en devise ── */}
-            <Td>
-              {tarif ? (
-                <div className="space-y-0.5">
-                  <div className="flex justify-between gap-2">
-                    <span className="text-gray-400">Assureur</span>
-                    <span className="font-semibold text-gray-700">
-                      {tarif.prixAssureurDevise.toLocaleString()} {devise}
-                    </span>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <span className="text-gray-400">Commission</span>
-                    <span className="font-semibold text-amber-600">
-                      {tarif.commissionDevise.toLocaleString()} {devise}
-                    </span>
-                  </div>
-                  <div className="flex justify-between gap-2 border-t border-gray-100 pt-0.5">
-                    <span className="text-gray-400">Client</span>
-                    <span className="font-bold text-indigo-600">
-                      {tarif.prixClientDevise.toLocaleString()} {devise}
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <span className="text-gray-300">—</span>
-              )}
-            </Td>
+                                    {/* ── Prix en devise ── */}
+                                    <Td>
+                                      {tarif ? (
+                                        <div className="space-y-0.5">
+                                          <div className="flex justify-between gap-2">
+                                            <span className="text-gray-400">Assureur</span>
+                                            <span className="font-semibold text-gray-700">
+                                              {tarif.prixAssureurDevise.toLocaleString()} {devise}
+                                            </span>
+                                          </div>
+                                          <div className="flex justify-between gap-2">
+                                            <span className="text-gray-400">Commission</span>
+                                            <span className="font-semibold text-amber-600">
+                                              {tarif.commissionDevise.toLocaleString()} {devise}
+                                            </span>
+                                          </div>
+                                          <div className="flex justify-between gap-2 border-t border-gray-100 pt-0.5">
+                                            <span className="text-gray-400">Client</span>
+                                            <span className="font-bold text-indigo-600">
+                                              {tarif.prixClientDevise.toLocaleString()} {devise}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <span className="text-gray-300">—</span>
+                                      )}
+                                    </Td>
 
-            {/* ── Prix en Ariary ── */}
-            <Td>
-              {tarif ? (
-                <div className="space-y-0.5">
-                  <div className="flex justify-between gap-2">
-                    <span className="text-gray-400">Assureur</span>
-                    <span className="font-semibold text-gray-700">
-                      {tarif.prixAssureurAriary.toLocaleString()} Ar
-                    </span>
-                  </div>
-                  <div className="flex justify-between gap-2">
-                    <span className="text-gray-400">Commission</span>
-                    <span className="font-semibold text-amber-600">
-                      {tarif.commissionAriary.toLocaleString()} Ar
-                    </span>
-                  </div>
-                  <div className="flex justify-between gap-2 border-t border-gray-100 pt-0.5">
-                    <span className="text-gray-400">Client</span>
-                    <span className="font-bold text-indigo-600">
-                      {tarif.prixClientAriary.toLocaleString()} Ar
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <span className="text-gray-300">—</span>
-              )}
-            </Td>
+                                    {/* ── Prix en Ariary ── */}
+                                    <Td>
+                                      {tarif ? (
+                                        <div className="space-y-0.5">
+                                          <div className="flex justify-between gap-2">
+                                            <span className="text-gray-400">Assureur</span>
+                                            <span className="font-semibold text-gray-700">
+                                              {tarif.prixAssureurAriary.toLocaleString()} Ar
+                                            </span>
+                                          </div>
+                                          <div className="flex justify-between gap-2">
+                                            <span className="text-gray-400">Commission</span>
+                                            <span className="font-semibold text-amber-600">
+                                              {tarif.commissionAriary.toLocaleString()} Ar
+                                            </span>
+                                          </div>
+                                          <div className="flex justify-between gap-2 border-t border-gray-100 pt-0.5">
+                                            <span className="text-gray-400">Client</span>
+                                            <span className="font-bold text-indigo-600">
+                                              {tarif.prixClientAriary.toLocaleString()} Ar
+                                            </span>
+                                          </div>
+                                        </div>
+                                      ) : (
+                                        <span className="text-gray-300">—</span>
+                                      )}
+                                    </Td>
 
-            {/* ── Taux de change ── */}
-            <Td>
-              {tauxChange ? (
-                <div className="text-center">
-                  <span className="font-mono bg-gray-50 border border-gray-200 text-gray-600 px-2 py-0.5 rounded text-xs">
-                    1 {devise} = {tauxChange.toLocaleString()} Ar
-                  </span>
-                </div>
-              ) : (
-                <span className="text-gray-300">—</span>
-              )}
-            </Td>
+                                    {/* ── Taux de change ── */}
+                                    <Td>
+                                      {tauxChange ? (
+                                        <div className="text-center">
+                                          <span className="font-mono bg-gray-50 border border-gray-200 text-gray-600 px-2 py-0.5 rounded text-xs">
+                                            1 {devise} = {tauxChange.toLocaleString()} Ar
+                                          </span>
+                                        </div>
+                                      ) : (
+                                        <span className="text-gray-300">—</span>
+                                      )}
+                                    </Td>
 
-            <Td><StatusBadge status={ligne.statusLigne} /></Td>
+                                    <Td><StatusBadge status={ligne.statusLigne} /></Td>
 
-            <Td className="text-gray-400 text-xs">{ligne.numeroPolice ?? '—'}</Td>
+                                    <Td className="text-gray-400 text-xs">{ligne.numeroPolice ?? '—'}</Td>
 
-            <Td>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  navigate(`/dossiers-communs/assurance/detailsAssurance/${ligne.id}`, {
-                    state: {
-                      numeroDos: entete.assuranceProspectionEntete.prestation.numeroDos,
-                      fournisseur: entete.assuranceProspectionEntete.fournisseur.libelle,
-                    }
-                  });
-                }}
-                className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-indigo-50 border border-indigo-200 text-indigo-600 text-xs font-semibold rounded-lg hover:bg-indigo-100 transition"
-              >
-                Détail <FiArrowRight />
-              </button>
-            </Td>
-          </tr>
-        </React.Fragment>
-      );
-    })}
-  </tbody>
-</table>
+                                    <Td>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          navigate(`/dossiers-communs/assurance/detailsAssurance/${ligne.id}`, {
+                                            state: {
+                                              numeroDos: entete.assuranceProspectionEntete.prestation.numeroDos,
+                                              fournisseur: entete.assuranceProspectionEntete.fournisseur.libelle,
+                                            }
+                                          });
+                                        }}
+                                        className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-indigo-50 border border-indigo-200 text-indigo-600 text-xs font-semibold rounded-lg hover:bg-indigo-100 transition"
+                                      >
+                                        Détail <FiArrowRight />
+                                      </button>
+                                    </Td>
+                                  </tr>
+                                </React.Fragment>
+                              );
+                            })}
+                          </tbody>
+                        </table>
                       )}
                     </div>
                   {/* )} */}
@@ -370,6 +370,7 @@ const AssuranceEnteteListe = () => {
           {activeTabSousSection === 'suivi' && (
             <SuiviTabSection
               prestationId={prestationId}
+              moduleName="assurance"
             />
           )}
         </div>

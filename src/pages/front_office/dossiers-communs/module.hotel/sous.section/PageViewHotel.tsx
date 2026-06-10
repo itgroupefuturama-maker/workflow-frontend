@@ -696,6 +696,7 @@ const PageViewHotel = () => {
                 {activeTabSousSection === 'suivi' && (
                   <SuiviTabSection
                     prestationId={prestationId}
+                    moduleName="hotel"
                   />
                 )}
                 <FournisseurAlerteBadge />

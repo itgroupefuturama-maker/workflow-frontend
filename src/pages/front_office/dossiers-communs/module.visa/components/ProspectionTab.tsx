@@ -330,6 +330,7 @@ const ProspectionTab = ({ prestationId }: Props) => {
           {activeTabSousSection === 'suivi' && (
             <SuiviTabSection
               prestationId={prestationId}
+              moduleName="visa"
             />
           )}
         </div>

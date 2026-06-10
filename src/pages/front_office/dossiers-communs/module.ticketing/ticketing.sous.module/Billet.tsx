@@ -489,6 +489,7 @@ const Billet = () => {
               {innerTab === 'suivi' && (
                 <SuiviTabSection
                     prestationId={enteteId || ''}
+                    moduleName="ticketing"
                   />
               )}
             </div>

@@ -527,6 +527,7 @@ const PageViewAttestation = () => {
                 {activeTabSousSection === 'suivi' && (
                   <SuiviTabSection
                     prestationId={prestationId}
+                    moduleName="attestation"
                   />
                 )}
 

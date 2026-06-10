@@ -463,6 +463,7 @@ const HotelReservationsList = ({ prestationId, dossierNumero }: Props) => {
           {activeTabSousSection === 'suivi' && (
             <SuiviTabSection
               prestationId={prestationId}
+              moduleName="hotel"
             />
           )}
         </div>

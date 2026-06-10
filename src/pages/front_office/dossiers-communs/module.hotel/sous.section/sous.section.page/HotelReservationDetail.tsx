@@ -793,7 +793,9 @@ const HotelReservationDetail = () => {
 
                     {/* ── Suivi ── */}
                     {activeTabSousSection === 'suivi' && (
-                      <SuiviTabSection prestationId={prestationId} />
+                      <SuiviTabSection prestationId={prestationId} 
+                      moduleName="hotel"
+                      />
                     )}
                   </div>
                 </div>

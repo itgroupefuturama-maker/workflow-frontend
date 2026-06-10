@@ -1453,6 +1453,7 @@ export default function ProspectionDetail() {
               {activeTabSousSection === 'suivi' && (
                 <SuiviTabSection
                   prestationId={prestationId}
+                  moduleName="ticketing"
                 />
               )}
             </div>
