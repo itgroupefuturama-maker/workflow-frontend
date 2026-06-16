@@ -316,7 +316,7 @@ export const useBilletPassagerPdf = () => {
     setLoading(true);
     try {
       const style = BILLET_STYLES[styleId];
-      const doc = generateBilletPassagerPdf(data, style, config.getLogo(), { returnDoc: true });
+      const doc = generateBilletPassagerPdf(data, style, config.getLogo(), undefined, { returnDoc: true });
       if (doc) {
         const blob = doc.output('blob');
         const url  = URL.createObjectURL(blob);

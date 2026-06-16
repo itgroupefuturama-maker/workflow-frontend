@@ -68,7 +68,7 @@ const PageResultatStats: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden px-8 pt-8 pb-8">
+    <div className="flex-1 flex flex-col overflow-hidden px-8 pt-8 pb-8 bg-slate-100 h-full">
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between mb-6">

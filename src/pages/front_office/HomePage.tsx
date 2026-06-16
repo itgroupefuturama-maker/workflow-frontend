@@ -76,18 +76,6 @@ const CATEGORIES = [
       { label: 'Gestion Couleurs',      desc: 'Palettes et thèmes écran',                path: '/dossiers-communs/couleurs',             defaultTab: null, icon: FiSettings,     color: 'violet' },
     ],
   },
-  // {
-  //   key: 'locked',
-  //   label: 'En cours de développement',
-  //   desc: 'Ces modules seront disponibles prochainement.',
-  //   icon: FiLock,
-  //   iconColor: 'text-gray-400',
-  //   iconBg: 'bg-gray-100',
-  //   modules: [
-  //     { label: 'Résultats Stats', desc: 'Analyses de données', path: '', defaultTab: null, icon: FiLock, color: 'gray', locked: true },
-  //     { label: 'Tableau de bord', desc: "Vue d'ensemble",      path: '', defaultTab: null, icon: FiLock, color: 'gray', locked: true },
-  //   ],
-  // },
 ];
 
 const COLOR_MAP: Record<string, {
@@ -123,11 +111,11 @@ function HomePage() {
     <div className="min-h-screen relative overflow-hidden">
 
       {/* Fond décoratif */}
-      <div className="absolute inset-0 bg-linear-to-br from-slate-100 via-white to-blue-50/40 pointer-events-none" />
-      <div className="absolute -top-40 -left-40 w-[500px] h-[500px] bg-linear-to-br from-blue-400/10 to-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-40 -right-40 w-[600px] h-[600px] bg-linear-to-tl from-violet-400/10 to-purple-500/8 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute inset-0 bg-linear-to-br from-[#dde6f5] via-[#e8f0fd] to-[#eef2fb] pointer-events-none" />
+      <div className="absolute -top-40 -left-40 w-[500px] h-[500px] bg-linear-to-br from-blue-400/20 to-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute -bottom-40 -right-40 w-[600px] h-[600px] bg-linear-to-tl from-violet-400/15 to-purple-500/12 rounded-full blur-3xl pointer-events-none" />
       <div
-        className="absolute inset-0 pointer-events-none opacity-[0.025]"
+        className="absolute inset-0 pointer-events-none opacity-[0.04]"
         style={{ backgroundImage: 'radial-gradient(circle, #475569 1px, transparent 1px)', backgroundSize: '28px 28px' }}
       />
 
@@ -157,7 +145,7 @@ function HomePage() {
 
                 {/* En-tête de catégorie */}
                 <div className="flex items-start gap-3 mb-4 pb-3 border-b border-slate-100">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${category.iconBg}`}>
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${category.iconBg}`}>
                     <CatIcon className={category.iconColor} size={15} />
                   </div>
                   <div>
@@ -198,10 +186,10 @@ function HomePage() {
                           state: mod.defaultTab ? { targetTab: mod.defaultTab } : undefined,
                         })}
                         className={`
-                          group relative shadow-sm bg-white/80 backdrop-blur-sm rounded-2xl p-5
+                          group relative shadow-md shadow-blue-200/40 bg-white rounded-2xl p-5
                           cursor-pointer border ${c.border}
                           transition-all duration-300
-                          hover:shadow-xl ${c.glow} hover:-translate-y-1.5
+                          hover:shadow-xl hover:shadow-blue-300/50 ${c.glow} hover:-translate-y-1.5
                           overflow-hidden
                         `}
                       >
@@ -209,7 +197,7 @@ function HomePage() {
                         <div className={`absolute top-0 left-0 right-0 h-0.5 bg-linear-to-r ${c.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-t-2xl`} />
 
                         {/* Blob décoratif */}
-                        <div className={`absolute -top-6 -right-6 w-24 h-24 bg-linear-to-br ${c.gradient} opacity-[0.06] rounded-full group-hover:scale-150 group-hover:opacity-[0.10] transition-all duration-500`} />
+                        <div className={`absolute -top-6 -right-6 w-24 h-24 bg-linear-to-br ${c.gradient} opacity-[0.1] rounded-full group-hover:scale-150 group-hover:opacity-[0.3] transition-all duration-500`} />
 
                         <div className="relative z-10">
                           <div className={`w-11 h-11 ${c.iconBg} rounded-xl flex items-center justify-center mb-4 transition-all duration-300 group-hover:scale-105`}>
@@ -233,7 +221,7 @@ function HomePage() {
 
         {/* Footer */}
         <p className="text-center text-xs text-slate-300 mt-12">
-          2 modules en cours de développement
+          Copyright © 2026 ABT IT Developpement
         </p>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import type { PdfDesign } from '../types/pdf-design.types';
+import { drawPageHeader } from '../generators/billet-passager.generator';
 
 // ─── Constantes portrait (rétrocompatibilité) ────────────────────────
 export const PAGE_W    = 210;
@@ -46,11 +47,10 @@ export function checkPage(
   design: PdfDesign,
   layout?: PageLayout
 ) {
-  const { pageH, margin, contentW } = layout ?? makeLayout('portrait');
+  const { pageH, margin } = layout ?? makeLayout('portrait');
   if (cursor.y + need > pageH - margin) {
     doc.addPage();
-    cursor.y = 20;
-    drawWatermark(doc, design, layout);
+    drawPageHeader(doc, cursor, design, undefined, layout);
   }
 }
 

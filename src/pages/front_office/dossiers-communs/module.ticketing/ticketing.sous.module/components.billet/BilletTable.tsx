@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import type { BilletLigne, ServiceProspectionLigne, ServiceSpecifique } from '../../../../../../app/front_office/billetSlice';
+import type { BilletEntete, BilletLigne, ServiceProspectionLigne, ServiceSpecifique } from '../../../../../../app/front_office/billetSlice';
 import { FiFilter, FiX } from 'react-icons/fi';
 import { API_URL } from '../../../../../../service/env';
-import type { BilletPassagerData } from '../../../module.pdf/pdf.generation/generators/billet-passager.generator';
+import type { BilletPassagerData, BilletPassagerExigence, BilletPassagerService } from '../../../module.pdf/pdf.generation/generators/billet-passager.generator';
 import { useBilletPassagerPdf } from '../../../module.pdf/pdf.generation/hooks/usePdfGenerator';
 import type { BilletStyleId } from '../../../module.pdf/pdf.generation/types/pdf-design.types';
 import { BILLET_STYLES } from '../../../module.pdf/pdf.generation/config/billet-styles';
@@ -30,268 +30,385 @@ interface BilletTableProps {
 interface PassagersCellProps {
   billets: BilletLigne['billet'];
   handleReporter: (ligne: BilletLigne) => void;
+  ligne: BilletLigne;
+  billetEntete: BilletEntete;
 }
 
-const PassagersCell: React.FC<PassagersCellProps> = ({ billets, handleReporter }) => {
-  const [expanded, setExpanded]   = useState(false);
-  const [styleId, setStyleId]     = useState<BilletStyleId>('elegant');
+const PassagersCell: React.FC<PassagersCellProps> = ({ billets, handleReporter, ligne, billetEntete }) => {
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [styleIds, setStyleIds]       = useState<Record<string, BilletStyleId>>({});
+  const [billetAReporter, setBilletAReporter] = useState<BilletLigne['billet'][0] | null>(null);
+  const [dateReport, setDateReport]   = useState('');
   const { generate, preview, loading: pdfLoading } = useBilletPassagerPdf();
 
-  // Helper pour construire BilletPassagerData depuis un billet
-  const buildBilletData = (b: BilletLigne['billet'][0], ligne?: any): BilletPassagerData => {
+  const toggleExpand = (id: string) =>
+    setExpandedIds(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  const getStyle = (id: string): BilletStyleId => styleIds[id] ?? 'elegant';
+  const setStyle = (id: string, s: BilletStyleId) =>
+    setStyleIds(prev => ({ ...prev, [id]: s }));
+
+  // À adapter dans PassagersCell — reçoit aussi `ligne: BilletLigne` et `billet: BilletEntete`
+  const buildBilletData = (
+    b: BilletLigne['billet'][0],
+    ligne: BilletLigne,
+    billetEntete: BilletEntete,
+  ): BilletPassagerData => {
     const info = b.clientbeneficiaireInfo;
+    const p    = ligne.prospectionLigne;
+    const ent  = billetEntete.prospectionEntete;
+
+    // Collecte des exigences depuis la destination (comme le devis)
+    const exigences: BilletPassagerExigence[] =
+      p.destinationVoyage?.pays?.paysVoyage
+        ?.map(pv => pv.exigenceVoyage)
+        .filter(Boolean) ?? [];
+
+    // Services depuis prospectionLigne (comme le devis)
+    const services: BilletPassagerService[] =
+      (p.serviceProspectionLigne ?? []).map(s => ({
+        libelle:     s.serviceSpecifique?.libelle    ?? '—',
+        code:        s.serviceSpecifique?.code       ?? '—',
+        type:        s.serviceSpecifique?.type       ?? null,
+        typeService: s.serviceSpecifique?.typeService ?? '—',
+        valeur:      s.valeur,
+      }));
+
     return {
-      nom:            info.nom,
-      prenom:         info.prenom,
-      nationalite:    info.nationalite,
-      typeDoc:        info.typeDoc,
-      referenceDoc:   info.referenceDoc,
-      dateValiditeDoc:info.dateValiditeDoc,
-      // Les infos vol viennent de la ligne parente si disponibles
-      // Sinon on met des valeurs par défaut depuis le billet
-      numeroVol:      '—',
-      itineraire:     '—',
-      classe:         '—',
-      typePassager:   info.clientType ?? '—',
-      dateDepart:     new Date().toISOString(),
-      heureDepart:    '—',
-      heureArrive:    '—',
-      numeroBillet:   b.numeroBillet,
-      reservation:    null,
+      // Passager
+      nom:             info.nom,
+      prenom:          info.prenom,
+      nationalite:     info.nationalite,
+      typeDoc:         info.typeDoc,
+      referenceDoc:    info.referenceDoc,
+      dateValiditeDoc: info.dateValiditeDoc,
+      clientType:      info.clientType ?? '—',
+      tel:             info.tel       || undefined,
+      whatsapp:        info.whatsapp  || undefined,
+      // Billet
+      numeroBillet:        b.numeroBillet,
+      statut:              b.statut,
+      numeroBilletEntete:  billetEntete.numeroBillet,
+      totalCompagnie:      billetEntete.totalCompagnie,
+      commissionPropose:   billetEntete.commissionPropose,
+      commissionAppliquer: billetEntete.commissionAppliquer,
+      totalCommission:     billetEntete.totalCommission,
+      // Dossier
+      numeroDossier: ent?.prestation?.numeroDos   ?? '—',
+      fournisseur:   ent?.fournisseur?.libelle    ?? '—',
+      typeVol:       ent?.typeVol                 ?? '—',
+      credit:        ent?.credit                  ?? '—',
+      dateEmission:  b.createdAt,
+      agence:        'AGT — AL BOURAQ TRAVEL',
+      // Ligne de vol — tout ce qui est dans BilletLigne + ProspectionLigne
+      ligne: {
+        numeroDosRef:   p.numeroDosRef           ?? '—',
+        numeroVol:      p.numeroVol              ?? '—',
+        avion:          p.avion                  ?? '—',
+        itineraire:     p.itineraire             ?? '—',
+        classe:         p.classe                 ?? '—',
+        typePassager:   p.typePassager           ?? '—',
+        nombre:         p.nombre                 ?? 1,
+        dateHeureDepart: p.dateHeureDepart,
+        dateHeureArrive: p.dateHeureArrive,
+        dureeVol:       p.dureeVol               ?? '—',
+        dureeEscale:    p.dureeEscale            ?? '—',
+        devise:         p.devise                 ?? '—',
+        tauxEchange:    p.tauxEchange            ?? 0,
+        // Prospection
+        puBilletCompagnieDevise:         p.puBilletCompagnieDevise       ?? 0,
+        puServiceCompagnieDevise:        p.puServiceCompagnieDevise      ?? 0,
+        puPenaliteCompagnieDevise:       p.puPenaliteCompagnieDevise     ?? 0,
+        montantBilletClientDevise:       p.montantBilletClientDevise     ?? 0,
+        montantServiceClientDevise:      p.montantServiceClientDevise    ?? 0,
+        montantPenaliteClientDevise:     p.montantPenaliteClientDevise   ?? 0,
+        montantBilletCompagnieAriary:    p.montantBilletCompagnieAriary  ?? 0,
+        montantServiceCompagnieAriary:   p.montantServiceCompagnieAriary ?? 0,
+        montantPenaliteCompagnieAriary:  p.montantPenaliteCompagnieAriary ?? 0,
+        montantBilletClientAriary:       p.montantBilletClientAriary     ?? 0,
+        montantServiceClientAriary:      p.montantServiceClientAriary    ?? 0,
+        montantPenaliteClientAriary:     p.montantPenaliteClientAriary   ?? 0,
+        commissionEnDevise:              p.commissionEnDevise            ?? 0,
+        commissionEnAriary:              p.commissionEnAriary            ?? 0,
+        conditionModif:                  p.conditionModif,
+        conditionAnnul:                  p.conditionAnnul,
+        modePaiement:                    p.modePaiement                  ?? '—',
+        // Réservation (depuis BilletLigne)
+        reservation:                        ligne.reservation,
+        puResaBilletCompagnieDevise:         ligne.puResaBilletCompagnieDevise,
+        puResaServiceCompagnieDevise:        ligne.puResaServiceCompagnieDevise,
+        puResaPenaliteCompagnieDevise:       ligne.puResaPenaliteCompagnieDevise,
+        resaTauxEchange:                     ligne.resaTauxEchange,
+        puResaBilletClientAriary:            ligne.puResaBilletClientAriary,
+        puResaServiceClientAriary:           ligne.puResaServiceClientAriary,
+        puResaPenaliteClientAriary:          ligne.puResaPenaliteClientAriary,
+        puResaMontantBilletCompagnieAriary:  ligne.puResaMontantBilletCompagnieAriary,
+        puResaMontantServiceCompagnieAriary: ligne.puResaMontantServiceCompagnieAriary,
+        puResaMontantPenaliteCompagnieAriary:ligne.puResaMontantPenaliteCompagnieAriary,
+        resaCommissionEnDevise:              ligne.resaCommissionEnDevise,
+        resaCommissionEnAriary:              ligne.resaCommissionEnAriary,
+        // Émission (depuis BilletLigne)
+        emissionTauxChange:                     ligne.emissionTauxChange,
+        emissionMontantBilletCompagnieAriary:    ligne.emissionMontantBilletCompagnieAriary,
+        emissionMontantServiceCompagnieAriary:   ligne.emissionMontantServiceCompagnieAriary,
+        emissionMontantPenaliteCompagnieAriary:  ligne.emissionMontantPenaliteCompagnieAriary,
+        emissionMontantBilletClientAriary:       ligne.emissionMontantBilletClientAriary,
+        emissionMontantServiceClientAriary:      ligne.emissionMontantServiceClientAriary,
+        emissionMontantPenaliteClientAriary:     ligne.emissionMontantPenaliteClientAriary,
+        emissionCommissionEnDevise:              ligne.emissionCommissionEnDevise,
+        emissionCommissionEnAriary:              ligne.emissionCommissionEnAriary,
+        // Services & destination
+        services,
+        destinationVoyage: p.destinationVoyage as any,
+      },
+      exigences,
     };
   };
 
-  if (!billets || billets.length === 0) {
+  const ouvrirDialogue = (b: BilletLigne['billet'][0]) => {
+    setBilletAReporter(b);
+    setDateReport('');
+  };
+
+  const confirmerReport = () => {
+    if (!billetAReporter) return;
+    handleReporter(billetAReporter);
+    setBilletAReporter(null);
+  };
+
+  if (!billets || billets.length === 0)
     return <span className="text-slate-400 text-xs italic">Aucun passager</span>;
-  }
+
+  const infoReporter = billetAReporter?.clientbeneficiaireInfo;
+  const nomReporter  = `${infoReporter?.prenom ?? ''} ${infoReporter?.nom ?? ''}`.trim() || 'Passager inconnu';
 
   return (
-    <div className="space-y-2 min-w-[280px]">
-      {billets.map((b, idx) => {
-        const info = b.clientbeneficiaireInfo;
-        const nomComplet = `${info?.prenom || ''} ${info?.nom || ''}`.trim() || 'Passager inconnu';
-        const docExpire = info?.dateValiditeDoc
-          ? new Date(info.dateValiditeDoc) < new Date()
-          : false;
+    <>
+      <div className="flex flex-col gap-2.5 min-w-[340px]">
+        {billets.map((b, idx) => {
+          const info       = b.clientbeneficiaireInfo;
+          const nomComplet = `${info?.prenom ?? ''} ${info?.nom ?? ''}`.trim() || 'Passager inconnu';
+          const expanded   = expandedIds.has(b.id);
+          const styleId    = getStyle(b.id);
+          const docExpire  = info?.dateValiditeDoc
+            ? new Date(info.dateValiditeDoc) < new Date()
+            : false;
 
-        return (
-          <div
-            key={b.id}
-            className="border border-slate-200 rounded-lg overflow-hidden bg-white shadow-sm"
-          >
-            {/* Header passager */}
-            <button
-              type="button"
-              onClick={() => setExpanded((prev) => !prev)}
-              className="w-full px-3 py-2 flex items-center gap-2 bg-slate-50 hover:bg-slate-100 transition-colors text-left"
-            >
-              <div className="w-5 h-5 bg-slate-700 text-white rounded-full flex items-center justify-center text-[10px] font-bold shrink-0">
-                {idx + 1}
-              </div>
-              <span className="text-xs font-semibold text-slate-800 flex-1 truncate">
-                {nomComplet || 'Passager inconnu'}
-              </span>
-              {/* Billet émis */}
-              {b.numeroBillet && (
-                <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded font-mono shrink-0">
-                  {b.numeroBillet}
+          return (
+            <div key={b.id} className="border border-slate-300/80 rounded-xl bg-white overflow-hidden">
+
+              {/* ── Header ── */}
+              <button
+                type="button"
+                onClick={() => toggleExpand(b.id)}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 hover:bg-slate-50 transition-colors text-left"
+              >
+                <span className="w-[22px] h-[22px] rounded-full bg-slate-100 border border-slate-200
+                                 flex items-center justify-center text-[11px] font-medium text-slate-500 shrink-0">
+                  {idx + 1}
                 </span>
-              )}
-              <span className="text-slate-400 text-[10px]">{expanded ? '▲' : '▼'}</span>
-            </button>
-
-            {/* Préférences (toujours visibles) */}
-            {b.servicePreference && b.servicePreference.length > 0 && (
-              <div className="px-3 py-1.5 flex flex-wrap gap-1 border-t border-slate-100 bg-indigo-50/50">
-                {b.servicePreference.map((pref, i) => (
-                  <span
-                    key={i}
-                    className="px-2 py-0.5 bg-indigo-100 text-indigo-700 border border-indigo-200 rounded text-[10px] font-medium"
-                  >
-                    ✓ {pref}
+                <span className="flex-1 text-[13px] font-medium text-slate-800 truncate">{nomComplet}</span>
+                {b.numeroBillet && (
+                  <span className="text-[10px] font-mono bg-emerald-50 text-emerald-700
+                                   border border-emerald-200 rounded-md px-1.5 py-0.5 shrink-0">
+                    {b.numeroBillet}
                   </span>
-                ))}
-              </div>
-            )}
-
-            {/* Détails (expandable) */}
-            {expanded && (
-              <div className="px-3 py-2.5 border-t border-slate-100 space-y-1.5 text-[11px] text-slate-600">
-                {/* Document */}
-                <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                  <div>
-                    <span className="text-slate-400 uppercase tracking-wide text-[9px] font-bold">Type</span>
-                    <p className="font-semibold text-slate-700">{info.typeDoc || '—'}</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 uppercase tracking-wide text-[9px] font-bold">Statut</span>
-                    <p className="font-semibold text-slate-700">{b.statut || '—'}</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 uppercase tracking-wide text-[9px] font-bold">Référence</span>
-                    <p className="font-mono font-semibold text-slate-700">{info.referenceDoc || '—'}</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 uppercase tracking-wide text-[9px] font-bold">Nationalité</span>
-                    <p className="font-semibold text-slate-700">{info.nationalite || '—'}</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 uppercase tracking-wide text-[9px] font-bold">Type passager</span>
-                    <p className="font-semibold text-slate-700">{info.clientType || '—'}</p>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 uppercase tracking-wide text-[9px] font-bold">Validité doc</span>
-                    <p className={`font-semibold ${docExpire ? 'text-red-600' : 'text-emerald-700'}`}>
-                      {info.dateValiditeDoc
-                        ? new Date(info.dateValiditeDoc).toLocaleDateString('fr-FR')
-                        : '—'}
-                      {docExpire && ' ⚠️'}
-                    </p>
-                  </div>
-                  {info.tel && (
-                    <div>
-                      <span className="text-slate-400 uppercase tracking-wide text-[9px] font-bold">Tél</span>
-                      <p className="font-mono text-slate-700">{info.tel}</p>
-                    </div>
-                  )}
-                </div>
-
-                {/* PJ Billet */}
-                {b.pjBillet ? (
-                  <div className="space-y-2">
-                    {/* Sélecteur de style billet */}
-                    <div className="flex items-center gap-1 flex-wrap">
-                      {Object.values(BILLET_STYLES).map((s) => (
-                        <button
-                          key={s.id}
-                          onClick={() => setStyleId(s.id as BilletStyleId)}
-                          className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium border transition-colors ${
-                            styleId === s.id
-                              ? 'border-slate-700 bg-slate-700 text-white'
-                              : 'border-slate-200 bg-white text-slate-600 hover:border-slate-400'
-                          }`}
-                        >
-                          <span
-                            className="w-2.5 h-2.5 rounded-full shrink-0"
-                            style={{ backgroundColor: s.preview }}
-                          />
-                          {s.label}
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <button
-                        disabled={b.statut !== 'PLANIFIE'}
-                        onClick={() => handleReporter(b)}
-                        className={`
-                          flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all
-                          ${b.statut !== 'PLANIFIE'
-                            ? 'bg-gray-50 text-gray-400 border border-gray-200 cursor-not-allowed'
-                            : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-600 hover:text-white active:scale-95'}
-                        `}
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
-                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        Reporter
-                      </button>
-                      {/* Aperçu billet généré */}
-                      <button
-                        onClick={() => preview(buildBilletData(b), styleId)}
-                        disabled={pdfLoading}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5
-                          bg-indigo-50 text-indigo-700 border border-indigo-200
-                          rounded-lg text-[11px] font-medium hover:bg-indigo-100
-                          disabled:opacity-50 transition-colors"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                        Aperçu
-                      </button>
-
-                      {/* Télécharger billet généré */}
-                      <button
-                        onClick={() => generate(buildBilletData(b), styleId)}
-                        disabled={pdfLoading}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5
-                          bg-blue-50 text-blue-700 border border-blue-200
-                          rounded-lg text-[11px] font-medium hover:bg-blue-100
-                          disabled:opacity-50 transition-colors"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                            d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        {pdfLoading ? '…' : 'Billet PDF'}
-                      </button>
-
-                      {/* Voir PJ serveur (existant) */}
-                      {/* <a
-                        href={`${API_URL}/${b.pjBillet}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5
-                          bg-slate-50 text-slate-600 border border-slate-200
-                          rounded-lg text-[11px] font-medium hover:bg-slate-100
-                          transition-colors"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
-                        PJ Serveur
-                      </a> */}
-
-                    </div>
-                  </div>
-                ) : (
-                  // Même affichage qu'avant si pas de PJ
-                  // Mais on propose quand même de générer le billet PDF
-                  <div className="space-y-1.5">
-                    <span className="inline-flex items-center gap-1 text-slate-400 text-[10px] italic">
-                      Pas de PJ billet
-                    </span>
-                    <div className="flex items-center gap-1 flex-wrap">
-                      {Object.values(BILLET_STYLES).map((s) => (
-                        <button
-                          key={s.id}
-                          onClick={() => setStyleId(s.id as BilletStyleId)}
-                          className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] font-medium border transition-colors ${
-                            styleId === s.id
-                              ? 'border-slate-700 bg-slate-700 text-white'
-                              : 'border-slate-200 bg-white text-slate-600 hover:border-slate-400'
-                          }`}
-                        >
-                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.preview }} />
-                          {s.label}
-                        </button>
-                      ))}
-                    </div>
-                    <button
-                      onClick={() => preview(buildBilletData(b), styleId)}
-                      disabled={pdfLoading}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5
-                        bg-indigo-50 text-indigo-700 border border-indigo-200
-                        rounded-lg text-[11px] font-medium hover:bg-indigo-100
-                        disabled:opacity-50 transition-colors"
-                    >
-                      Générer billet
-                    </button>
-                  </div>
                 )}
+                {b.statut && (
+                  <span className="text-[10px] font-medium bg-amber-50 text-amber-700
+                                   border border-amber-200 rounded-md px-1.5 py-0.5 shrink-0">
+                    {b.statut}
+                  </span>
+                )}
+                <svg className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`}
+                  fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </button>
+
+              {/* ── Préférences ── */}
+              {b.servicePreference && b.servicePreference.length > 0 && (
+                <div className="flex flex-wrap gap-1 px-3.5 py-2 border-t border-slate-100 bg-slate-50/60">
+                  {b.servicePreference.map((pref, i) => (
+                    <span key={i} className="text-[10px] font-medium px-2 py-0.5 rounded-md
+                                            bg-indigo-50 text-indigo-700 border border-indigo-200">
+                      ✓ {pref}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* ── Corps ── */}
+              {expanded && (
+                <div className="flex border-t border-slate-100">
+
+                  {/* Grille d'infos */}
+                  <div className="flex-1 grid grid-cols-2 px-3.5 py-3 min-w-0">
+                    {[
+                      { label: 'Type doc',      value: info.typeDoc,      cls: '' },
+                      { label: 'Nationalité',   value: info.nationalite,  cls: '' },
+                      { label: 'Référence',     value: info.referenceDoc, cls: 'font-mono' },
+                      { label: 'Type passager', value: info.clientType,   cls: '' },
+                      {
+                        label: 'Validité doc',
+                        value: info.dateValiditeDoc
+                          ? new Date(info.dateValiditeDoc).toLocaleDateString('fr-FR')
+                          : '—',
+                        cls:    docExpire ? 'text-red-600' : 'text-emerald-700',
+                        suffix: docExpire ? ' ⚠️' : '',
+                      },
+                      ...(info.tel ? [{ label: 'Téléphone', value: info.tel, cls: 'font-mono' }] : []),
+                    ].map(({ label, value, cls, suffix }, i, arr) => (
+                      <div key={label}
+                        className={`flex flex-col gap-0.5 py-1.5 ${i < arr.length - 2 ? 'border-b border-slate-100' : ''}`}>
+                        <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">{label}</span>
+                        <span className={`text-[12px] font-medium text-slate-700 ${cls}`}>
+                          {value || '—'}{suffix}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Colonne d'actions */}
+                  <div className="flex flex-col gap-2 px-3.5 py-3 border-l border-slate-100 min-w-[130px] justify-center">
+
+                    {/* Sélecteur de style */}
+                    <div className="flex flex-wrap gap-1">
+                      {Object.values(BILLET_STYLES).map((s) => (
+                        <button key={s.id} onClick={() => setStyle(b.id, s.id as BilletStyleId)}
+                          className={`flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium border transition-colors
+                            ${styleId === s.id
+                              ? 'border-slate-700 bg-slate-700 text-white'
+                              : 'border-slate-200 bg-white text-slate-500 hover:border-slate-400'}`}>
+                          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: s.preview }} />
+                          {s.label}
+                        </button>
+                      ))}
+                    </div>
+
+                    <hr className="border-slate-100" />
+
+                    {/* Reporter → ouvre le dialogue */}
+                    <button
+                      disabled={b.statut !== 'PLANIFIE'}
+                      onClick={() => ouvrirDialogue(b)}
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border w-full transition-all
+                        ${b.statut !== 'PLANIFIE'
+                          ? 'border-slate-100 text-slate-300 cursor-not-allowed'
+                          : 'border-amber-200 text-amber-700 hover:bg-amber-50 active:scale-95'}`}
+                    >
+                      <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Reporter
+                    </button>
+
+                    {/* Aperçu */}
+                    <button onClick={() => preview(buildBilletData(b, ligne, billetEntete), styleId)} disabled={pdfLoading}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border w-full
+                                 border-violet-200 text-violet-700 hover:bg-violet-50 disabled:opacity-40 transition-colors">
+                      <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      Aperçu
+                    </button>
+
+                    {/* Billet PDF */}
+                    <button onClick={() => generate(buildBilletData(b, ligne, billetEntete), styleId)} disabled={pdfLoading}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border w-full
+                                 border-blue-200 text-blue-700 hover:bg-blue-50 disabled:opacity-40 transition-colors">
+                      <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      {pdfLoading ? '…' : 'Billet PDF'}
+                    </button>
+
+                    {!b.pjBillet && (
+                      <p className="text-[10px] text-slate-400 italic text-center">Pas de PJ</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* ── Dialogue de confirmation Reporter ── */}
+      {billetAReporter && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onClick={() => setBilletAReporter(null)}
+        >
+          <div
+            className="bg-white rounded-2xl w-full max-w-sm mx-4 overflow-hidden"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-start gap-3 px-5 pt-5 pb-4">
+              <div className="w-9 h-9 rounded-full bg-amber-100 flex items-center justify-center shrink-0">
+                <svg className="w-5 h-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               </div>
-            )}
+              <div className="flex-1 min-w-0">
+                <h3 className="text-[15px] font-semibold text-slate-800">Reporter le billet</h3>
+                <p className="text-[12px] text-slate-500 mt-0.5 truncate">
+                  {nomReporter}
+                  {billetAReporter.numeroBillet && (
+                    <span className="ml-1.5 font-mono text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
+                      {billetAReporter.numeroBillet}
+                    </span>
+                  )}
+                </p>
+              </div>
+              <button onClick={() => setBilletAReporter(null)}
+                className="text-slate-400 hover:text-slate-600 transition-colors">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Avertissement */}
+            <div className="mx-5 mb-5 flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3.5 py-3">
+              <svg className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              </svg>
+              <p className="text-[11px] text-amber-700 leading-relaxed">
+                Voulez-vous vraiment reporter ce billet ? Cette action est irréversible.
+              </p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2.5 px-5 pb-5">
+              <button onClick={() => setBilletAReporter(null)}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200
+                          text-[13px] font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+                Annuler
+              </button>
+              <button
+                onClick={confirmerReport}
+                className="flex-1 px-4 py-2.5 rounded-xl text-[13px] font-semibold text-white
+                          bg-amber-500 hover:bg-amber-600 active:scale-[0.98] transition-all"
+              >
+                Confirmer
+              </button>
+            </div>
           </div>
-        );
-      })}
-    </div>
+        </div>
+      )}
+    </>
   );
 };
 
@@ -741,7 +858,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                 {/* Services + Actions fixes */}
                 <th rowSpan={2} className="px-4 py-3 text-left font-semibold text-slate-700 uppercase bg-slate-100">Mode de paiement</th>
                 <th rowSpan={2} className="px-4 py-3 text-left font-semibold text-slate-700 uppercase bg-slate-100">Services</th>
-                <th rowSpan={2} className="px-4 py-3 text-left font-semibold text-slate-700 uppercase bg-slate-100 min-w-[300px]">
+                <th rowSpan={2} className="px-4 py-3 text-left font-semibold text-slate-700 uppercase bg-slate-100 min-w-[600px]">
                   Passagers & Billets
                 </th>
                 <th rowSpan={2} className="px-4 py-3 text-center font-semibold text-slate-700 uppercase bg-slate-100 min-w-[220px]">Preuve</th>
@@ -990,7 +1107,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                 )}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-300">
               {sortedLignes.map((ligne, index) => {
                 const p = ligne.prospectionLigne;
                 const fournisseurLibelle = billet?.prospectionEntete?.fournisseur?.libelle || '—';
@@ -1298,7 +1415,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                       {!collapsedGroups.annulation ? (
                         <>
                           <td className="px-4 py-3">{p?.conditionModif || '—'}</td>
-                          <td className="px-4 py-3">{p?.conditionAnnulation || '—'}</td>
+                          <td className="px-4 py-3">{p?.conditionAnnul || '—'}</td>
                         </>
                       ) : (
                         <td className="px-4 py-3 text-center text-xs text-orange-600 bg-orange-50 italic">
@@ -1317,7 +1434,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                       </td>
 
                       <td className="px-4 py-3 align-top">
-                        <PassagersCell billets={ligne.billet} handleReporter={handleReporter} />
+                        <PassagersCell billets={ligne.billet} handleReporter={handleReporter} ligne={ligne} billetEntete={billet} />
                       </td>
 
                       {/* Preuve client — image séparée car pas un simple texte */}

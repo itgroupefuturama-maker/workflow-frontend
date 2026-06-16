@@ -69,7 +69,7 @@ const PageEtatVente: React.FC = () => {
   const moduleSelectionne = modules.find((m) => m.id === moduleId);
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden px-8 pt-8 pb-8 space-y-6">
+    <div className="flex-1 flex flex-col overflow-hidden px-8 pt-8 pb-8 space-y-6 bg-slate-100 h-full">
 
       {/* ── Titre ── */}
         <div className="flex items-center gap-4">
@@ -89,44 +89,44 @@ const PageEtatVente: React.FC = () => {
         </div>
 
       {/* ── Barre de filtres ── */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="bg-white rounded-xl border border-gray-100 shadow-sm px-4 py-3">
+        <div className="flex flex-wrap items-end gap-3">
 
           {/* Date début */}
-          <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">
+          <div className="flex flex-col gap-0.5 min-w-[130px]">
+            <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
               Date début
             </label>
             <input
               type="month"
               value={dateDebut}
               onChange={(e) => setDateDebut(e.target.value)}
-              className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition"
+              className="px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition"
             />
           </div>
 
           {/* Date fin */}
-          <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">
+          <div className="flex flex-col gap-0.5 min-w-[130px]">
+            <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
               Date fin
             </label>
             <input
               type="month"
               value={dateFin}
               onChange={(e) => setDateFin(e.target.value)}
-              className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition"
+              className="px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition"
             />
           </div>
 
           {/* Module */}
-          <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">
+          <div className="flex flex-col gap-0.5 min-w-[150px]">
+            <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
               Module
             </label>
             <select
               value={moduleId}
               onChange={(e) => setModuleId(e.target.value)}
-              className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition bg-white"
+              className="px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition bg-white"
             >
               <option value="">Tous les modules</option>
               {modules.map((m) => (
@@ -136,8 +136,8 @@ const PageEtatVente: React.FC = () => {
           </div>
 
           {/* Client facturé */}
-          <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">
+          <div className="flex flex-col gap-0.5 min-w-[160px] flex-1">
+            <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
               Client facturé
             </label>
             <input
@@ -145,31 +145,32 @@ const PageEtatVente: React.FC = () => {
               value={clientFacture}
               onChange={(e) => setClientFacture(e.target.value)}
               placeholder="Ex : Client Air France"
-              className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition"
+              className="px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition"
             />
           </div>
-        </div>
 
-        {/* Boutons */}
-        <div className="flex items-center gap-3 mt-4 justify-end">
-          <button
-            onClick={handleReset}
-            className="flex items-center gap-1.5 px-4 py-2 text-sm text-gray-500 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition"
-          >
-            <FiX size={14} />
-            Réinitialiser
-          </button>
-          <button
-            onClick={handleSearch}
-            disabled={loadingEtatVente}
-            className="flex items-center gap-1.5 px-5 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition disabled:opacity-50"
-          >
-            {loadingEtatVente
-              ? <FiRefreshCw size={14} className="animate-spin" />
-              : <FiSearch size={14} />
-            }
-            Rechercher
-          </button>
+          {/* Boutons — alignés en bas avec les inputs */}
+          <div className="flex items-end gap-2 pb-0.5">
+            <button
+              onClick={handleReset}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-500 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition"
+            >
+              <FiX size={13} />
+              Réinitialiser
+            </button>
+            <button
+              onClick={handleSearch}
+              disabled={loadingEtatVente}
+              className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition disabled:opacity-50"
+            >
+              {loadingEtatVente
+                ? <FiRefreshCw size={13} className="animate-spin" />
+                : <FiSearch size={13} />
+              }
+              Rechercher
+            </button>
+          </div>
+
         </div>
       </div>
 

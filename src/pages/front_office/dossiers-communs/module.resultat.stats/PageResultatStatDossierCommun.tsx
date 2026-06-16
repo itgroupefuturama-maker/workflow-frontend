@@ -18,7 +18,7 @@ const PageResultatStatDossierCommun = () => {
   }, [dispatch]);
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden px-8 pt-8 pb-8">
+    <div className="flex-1 flex flex-col overflow-hidden px-8 pt-8 pb-8 bg-slate-100 h-full">
 
       {/* ── Header ── */}
       <div className="flex items-center justify-between mb-6">
@@ -31,7 +31,7 @@ const PageResultatStatDossierCommun = () => {
             <span className="text-sm font-medium">Retour</span>
           </button>
 
-          <h1 className="text-xl font-bold text-gray-900">Liste des dossiers communs</h1>
+          <h1 className="text-xl font-bold text-gray-900">Résultat Statistiques par Dossier Commun</h1>
         </div>
 
         <button
@@ -53,7 +53,7 @@ const PageResultatStatDossierCommun = () => {
                 {[
                   'N° Dos', 'Réf Travel Planner', 'Date Création', 'Statut',
                   'Description',
-                  'Client Facturé', 'Crée par', 'Modules',
+                  'Client Facturé', 'Crée par', 'Modules', 'Action'
                 ].map((h) => (
                   <th key={h} className="px-5 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">
                     {h}
@@ -120,6 +120,13 @@ const PageResultatStatDossierCommun = () => {
                             </span>
                           ))}
                       </div>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <button
+                        className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-semibold rounded-lg hover:bg-indigo-700 transition-colors"
+                      >
+                        Voir
+                      </button>
                     </td>
                   </tr>
                 ))

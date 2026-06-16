@@ -18,36 +18,26 @@ export const PDF_DESIGNS: Record<string, PdfDesign> = {
     },
   },
 
-  moderne: {
-    id: 'moderne',
-    label: 'Moderne',
-    description: 'Vert sobre, look contemporain et aéré',
-    preview: '#0A5A3C',
+  emirates: {
+    id: 'emirates',
+    label: 'AL Bouraq Travel - Design',
+    description: 'Style document compagnie aérienne, formel et paginé',
+    preview: '#1A2744',
     colors: {
-      headerBg:      [10,  90,  60],
+      headerBg:      [26,  39,  68],
       headerText:    [255, 255, 255],
-      accentBg:      [10,  90,  60],
+      accentBg:      [26,  39,  68],
       accentText:    [255, 255, 255],
-      tableHeadBg:   [232, 245, 238],
-      tableHeadText: [10,  90,  60],
-      accentLine:    [10,  90,  60],
+      tableHeadBg:   [244, 246, 250],
+      tableHeadText: [26,  39,  68],
+      accentLine:    [215, 25,  33],
     },
-  },
-
-  minimaliste: {
-    id: 'minimaliste',
-    label: 'Minimaliste',
-    description: 'Noir et blanc, sobre et professionnel',
-    preview: '#1A1A1A',
-    colors: {
-      headerBg:      [26,  26,  26],
-      headerText:    [255, 255, 255],
-      accentBg:      [26,  26,  26],
-      accentText:    [255, 255, 255],
-      tableHeadBg:   [245, 245, 245],
-      tableHeadText: [26,  26,  26],
-      accentLine:    [26,  26,  26],
+    staticTexts: {
+      headerSubtitle: 'Agence de voyages agréée IATA · Madagascar',
+      footerContact:  'albouraqtravel@gmail.com  ·  +261 34 01 637 17',
+      footerLegal:    "Devis établi sous réserve de disponibilité. Tarifs susceptibles de modification jusqu'à émission du billet.",
+      validityLabel:  'Validité du devis',
+      validityValue:  "30 jours à compter de la date d'émission",
     },
-    watermark: 'ORIGINAL',
   },
 };

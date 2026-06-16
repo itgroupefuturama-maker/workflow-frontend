@@ -187,7 +187,7 @@ const PageControle = () => {
 
   // ── Rendu ────────────────────────────────────────────────────────────────────
   return (
-    <div onClick={() => setOpenFilter(null)}>
+    <div onClick={() => setOpenFilter(null)} className='bg-slate-100 h-full'>
 
       {/* HEADER */}
       <div className="bg-white p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
