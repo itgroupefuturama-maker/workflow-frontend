@@ -206,6 +206,19 @@ export default function ProspectionDetail() {
                             + (mtPenaliteClientDevise - mtPenaliteCieDevise);
     const commissionEnAriary = commissionEnDevise * taux;
 
+    // ── Taxe : saisie soit du taux (%), soit du montant direct (règle de trois inversée) ──
+    const modeSaisieTaxe = formData.modeSaisieTaxe === 'MONTANT' ? 'MONTANT' : 'POURCENTAGE';
+    let tauxTaxe: number;
+    let montantTaxeDevise: number;
+    if (modeSaisieTaxe === 'MONTANT') {
+      montantTaxeDevise = Number(formData.montantTaxeDevise) || 0;
+      tauxTaxe = puBilletCieDevise > 0 ? (montantTaxeDevise / puBilletCieDevise) * 100 : 0;
+    } else {
+      tauxTaxe = Number(formData.tauxTaxe) || 0;
+      montantTaxeDevise = puBilletCieDevise * (tauxTaxe / 100);
+    }
+    const montantTaxeAriary = montantTaxeDevise * taux;
+
     return {
       departId:      formData.departId,
       destinationId: formData.destinationId,
@@ -248,6 +261,12 @@ export default function ProspectionDetail() {
 
       commissionEnDevise,
       commissionEnAriary,
+
+      tauxTaxe,
+      montantTaxeDevise,
+      montantTaxeAriary,
+      aeroportDepart:     formData.aeroportDepart || null,
+      aeroportArrivee:    formData.aeroportArrivee || null,
 
       // modePaiement: formData.modePaiement || 'COMPTANT',
 
@@ -534,6 +553,12 @@ export default function ProspectionDetail() {
       montantBilletClientDevise: 0,
       montantServiceClientDevise: 0,
       montantPenaliteClientDevise: 0,
+      modeSaisieTaxe: 'POURCENTAGE',
+      tauxTaxe: 0,
+      montantTaxeDevise: 0,
+      montantTaxeAriary: 0,
+      aeroportDepart: '',
+      aeroportArrivee: '',
       serviceValues: initialServiceValues,
       // modePaiement: 'COMPTANT' as ModePaiement,
       isSaving: false,
@@ -1099,7 +1124,7 @@ export default function ProspectionDetail() {
 
                             {/* Groupe : Infos Vol */}
                             <th
-                              colSpan={collapsedGroups.infosVol ? 1 : 11}
+                              colSpan={collapsedGroups.infosVol ? 1 : 13}
                               className="px-4 py-2 text-center text-xs font-bold text-white uppercase bg-slate-700 border-x border-slate-500 cursor-pointer hover:bg-slate-600 transition-colors select-none"
                               onClick={() => toggleGroup('infosVol')}
                             >
@@ -1116,7 +1141,7 @@ export default function ProspectionDetail() {
 
                             {/* Groupe : Tarifs Cie Devise */}
                             <th
-                              colSpan={collapsedGroups.tarifsCieDevise ? 1 : (showPenalite ? 6 : 4)}
+                              colSpan={collapsedGroups.tarifsCieDevise ? 1 : (showPenalite ? 9 : 7)}
                               className="px-4 py-2 text-center text-xs font-bold text-white uppercase bg-emerald-700 border-x border-emerald-500 cursor-pointer hover:bg-emerald-600 transition-colors select-none"
                               onClick={() => toggleGroup('tarifsCieDevise')}
                             >
@@ -1198,6 +1223,8 @@ export default function ProspectionDetail() {
                                 <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[180px]">Itinéraire</th>
                                 <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[100px]">Durée vol</th>
                                 <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[110px]">Durée escale</th>
+                                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[130px]">Aéroport Départ</th>
+                                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[130px]">Aéroport Arrivée</th>
                               </>
                             ) : (
                               <th className="px-4 py-2 text-center text-xs text-slate-400 italic bg-slate-800/10">— replié —</th>
@@ -1216,6 +1243,9 @@ export default function ProspectionDetail() {
                                 <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[140px]">Mt Billet</th>
                                 <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[140px]">Mt Service</th>
                                 {showPenalite && <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[140px]">Mt Pénalité</th>}
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[110px]">Taux Taxe</th>
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[130px]">Mt Taxe Devise</th>
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[130px]">Mt Taxe Ariary</th>
                               </>
                             ) : (
                               <th className="px-4 py-2 text-center text-xs text-emerald-400 italic bg-emerald-50">— replié —</th>
@@ -1308,6 +1338,8 @@ export default function ProspectionDetail() {
                                     
                                   <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">{ligne.dureeVol || '—'}</td>
                                   <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">{ligne.dureeEscale || '—'}</td>
+                                  <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">{ligne.aeroportDepart || '—'}</td>
+                                  <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">{ligne.aeroportArrivee || '—'}</td>
                                 </>
                                 ) : (
                                   <td className="px-4 py-4 text-center text-xs text-slate-400 bg-slate-50 italic">
@@ -1328,6 +1360,9 @@ export default function ProspectionDetail() {
                                     <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{ligne.montantBilletCompagnieDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>
                                     <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{ligne.montantServiceCompagnieDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>
                                     {showPenalite && <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{ligne.montantPenaliteCompagnieDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) || '—'}</td>}
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{ligne.tauxTaxe?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) ?? '—'}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{ligne.montantTaxeDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 }) ?? '—'}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{ligne.montantTaxeAriary?.toLocaleString('fr-FR') ?? '—'}</td>
                                   </>
                                 ) : (
                                   <td className="px-4 py-4 text-center text-xs text-emerald-600 bg-emerald-50 font-semibold">
@@ -1419,7 +1454,7 @@ export default function ProspectionDetail() {
                             ))
                           ) : (
                             <tr>
-                              <td colSpan={33} className="px-6 py-10 text-center text-slate-500">
+                              <td colSpan={38} className="px-6 py-10 text-center text-slate-500">
                                 {loadingLignes ? 'Chargement des lignes...' : 'Aucune ligne trouvée'}
                               </td>
                             </tr>

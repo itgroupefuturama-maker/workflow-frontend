@@ -86,6 +86,12 @@ export interface ProspectionLigne {
   dateDevis: string | null;
   devisId: string | null;
 
+  tauxTaxe: number;
+  montantTaxeDevise: number;
+  montantTaxeAriary: number;
+  aeroportDepart: string | null;
+  aeroportArrivee: string | null;
+
   createdAt: string;
   updatedAt: string;
 
@@ -151,6 +157,13 @@ export interface CreateProspectionLignePayload {
   // Commission
   commissionEnDevise: number;
   commissionEnAriary: number;
+  // Taxe
+  tauxTaxe: number;
+  montantTaxeDevise: number;
+  montantTaxeAriary: number;
+  aeroportDepart: string | null;
+  aeroportArrivee: string | null;
+  
   nombre: number;
   modePaiement: ModePaiement;
   services: { serviceSpecifiqueId: string; valeur: string }[];

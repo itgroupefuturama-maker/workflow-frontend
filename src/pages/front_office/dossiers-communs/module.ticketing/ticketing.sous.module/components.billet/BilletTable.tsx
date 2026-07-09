@@ -330,10 +330,6 @@ const PassagersCell: React.FC<PassagersCellProps> = ({ billets, handleReporter, 
                       </svg>
                       {pdfLoading ? '…' : 'Billet PDF'}
                     </button>
-
-                    {!b.pjBillet && (
-                      <p className="text-[10px] text-slate-400 italic text-center">Pas de PJ</p>
-                    )}
                   </div>
                 </div>
               )}
@@ -602,7 +598,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
 
                 {/* Groupe Infos Vol */}
                 <th
-                  colSpan={collapsedGroups.infosVol ? 1 : 10}
+                  colSpan={collapsedGroups.infosVol ? 1 : 12}
                   onClick={() => toggleGroup('infosVol')}
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-slate-700 border-x border-slate-500 cursor-pointer hover:bg-slate-600 transition-colors select-none"
                 >
@@ -615,7 +611,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                 {/* ********************** Prix Prospection ********************** */}
                 {/* Groupe PU Cie Devise */}
                 <th
-                  colSpan={collapsedGroups.puCieDevise ? 1 : 3}
+                  colSpan={collapsedGroups.puCieDevise ? 1 : 6}
                   onClick={() => toggleGroup('puCieDevise')}
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-emerald-700 border-x border-emerald-500 cursor-pointer hover:bg-emerald-600 transition-colors select-none"
                 >
@@ -878,6 +874,8 @@ const BilletTable: React.FC<BilletTableProps> = ({
                     <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10">Type pax</th>
                     <th className="px-4 py-2 text-center text-xs font-semibold text-slate-500 bg-slate-800/10">Date départ</th>
                     <th className="px-4 py-2 text-center text-xs font-semibold text-slate-500 bg-slate-800/10">Date arrivée</th>
+                    <th className="px-4 py-2 text-center text-xs font-semibold text-slate-500 bg-slate-800/10">Aéroport départ</th>
+                    <th className="px-4 py-2 text-center text-xs font-semibold text-slate-500 bg-slate-800/10">Aéroport arrivée</th>
                     <th className="px-4 py-2 text-center text-xs font-semibold text-slate-500 bg-slate-800/10">Durée vol</th>
                     <th className="px-4 py-2 text-center text-xs font-semibold text-slate-500 bg-slate-800/10">Durée escale</th>
                   </>
@@ -891,6 +889,9 @@ const BilletTable: React.FC<BilletTableProps> = ({
                     <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50">Billet</th>
                     <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50">Service</th>
                     <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50">Pénalité</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50">Taux Taxe</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50">Taxe Devise</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50">Taxe Ariary</th>
                   </>
                 ) : (
                   <th className="px-4 py-2 text-center text-xs text-emerald-400 italic bg-emerald-50">— replié —</th>
@@ -1148,6 +1149,8 @@ const BilletTable: React.FC<BilletTableProps> = ({
                           <td className="px-4 py-3 text-center">
                             {p?.dateHeureArrive ? new Date(p.dateHeureArrive).toLocaleDateString('fr-FR') : '—'}
                           </td>
+                          <td className="px-4 py-3">{p?.aeroportDepart || '—'}</td>
+                          <td className="px-4 py-3">{p?.aeroportArrivee || '—'}</td>
                           <td className="px-4 py-3">{p?.dureeVol || '—'}</td>
                           <td className="px-4 py-3">{p?.dureeEscale || '—'}</td>
                         </>
@@ -1167,6 +1170,9 @@ const BilletTable: React.FC<BilletTableProps> = ({
                           <PriceCell value={p?.puBilletCompagnieDevise} isCurrency />
                           <PriceCell value={p?.puServiceCompagnieDevise} isCurrency />
                           <PriceCell value={p?.puPenaliteCompagnieDevise} isCurrency />
+                          <PriceCell value={p?.tauxTaxe} isCurrency />
+                          <PriceCell value={p?.montantTaxeDevise} isCurrency />
+                          <PriceCell value={p?.montantTaxeAriary} isCurrency />
                         </>
                       ) : (
                         <td className="px-4 py-3 text-center text-xs text-emerald-600 bg-emerald-50 font-semibold">

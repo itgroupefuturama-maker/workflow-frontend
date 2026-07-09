@@ -137,12 +137,19 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
         puResaMontantPenaliteCompagnieDevise: totalPenalite,
       }));
     }
-  }, [
-    nombrePassagers,
-    formData.puResaBilletCompagnieDevise,
-    formData.puResaServiceCompagnieDevise,
-    formData.puResaPenaliteCompagnieDevise,
-  ]);
+  }, [nombrePassagers, formData.puResaBilletCompagnieDevise, formData.puResaServiceCompagnieDevise, formData.puResaPenaliteCompagnieDevise, totalBillet, totalService, totalPenalite]);
+
+  // ─── Initialisation des tarifs compagnie depuis prospectionLigne ───
+  useEffect(() => {
+    if (isOpen && ligne?.prospectionLigne) {
+      setFormData((prev) => ({
+        ...prev,
+        puResaBilletCompagnieDevise: ligne.prospectionLigne.puBilletCompagnieDevise || 0,
+        puResaServiceCompagnieDevise: ligne.prospectionLigne.puServiceCompagnieDevise || 0,
+        puResaPenaliteCompagnieDevise: ligne.prospectionLigne.puPenaliteCompagnieDevise || 0,
+      }));
+    }
+  }, [isOpen, ligne]);
 
   useEffect(() => {
     if (!dropdownOpen) return;
@@ -782,58 +789,96 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
                           Prix unitaires
                         </h4>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          {/* PU Billet */}
                           <div>
                             <label className="block text-xs font-medium text-gray-700 mb-1.5">
                               PU Billet <span className="text-red-600">*</span>
                             </label>
-                            <input
-                              type="number"
-                              name="puResaBilletCompagnieDevise"
-                              value={formData.puResaBilletCompagnieDevise}
-                              onChange={handleChange}
-                              step="0.01"
-                              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
-                              placeholder="0.00"
-                            />
+                            <div className="relative">
+                              <input
+                                type="number"
+                                name="puResaBilletCompagnieDevise"
+                                value={formData.puResaBilletCompagnieDevise}
+                                onChange={handleChange}
+                                step="0.01"
+                                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-gray-900 focus:border-gray-900 font-semibold text-gray-900"
+                                placeholder={ligne?.prospectionLigne?.puBilletCompagnieDevise?.toFixed(2) || "0.00"}
+                              />
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                                {formData.devise}
+                              </span>
+                            </div>
                             {nombrePassagers > 0 && (
                               <p className="text-xs text-gray-600 mt-1.5">
                                 → Total: <span className="font-semibold">{totalBillet.toLocaleString('fr-FR')} {formData.devise}</span>
                               </p>
                             )}
+                            {ligne?.prospectionLigne?.puBilletCompagnieDevise && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                Original: {ligne.prospectionLigne.puBilletCompagnieDevise.toFixed(2)}
+                              </p>
+                            )}
                           </div>
 
+                          {/* PU Service */}
                           <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1.5">PU Service</label>
-                            <input
-                              type="number"
-                              name="puResaServiceCompagnieDevise"
-                              value={formData.puResaServiceCompagnieDevise}
-                              onChange={handleChange}
-                              step="0.01"
-                              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
-                              placeholder="0.00"
-                            />
+                            <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                              PU Service
+                            </label>
+                            <div className="relative">
+                              <input
+                                type="number"
+                                name="puResaServiceCompagnieDevise"
+                                value={formData.puResaServiceCompagnieDevise}
+                                onChange={handleChange}
+                                step="0.01"
+                                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-gray-900 focus:border-gray-900 font-semibold text-gray-900"
+                                placeholder={ligne?.prospectionLigne?.puServiceCompagnieDevise?.toFixed(2) || "0.00"}
+                              />
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                                {formData.devise}
+                              </span>
+                            </div>
                             {nombrePassagers > 0 && (
                               <p className="text-xs text-gray-600 mt-1.5">
                                 → Total: <span className="font-semibold">{totalService.toLocaleString('fr-FR')} {formData.devise}</span>
                               </p>
                             )}
+                            {ligne?.prospectionLigne?.puServiceCompagnieDevise && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                Original: {ligne.prospectionLigne.puServiceCompagnieDevise.toFixed(2)}
+                              </p>
+                            )}
                           </div>
 
+                          {/* PU Pénalité */}
                           <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1.5">PU Pénalité</label>
-                            <input
-                              type="number"
-                              name="puResaPenaliteCompagnieDevise"
-                              value={formData.puResaPenaliteCompagnieDevise}
-                              readOnly
-                              step="0.01"
-                              className="w-full bg-gray-100 border border-gray-300 rounded px-3 py-2 text-sm text-gray-500 cursor-not-allowed"
-                              placeholder="0.00"
-                            />
+                            <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                              PU Pénalité
+                            </label>
+                            <div className="relative">
+                              <input
+                                type="number"
+                                name="puResaPenaliteCompagnieDevise"
+                                value={formData.puResaPenaliteCompagnieDevise}
+                                onChange={handleChange}
+                                disabled
+                                step="0.01"
+                                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-gray-900 focus:border-gray-900 font-semibold text-gray-900"
+                                placeholder={ligne?.prospectionLigne?.puPenaliteCompagnieDevise?.toFixed(2) || "0.00"}
+                              />
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                                {formData.devise}
+                              </span>
+                            </div>
                             {nombrePassagers > 0 && (
                               <p className="text-xs text-gray-600 mt-1.5">
                                 → Total: <span className="font-semibold">{totalPenalite.toLocaleString('fr-FR')} {formData.devise}</span>
+                              </p>
+                            )}
+                            {ligne?.prospectionLigne?.puPenaliteCompagnieDevise && (
+                              <p className="text-xs text-gray-500 mt-1">
+                                Original: {ligne.prospectionLigne.puPenaliteCompagnieDevise.toFixed(2)}
                               </p>
                             )}
                           </div>
@@ -847,39 +892,70 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
                         </h4>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1.5">Total Billet</label>
-                            <input
-                              type="number"
-                              name="puResaMontantBilletCompagnieDevise"
-                              value={formData.puResaMontantBilletCompagnieDevise}
-                              onChange={handleChange}
-                              step="0.01"
-                              className="w-full border border-gray-300 bg-gray-50 rounded px-3 py-2 text-sm font-semibold text-gray-900"
-                            />
+                            <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                              Total Billet
+                            </label>
+                            <div className="relative">
+                              <input
+                                type="number"
+                                name="puResaMontantBilletCompagnieDevise"
+                                value={formData.puResaMontantBilletCompagnieDevise}
+                                onChange={handleChange}
+                                disabled
+                                step="0.01"
+                                className="w-full border border-gray-300 bg-blue-50 rounded px-3 py-2 text-sm font-semibold text-gray-900 focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                              />
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                                {formData.devise}
+                              </span>
+                            </div>
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1.5">Total Service</label>
-                            <input
-                              type="number"
-                              name="puResaMontantServiceCompagnieDevise"
-                              value={formData.puResaMontantServiceCompagnieDevise}
-                              onChange={handleChange}
-                              step="0.01"
-                              className="w-full border border-gray-300 bg-gray-50 rounded px-3 py-2 text-sm font-semibold text-gray-900"
-                            />
+                            <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                              Total Service
+                            </label>
+                            <div className="relative">
+                              <input
+                                type="number"
+                                name="puResaMontantServiceCompagnieDevise"
+                                value={formData.puResaMontantServiceCompagnieDevise}
+                                onChange={handleChange}
+                                disabled
+                                step="0.01"
+                                className="w-full border border-gray-300 bg-blue-50 rounded px-3 py-2 text-sm font-semibold text-gray-900 focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                              />
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                                {formData.devise}
+                              </span>
+                            </div>
                           </div>
                           <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1.5">Total Pénalité</label>
-                            <input
-                              type="number"
-                              name="puResaMontantPenaliteCompagnieDevise"
-                              value={formData.puResaMontantPenaliteCompagnieDevise}
-                              readOnly
-                              step="0.01"
-                              className="w-full bg-gray-100 border border-gray-300 rounded px-3 py-2 text-sm font-semibold text-gray-500 cursor-not-allowed"
-                            />
+                            <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                              Total Pénalité
+                            </label>
+                            <div className="relative">
+                              <input
+                                type="number"
+                                name="puResaMontantPenaliteCompagnieDevise"
+                                value={formData.puResaMontantPenaliteCompagnieDevise}
+                                readOnly
+                                step="0.01"
+                                className="w-full bg-gray-100 border border-gray-300 rounded px-3 py-2 text-sm font-semibold text-gray-500 cursor-not-allowed"
+                              />
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+                                {formData.devise}
+                              </span>
+                            </div>
                           </div>
                         </div>
+                      </div>
+
+                      {/* Badge d'info */}
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
+                        <span className="text-lg">ℹ️</span>
+                        <p className="text-xs text-blue-800">
+                          Les tarifs ont été pré-chargés depuis la prospection. Vous pouvez les modifier si nécessaire.
+                        </p>
                       </div>
                     </div>
                   </section>

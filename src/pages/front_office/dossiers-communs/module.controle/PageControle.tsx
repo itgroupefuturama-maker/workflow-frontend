@@ -169,7 +169,7 @@ const PageControle = () => {
 
   const COLUMNS = [
     'Date transaction', 'Type', 'Statut transaction',
-    'Catégorie Prestation',
+    'Catégorie Prestation', 'Bénéficiaire',
     'N° Dos. commun', 'N° Dos. prestation', 'Origine ligne',
     'Prestation', 'Commentaire', 'Partenaire', 'Prestataire',
     'Com PU Devise', 'Com CU Devise', 'Com Devise', 'Com Taux change',
@@ -367,12 +367,16 @@ const PageControle = () => {
                       <td className="px-3 py-2.5 align-middle whitespace-nowrap uppercase">
                         <Badge label={item.module.nom} color="gray" />
                       </td>
+                      <Td mono muted>
+                        {item.clientBeneficiaire?.map(cb => cb.libelle).join(', ') || '—'}
+                      </Td>
                       <Td>N° {item.numDosCommun}</Td>
                       <Td>{item.numDosPrestation}</Td>
                       <Td mono muted>{item.origineLigne}</Td>
                       <Td>{item.prestation}</Td>
                       <Td mono>{item.commentaire || '—'}</Td>
-                      <Td mono muted>{item.fournisseur?.libelle}</Td>
+                      {/* <Td mono muted>{item.clientBeneficiaire?.[0]?.libelle ?? '—'}</Td> */}
+                      <Td mono muted>{item.transaction === 'VENTE' ? item.clientFacture?.libelle : item.fournisseur?.libelle ?? 'Fournisseur A'}</Td>
                       <Td mono muted>{item.user?.nom} {item.user?.prenom}</Td>
                       <Td right>{formatDevise(item.cmPuDevise, item.cmDevise)}</Td>
                       <Td right>{formatDevise(item.cmCuDevise, item.cmDevise)}</Td>

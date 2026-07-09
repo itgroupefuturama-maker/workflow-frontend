@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import type { AppDispatch } from '../../app/store';
 import { createServiceSpecifique } from '../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
@@ -7,12 +7,13 @@ import type { TypeService } from '../../app/front_office/parametre_ticketing/ser
 interface ServiceSpecifiqueModalProps {
   isOpen: boolean;
   onClose: () => void;
-  typeService: TypeService; // ← nouveau
+  typeService: TypeService;
+  defaultType?: 'SERVICE' | 'SPECIFIQUE';
 }
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
-export default function ServiceSpecifiqueModal({ isOpen, onClose, typeService }: ServiceSpecifiqueModalProps) {
+export default function ServiceSpecifiqueModal({ isOpen, onClose, typeService, defaultType }: ServiceSpecifiqueModalProps) {
   const dispatch = useAppDispatch();
 
   const [form, setForm] = useState({
@@ -21,6 +22,13 @@ export default function ServiceSpecifiqueModal({ isOpen, onClose, typeService }:
   });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Pré-remplit le type selon le tableau depuis lequel la modal a été ouverte
+  useEffect(() => {
+    if (isOpen) {
+      setForm((f) => ({ ...f, type: defaultType || 'SERVICE' }));
+    }
+  }, [isOpen, defaultType]);
 
   if (!isOpen) return null;
 
@@ -34,11 +42,10 @@ export default function ServiceSpecifiqueModal({ isOpen, onClose, typeService }:
     setSubmitting(true);
     setError(null);
 
-    // ── Payload selon le contexte ──────────────────────────
     const payload =
       typeService === 'HOTEL'
-        ? { libelle: form.libelle, typeService }           // pas de "type"
-        : { libelle: form.libelle, type: form.type, typeService }; // avec "type"
+        ? { libelle: form.libelle, typeService }
+        : { libelle: form.libelle, type: form.type, typeService };
 
     const resultAction = await dispatch(createServiceSpecifique(payload));
 
@@ -56,9 +63,8 @@ export default function ServiceSpecifiqueModal({ isOpen, onClose, typeService }:
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
 
-        {/* Titre dynamique */}
         <h2 className="text-xl font-bold mb-6">
-          Nouveau service — {typeService === 'HOTEL' ? 'Hôtel' : 'Ticketing'}
+          Nouveau service — {typeService === 'HOTEL' ? 'Hôtel' : form.type === 'SERVICE' ? 'Service' : 'Spécifique'}
         </h2>
 
         {error && (
@@ -68,7 +74,6 @@ export default function ServiceSpecifiqueModal({ isOpen, onClose, typeService }:
         )}
 
         <form onSubmit={handleSubmit}>
-          {/* Libellé */}
           <div className="mb-5">
             <label className="block text-sm font-medium text-slate-700 mb-1">
               Libellé *
@@ -83,7 +88,7 @@ export default function ServiceSpecifiqueModal({ isOpen, onClose, typeService }:
             />
           </div>
 
-          {/* Champ "Type" uniquement pour TICKET */}
+          {/* Le select reste visible et modifiable même pré-rempli, au cas où l'utilisateur change d'avis */}
           {typeService === 'TICKET' && (
             <div className="mb-6">
               <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -100,7 +105,6 @@ export default function ServiceSpecifiqueModal({ isOpen, onClose, typeService }:
             </div>
           )}
 
-          {/* Actions */}
           <div className="flex justify-end gap-3">
             <button
               type="button"

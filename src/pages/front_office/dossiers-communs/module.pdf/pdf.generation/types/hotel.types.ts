@@ -251,6 +251,8 @@ export interface HotelPdfSelection {
     ligneId: string;
     deviseIds: string[]; // IDs des deviseHotel sélectionnées
   }[];
+
+  images?: string[];
 }
 
 // ─── Normalisation vers HotelProspectionEnteteItem ───────────────────

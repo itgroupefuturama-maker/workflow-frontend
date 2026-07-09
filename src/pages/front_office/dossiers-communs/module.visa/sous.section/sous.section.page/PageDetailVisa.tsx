@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import type { AppDispatch, RootState } from '../../../../../../app/store';
-import { FiArrowRight, FiCheck, FiCheckCircle, FiChevronDown, FiFile } from 'react-icons/fi';
+import { FiArrowRight, FiCheck, FiChevronDown, FiFile } from 'react-icons/fi';
 import {
   clearVisaEnteteDetail,
   fetchVisaEnteteDetail,
@@ -27,115 +27,6 @@ const fmtDate = (d: string | null) =>
 
 const fmtNum = (n: number | null | undefined) =>
   n != null ? n.toLocaleString('fr-FR') : '—';
-
-// Palette couleur par module (même logique que DossierActifCard)
-const colorMap: Record<string, { bg: string; bgLight: string; text: string; border: string }> = {
-  amber:  { bg: '#f59e0b', bgLight: '#fef3c7', text: '#d97706', border: '#fde68a' },
-  blue:   { bg: '#3b82f6', bgLight: '#eff6ff', text: '#2563eb', border: '#bfdbfe' },
-  rose:   { bg: '#f43f5e', bgLight: '#fff1f2', text: '#e11d48', border: '#fecdd3' },
-  orange: { bg: '#f97316', bgLight: '#ffedd5', text: '#ea580c', border: '#fed7aa' },
-  green:  { bg: '#22c55e', bgLight: '#f0fdf4', text: '#16a34a', border: '#bbf7d0' },
-  indigo: { bg: '#6366f1', bgLight: '#eef2ff', text: '#4f46e5', border: '#c7d2fe' },
-  violet: { bg: '#8b5cf6', bgLight: '#f5f3ff', text: '#7c3aed', border: '#ddd6fe' },
-};
-
-const extractColorFromGradient = (gradient: string): string => {
-  const match = gradient.match(/from-(\w+)-/);
-  return match?.[1] ?? 'blue';
-};
-
-// ── Card collapsible avec accent couleur ───────────────────────────────────
-
-interface CardProps {
-  title: string;
-  children: React.ReactNode;
-  action?: React.ReactNode;
-  gradient?: string;
-}
-
-const Card = ({ title, children, action, gradient = 'from-blue-400 to-indigo-500' }: CardProps) => {
-  const colorKey = extractColorFromGradient(gradient);
-  const color    = colorMap[colorKey] ?? colorMap['blue'];
-
-  const [isOpen, setIsOpen] = useState<boolean>(() => {
-    const saved = localStorage.getItem('dossierActifCard_isOpen');
-    return saved !== null ? saved === 'true' : true;
-  });
-
-  const handleToggle = () => {
-    setIsOpen(prev => {
-      const next = !prev;
-      localStorage.setItem('dossierActifCard_isOpen', String(next));
-      return next;
-    });
-  };
-
-  return (
-    <div
-      className="bg-white rounded-xl border overflow-hidden mb-1"
-      style={{ borderColor: color.border }}
-    >
-      {/* Header */}
-      <div
-        className="relative flex items-center justify-between px-4 py-2.5 cursor-pointer overflow-hidden transition-colors"
-        style={{ background: color.bgLight, borderBottom: isOpen ? `0.5px solid ${color.border}` : 'none' }}
-        onClick={() => setIsOpen(p => !p)}
-      >
-        {/* Cercles décoratifs */}
-        <div
-          className={`absolute -top-4 -right-4 w-20 h-20 rounded-full opacity-20 bg-linear-to-r ${gradient}`}
-        />
-        <div
-          className={`absolute -bottom-5 -right-10 w-28 h-28 rounded-full opacity-10 bg-linear-to-r ${gradient}`}
-        />
-
-        {/* Titre */}
-        <div className="relative flex items-center gap-2.5">
-          <div
-            className="w-6 h-6 rounded-md flex items-center justify-center shrink-0"
-            style={{ background: color.bg }}
-          >
-            <FiFile size={11} color="#fff" />
-          </div>
-          <p className="text-sm font-semibold" style={{ color: color.text }}>
-            {title}
-          </p>
-        </div>
-
-        {/* Droite : action slot + chevron */}
-        <div className="relative flex items-center gap-2" onClick={e => e.stopPropagation()}>
-          {action}
-          <button
-            onClick={e => { e.stopPropagation(); handleToggle(); }}
-            className="w-6 h-6 rounded-md border flex items-center justify-center transition-colors"
-            style={{ borderColor: color.border, color: color.text }}
-            title={isOpen ? 'Réduire' : 'Agrandir'}
-          >
-            <FiChevronDown
-              size={12}
-              style={{
-                transform: isOpen ? 'rotate(0deg)' : 'rotate(-90deg)',
-                transition: 'transform 0.2s',
-              }}
-            />
-          </button>
-        </div>
-      </div>
-
-      {/* Body collapsible */}
-      <div
-        style={{
-          maxHeight: isOpen ? '600px' : '0',
-          opacity:   isOpen ? 1 : 0,
-          overflow:  'hidden',
-          transition: 'max-height 0.3s ease, opacity 0.2s ease',
-        }}
-      >
-        <div className="px-4 py-3">{children}</div>
-      </div>
-    </div>
-  );
-};
 
 // ── Row redesigné ──────────────────────────────────────────────────────────
 
@@ -298,10 +189,6 @@ const PageDetailVisa = () => {
 
   const prestation     = detail?.visaProspectionEntete.prestation;
   const consulat       = detail?.visaProspectionEntete.consulat;  // ← ajouter
-  const totalPersonnes = detail?.visaLigne.reduce((s, l) => s + l.visaProspectionLigne.nombre, 0);
-  const totalAriary    = detail?.visaLigne.reduce(
-    (s, l) => s + l.visaProspectionLigne.puClientAriary * l.visaProspectionLigne.nombre, 0
-  );
 
   return (
     <div className="h-full flex flex-col min-h-0">
@@ -435,364 +322,416 @@ const PageDetailVisa = () => {
 
             <div className="flex-1 min-h-0 overflow-y-auto py-2">
               {activeTabSousSection === 'lignes' && (
-                <div>
+                <div className="px-2">
                   {loading ? (
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                       {Array.from({ length: 3 }).map((_, i) => (
-                        <div key={i} className="rounded-xl border border-gray-100 overflow-hidden">
-                          <div className="flex items-center justify-between px-4 py-3 bg-white">
-                            <div className="flex items-center gap-3">
-                              <Skeleton className="h-5 w-8" />
-                              <div className="space-y-1">
-                                <Skeleton className="h-4 w-32" />
-                                <Skeleton className="h-3 w-24" />
-                              </div>
-                              <Skeleton className="h-5 w-24" />
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <Skeleton className="h-7 w-28" />
-                              <Skeleton className="h-7 w-24" />
-                            </div>
-                          </div>
-                        </div>
+                        <div key={i} className="h-12 bg-gray-100 rounded-lg animate-pulse" />
                       ))}
                     </div>
                   ) : detail?.visaLigne?.length === 0 ? (
                     <EmptyMsg msg="Aucune ligne visa" />
                   ) : (
-                    <div className="space-y-3">
-                      {detail?.visaLigne.map((ligne, idx) => {
-                        const vp       = ligne.visaProspectionLigne;
-                        const vParams  = vp.visaParams;
-                        const expanded = expandedLignes.has(ligne.id);
-                        // const accesPortailListe = ligne.accesPortail ?? [];
-                        const sousTotal = vp.puClientAriary * vp.nombre;
-                        const passagers = ligne.passagers ?? [];
-                        const visa = ligne.visa ?? [];
+                    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                      <table className="min-w-full border-collapse">
+                        <thead>
+                          <tr className="bg-slate-700 text-white">
+                            <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider whitespace-nowrap">#</th>
+                            <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider whitespace-nowrap">Référence</th>
+                            <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider whitespace-nowrap">Pays / Type</th>
+                            <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider whitespace-nowrap">Séjour</th>
+                            <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider whitespace-nowrap">Consulat</th>
+                            <th className="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider whitespace-nowrap">Prix consulat</th>
+                            <th className="px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider whitespace-nowrap">Sous-total</th>
+                            <th className="px-4 py-3 text-center text-[11px] font-bold uppercase tracking-wider whitespace-nowrap">Passagers</th>
+                            <th className="px-4 py-3 text-center text-[11px] font-bold uppercase tracking-wider whitespace-nowrap">Soumission</th>
+                            <th className="px-4 py-3 text-center text-[11px] font-bold uppercase tracking-wider whitespace-nowrap">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {detail?.visaLigne.map((ligne, idx) => {
+                            const vp      = ligne.visaProspectionLigne;
+                            const vParams = vp.visaParams;
+                            const sousTotal = vp.puClientAriary * vp.nombre;
+                            const passagers = ligne.passagers ?? [];
+                            const visa      = ligne.visa ?? [];
 
-                        // Tous les passagers ont un visa associé ?
-                        const tousPassagersOntVisa =
-                          passagers.length > 0 &&
-                          passagers.every(p =>
-                            visa.some((v: Visa) => v.passagerAbstractId === p.id)
-                          );
+                            const tousPassagersOntVisa =
+                              passagers.length > 0 &&
+                              passagers.every(p => visa.some((v: Visa) => v.passagerAbstractId === p.id));
 
-                        return (
-                          <div key={ligne.id} className="bg-slate-700 rounded-xl border border-slate-400 overflow-hidden">
+                            const dejaSoumis = ligne.soummissionPuConsilatAriary !== null;
 
-                            {/* ── Header accordéon ── */}
-                            <div
-                              onClick={() => toggleLigne(ligne.id)}
-                              className="w-full flex items-center justify-between px-4 py-3  hover:bg-slate-600 transition cursor-pointer"
-                            >
-                              {/* Infos ligne */}
-                              <div className="flex items-center gap-3 flex-wrap">
-                                <span className="text-[10px] font-bold uppercase tracking-widest text-indigo-400 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-md">
-                                  #{idx + 1}
-                                </span>
-
-                                <div className="flex flex-col">
-                                  <span className="font-semibold text-white text-sm">
-                                    {vParams.pays.pays}
-                                  </span>
-                                  <span className="text-[10px] text-gray-100 font-medium">
-                                    {vParams.code} — {vParams.visaType.nom}
-                                  </span>
-                                </div>
-
-                                <span className="font-mono text-xs text-indigo-600 bg-indigo-50 border border-indigo-200 px-2 py-0.5 rounded-md">
-                                  {ligne.referenceLine}
-                                </span>
-
-                                {/* <StatusBadge status={ligne.statusLigne} />
-                                <StatusBadge status={ligne.statusVisa} /> */}
-                              </div>
-
-                              {/* Actions & résumé */}
-                              <div className="flex items-center gap-3 shrink-0">
-
-                                {/* Sous-total */}
-                                <span className="text-sm font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-lg">
-                                  {sousTotal.toLocaleString('fr-FR')} Ar
-                                </span>
-
-                                <div className="w-px h-6 bg-gray-200 shrink-0" />
-
-                                {/* Bouton soumettre */}
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSubmitModal({
-                                      ligneId:          ligne.id,
-                                      puConsulatDevise: vp.puConsulatDevise,
-                                      puClientAriary:   vp.puClientAriary,
-                                      tauxEchange:      vp.tauxEchange,
-                                      devise:           vp.devise,
-                                    });
-                                  }}
-                                  disabled={!tousPassagersOntVisa || ligne.soummissionPuConsilatAriary !== null}
-                                  title={
-                                    !tousPassagersOntVisa
-                                      ? passagers.length === 0
-                                        ? 'Aucun passager assigné'
-                                        : `${passagers.filter(p => !visa.some((v: Visa) => v.passagerAbstractId === p.id)).length} passager(s) sans visa`
-                                      : 'Soumettre la ligne'
-                                  }
-                                  className={`px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all ${
-                                    tousPassagersOntVisa && ligne.soummissionPuConsilatAriary == null
-                                      ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-sm'
-                                      : 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
+                            return (
+                              <>
+                                {/* ── Ligne principale ── */}
+                                <tr
+                                  key={ligne.id}
+                                  className={`transition-colors hover:bg-slate-50 cursor-pointer ${
+                                    expandedLignes.has(ligne.id) ? 'bg-indigo-50/50' : idx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'
                                   }`}
+                                  onClick={() => toggleLigne(ligne.id)}
                                 >
-                                  <span className={!tousPassagersOntVisa || ligne.soummissionPuConsilatAriary !== null ? 'grayscale opacity-50' : ''}>
-                                    📤
-                                  </span>
-                                  Soumettre
-                                </button>
+                                  {/* # */}
+                                  <td className="px-4 py-3 whitespace-nowrap">
+                                    <span className="text-[10px] font-bold text-indigo-500 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-md">
+                                      #{idx + 1}
+                                    </span>
+                                  </td>
 
-                                {/* Chevron */}
-                                <svg
-                                  className={`h-4 w-4 text-gray-400 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}
-                                  fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                >
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
-                              </div>
-                            </div>
+                                  {/* Référence */}
+                                  <td className="px-4 py-3 whitespace-nowrap">
+                                    <span className="font-mono text-xs text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-md">
+                                      {ligne.referenceLine}
+                                    </span>
+                                  </td>
 
-                            {/* ── Corps accordéon ── */}
-                            {expanded && (
-                              <div className="px-4 py-4 space-y-5 bg-white">
-                                {/* ── Grille infos séjour / consulat / tarifs / soumission ── */}
-                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                  {/* Pays / Type */}
+                                  <td className="px-4 py-3 whitespace-nowrap">
+                                    <p className="text-sm font-semibold text-gray-800">{vParams.pays.pays}</p>
+                                    <p className="text-[10px] text-gray-400">{vParams.code} — {vParams.visaType.nom}</p>
+                                  </td>
+
                                   {/* Séjour */}
-                                  <div className="bg-gray-50 border border-gray-100 rounded-xl p-3 space-y-2">
-                                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Séjour</p>
-                                    <div className="space-y-1">
-                                      <p className="text-sm font-semibold text-gray-800">
-                                        {fmtDate(vp.dateDepart)} → {fmtDate(vp.dateRetour)}
-                                      </p>
-                                      <p className="text-xs text-gray-500">
-                                        {vParams.visaDuree.duree} j · {vParams.visaEntree.entree} · {vp.nombre} pers.
-                                      </p>
-                                      <p className="text-xs text-gray-500">Traitement : {vParams.dureeTraitement} j</p>
-                                    </div>
-                                  </div>
+                                  <td className="px-4 py-3 whitespace-nowrap">
+                                    <p className="text-xs text-gray-700 font-medium">
+                                      {fmtDate(vp.dateDepart)} → {fmtDate(vp.dateRetour)}
+                                    </p>
+                                    <p className="text-[10px] text-gray-400">
+                                      {vParams.visaDuree.duree}j · {vParams.visaEntree.entree} · {vp.nombre} pers.
+                                    </p>
+                                  </td>
 
                                   {/* Consulat */}
-                                  <div className="bg-gray-50 border border-gray-100 rounded-xl p-3 space-y-2">
-                                    <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Consulat</p>
-                                    <div className="space-y-1">
-                                      <p className="text-sm font-semibold text-gray-800 capitalize">{consulat?.nom ?? '—'}</p>
-                                      <p className="text-xs text-gray-500">PU : {fmtNum(vp.puConsulatDevise)} {vp.devise}</p>
-                                      <p className="text-xs text-gray-500">PU Ar : {fmtNum(vp.puConsulatAriary)} Ar</p>
-                                    </div>
-                                  </div>
+                                  <td className="px-4 py-3 whitespace-nowrap">
+                                    <p className="text-xs font-medium text-gray-700 capitalize">{consulat?.nom ?? '—'}</p>
+                                    <p className="text-[10px] text-gray-400">{fmtNum(vp.puConsulatDevise)} {vp.devise}</p>
+                                  </td>
 
-                                  {/* Tarif client */}
-                                  <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 space-y-2">
-                                    <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-400">Tarif client</p>
-                                    <div className="space-y-1">
-                                      <p className="text-sm font-bold text-indigo-700">{fmtNum(sousTotal)} Ar</p>
-                                      <p className="text-xs text-indigo-500">
-                                        {fmtNum(vp.puClientDevise)} {vp.devise} × {vp.nombre} pers.
-                                      </p>
-                                      <p className="text-xs text-indigo-400">Taux : 1 {vp.devise} = {fmtNum(vp.tauxEchange)} Ar</p>
+                                  {/* Prix consulat Ar */}
+                                  <td className="px-4 py-3 whitespace-nowrap text-right">
+                                    <span className="text-xs font-mono text-gray-600">{fmtNum(vp.puConsulatAriary)} Ar</span>
+                                  </td>
+
+                                  {/* Sous-total */}
+                                  <td className="px-4 py-3 whitespace-nowrap text-right">
+                                    <span className="text-sm font-bold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-lg font-mono">
+                                      {sousTotal.toLocaleString('fr-FR')} Ar
+                                    </span>
+                                  </td>
+
+                                  {/* Passagers */}
+                                  <td className="px-4 py-3 whitespace-nowrap text-center" onClick={e => e.stopPropagation()}>
+                                    <div className="flex flex-col items-center gap-1">
+                                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                                        tousPassagersOntVisa
+                                          ? 'text-emerald-700 bg-emerald-50 border border-emerald-200'
+                                          : passagers.length === 0
+                                            ? 'text-amber-600 bg-amber-50 border border-amber-200'
+                                            : 'text-orange-600 bg-orange-50 border border-orange-200'
+                                      }`}>
+                                        {passagers.length} / {vp.nombre}
+                                      </span>
+                                      {passagers.length > 0 && (
+                                        <div className="flex flex-col gap-1 mt-1 w-full">
+                                          {passagers.map((passager) => {
+                                            const visaPassager = visa.find((v: Visa) => v.passagerAbstractId === passager.id);
+                                            return (
+                                              <div key={passager.id} className="flex items-center justify-between gap-2 text-[10px] bg-white border border-gray-100 rounded-lg px-2 py-1">
+                                                <span className="text-gray-600 font-medium truncate max-w-[80px]">
+                                                  {passager.clientbeneficiaire.libelle}
+                                                </span>
+                                                {visaPassager
+                                                  ? <StatusBadge status={visaPassager.statusVisa} />
+                                                  : <span className="text-gray-300">—</span>
+                                                }
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
                                     </div>
-                                  </div>
+                                  </td>
 
                                   {/* Soumission */}
-                                  <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 space-y-2">
-                                    <p className="text-[10px] font-bold uppercase tracking-widest text-amber-500">Soumission</p>
-                                    <div className="space-y-1">
-                                      <p className="text-xs text-gray-600">Taux : {fmtNum(ligne.soummissionTauxChange)}</p>
-                                      <p className="text-xs text-gray-600">PU consulat : {fmtNum(ligne.soummissionPuConsilatAriary)} Ar</p>
-                                      <p className="text-xs text-gray-600">PU client : {fmtNum(ligne.soummissionPuClientAriary)} Ar</p>
-                                      <p className="text-xs text-gray-600">Commission : {fmtNum(ligne.soummissionCommissionAriary)} Ar</p>
-                                      <div className="pt-1 mt-1 border-t border-amber-100 space-y-1">
-                                        <p className="text-xs text-gray-500">Réf. : {ligne.referenceSoummision ?? '—'}</p>
-                                        <p className="text-xs text-gray-500">Limite : {fmtDate(ligne.limiteSoummision)}</p>
+                                  <td className="px-4 py-3 whitespace-nowrap text-center">
+                                    {dejaSoumis ? (
+                                      <div className="flex flex-col items-center gap-0.5">
+                                        <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                                          ✓ Soumis
+                                        </span>
+                                        <span className="text-[10px] text-gray-400 font-mono">
+                                          {fmtNum(ligne.soummissionPuConsilatAriary)} Ar
+                                        </span>
+                                        <span className="text-[10px] text-gray-400">
+                                          Réf : {ligne.referenceSoummision ?? '—'}
+                                        </span>
                                       </div>
+                                    ) : (
+                                      <span className="text-[10px] text-gray-400 italic">Non soumis</span>
+                                    )}
+                                  </td>
+
+                                  {/* Actions */}
+                                  <td className="px-4 py-3 whitespace-nowrap text-center" onClick={e => e.stopPropagation()}>
+                                    <div className="flex items-center justify-center gap-1.5 flex-wrap">
+
+                                      {/* Soumettre */}
+                                      <button
+                                        onClick={() => setSubmitModal({
+                                          ligneId:          ligne.id,
+                                          puConsulatDevise: vp.puConsulatDevise,
+                                          puClientAriary:   vp.puClientAriary,
+                                          tauxEchange:      vp.tauxEchange,
+                                          devise:           vp.devise,
+                                        })}
+                                        disabled={!tousPassagersOntVisa || dejaSoumis}
+                                        title={
+                                          !tousPassagersOntVisa
+                                            ? passagers.length === 0
+                                              ? 'Aucun passager assigné'
+                                              : 'Passager(s) sans visa'
+                                            : dejaSoumis
+                                              ? 'Déjà soumis'
+                                              : 'Soumettre la ligne'
+                                        }
+                                        className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg flex items-center gap-1 transition-all ${
+                                          tousPassagersOntVisa && !dejaSoumis
+                                            ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-sm'
+                                            : 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
+                                        }`}
+                                      >
+                                        📤 Soumettre
+                                      </button>
+
+                                      {/* Détail (expand) */}
+                                      <button
+                                        onClick={() => toggleLigne(ligne.id)}
+                                        className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-200 flex items-center gap-1 transition"
+                                      >
+                                        {expandedLignes.has(ligne.id) ? '▲ Réduire' : '▼ Détails'}
+                                      </button>
                                     </div>
-                                  </div>
+                                  </td>
+                                </tr>
 
-                                </div>
+                                {/* ── Ligne expandée : passagers détail + actions ── */}
+                                {expandedLignes.has(ligne.id) && (
+                                  <tr key={`${ligne.id}-expanded`}>
+                                    <td colSpan={10} className="bg-slate-50 border-t border-indigo-100 px-6 py-4">
 
-                                {/* ── Infos complémentaires ── */}
-                                {(ligne.numeroDossier || ligne.resultatVisa || ligne.variante || ligne.limitePaiement) && (
-                                  <div className="rounded-xl bg-gray-50 border border-gray-100 px-4 py-3">
-                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">
-                                      Informations complémentaires
-                                    </p>
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                                      {ligne.numeroDossier  && <Row label="N° dossier"      value={ligne.numeroDossier} />}
-                                      {ligne.variante       && <Row label="Variante"         value={ligne.variante} />}
-                                      {ligne.resultatVisa   && <Row label="Résultat visa"    value={ligne.resultatVisa} />}
-                                      {ligne.limitePaiement && <Row label="Limite paiement" value={fmtDate(ligne.limitePaiement)} />}
-                                    </div>
-                                  </div>
-                                )}
+                                      {/* Grille infos */}
+                                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                                        <div className="bg-white border border-gray-100 rounded-xl p-3 space-y-1">
+                                          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Séjour</p>
+                                          <p className="text-xs font-semibold text-gray-800">{fmtDate(vp.dateDepart)} → {fmtDate(vp.dateRetour)}</p>
+                                          <p className="text-[10px] text-gray-500">{vParams.visaDuree.duree}j · {vParams.visaEntree.entree} · {vp.nombre} pers.</p>
+                                          <p className="text-[10px] text-gray-400">Traitement : {vParams.dureeTraitement}j</p>
+                                        </div>
+                                        <div className="bg-white border border-gray-100 rounded-xl p-3 space-y-1">
+                                          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Consulat</p>
+                                          <p className="text-xs font-semibold text-gray-800 capitalize">{consulat?.nom ?? '—'}</p>
+                                          <p className="text-[10px] text-gray-500">PU : {fmtNum(vp.puConsulatDevise)} {vp.devise}</p>
+                                          <p className="text-[10px] text-gray-500">PU Ar : {fmtNum(vp.puConsulatAriary)} Ar</p>
+                                        </div>
+                                        <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-3 space-y-1">
+                                          <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-400">Tarif client</p>
+                                          <p className="text-xs font-bold text-indigo-700">{fmtNum(sousTotal)} Ar</p>
+                                          <p className="text-[10px] text-indigo-500">{fmtNum(vp.puClientDevise)} {vp.devise} × {vp.nombre}</p>
+                                          <p className="text-[10px] text-indigo-400">Taux : 1 {vp.devise} = {fmtNum(vp.tauxEchange)} Ar</p>
+                                        </div>
+                                        <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 space-y-1">
+                                          <p className="text-[10px] font-bold uppercase tracking-widest text-amber-500">Soumission</p>
+                                          <p className="text-[10px] text-gray-600">Taux : {fmtNum(ligne.soummissionTauxChange)}</p>
+                                          <p className="text-[10px] text-gray-600">PU consulat : {fmtNum(ligne.soummissionPuConsilatAriary)} Ar</p>
+                                          <p className="text-[10px] text-gray-600">Commission : {fmtNum(ligne.soummissionCommissionAriary)} Ar</p>
+                                          <p className="text-[10px] text-gray-500">Réf. : {ligne.referenceSoummision ?? '—'}</p>
+                                          <p className="text-[10px] text-gray-500">Limite : {fmtDate(ligne.limiteSoummision)}</p>
+                                        </div>
+                                      </div>
 
-                                {/* ── Passagers + Visa ── */}
-                                <div>
-                                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-3">
-                                    Passagers ({passagers.length} / {vp.nombre})
-                                  </p>
-
-                                  {passagers.length === 0 ? (
-                                    <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                                      ⚠ Aucun passager assigné — utilisez le bouton "Accès portail"
-                                    </div>
-                                  ) : (
-                                    <div className="space-y-3">
-                                      {passagers.map((passager) => {
-                                        const visaPassager = visa.find((v: Visa) => v.passagerAbstractId === passager.id);
-                                        const isActif    = passager.clientbeneficiaire.statut === 'ACTIF';
-
-                                        return (
-                                          <div
-                                            key={passager.id}
-                                            className="rounded-2xl border border-slate-300 overflow-hidden shadow-sm"
-                                          >
-                                            {/* ── Header passager ── */}
-                                            <div className="flex items-center justify-between px-4 py-3 bg-gray-50 border-b border-gray-100">
-                                              <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-xs font-bold shrink-0">
-                                                  {passager.clientbeneficiaire.libelle
-                                                    ?.split(' ').slice(0, 2)
-                                                    .map((n: string) => n[0]).join('').toUpperCase()}
-                                                </div>
-                                                <div>
-                                                  <p className="text-sm font-semibold text-gray-900 leading-tight">
-                                                    {passager.clientbeneficiaire.libelle} 
-                                                  </p>
-                                                  <p className="text-xs text-gray-400 font-mono">{passager.clientbeneficiaire.code}</p>
-                                                </div>
-
-                                                
-                                              
-                                              </div>
-
-                                              <div className="flex items-center gap-2">
-                                                <span className={`flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
-                                                  isActif ? 'text-emerald-600 bg-emerald-50' : 'text-gray-400 bg-gray-100'
-                                                }`}>
-                                                  <span className={`w-1.5 h-1.5 rounded-full ${isActif ? 'bg-emerald-500' : 'bg-gray-400'}`} />
-                                                  {isActif ? 'Actif' : 'Inactif'}
-                                                </span>
-                                                <button
-                                                  onClick={() => navigate(`/dossiers-communs/visa/passager/${passager.id}`, {
-                                                    state: { 
-                                                      nomPassager: passager.clientbeneficiaire.libelle,
-                                                      numeroDos: prestation?.numeroDos,
-                                                    }
-                                                  })}
-                                                  className="flex items-center bg-blue-500 gap-1 text-xs font-medium text-blue-100 hover:text-gray-900 hover:bg-gray-200 px-2.5 py-1 rounded-lg transition"
-                                                >
-                                                  Valider Les Infos <FiArrowRight size={11} /> 
-                                                </button>
-
-                                                <div>
-                                                  {visaPassager?.statusVisa == 'ACCEPTER' ? <FiCheck size={30} color='green' />  : ''}
-                                                </div>
-                                              </div>
-                                            </div>
-
-                                            {/* ── Corps : accès portail + visa côte à côte ── */}
-                                            <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-gray-100">
-
-                                              {/* Accès portail */}
-                                              <div className="px-4 py-3 space-y-6">
-                                                <div className="flex items-center justify-between">
-                                                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Accès portail</p> 
-                                                  {/* Bouton ouvrir en plein */}
-                                                  <a
-                                                    href={`${API_URL}/${detail.pdfLogin}`}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-semibold bg-blue-500 text-white border border-blue-200 hover:bg-blue-600 transition-all"
-                                                  >
-                                                    Ouvrir le pdf
-                                                  </a>
-                                                </div>
-                                                <div className="flex items-center justify-between">
-                                                  <p className="text-xs text-gray-500">Completer manuellement les infos du client</p>
-                                                  <button
-                                                    onClick={() => navigate(`/dossiers-communs/visa/client-info/${passager.id}`)}
-                                                    className="bg-indigo-500 text-xs text-white px-2 py-1 rounded-lg font-semibold hover:bg-indigo-600 transition-all"
-                                                  >
-                                                    Acceder au formulaire
-                                                  </button>
-                                                </div>
-                                              </div>
-
-                                              {/* Visa du passager */}
-                                              <div className="px-4 py-3 space-y-2">
-                                                <p className={`text-xs font-semibold ${visaPassager?.statusVisa == 'ACCEPTER' ? 'text-green-500' : 'text-gray-400'} uppercase tracking-wide`}>Visa {visaPassager?.statusVisa == 'ACCEPTER' ? 'Valider' : ''} </p>
-                                                {visaPassager ? (
-                                                  <>
-                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                      <StatusBadge status={visaPassager.statusVisa} />
-                                                      <span className="text-xs text-gray-500">Résultat : {visaPassager.resultat ?? '—'}</span>
-                                                    </div>
-                                                    <p className="text-xs text-gray-500">
-                                                      Réf. dossier : <span className="font-medium text-gray-700">{visaPassager.referenceDossier ?? '—'}</span>
-                                                    </p>
-                                                    <p className="text-xs text-gray-500">
-                                                      Soumission : {fmtDate(visaPassager.dateSoummission)}
-                                                    </p>
-                                                    {/* Actions visa */}
-                                                    <div className="flex items-center gap-2 pt-1 flex-wrap">
-                                                      <button
-                                                        disabled= {visaPassager.statusVisa !== 'A_ENREGISTRER'}  
-                                                        onClick={() => setSendModal({ visaId: visaPassager.id, visaEnteteId: detail.id })}
-                                                        className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 flex items-center gap-1 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                                                      >
-                                                        Envoyer 
-                                                      </button>
-                                                      <button
-                                                        onClick={() => handlePay(visaPassager.id)}
-                                                        disabled={payLoading || visaPassager.statusVisa !== 'ENREGISTRE'}
-                                                        className="px-3 py-1.5 bg-emerald-600 text-white text-xs rounded-lg hover:bg-emerald-700 disabled:opacity-50 flex items-center gap-1 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                                                      >
-                                                        💳 Payer
-                                                      </button>
-                                                      <button
-                                                        onClick={() => setDecisionModal({ visaId: visaPassager.id, visaEnteteId: detail.id })}
-                                                        disabled={visaPassager.statusVisa !== 'EN_COURS'}
-                                                        className="px-3 py-1.5 bg-amber-500 text-white text-xs rounded-lg hover:bg-amber-600 flex items-center gap-1 disabled:opacity-50 disabled:bg-gray-100 disabled:cursor-not-allowed"
-                                                      >
-                                                        ⚖️ Décision
-                                                      </button>
-                                                    </div>
-                                                  </>
-                                                ) : (
-                                                  <div className="flex items-center gap-1.5">
-                                                    <span className="w-1 h-1 rounded-full bg-gray-300" />
-                                                    <p className="text-xs text-gray-400">Aucun visa associé</p>
-                                                  </div>
-                                                )}
-                                              </div>
-
-                                            </div>
-
-                                            {/* Footer */}
-                                            <div className="px-4 py-2 bg-gray-50 border-t border-gray-100">
-                                              <p className="text-[10px] text-gray-300">Assigné le {fmtDate(passager.createdAt)}</p>
-                                            </div>
-
+                                      {/* Infos complémentaires */}
+                                      {(ligne.numeroDossier || ligne.resultatVisa || ligne.variante || ligne.limitePaiement) && (
+                                        <div className="rounded-xl bg-white border border-gray-100 px-4 py-3 mb-4">
+                                          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-2">Informations complémentaires</p>
+                                          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                                            {ligne.numeroDossier  && <Row label="N° dossier"      value={ligne.numeroDossier} />}
+                                            {ligne.variante       && <Row label="Variante"         value={ligne.variante} />}
+                                            {ligne.resultatVisa   && <Row label="Résultat visa"    value={ligne.resultatVisa} />}
+                                            {ligne.limitePaiement && <Row label="Limite paiement" value={fmtDate(ligne.limitePaiement)} />}
                                           </div>
-                                        );
-                                      })}
-                                    </div>
-                                  )}
-                                </div>
+                                        </div>
+                                      )}
 
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+                                      {/* Tableau passagers */}
+                                      <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">
+                                        Passagers ({passagers.length} / {vp.nombre})
+                                      </p>
+
+                                      {passagers.length === 0 ? (
+                                        <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                                          ⚠ Aucun passager assigné — utilisez le bouton "Accès portail"
+                                        </div>
+                                      ) : (
+                                        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                                          <table className="min-w-full border-collapse">
+                                            <thead>
+                                              <tr className="bg-gray-100 text-gray-500">
+                                                <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wider">Passager</th>
+                                                <th className="px-4 py-2 text-left text-[10px] font-bold uppercase tracking-wider">Code</th>
+                                                <th className="px-4 py-2 text-center text-[10px] font-bold uppercase tracking-wider">Statut</th>
+                                                <th className="px-4 py-2 text-center text-[10px] font-bold uppercase tracking-wider">Visa</th>
+                                                <th className="px-4 py-2 text-center text-[10px] font-bold uppercase tracking-wider">Résultat</th>
+                                                <th className="px-4 py-2 text-center text-[10px] font-bold uppercase tracking-wider">Réf. dossier</th>
+                                                <th className="px-4 py-2 text-center text-[10px] font-bold uppercase tracking-wider">Soumission</th>
+                                                <th className="px-4 py-2 text-center text-[10px] font-bold uppercase tracking-wider">Actions</th>
+                                              </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-gray-100">
+                                              {passagers.map((passager, pIdx) => {
+                                                const visaPassager = visa.find((v: Visa) => v.passagerAbstractId === passager.id);
+                                                const isActif = passager.clientbeneficiaire.statut === 'ACTIF';
+
+                                                return (
+                                                  <tr key={passager.id} className={pIdx % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+
+                                                    {/* Passager */}
+                                                    <td className="px-4 py-2.5 whitespace-nowrap">
+                                                      <div className="flex items-center gap-2">
+                                                        <div className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-[10px] font-bold shrink-0">
+                                                          {passager.clientbeneficiaire.libelle?.split(' ').slice(0, 2).map((n: string) => n[0]).join('').toUpperCase()}
+                                                        </div>
+                                                        <span className="text-xs font-semibold text-gray-800">
+                                                          {passager.clientbeneficiaire.libelle}
+                                                        </span>
+                                                        {visaPassager?.statusVisa === 'ACCEPTER' && (
+                                                          <FiCheck size={14} className="text-emerald-500 shrink-0" />
+                                                        )}
+                                                      </div>
+                                                    </td>
+
+                                                    {/* Code */}
+                                                    <td className="px-4 py-2.5 whitespace-nowrap">
+                                                      <span className="font-mono text-[10px] text-gray-400">{passager.clientbeneficiaire.code}</span>
+                                                    </td>
+
+                                                    {/* Statut */}
+                                                    <td className="px-4 py-2.5 whitespace-nowrap text-center">
+                                                      <span className={`inline-flex items-center gap-1 text-[10px] font-medium px-2 py-0.5 rounded-full ${
+                                                        isActif ? 'text-emerald-600 bg-emerald-50' : 'text-gray-400 bg-gray-100'
+                                                      }`}>
+                                                        <span className={`w-1.5 h-1.5 rounded-full ${isActif ? 'bg-emerald-500' : 'bg-gray-400'}`} />
+                                                        {isActif ? 'Actif' : 'Inactif'}
+                                                      </span>
+                                                    </td>
+
+                                                    {/* Visa status */}
+                                                    <td className="px-4 py-2.5 whitespace-nowrap text-center">
+                                                      {visaPassager
+                                                        ? <StatusBadge status={visaPassager.statusVisa} />
+                                                        : <span className="text-[10px] text-gray-300 italic">Aucun</span>
+                                                      }
+                                                    </td>
+
+                                                    {/* Résultat */}
+                                                    <td className="px-4 py-2.5 whitespace-nowrap text-center">
+                                                      <span className="text-xs text-gray-500">{visaPassager?.resultat ?? '—'}</span>
+                                                    </td>
+
+                                                    {/* Réf. dossier */}
+                                                    <td className="px-4 py-2.5 whitespace-nowrap text-center">
+                                                      <span className="text-xs font-mono text-gray-600">{visaPassager?.referenceDossier ?? '—'}</span>
+                                                    </td>
+
+                                                    {/* Date soumission */}
+                                                    <td className="px-4 py-2.5 whitespace-nowrap text-center">
+                                                      <span className="text-xs text-gray-500">{fmtDate(visaPassager?.dateSoummission ?? null)}</span>
+                                                    </td>
+
+                                                    {/* Actions */}
+                                                    <td className="px-4 py-2.5 whitespace-nowrap text-center">
+                                                      <div className="flex items-center justify-center gap-1.5 flex-wrap">
+
+                                                        {/* Valider infos */}
+                                                        <button
+                                                          onClick={() => navigate(`/dossiers-communs/visa/passager/${passager.id}`, {
+                                                            state: {
+                                                              nomPassager: passager.clientbeneficiaire.libelle,
+                                                              numeroDos: prestation?.numeroDos,
+                                                            }
+                                                          })}
+                                                          className="px-2 py-1 text-[10px] font-semibold bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition flex items-center gap-1"
+                                                        >
+                                                          Valider infos <FiArrowRight size={9} />
+                                                        </button>
+
+                                                        {/* Formulaire */}
+                                                        <button
+                                                          onClick={() => navigate(`/dossiers-communs/visa/client-info/${passager.id}`)}
+                                                          className="px-2 py-1 text-[10px] font-semibold bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition"
+                                                        >
+                                                          Formulaire
+                                                        </button>
+
+                                                        {/* PDF portail */}
+                                                        <a
+                                                          href={`${API_URL}/${detail.pdfLogin}`}
+                                                          target="_blank"
+                                                          rel="noreferrer"
+                                                          className="px-2 py-1 text-[10px] font-semibold bg-sky-500 text-white rounded-lg hover:bg-sky-600 transition"
+                                                        >
+                                                          PDF
+                                                        </a>
+
+                                                        {/* Envoyer */}
+                                                        {visaPassager && (
+                                                          <button
+                                                            disabled={visaPassager.statusVisa !== 'A_ENREGISTRER'}
+                                                            onClick={() => setSendModal({ visaId: visaPassager.id, visaEnteteId: detail.id })}
+                                                            className="px-2 py-1 text-[10px] font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition"
+                                                          >
+                                                            Envoyer
+                                                          </button>
+                                                        )}
+
+                                                        {/* Payer */}
+                                                        {visaPassager && (
+                                                          <button
+                                                            onClick={() => handlePay(visaPassager.id)}
+                                                            disabled={payLoading || visaPassager.statusVisa !== 'ENREGISTRE'}
+                                                            className="px-2 py-1 text-[10px] font-semibold bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition flex items-center gap-1"
+                                                          >
+                                                            💳 Payer
+                                                          </button>
+                                                        )}
+
+                                                        {/* Décision */}
+                                                        {visaPassager && (
+                                                          <button
+                                                            onClick={() => setDecisionModal({ visaId: visaPassager.id, visaEnteteId: detail.id })}
+                                                            disabled={visaPassager.statusVisa !== 'EN_COURS'}
+                                                            className="px-2 py-1 text-[10px] font-semibold bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed transition flex items-center gap-1"
+                                                          >
+                                                            ⚖️ Décision
+                                                          </button>
+                                                        )}
+                                                      </div>
+                                                    </td>
+                                                  </tr>
+                                                );
+                                              })}
+                                            </tbody>
+                                          </table>
+                                        </div>
+                                      )}
+                                    </td>
+                                  </tr>
+                                )}
+                              </>
+                            );
+                          })}
+                        </tbody>
+                      </table>
                     </div>
                   )}
                 </div>

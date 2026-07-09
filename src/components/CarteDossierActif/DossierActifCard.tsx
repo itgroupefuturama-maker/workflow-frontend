@@ -56,13 +56,14 @@ export default function DossierActifCard({
   const color    = colorMap[colorKey] ?? colorMap['amber'];
 
   const rows = [
-    { label: 'Contact principal',   value: dossierActif.contactPrincipal,          icon: User      },
-    { label: 'WhatsApp',            value: dossierActif.whatsapp,                  icon: Phone     },
-    { label: 'Client facturé',      value: dossierActif.clientfacture?.libelle,    icon: Building2 },
-    { label: 'Code client',         value: dossierActif.clientfacture?.code,       icon: Hash      },
-    { label: 'Réf. Travel Planner', value: dossierActif.referenceTravelPlaner,     icon: Tag       },
-    { label: 'N° dossier',          value: dossierActif.numero?.toString(),        icon: FileText  },
-    { label: 'Description',         value: dossierActif.description?.toString(),   icon: FileText  },
+    { label: 'Contact principal',   value: dossierActif.contactPrincipal,               icon: User      },
+    { label: 'WhatsApp',            value: dossierActif.whatsapp,                       icon: Phone     },
+    { label: 'Client facturé',      value: dossierActif.clientfacture?.libelle,         icon: Building2 },
+    { label: 'Credit par défaut',   value: dossierActif.clientfacture?.creditdefault,   icon: Building2 },
+    { label: 'Code client',         value: dossierActif.clientfacture?.code,            icon: Hash      },
+    { label: 'Réf. Travel Planner', value: dossierActif.referenceTravelPlaner,          icon: Tag       },
+    { label: 'N° dossier',          value: dossierActif.numero?.toString(),             icon: FileText  },
+    { label: 'Description',         value: dossierActif.description?.toString(),        icon: FileText  },
   ].filter(r => r.value);
 
   // Regroupe les rows en paires pour le tableau 4 colonnes

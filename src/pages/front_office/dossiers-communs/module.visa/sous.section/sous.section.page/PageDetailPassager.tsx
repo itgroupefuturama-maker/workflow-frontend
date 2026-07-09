@@ -29,9 +29,9 @@ const Spinner = ({ size = 4 }: { size?: number }) => (
 );
 
 const Badge = ({ status }: { status: string }) => {
-  const isValid = status === 'VALIDE' || status === 'VALIDER';
+  const isValid = status === 'VALIDE' || status === 'VALIDER' || status === 'ACTIF';
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold ${
+    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold ${
       isValid
         ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
         : 'bg-amber-50 text-amber-700 border border-amber-200'
@@ -41,51 +41,6 @@ const Badge = ({ status }: { status: string }) => {
     </span>
   );
 };
-
-/* Card container */
-const Card = ({ title, badge, action, children }: {
-  title: string;
-  badge?: React.ReactNode;
-  action?: React.ReactNode;
-  children: React.ReactNode;
-}) => (
-  <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
-    <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 bg-gray-50">
-      <div className="flex items-center gap-2.5">
-        <span className="text-sm font-semibold text-gray-800">{title}</span>
-        {badge}
-      </div>
-      {action && <div>{action}</div>}
-    </div>
-    <div className="px-5 py-4">{children}</div>
-  </div>
-);
-
-/* Row dans un tableau de données */
-const DataRow = ({ label, value, valueClass = '' }: {
-  label: string;
-  value: React.ReactNode;
-  valueClass?: string;
-}) => (
-  <div className="flex items-center justify-between py-2.5 border-b border-gray-50 last:border-0">
-    <span className="text-sm text-gray-500">{label}</span>
-    <span className={`text-sm font-medium text-gray-900 text-right ${valueClass}`}>{value ?? '—'}</span>
-  </div>
-);
-
-/* Grille de champs (section formulaire) */
-const Field = ({ label, value }: { label: string; value: React.ReactNode }) => (
-  <div className="flex flex-col gap-0.5">
-    <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">{label}</span>
-    <span className="text-sm font-medium text-gray-900">{value ?? '—'}</span>
-  </div>
-);
-
-const SectionLabel = ({ label }: { label: string }) => (
-  <p className="text-[11px] font-bold uppercase tracking-widest text-indigo-500 pt-1 pb-2 border-b border-indigo-50 mb-3">
-    {label}
-  </p>
-);
 
 const ActionButton = ({
   onClick, loading, done, label, statut, doneLabel, color = 'green',
@@ -103,8 +58,8 @@ const ActionButton = ({
     <button
       onClick={onClick}
       disabled={isDisabled}
-      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-white text-xs font-semibold transition-all ${
-        isDisabled ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : colors[color]
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-white text-[11px] font-semibold transition-all ${
+        isDisabled ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200' : colors[color]
       }`}
     >
       {loading ? <Spinner size={3} /> : done ? '✓' : null}
@@ -112,6 +67,25 @@ const ActionButton = ({
     </button>
   );
 };
+
+/* ── Section header ── */
+const SectionHeader = ({ icon, label, color = 'indigo', count }: {
+  icon: React.ReactNode; label: string; color?: string; count?: number;
+}) => (
+  <tr className={`bg-slate-600`}>
+    <td colSpan={99} className="px-4 py-2">
+      <div className="flex items-center gap-2">
+        <div className={`w-5 h-5 rounded-md bg-${color}-100 flex items-center justify-center shrink-0`}>
+          {icon}
+        </div>
+        <span className="text-[11px] font-black uppercase tracking-widest text-white">{label}</span>
+        {count !== undefined && (
+          <span className="text-[10px] bg-white/20 text-white px-1.5 py-0.5 rounded-full font-bold">{count}</span>
+        )}
+      </div>
+    </td>
+  </tr>
+);
 
 /* ─────────────────────── page ────────────────────────── */
 
@@ -122,7 +96,7 @@ const PageDetailPassager = () => {
   const location       = useLocation();
 
   const nomPassager = location.state?.nomPassager ?? 'Passager';
-  const numeroDos   = location.state?.numeroDos ?? null; 
+  const numeroDos   = location.state?.numeroDos ?? null;
   const { detail, loading, error } = useSelector((s: RootState) => s.passagerDetail);
 
   const [formLoading,   setFormLoading]   = useState<Record<string, boolean>>({});
@@ -133,12 +107,12 @@ const PageDetailPassager = () => {
   const [syncDone,      setSyncDone]      = useState(false);
   const [actionError,   setActionError]   = useState('');
   const [actionSuccess, setActionSuccess] = useState('');
+  const [expandedForms, setExpandedForms] = useState<Set<string>>(new Set());
 
   const tabs = [
-      { id: 'prospection', label: 'Listes des prospections' },
-      { id: 'visa',        label: 'Listes des visa' },
+    { id: 'prospection', label: 'Listes des prospections' },
+    { id: 'visa',        label: 'Listes des visa' },
   ];
-
   const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'visa');
 
   useEffect(() => {
@@ -193,338 +167,401 @@ const PageDetailPassager = () => {
   };
 
   const handleTabChange = (id: string) => {
-      if (id === 'prospection') {
-      // On remonte au parent (PageView) en passant le state pour l'onglet
-      navigate(`/dossiers-communs/visa/pages`, { 
-          state: { targetTab: 'prospection' }
-      });
-      } else {
+    if (id === 'prospection') {
+      navigate(`/dossiers-communs/visa/pages`, { state: { targetTab: 'prospection' } });
+    } else {
       setActiveTab(id);
-      }
+    }
   };
+
+  const toggleForm = (id: string) =>
+    setExpandedForms(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
 
   if (loading) return (
     <div className="flex items-center justify-center py-16 gap-3 text-gray-400">
       <Spinner /> <span className="text-sm">Chargement…</span>
     </div>
   );
-  /* ── rendu ── */
+
   return (
     <div className="h-full flex flex-col min-h-0">
       <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange}>
-        <div className="py-2 px-4 space-y-4">
-          <div className="flex flex-row justify-between">
-              <VisaHeader numerovisa={numeroDos} nomPassager={nomPassager} navigate={navigate} isDetail={true} isPassager={true}/>
+        <div className="flex flex-col h-full min-h-0">
 
-              <button
-                onClick={handleSync}
-                disabled={syncLoading}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white text-xs font-semibold transition"
-              >
-                {syncLoading ? <Spinner size={3} /> : syncDone ? '✓' : '⚡'}
-                {syncDone ? 'Synchronisé' : 'Synchroniser'}
-              </button>
+          {/* ── Header fixe ── */}
+          <div className="shrink-0 px-4 py-3 bg-slate-200 rounded-t-xl flex items-center justify-between gap-3">
+            <VisaHeader numerovisa={numeroDos} nomPassager={nomPassager} navigate={navigate} isDetail={true} isPassager={true} />
+            <button
+              onClick={handleSync}
+              disabled={syncLoading}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white text-xs font-semibold transition shrink-0"
+            >
+              {syncLoading ? <Spinner size={3} /> : syncDone ? '✓' : '⚡'}
+              {syncDone ? 'Synchronisé' : 'Synchroniser'}
+            </button>
           </div>
 
-          {/* ══ Content ══ */}
-          <div className="space-y-4">
+          {/* ── Feedbacks ── */}
+          {(actionSuccess || actionError) && (
+            <div className="shrink-0 px-4 pt-2">
+              {actionSuccess && (
+                <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl px-4 py-2.5">
+                  ✓ {actionSuccess}
+                </div>
+              )}
+              {actionError && (
+                <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-2.5">
+                  ⚠️ {actionError}
+                </div>
+              )}
+            </div>
+          )}
 
-            {/* feedbacks */}
-            {actionSuccess && (
-              <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl px-4 py-3">
-                ✓ {actionSuccess}
-              </div>
-            )}
-            {actionError && (
-              <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-3">
-                ⚠️ {actionError}
-              </div>
-            )}
-
+          {/* ── Contenu scrollable ── */}
+          <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-4">
             {detail && (
               <>
-                {/* ══ Layout 2 colonnes ══ */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
-
-                  {/* ── Colonne gauche (2/3) ── */}
-                  <div className="lg:col-span-2 space-y-6">
-
-                    {/* ══════════════════════════════════
-                        SECTION — Documents
-                    ══════════════════════════════════ */}
-                    {detail.userDocument.length > 0 && (
-                      <section>
-                        <div className="flex items-center justify-between mb-3">
+                {/* ══════════════════════════════════
+                    TABLEAU — Résumé du compte
+                ══════════════════════════════════ */}
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                  <table className="min-w-full border-collapse">
+                    <thead>
+                      <tr className="bg-slate-700 text-white">
+                        <th colSpan={4} className="px-4 py-2.5 text-left text-[11px] font-black uppercase tracking-wider">
                           <div className="flex items-center gap-2">
-                            <h2 className="text-base font-bold text-gray-900">Documents</h2>
-                            <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">
-                              {detail.userDocument.length}
-                            </span>
+                            <User size={12} />
+                            Résumé du compte
                           </div>
-                        </div>
+                        </th>
+                      </tr>
+                      <tr className="bg-gray-50 border-b border-gray-100">
+                        <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-left w-1/4">Statut</th>
+                        <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-left w-1/4">Validation</th>
+                        <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-left w-1/4">Créé le</th>
+                        <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-left w-1/4">Nom passager</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="hover:bg-gray-50 transition">
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <Badge status={detail.actif ? 'ACTIF' : 'INACTIF'} />
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <Badge status={detail.isValidate ? 'VALIDE' : 'EN_ATTENTE'} />
+                        </td>
+                        <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">
+                          {fmtDate(detail.createdAt)}
+                        </td>
+                        <td className="px-4 py-3 text-xs font-semibold text-gray-800 whitespace-nowrap">
+                          {nomPassager}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {detail.userDocument.map((doc) => (
-                            <div
-                              key={doc.id}
-                              className="bg-white border border-gray-200 rounded-xl px-4 py-3.5 flex items-center justify-between gap-3 shadow-sm hover:shadow-md hover:border-indigo-100 transition-all"
-                            >
-                              {/* icône + infos */}
-                              <div className="flex items-center gap-3 min-w-0">
-                                <div className="h-10 w-10 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0 text-lg">
+                {/* ══════════════════════════════════
+                    TABLEAU — Documents
+                ══════════════════════════════════ */}
+                {detail.userDocument.length > 0 && (
+                  <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                    <table className="min-w-full border-collapse">
+                      <thead>
+                        <tr className="bg-slate-700 text-white">
+                          <th colSpan={5} className="px-4 py-2.5 text-left text-[11px] font-black uppercase tracking-wider">
+                            <div className="flex items-center gap-2">
+                              <FileText size={12} />
+                              Documents
+                              <span className="bg-white/20 text-white text-[10px] px-1.5 py-0.5 rounded-full font-bold">
+                                {detail.userDocument.length}
+                              </span>
+                            </div>
+                          </th>
+                        </tr>
+                        <tr className="bg-gray-50 border-b border-gray-100">
+                          <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-left">Nom du document</th>
+                          <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-center">Date ajout</th>
+                          <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-center">Statut</th>
+                          <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-center">Aperçu</th>
+                          <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-center">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {detail.userDocument.map((doc, dIdx) => (
+                          <tr key={doc.id} className={dIdx % 2 === 0 ? 'bg-white hover:bg-gray-50' : 'bg-gray-50/40 hover:bg-gray-50'}>
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <div className="flex items-center gap-2.5">
+                                <div className="h-8 w-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0 text-base">
                                   📄
                                 </div>
-                                <div className="min-w-0">
-                                  <p className="text-sm font-semibold text-gray-900 truncate">{doc.nomDoc}</p>
-                                  <div className="flex items-center gap-2 mt-2 mb-2 flex-wrap">
-                                    <span className="text-xs text-gray-400">{fmtDate(doc.createdAt)}</span>
-                                  </div>
-                                  <Badge status={doc.status} />
-                                </div>
+                                <span className="text-sm font-semibold text-gray-800">{doc.nomDoc}</span>
                               </div>
-                              {/* actions */}
-                              <div className="flex flex-col items-end gap-1.5 shrink-0">
-                                <a
-                                  href={`${API_URL_PORTAIL}${doc.pj}`}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 border border-gray-200 text-indigo-600 text-xs font-semibold rounded-lg hover:bg-indigo-50 transition"
-                                >
-                                  Voir
-                                </a>
-                                <ActionButton
-                                  onClick={() => handleValidateDoc(doc.id)}
-                                  loading={docLoading[doc.id] ?? false}
-                                  statut={doc.status}
-                                  done={docDone[doc.id] ?? doc.status === 'VALIDE'}
-                                  label="Valider"
-                                  doneLabel="Validé"
-                                  color="green"
-                                />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </section>
-                    )}
+                            </td>
+                            <td className="px-4 py-3 text-xs text-gray-500 text-center whitespace-nowrap">
+                              {fmtDate(doc.createdAt)}
+                            </td>
+                            <td className="px-4 py-3 text-center whitespace-nowrap">
+                              <Badge status={doc.status} />
+                            </td>
+                            <td className="px-4 py-3 text-center whitespace-nowrap">
+                              <a
+                                href={`${API_URL_PORTAIL}${doc.pj}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 border border-gray-200 text-indigo-600 text-[11px] font-semibold rounded-lg hover:bg-indigo-50 transition"
+                              >
+                                Voir
+                              </a>
+                            </td>
+                            <td className="px-4 py-3 text-center whitespace-nowrap">
+                              <ActionButton
+                                onClick={() => handleValidateDoc(doc.id)}
+                                loading={docLoading[doc.id] ?? false}
+                                statut={doc.status}
+                                done={docDone[doc.id] ?? doc.status === 'VALIDE'}
+                                label="Valider"
+                                doneLabel="Validé"
+                                color="green"
+                              />
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
 
-                    {/* ══════════════════════════════════
-                        SECTION — Formulaires
-                    ══════════════════════════════════ */}
-                    {detail.clientBeneficiaireForms.length === 0 ? (
-                      <div className="bg-white border border-dashed border-gray-200 rounded-xl px-5 py-10 text-center text-sm text-gray-400 italic">
-                        Aucun formulaire rempli pour ce passager.
-                      </div>
-                    ) : (
-                      detail.clientBeneficiaireForms.map((form, fIdx) => (
-                        <section key={form.id}>
-
-                          {/* ── Titre de section formulaire ── */}
-                          <div className="flex items-center justify-between mb-3">
-                            <div className="flex items-center gap-2.5">
-                              <h2 className="text-base font-bold text-gray-900">{form.prenom} {form.nom}</h2>
-                              <span className="text-xs text-gray-400 font-medium">Formulaire #{fIdx + 1}</span>
-                              <Badge status={form.status} />
-                            </div>
-                            <ActionButton
-                              onClick={() => handleValidateForm(form.id)}
-                              loading={formLoading[form.id] ?? false}
-                              statut={form.status}
-                              done={formDone[form.id] ?? form.status === 'VALIDE'}
-                              label="Confirmer"
-                              doneLabel="Confirmé"
-                              color="green"
-                            />
-                          </div>
-
-                          {/* ── Card principale ── */}
-                          <div className="overflow-hidden space-y-4">
-
-                            {/* ── Identité ── */}
-                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                              <div className="flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 bg-gray-50/80">
-                                <div className="w-6 h-6 rounded-lg bg-indigo-100 flex items-center justify-center shrink-0">
-                                  <User size={12} className="text-indigo-600" />
-                                </div>
-                                <p className="text-[11px] font-black uppercase tracking-widest text-gray-600">Identité</p>
-                              </div>
-                              <div className="p-4 grid grid-cols-2 md:grid-cols-3 gap-2">
-                                <Field label="Nom"            value={form.nom} />
-                                <Field label="Prénom"         value={form.prenom} />
-                                <Field label="Sexe"           value={form.sexe} />
-                                <Field label="Date naissance" value={fmtDate(form.dateNaissance)} />
-                                <Field label="Lieu naissance" value={form.lieuNaissance} />
-                                <Field label="Nationalité"    value={form.nationalite} />
-                                <Field label="État civil"     value={form.etatCivil} />
-                                <Field label="Adresse"        value={form.adresse} />
-                                <Field label="Pays résidence" value={form.paysResidence} />
-                              </div>
-                            </div>
-
-                            {/* ── Contact + Contact d'urgence ── */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-                              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                                <div className="flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 bg-gray-50/80">
-                                  <div className="w-6 h-6 rounded-lg bg-rose-100 flex items-center justify-center shrink-0">
-                                    <Phone size={12} className="text-rose-500" />
-                                  </div>
-                                  <p className="text-[11px] font-black uppercase tracking-widest text-gray-600">Contact d'urgence</p>
-                                </div>
-                                <div className="p-4 grid grid-cols-1 gap-2">
-                                  <Field label="Nom"       value={`${form.prenomContactUrgence} ${form.nomContactUrgence}`} />
-                                  <Field label="Téléphone" value={form.numeroContactUrgence} />
-                                  <Field label="Email"     value={form.emailContactUrgence} />
-                                </div>
-                              </div>
-
-                              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                                <div className="flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 bg-gray-50/80">
-                                  <div className="w-6 h-6 rounded-lg bg-emerald-100 flex items-center justify-center shrink-0">
-                                    <Phone size={12} className="text-emerald-600" />
-                                  </div>
-                                  <p className="text-[11px] font-black uppercase tracking-widest text-gray-600">Contact</p>
-                                </div>
-                                <div className="p-4 grid grid-cols-1 gap-2">
-                                  <Field label="Téléphone" value={form.numero} />
-                                  <Field label="Email"     value={form.email} />
-                                </div>
-                              </div>
-
-                            </div>
-
-                            {/* ── Profession ── */}
-                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                              <div className="flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 bg-gray-50/80">
-                                <div className="w-6 h-6 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
-                                  <Briefcase size={12} className="text-amber-600" />
-                                </div>
-                                <p className="text-[11px] font-black uppercase tracking-widest text-gray-600">Profession</p>
-                              </div>
-                              <div className="p-4 grid grid-cols-2 md:grid-cols-3 gap-2">
-                                <Field label="Profession"    value={form.professionActuelle} />
-                                <Field label="Employeur"     value={form.nomEmployeur} />
-                                <Field label="Tél. pro"      value={form.numeroTelephone} />
-                                <Field label="Email pro"     value={form.emailProfessionnel} />
-                                <Field label="Adresse pro"   value={form.adresseProfessionnel} />
-                                <Field label="Établissement" value={form.etablissement} />
-                                <Field label="Diplôme"       value={form.diplome} />
-                              </div>
-                            </div>
-
-                            {/* ── Document d'identité ── */}
-                            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                              <div className="flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 bg-gray-50/80">
-                                <div className="w-6 h-6 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
-                                  <FileText size={12} className="text-blue-600" />
-                                </div>
-                                <p className="text-[11px] font-black uppercase tracking-widest text-gray-600">Document d'identité</p>
-                              </div>
-                              <div className="p-4 grid grid-cols-2 md:grid-cols-3 gap-2">
-                                <Field label="Type"       value={form.typeDoc} />
-                                <Field label="Référence"  value={form.referenceDoc} />
-                                <Field label="Délivrance" value={fmtDate(form.dateDelivranceDoc)} />
-                                <Field label="Validité"   value={fmtDate(form.dateValiditeDoc)} />
-                              </div>
-                            </div>
-
-                            {/* ── Personnes liées ── */}
-                            {form.clientBeneficiairePerson.length > 0 && (
-                              <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-gray-50/80">
-                                  <div className="flex items-center gap-2.5">
-                                    <div className="w-6 h-6 rounded-lg bg-violet-100 flex items-center justify-center shrink-0">
-                                      <Users size={12} className="text-violet-600" />
-                                    </div>
-                                    <p className="text-[11px] font-black uppercase tracking-widest text-gray-600">Personnes liées</p>
-                                  </div>
-                                  <span className="text-[10px] font-bold bg-violet-100 text-violet-600 px-2 py-0.5 rounded-full">
-                                    {form.clientBeneficiairePerson.length}
+                {detail.clientBeneficiaireForms.length === 0 ? (
+                  <div className="bg-white border border-dashed border-gray-200 rounded-xl px-5 py-10 text-center text-sm text-gray-400 italic">
+                    Aucun formulaire rempli pour ce passager.
+                  </div>
+                ) : (
+                  detail.clientBeneficiaireForms.map((form, fIdx) => (
+                    <div key={form.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                      <table className="min-w-full border-collapse">
+                        <thead>
+                          {/* ── Titre formulaire ── */}
+                          <tr className="bg-slate-700 text-white">
+                            <th colSpan={9} className="px-4 py-2.5">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <User size={12} />
+                                  <span className="text-[11px] font-black uppercase tracking-wider">
+                                    Formulaire #{fIdx + 1} — {form.prenom} {form.nom}
                                   </span>
+                                  <Badge status={form.status} />
                                 </div>
+                                <div className="flex items-center gap-2">
+                                  <ActionButton
+                                    onClick={() => handleValidateForm(form.id)}
+                                    loading={formLoading[form.id] ?? false}
+                                    statut={form.status}
+                                    done={formDone[form.id] ?? form.status === 'VALIDE'}
+                                    label="Confirmer"
+                                    doneLabel="Confirmé"
+                                    color="green"
+                                  />
+                                  <button
+                                    onClick={() => toggleForm(form.id)}
+                                    className="px-2.5 py-1 text-[11px] font-semibold rounded-lg bg-white/20 hover:bg-white/30 text-white transition flex items-center gap-1"
+                                  >
+                                    {expandedForms.has(form.id) ? '▲ Réduire' : '▼ Voir détails'}
+                                  </button>
+                                </div>
+                              </div>
+                            </th>
+                          </tr>
 
-                                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                  {form.clientBeneficiairePerson.map((person) => (
-                                    <div
-                                      key={person.id}
-                                      className="rounded-xl border border-gray-100 overflow-hidden hover:border-violet-100 hover:shadow-sm transition-all"
-                                    >
-                                      {/* Header personne */}
-                                      <div className="flex items-center justify-between px-3 py-2.5 bg-linear-gradient-to-r from-violet-50 to-indigo-50 border-b border-gray-100">
-                                        <div className="flex items-center gap-2.5">
-                                          <div className="h-7 w-7 rounded-full bg-violet-100 border border-violet-200 flex items-center justify-center text-violet-600 text-[11px] font-black shrink-0">
-                                            {person.prenom?.[0]}{person.nom?.[0]}
-                                          </div>
-                                          <p className="text-sm font-bold text-gray-900">
-                                            {person.prenom} {person.nom}
-                                          </p>
-                                        </div>
-                                        <span className="text-[10px] bg-white border border-violet-100 text-violet-600 px-2 py-0.5 rounded-full font-bold shadow-sm">
-                                          {person.typePerson}
+                          {/* ── En-têtes résumé ── */}
+                          <tr className="bg-gray-50 border-b border-gray-100">
+                            <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-left">Nom complet</th>
+                            <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-left">Sexe</th>
+                            <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-left">Date naissance</th>
+                            <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-left">Nationalité</th>
+                            <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-left">État civil</th>
+                            <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-left">Pays résidence</th>
+                            <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-left">Type doc</th>
+                            <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-left">Réf. doc</th>
+                            <th className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 text-left">Validité doc</th>
+                          </tr>
+                        </thead>
+
+                        <tbody>
+                          {/* ── Ligne résumé ── */}
+                          <tr className="border-b border-gray-100 hover:bg-gray-50 transition">
+                            <td className="px-4 py-3 text-sm font-semibold text-gray-800 whitespace-nowrap">{form.prenom} {form.nom}</td>
+                            <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">{form.sexe ?? '—'}</td>
+                            <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">{fmtDate(form.dateNaissance)}</td>
+                            <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">{form.nationalite ?? '—'}</td>
+                            <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">{form.etatCivil ?? '—'}</td>
+                            <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">{form.paysResidence ?? '—'}</td>
+                            <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">{form.typeDoc ?? '—'}</td>
+                            <td className="px-4 py-3 text-xs font-mono text-gray-600 whitespace-nowrap">{form.referenceDoc ?? '—'}</td>
+                            <td className="px-4 py-3 text-xs text-gray-600 whitespace-nowrap">{fmtDate(form.dateValiditeDoc)}</td>
+                          </tr>
+
+                          {/* ── Section expandée ── */}
+                          {expandedForms.has(form.id) && (
+                            <>
+                              {/* ─── CONTACT ─────────────────────────────── */}
+                              <tr className="bg-slate-100 border-t border-slate-200">
+                                <td colSpan={9} className="px-4 py-1.5">
+                                  <div className="flex items-center gap-1.5">
+                                    <Phone size={10} className="text-slate-500" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Contact</span>
+                                  </div>
+                                </td>
+                              </tr>
+                              <tr className="bg-slate-50/60 border-b border-slate-100">
+                                <th className="px-4 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-left" colSpan={3}>Téléphone</th>
+                                <th className="px-4 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-left" colSpan={3}>Email</th>
+                                <th className="px-4 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-left" colSpan={3}>Adresse</th>
+                              </tr>
+                              <tr className="border-b border-gray-100 hover:bg-gray-50 transition">
+                                <td className="px-4 py-2.5 text-xs text-gray-700" colSpan={3}>{form.numero ?? '—'}</td>
+                                <td className="px-4 py-2.5 text-xs text-gray-700" colSpan={3}>{form.email ?? '—'}</td>
+                                <td className="px-4 py-2.5 text-xs text-gray-700" colSpan={3}>{form.adresse ?? '—'}</td>
+                              </tr>
+
+                              {/* ─── CONTACT URGENCE ─────────────────────── */}
+                              <tr className="bg-slate-100 border-t border-slate-200">
+                                <td colSpan={9} className="px-4 py-1.5">
+                                  <div className="flex items-center gap-1.5">
+                                    <Phone size={10} className="text-slate-500" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Contact d'urgence</span>
+                                  </div>
+                                </td>
+                              </tr>
+                              <tr className="bg-slate-50/60 border-b border-slate-100">
+                                <th className="px-4 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-left" colSpan={3}>Nom</th>
+                                <th className="px-4 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-left" colSpan={3}>Téléphone</th>
+                                <th className="px-4 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-left" colSpan={3}>Email</th>
+                              </tr>
+                              <tr className="border-b border-gray-100 hover:bg-gray-50 transition">
+                                <td className="px-4 py-2.5 text-xs text-gray-700" colSpan={3}>{form.prenomContactUrgence} {form.nomContactUrgence}</td>
+                                <td className="px-4 py-2.5 text-xs text-gray-700" colSpan={3}>{form.numeroContactUrgence ?? '—'}</td>
+                                <td className="px-4 py-2.5 text-xs text-gray-700" colSpan={3}>{form.emailContactUrgence ?? '—'}</td>
+                              </tr>
+
+                              {/* ─── PROFESSION ──────────────────────────── */}
+                              <tr className="bg-slate-100 border-t border-slate-200">
+                                <td colSpan={9} className="px-4 py-1.5">
+                                  <div className="flex items-center gap-1.5">
+                                    <Briefcase size={10} className="text-slate-500" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Profession</span>
+                                  </div>
+                                </td>
+                              </tr>
+                              <tr className="bg-slate-50/60 border-b border-slate-100">
+                                <th className="px-4 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-left" colSpan={2}>Profession</th>
+                                <th className="px-4 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-left" colSpan={2}>Employeur</th>
+                                <th className="px-4 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-left">Tél. pro</th>
+                                <th className="px-4 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-left" colSpan={2}>Email pro</th>
+                                <th className="px-4 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-left">Établissement</th>
+                                <th className="px-4 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-left">Diplôme</th>
+                              </tr>
+                              <tr className="border-b border-gray-100 hover:bg-gray-50 transition">
+                                <td className="px-4 py-2.5 text-xs text-gray-700" colSpan={2}>{form.professionActuelle ?? '—'}</td>
+                                <td className="px-4 py-2.5 text-xs text-gray-700" colSpan={2}>{form.nomEmployeur ?? '—'}</td>
+                                <td className="px-4 py-2.5 text-xs text-gray-700">{form.numeroTelephone ?? '—'}</td>
+                                <td className="px-4 py-2.5 text-xs text-gray-700" colSpan={2}>{form.emailProfessionnel ?? '—'}</td>
+                                <td className="px-4 py-2.5 text-xs text-gray-700">{form.etablissement ?? '—'}</td>
+                                <td className="px-4 py-2.5 text-xs text-gray-700">{form.diplome ?? '—'}</td>
+                              </tr>
+                              {/* Adresse pro sur ligne séparée */}
+                              <tr className="bg-slate-50/60 border-b border-slate-100">
+                                <th className="px-4 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-left" colSpan={9}>Adresse professionnelle</th>
+                              </tr>
+                              <tr className="border-b border-gray-100 hover:bg-gray-50 transition">
+                                <td className="px-4 py-2.5 text-xs text-gray-700" colSpan={9}>{form.adresseProfessionnel ?? '—'}</td>
+                              </tr>
+
+                              {/* ─── DOCUMENT D'IDENTITÉ ─────────────────── */}
+                              <tr className="bg-slate-100 border-t border-slate-200">
+                                <td colSpan={9} className="px-4 py-1.5">
+                                  <div className="flex items-center gap-1.5">
+                                    <FileText size={10} className="text-slate-500" />
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Document d'identité</span>
+                                  </div>
+                                </td>
+                              </tr>
+                              <tr className="bg-slate-50/60 border-b border-slate-100">
+                                <th className="px-4 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-left" colSpan={2}>Type</th>
+                                <th className="px-4 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-left" colSpan={3}>Référence</th>
+                                <th className="px-4 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-left" colSpan={2}>Délivrance</th>
+                                <th className="px-4 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-left" colSpan={2}>Validité</th>
+                              </tr>
+                              <tr className="border-b border-gray-100 hover:bg-gray-50 transition">
+                                <td className="px-4 py-2.5 text-xs text-gray-700" colSpan={2}>{form.typeDoc ?? '—'}</td>
+                                <td className="px-4 py-2.5 text-xs font-mono text-gray-700" colSpan={3}>{form.referenceDoc ?? '—'}</td>
+                                <td className="px-4 py-2.5 text-xs text-gray-700" colSpan={2}>{fmtDate(form.dateDelivranceDoc)}</td>
+                                <td className="px-4 py-2.5 text-xs text-gray-700" colSpan={2}>{fmtDate(form.dateValiditeDoc)}</td>
+                              </tr>
+
+                              {/* ─── PERSONNES LIÉES ─────────────────────── */}
+                              {form.clientBeneficiairePerson.length > 0 && (
+                                <>
+                                  <tr className="bg-slate-100 border-t border-slate-200">
+                                    <td colSpan={9} className="px-4 py-1.5">
+                                      <div className="flex items-center gap-1.5">
+                                        <Users size={10} className="text-slate-500" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Personnes liées</span>
+                                        <span className="text-[10px] bg-slate-300 text-slate-600 px-1.5 py-0.5 rounded-full font-bold">
+                                          {form.clientBeneficiairePerson.length}
                                         </span>
                                       </div>
-
-                                      {/* Body personne */}
-                                      <div className="p-3 grid grid-cols-2 gap-1.5 bg-white">
-                                        <Field label="Sexe"           value={person.sexe} />
-                                        <Field label="Né(e) le"       value={fmtDate(person.dateNaissance)} />
-                                        <Field label="Lieu"           value={person.lieuNaissance} />
-                                        <Field label="Nationalité"    value={person.nationalite} />
-                                        <Field label="État civil"     value={person.etatCivil} />
-                                        <Field label="Pays résidence" value={person.paysResidence} />
-                                        <Field label="Email"          value={person.email} />
-                                        <Field label="Téléphone"      value={person.numero} />
-                                      </div>
-                                    </div>
+                                    </td>
+                                  </tr>
+                                  <tr className="bg-slate-50/60 border-b border-slate-100">
+                                    <th className="px-4 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-left" colSpan={2}>Nom</th>
+                                    <th className="px-4 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-left">Type</th>
+                                    <th className="px-4 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-left">Sexe</th>
+                                    <th className="px-4 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-left">Naissance</th>
+                                    <th className="px-4 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-left">Nationalité</th>
+                                    <th className="px-4 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-left">État civil</th>
+                                    <th className="px-4 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-left">Email</th>
+                                    <th className="px-4 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-left">Téléphone</th>
+                                  </tr>
+                                  {form.clientBeneficiairePerson.map((person, pIdx) => (
+                                    <tr
+                                      key={person.id}
+                                      className={`border-b border-gray-100 hover:bg-gray-50 transition ${pIdx % 2 === 0 ? 'bg-white' : 'bg-slate-50/40'}`}
+                                    >
+                                      <td className="px-4 py-2.5 whitespace-nowrap" colSpan={2}>
+                                        <div className="flex items-center gap-2">
+                                          <div className="h-6 w-6 rounded-full bg-slate-200 border border-slate-300 flex items-center justify-center text-slate-500 text-[9px] font-black shrink-0">
+                                            {person.prenom?.[0]}{person.nom?.[0]}
+                                          </div>
+                                          <span className="text-xs font-semibold text-gray-800">{person.prenom} {person.nom}</span>
+                                        </div>
+                                      </td>
+                                      <td className="px-4 py-2.5 whitespace-nowrap">
+                                        <span className="text-[10px] bg-slate-100 border border-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full font-bold">
+                                          {person.typePerson}
+                                        </span>
+                                      </td>
+                                      <td className="px-4 py-2.5 text-xs text-gray-600 whitespace-nowrap">{person.sexe ?? '—'}</td>
+                                      <td className="px-4 py-2.5 text-xs text-gray-600 whitespace-nowrap">{fmtDate(person.dateNaissance)}</td>
+                                      <td className="px-4 py-2.5 text-xs text-gray-600 whitespace-nowrap">{person.nationalite ?? '—'}</td>
+                                      <td className="px-4 py-2.5 text-xs text-gray-600 whitespace-nowrap">{person.etatCivil ?? '—'}</td>
+                                      <td className="px-4 py-2.5 text-xs text-gray-600 whitespace-nowrap">{person.email ?? '—'}</td>
+                                      <td className="px-4 py-2.5 text-xs text-gray-600 whitespace-nowrap">{person.numero ?? '—'}</td>
+                                    </tr>
                                   ))}
-                                </div>
-                              </div>
-                            )}
-
-                          </div>
-                        </section>
-                      ))
-                    )}
-                  </div>
-
-                  {/* ── Colonne droite (1/3) ── */}
-                  <div className="space-y-4">
-
-                    {/* Statut du compte */}
-                    <Card title="Résumé du compte">
-                      <DataRow label="Statut"     value={<Badge status={detail.actif ? 'ACTIF' : 'INACTIF'} />} />
-                      <DataRow label="Validation" value={<Badge status={detail.isValidate ? 'VALIDE' : 'EN_ATTENTE'} />} />
-                      <DataRow label="Créé le"    value={fmtDate(detail.createdAt)} />
-                    </Card>
-
-                    {/* Récap documents */}
-                    {detail.userDocument.length > 0 && (
-                      <Card title="Récap documents">
-                        {detail.userDocument.map((doc) => (
-                          <DataRow
-                            key={doc.id}
-                            label={doc.nomDoc}
-                            value={<Badge status={doc.status} />}
-                          />
-                        ))}
-                      </Card>
-                    )}
-
-                    {/* Récap formulaires */}
-                    {detail.clientBeneficiaireForms.length > 0 && (
-                      <Card title="Récap formulaires">
-                        {detail.clientBeneficiaireForms.map((form, i) => (
-                          <DataRow
-                            key={form.id}
-                            label={`Formulaire #${i + 1} — ${form.prenom} ${form.nom}`}
-                            value={<Badge status={form.status} />}
-                          />
-                        ))}
-                      </Card>
-                    )}
-
-                  </div>
-                </div>
+                                </>
+                              )}
+                            </>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  ))
+                )}
               </>
             )}
           </div>

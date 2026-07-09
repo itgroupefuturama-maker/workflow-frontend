@@ -87,6 +87,8 @@ export interface DevisLigne {
   dateHeureArrive: string;
   dureeVol: string;
   dureeEscale: string;
+  aeroportDepart: string | null;
+  aeroportArrivee: string | null;
   conditionModif: string | null;
   conditionAnnul: string | null;
   devise: string;

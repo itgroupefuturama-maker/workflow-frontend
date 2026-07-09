@@ -17,6 +17,7 @@ export interface ClientFacture {
   code: string;
   libelle: string;
   profilRisque: string;
+  creditdefault: string;
   statut: string;
 }
 

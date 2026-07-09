@@ -8,11 +8,12 @@ import { fetchExigences } from '../../app/front_office/parametre_ticketing/exige
 interface AssociationModalProps {
   isOpen: boolean;
   onClose: () => void;
+  defaultPaysId?: string | null;
 }
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
-export default function AssociationModal({ isOpen, onClose }: AssociationModalProps) {
+export default function AssociationModal({ isOpen, onClose, defaultPaysId }: AssociationModalProps) {
   const dispatch = useAppDispatch();
 
   const { items: pays, loading: paysLoading } = useSelector((state: RootState) => state.pays);
@@ -29,6 +30,14 @@ export default function AssociationModal({ isOpen, onClose }: AssociationModalPr
       if (exigences.length === 0 && !exigencesLoading) dispatch(fetchExigences());
     }
   }, [isOpen, pays.length, exigences.length, paysLoading, exigencesLoading, dispatch]);
+
+  // Pré-remplit le pays avec celui sélectionné dans la colonne de gauche
+  // à chaque ouverture de la modal (mais reste modifiable par l'utilisateur).
+  useEffect(() => {
+    if (isOpen) {
+      setPaysId(defaultPaysId || '');
+    }
+  }, [isOpen, defaultPaysId]);
 
   if (!isOpen) return null;
 

@@ -303,12 +303,6 @@ function drawBilletConsignes(
   cur.move(blkH + 5);
 
   // ── Avertissement + mention sanitaire — même bloc sobre ───────────
-  // doc.setFillColor(246, 247, 249);
-  // doc.rect(MARGIN - 2, cur.y, CONTENT_W + 4, 14, 'F');
-
-  // Trait fin à gauche
-  // doc.setFillColor(180, 140, 0);
-  // doc.rect(MARGIN, cur.y, 2, 14, 'F');
 
   doc.setFontSize(7);
   doc.setFont('helvetica', 'bold');
@@ -318,39 +312,7 @@ function drawBilletConsignes(
     MARGIN + 3, cur.y + 5,
   );
 
-  // doc.setFontSize(6.5);
-  // doc.setFont('helvetica', 'italic');
-  // setColor(doc, [120, 100, 60], 'text');
-  // doc.text(
-  //   'Les conditions sont susceptibles de changer en fonction de la situation sanitaire.',
-  //   MARGIN + 3, cur.y + 10,
-  // );
-
   cur.move(18);
-
-  // ── Destination ───────────────────────────────────────────────────
-  // const dest = data.ligne.destinationVoyage;
-  // if (dest) {
-  //   const ville = sanitize(dest.ville ?? '-');
-  //   const pays  = sanitize(dest.pays?.pays ?? '-');
-
-  //   doc.setFillColor(246, 247, 249);
-  //   doc.rect(MARGIN - 2, cur.y, CONTENT_W + 4, 10, 'F');
-  //   setColor(doc, accentColor, 'fill');
-  //   doc.rect(MARGIN - 2, cur.y, 2, 10, 'F');
-
-  //   doc.setFontSize(6);
-  //   doc.setFont('helvetica', 'normal');
-  //   setColor(doc, [140, 140, 140], 'text');
-  //   doc.text('DESTINATION', MARGIN + 4, cur.y + 4);
-
-  //   doc.setFontSize(8);
-  //   doc.setFont('helvetica', 'bold');
-  //   setColor(doc, [26, 39, 68], 'text');
-  //   doc.text(`${ville}  -  ${pays}`, MARGIN + 4, cur.y + 8.5);
-
-  //   cur.move(14);
-  // }
 
   drawSeparator(doc, cur);
 }
@@ -436,13 +398,14 @@ function drawBilletExigences(
 }
 
 // ─── Passager : style Receipt billet d'avion ─────────────────────────
+// ─── Passager : style Receipt billet d'avion (SANS PRIX) ─────────────
 function drawBilletPassager(
   doc: jsPDF,
   cur: Cursor,
   data: BilletPassagerData,
   style: BilletStyle,
 ) {
-  checkPage(doc, cur, 60, style as any);
+  checkPage(doc, cur, 40, style as any);
 
   const accentColor = (style.colors.accentLine ?? style.colors.accentBg) as [number, number, number];
   const l = data.ligne;
@@ -457,26 +420,26 @@ function drawBilletPassager(
   cur.move(13);
 
   // ── Bloc receipt sur fond blanc avec bordure fine ─────────────────
-  const blockH = 60;
+  const blockH = 36;
   doc.setFillColor(255, 255, 255);
   doc.setDrawColor(220, 220, 225);
   doc.setLineWidth(0.3);
   doc.rect(MARGIN - 2, cur.y, CONTENT_W + 4, blockH, 'FD');
 
-  // Ligne de titre "Ticket & Receipt" style Emirates
+  // Bandeau titre
   doc.setFillColor(...(style.colors.headerBg as [number, number, number]));
   doc.rect(MARGIN - 2, cur.y, CONTENT_W + 4, 8, 'F');
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
   setColor(doc, [255, 255, 255], 'text');
-  doc.text('Ticket & Receipt', MARGIN + 2, cur.y + 5.5);
+  doc.text('Billet & Reçu', MARGIN + 2, cur.y + 5.5);
 
-  // Numéro billet aligné à droite dans le bandeau
+  // Numéro billet à droite dans le bandeau
   doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
   setColor(doc, [200, 210, 230], 'text');
   doc.text(
-    sanitize(`Ticket number : ${data.numeroBillet ?? data.numeroBilletEntete}`),
+    sanitize(`Numéro de billet : ${data.numeroBillet ?? data.numeroBilletEntete}`),
     MARGIN + CONTENT_W,
     cur.y + 5.5,
     { align: 'right' },
@@ -484,19 +447,23 @@ function drawBilletPassager(
 
   cur.move(12);
 
-  // ── Informations passager ─────────────────────────────────────────
+  // ── Informations passager UNIQUEMENT (sans prix) ──────────────────
   const rows: Array<{ label: string; value: string }> = [
     {
-      label: 'Name',
+      label: 'Nom',
       value: sanitize(`${data.prenom} ${data.nom}`.toUpperCase() + ` ${fmt.replace_(data.clientType)}`),
     },
     {
-      label: 'Ticket number',
+      label: 'Numéro de billet',
       value: sanitize(data.numeroBillet ?? data.numeroBilletEntete),
     },
     {
-      label: 'Form of payment',
+      label: 'Mode de paiement',
       value: sanitize(fmt.replace_(l.modePaiement ?? '-')),
+    },
+    {
+      label: 'Statut',
+      value: sanitize(data.statut ?? '-'),
     },
   ];
 
@@ -512,67 +479,6 @@ function drawBilletPassager(
 
     cur.move(6);
   });
-
-  cur.move(2);
-
-  // ── Séparateur pointillé ──────────────────────────────────────────
-  doc.setDrawColor(210, 210, 215);
-  doc.setLineWidth(0.2);
-  doc.setLineDashPattern([1, 1], 0);
-  doc.line(MARGIN + 2, cur.y, MARGIN + CONTENT_W, cur.y);
-  doc.setLineDashPattern([], 0);
-  cur.move(4);
-
-  // ── Fare Calculation ─────────────────────────────────────────────
-  doc.setFontSize(6.5);
-  doc.setFont('helvetica', 'bold');
-  setColor(doc, [80, 80, 90], 'text');
-  doc.text('Fare Calculation', MARGIN + 2, cur.y);
-
-  // Calcul automatique depuis les données
-  const dest      = sanitize(l.destinationVoyage?.pays?.pays ?? l.destinationVoyage?.ville ?? '-');
-  const devise    = sanitize(l.devise ?? 'MGA');
-  const billet    = l.puResaBilletClientAriary ?? l.montantBilletClientAriary ?? 0;
-  const fareCalc  = sanitize(
-    `${dest} ${fmt.number(billet, 0)}${devise} END`
-  );
-
-  doc.setFont('helvetica', 'normal');
-  setColor(doc, [50, 50, 60], 'text');
-  const fareLines = doc.splitTextToSize(fareCalc, CONTENT_W - 44);
-  doc.text(fareLines, MARGIN + 42, cur.y);
-  cur.move(fareLines.length * 4 + 3);
-
-  // ── Séparateur pointillé ──────────────────────────────────────────
-  doc.setDrawColor(210, 210, 215);
-  doc.setLineWidth(0.2);
-  doc.setLineDashPattern([1, 1], 0);
-  doc.line(MARGIN + 2, cur.y, MARGIN + CONTENT_W, cur.y);
-  doc.setLineDashPattern([], 0);
-  cur.move(4);
-
-  // ── Air Fare + Taxes ─────────────────────────────────────────────
-  const airFare   = l.puResaBilletClientAriary ?? l.montantBilletClientAriary ?? 0;
-  const taxes     = l.puResaServiceClientAriary ?? l.montantServiceClientAriary ?? 0;
-
-  // Air Fare
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'bold');
-  setColor(doc, [80, 80, 90], 'text');
-  doc.text('Air Fare', MARGIN + 2, cur.y);
-  doc.setFont('helvetica', 'normal');
-  setColor(doc, [30, 30, 30], 'text');
-  doc.text(`MGA ${fmt.number(airFare, 0)}`, MARGIN + 42, cur.y);
-  cur.move(6);
-
-  // Tax
-  doc.setFont('helvetica', 'bold');
-  setColor(doc, [80, 80, 90], 'text');
-  doc.text('Tax', MARGIN + 2, cur.y);
-  doc.setFont('helvetica', 'normal');
-  setColor(doc, [30, 30, 30], 'text');
-  doc.text(`MGA ${fmt.number(taxes, 0)}`, MARGIN + 42, cur.y);
-  cur.move(6);
 
   cur.move(12);
   drawSeparator(doc, cur);
@@ -644,7 +550,7 @@ function drawBilletSegment(
   doc.setFontSize(6.5);
   doc.setFont('helvetica', 'normal');
   setColor(doc, [80, 80, 90], 'text');
-  doc.text('Departing  >>  From', MARGIN + 7, blockY + 6);
+  doc.text('Départ  >>  De', MARGIN + 7, blockY + 6);
 
   doc.setFont('helvetica', 'bold');
   setColor(doc, [30, 30, 40], 'text');
@@ -656,7 +562,7 @@ function drawBilletSegment(
     doc.setFont('helvetica', 'normal');
     setColor(doc, [120, 120, 130], 'text');
     doc.text(
-      sanitize(`1 Stop (${l.dureeEscale})`),
+      sanitize(`1 Escale (${l.dureeEscale})`),
       MARGIN + CONTENT_W,
       blockY + 6,
       { align: 'right' },
@@ -671,7 +577,7 @@ function drawBilletSegment(
   doc.setFontSize(6);
   doc.setFont('helvetica', 'normal');
   setColor(doc, [140, 140, 150], 'text');
-  doc.text('Flight', c1x, cur.y + 5);
+  doc.text('Vol', c1x, cur.y + 5);
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
@@ -693,7 +599,7 @@ function drawBilletSegment(
   doc.setFontSize(6);
   doc.setFont('helvetica', 'normal');
   setColor(doc, [140, 140, 150], 'text');
-  doc.text('Check-in at', c2x, cur.y + 5);
+  doc.text('Enregistrement le', c2x, cur.y + 5);
 
   doc.setFontSize(7);
   doc.setFont('helvetica', 'bold');
@@ -703,7 +609,7 @@ function drawBilletSegment(
   doc.setFontSize(6);
   doc.setFont('helvetica', 'normal');
   setColor(doc, [140, 140, 150], 'text');
-  doc.text('Departure', c2x, cur.y + 16);
+  doc.text('Départ', c2x, cur.y + 16);
 
   doc.setFontSize(7);
   doc.setFont('helvetica', 'bold');
@@ -721,16 +627,6 @@ function drawBilletSegment(
   // Col 3 : Flèche + Arrival
   const c3x = MARGIN + 67;
 
-  // Flèche avion stylisée
-  // const arrY = cur.y + 8;
-  // doc.setDrawColor(180, 170, 140);
-  // doc.setLineWidth(0.5);
-  // doc.line(c3x, arrY, c3x + 10, arrY);
-  // doc.line(c3x + 7, arrY - 2, c3x + 10, arrY);
-  // doc.line(c3x + 7, arrY + 2, c3x + 10, arrY);
-  // doc.setFillColor(180, 170, 140);
-  // doc.circle(c3x, arrY, 1.5, 'S');
-  // doc.circle(c3x + 10, arrY, 1.5, 'S');
   // ── Icône avion ───────────────────────────────────────────────────
   const arrY  = cur.y + 4;
   const iconW = 14;
@@ -752,7 +648,7 @@ function drawBilletSegment(
   doc.setFontSize(6);
   doc.setFont('helvetica', 'normal');
   setColor(doc, [140, 140, 150], 'text');
-  doc.text('Arrival', c3x, cur.y + 16);
+  doc.text('Arrivée', c3x, cur.y + 16);
 
   doc.setFontSize(7);
   doc.setFont('helvetica', 'bold');
@@ -778,7 +674,7 @@ function drawBilletSegment(
   doc.setFontSize(6);
   doc.setFont('helvetica', 'normal');
   setColor(doc, [120, 120, 130], 'text');
-  doc.text(`Departing ${codeD}`, c4x, cur.y + 15);
+  doc.text(`Départ ${codeD}`, c4x, cur.y + 15);
 
   doc.setFontSize(14);
   doc.setFont('helvetica', 'bold');
@@ -788,7 +684,7 @@ function drawBilletSegment(
   doc.setFontSize(6);
   doc.setFont('helvetica', 'normal');
   setColor(doc, [120, 120, 130], 'text');
-  doc.text(`Arriving ${codeA}`, c4x, cur.y + 29);
+  doc.text(`Arrivée ${codeA}`, c4x, cur.y + 29);
 
   cur.move(iataH);
 
@@ -842,7 +738,7 @@ function drawBilletSegment(
   doc.setFontSize(6);
   doc.setFont('helvetica', 'normal');
   setColor(doc, [130, 130, 140], 'text');
-  doc.text('Coupon validity: not before', MARGIN + 2, cur.y + 5.5);
+  doc.text('Validité du coupon : pas avant le', MARGIN + 2, cur.y + 5.5);
 
   doc.setFont('helvetica', 'bold');
   setColor(doc, accentColor, 'text');
@@ -850,7 +746,7 @@ function drawBilletSegment(
 
   doc.setFont('helvetica', 'normal');
   setColor(doc, [130, 130, 140], 'text');
-  doc.text('/ not after', MARGIN + 55, cur.y + 5.5);
+  doc.text('/ pas après le', MARGIN + 55, cur.y + 5.5);
 
   doc.setFont('helvetica', 'bold');
   setColor(doc, accentColor, 'text');
@@ -859,7 +755,7 @@ function drawBilletSegment(
   doc.setFontSize(7);
   doc.setFont('helvetica', 'bold');
   setColor(doc, [50, 50, 60], 'text');
-  doc.text('Baggage 3 Piece', MARGIN + CONTENT_W, cur.y + 5.5, { align: 'right' });
+  doc.text('Bagages 3 pièces', MARGIN + CONTENT_W, cur.y + 5.5, { align: 'right' });
 
   cur.move(9);
 
@@ -977,6 +873,245 @@ function drawBilletBagage(
   });
 
   cur.move(bH + 6);
+  drawSeparator(doc, cur);
+}
+
+// ─── PAGE 3 : Reçu complet avec tous les prix ────────────────────────
+function drawRecuComplet(
+  doc: jsPDF,
+  cur: Cursor,
+  data: BilletPassagerData,
+  style: BilletStyle,
+) {
+  const l = data.ligne;
+  const accentColor = (style.colors.accentLine ?? style.colors.accentBg) as [number, number, number];
+
+  // ── Titre section ─────────────────────────────────────────────────
+  setColor(doc, accentColor, 'fill');
+  doc.rect(MARGIN, cur.y - 1, 2, 9, 'F');
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  setColor(doc, accentColor, 'text');
+  doc.text('REÇU DE PAIEMENT', MARGIN + 5, cur.y + 6);
+  cur.move(13);
+
+  // ── En-tête du reçu ───────────────────────────────────────────────
+  const headerH = 20;
+  doc.setFillColor(255, 255, 255);
+  doc.setDrawColor(220, 220, 225);
+  doc.setLineWidth(0.3);
+  doc.rect(MARGIN - 2, cur.y, CONTENT_W + 4, headerH, 'FD');
+
+  doc.setFillColor(...(style.colors.headerBg as [number, number, number]));
+  doc.rect(MARGIN - 2, cur.y, CONTENT_W + 4, 8, 'F');
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  setColor(doc, [255, 255, 255], 'text');
+  doc.text('REÇU OFFICIEL', MARGIN + 2, cur.y + 5.5);
+
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
+  setColor(doc, [200, 210, 230], 'text');
+  doc.text(
+    sanitize(`Dossier : ${data.numeroDossier}  |  Émis le : ${fmt.date(data.dateEmission)}`),
+    MARGIN + CONTENT_W,
+    cur.y + 5.5,
+    { align: 'right' },
+  );
+  cur.move(10);
+
+  // Infos passager en résumé
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'bold');
+  setColor(doc, [80, 80, 90], 'text');
+  doc.text('Passager :', MARGIN + 2, cur.y);
+  doc.setFont('helvetica', 'normal');
+  setColor(doc, [30, 30, 30], 'text');
+  doc.text(
+    sanitize(`${data.prenom} ${data.nom}`.toUpperCase()),
+    MARGIN + 30, cur.y,
+  );
+
+  doc.setFont('helvetica', 'bold');
+  setColor(doc, [80, 80, 90], 'text');
+  doc.text('Billet :', MARGIN + 100, cur.y);
+  doc.setFont('helvetica', 'normal');
+  setColor(doc, [30, 30, 30], 'text');
+  doc.text(
+    sanitize(data.numeroBillet ?? data.numeroBilletEntete),
+    MARGIN + 118, cur.y,
+  );
+  cur.move(headerH - 10 + 6);
+
+  // ── Tableau des prix ──────────────────────────────────────────────
+  // Colonnes : Désignation | Devise | Montant Compagnie | Montant Client
+  const tableH = 10;
+  const col1 = MARGIN;
+  const col2 = MARGIN + 60;
+  const col3 = MARGIN + 90;
+  const col4 = MARGIN + 130;
+  const colEnd = MARGIN + CONTENT_W;
+
+  // En-tête tableau
+  doc.setFillColor(...(style.colors.headerBg as [number, number, number]));
+  doc.rect(MARGIN - 2, cur.y, CONTENT_W + 4, tableH, 'F');
+
+  doc.setFontSize(6.5);
+  doc.setFont('helvetica', 'bold');
+  setColor(doc, [255, 255, 255], 'text');
+  doc.text('DÉSIGNATION', col1 + 2, cur.y + 6.5);
+  doc.text('DEVISE', col2, cur.y + 6.5);
+  doc.text('MONTANT CIE', col3, cur.y + 6.5);
+  doc.text('MONTANT CLIENT', col4, cur.y + 6.5);
+  cur.move(tableH);
+
+  // Lignes du tableau
+  const lignesPrix = [
+    {
+      label:    'Billet (réservation)',
+      devise:   sanitize(l.devise ?? '-'),
+      montantCie: l.puResaBilletCompagnieDevise ?? l.puBilletCompagnieDevise ?? 0,
+      montantClient: l.puResaBilletClientAriary ?? l.montantBilletClientAriary ?? 0,
+    },
+    {
+      label:    'Services / Taxes (réservation)',
+      devise:   sanitize(l.devise ?? '-'),
+      montantCie: l.puResaServiceCompagnieDevise ?? l.puServiceCompagnieDevise ?? 0,
+      montantClient: l.puResaServiceClientAriary ?? l.montantServiceClientAriary ?? 0,
+    },
+    {
+      label:    'Pénalités (réservation)',
+      devise:   sanitize(l.devise ?? '-'),
+      montantCie: l.puResaPenaliteCompagnieDevise ?? l.puPenaliteCompagnieDevise ?? 0,
+      montantClient: l.puResaPenaliteClientAriary ?? l.montantPenaliteClientAriary ?? 0,
+    },
+    {
+      label:    'Billet (émission)',
+      devise:   'MGA',
+      montantCie: l.emissionMontantBilletCompagnieAriary ?? l.montantBilletCompagnieAriary ?? 0,
+      montantClient: l.emissionMontantBilletClientAriary ?? l.montantBilletClientAriary ?? 0,
+    },
+    {
+      label:    'Services / Taxes (émission)',
+      devise:   'MGA',
+      montantCie: l.emissionMontantServiceCompagnieAriary ?? l.montantServiceCompagnieAriary ?? 0,
+      montantClient: l.emissionMontantServiceClientAriary ?? l.montantServiceClientAriary ?? 0,
+    },
+    {
+      label:    'Pénalités (émission)',
+      devise:   'MGA',
+      montantCie: l.emissionMontantPenaliteCompagnieAriary ?? l.montantPenaliteCompagnieAriary ?? 0,
+      montantClient: l.emissionMontantPenaliteClientAriary ?? l.montantPenaliteClientAriary ?? 0,
+    },
+  ];
+
+  lignesPrix.forEach((lp, idx) => {
+    const rowH = 8;
+    // Alternance de fond
+    if (idx % 2 === 0) {
+      doc.setFillColor(248, 249, 252);
+    } else {
+      doc.setFillColor(255, 255, 255);
+    }
+    doc.rect(MARGIN - 2, cur.y, CONTENT_W + 4, rowH, 'F');
+
+    doc.setFontSize(6.5);
+    doc.setFont('helvetica', 'normal');
+    setColor(doc, [50, 50, 60], 'text');
+    doc.text(lp.label, col1 + 2, cur.y + 5.5);
+
+    setColor(doc, [100, 100, 110], 'text');
+    doc.text(lp.devise, col2, cur.y + 5.5);
+
+    setColor(doc, [50, 50, 60], 'text');
+    doc.text(fmt.number(lp.montantCie, 2), col3, cur.y + 5.5);
+
+    doc.setFont('helvetica', 'bold');
+    setColor(doc, [26, 39, 68], 'text');
+    doc.text(fmt.number(lp.montantClient, 2), col4, cur.y + 5.5);
+
+    cur.move(rowH);
+  });
+
+  // ── Séparateur pointillé ──────────────────────────────────────────
+  doc.setDrawColor(210, 210, 215);
+  doc.setLineWidth(0.2);
+  doc.setLineDashPattern([1, 1], 0);
+  doc.line(MARGIN, cur.y, MARGIN + CONTENT_W, cur.y);
+  doc.setLineDashPattern([], 0);
+  cur.move(4);
+
+  // ── Bloc commissions ──────────────────────────────────────────────
+  const commissions = [
+    {
+      label: 'Client Facturé',
+      value: '---',
+    },
+    {
+      label: 'Mode de payement',
+      value: '---',
+    },
+    {
+      label: 'Taux de change réservation',
+      value: fmt.number(l.resaTauxEchange ?? l.tauxEchange ?? 0, 2),
+    },
+    {
+      label: 'Taux ce change émission',
+      value: fmt.number(l.emissionTauxChange ?? l.tauxEchange ?? 0, 2),
+    }
+  ];
+
+  commissions.forEach((c, idx) => {
+    const rowH = 7;
+    doc.setFillColor(idx % 2 === 0 ? 248 : 255, idx % 2 === 0 ? 249 : 255, idx % 2 === 0 ? 252 : 255);
+    doc.rect(MARGIN - 2, cur.y, CONTENT_W + 4, rowH, 'F');
+
+    doc.setFontSize(6.5);
+    doc.setFont('helvetica', 'normal');
+    setColor(doc, [80, 80, 90], 'text');
+    doc.text(c.label, col1 + 2, cur.y + 5);
+
+    doc.setFont('helvetica', 'bold');
+    setColor(doc, [26, 39, 68], 'text');
+    doc.text(c.value, colEnd, cur.y + 5, { align: 'right' });
+
+    cur.move(rowH);
+  });
+
+  cur.move(3);
+
+  // ── Taux de change ────────────────────────────────────────────────
+  // doc.setFontSize(6.5);
+  // doc.setFont('helvetica', 'italic');
+  // setColor(doc, [140, 140, 150], 'text');
+  // doc.text(
+  //   sanitize(
+  //     `Taux de change réservation : ${fmt.number(l.resaTauxEchange ?? l.tauxEchange ?? 0, 2)}  |  ` +
+  //     `Taux de change émission : ${fmt.number(l.emissionTauxChange ?? l.tauxEchange ?? 0, 2)}`
+  //   ),
+  //   MARGIN + 2, cur.y,
+  // );
+  // cur.move(7);
+
+  // ── Ligne TOTAL ───────────────────────────────────────────────────
+  doc.setFillColor(...(style.colors.headerBg as [number, number, number]));
+  doc.rect(MARGIN - 2, cur.y, CONTENT_W + 4, 11, 'F');
+
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  setColor(doc, [255, 255, 255], 'text');
+  doc.text('TOTAL COMPAGNIE (MGA)', MARGIN + 2, cur.y + 7.5);
+
+  doc.setFontSize(9);
+  setColor(doc, [255, 220, 100], 'text');
+  doc.text(
+    fmt.number(l.emissionMontantBilletClientAriary ?? l.montantBilletClientAriary ?? 0, 2) + ' MGA',
+    colEnd,
+    cur.y + 7.5,
+    { align: 'right' },
+  );
+
+  cur.move(11 + 6);
   drawSeparator(doc, cur);
 }
 
@@ -1130,10 +1265,14 @@ export function generateBilletPassagerPdf(
 
   // ── PAGE 2 ────────────────────────────────────────────────────────
   doc.addPage();
-  drawPageHeader(doc, cur, style as any, logo);  // ← header léger avec infos agence
-
+  drawPageHeader(doc, cur, style as any, logo);
   drawBilletSegment(doc, cur, data, style, AVION_IMG);
-  drawBilletPassager(doc, cur, data, style);
+  drawBilletPassager(doc, cur, data, style);   // ← sans les prix
+
+  // ── PAGE 3 ────────────────────────────────────────────────────────
+  doc.addPage();
+  drawPageHeader(doc, cur, style as any, logo);
+  drawRecuComplet(doc, cur, data, style);      // ← tous les prix ici
   drawBilletFooter(doc, cur, data, style, stamp);
 
   if (options?.returnDoc) return doc;

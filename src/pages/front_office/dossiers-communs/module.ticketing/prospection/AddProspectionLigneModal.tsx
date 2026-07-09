@@ -45,7 +45,13 @@ export default function AddProspectionLigneModal({
     montantBilletClientDevise: 0,
     montantServiceClientDevise: 0,
     montantPenaliteClientDevise: 0,
-    modePaiement: 'COMPTANT' as 'COMPTANT' | 'CREDIT' | 'CHEQUE' | 'VIREMENT', 
+    modeSaisieTaxe: 'POURCENTAGE' as 'POURCENTAGE' | 'MONTANT',
+    tauxTaxe: 0,
+    montantTaxeDevise: 0,
+    montantTaxeAriary: 0,
+    aeroportDepart: '',
+    aeroportArrivee: '',
+    modePaiement: 'COMPTANT' as 'COMPTANT' | 'CREDIT' | 'CHEQUE' | 'VIREMENT',
   });
 
   // Init services
@@ -80,6 +86,12 @@ export default function AddProspectionLigneModal({
         montantBilletClientDevise: 0,
         montantServiceClientDevise: 0,
         montantPenaliteClientDevise: 0,
+        modeSaisieTaxe: 'POURCENTAGE',
+        tauxTaxe: 0,
+        montantTaxeDevise: 0,
+        montantTaxeAriary: 0,
+        aeroportDepart: '',
+        aeroportArrivee: '',
         modePaiement: 'COMPTANT',
       });
       setServiceValues(servicesDisponibles.map((s) => ({ serviceSpecifiqueId: s.id, valeur: '' })));
@@ -147,6 +159,15 @@ export default function AddProspectionLigneModal({
                           + (mtPenaliteClientDevise - form.montantPenaliteCompagnieDevise);
   const commissionEnAriary = commissionEnDevise * taux;
 
+  // Taxe : saisie soit du taux (%), soit du montant direct (règle de trois inversée)
+  const tauxTaxe = form.modeSaisieTaxe === 'MONTANT'
+    ? (puBilletCieDevise > 0 ? (form.montantTaxeDevise / puBilletCieDevise) * 100 : 0)
+    : form.tauxTaxe;
+  const montantTaxeDevise = form.modeSaisieTaxe === 'MONTANT'
+    ? form.montantTaxeDevise
+    : puBilletCieDevise * (form.tauxTaxe / 100);
+  const montantTaxeAriary = montantTaxeDevise * taux;
+
   const set = (field: string, value: any) => setForm((prev) => ({ ...prev, [field]: value }));
 
   const handleSubmit = async () => {
@@ -168,6 +189,9 @@ export default function AddProspectionLigneModal({
         dureeVol:    form.dureeVol || null,
         dureeEscale: form.dureeEscale || null,
         avion:       form.avion || null,
+        tauxTaxe,
+        montantTaxeDevise,
+        montantTaxeAriary,
         services:    serviceValues,   // ← on passe directement, buildPayload s'occupe du mapping
       });
       onClose();
@@ -224,6 +248,12 @@ export default function AddProspectionLigneModal({
     commissionEnDevise,
     commissionEnAriary,
 
+    tauxTaxe,
+    montantTaxeDevise,
+    montantTaxeAriary,
+    aeroportDepart:    form.aeroportDepart || null,
+    aeroportArrivee:   form.aeroportArrivee || null,
+
     modePaiement: form.modePaiement,
 
     services: serviceValues.map((s) => ({
@@ -237,6 +267,14 @@ export default function AddProspectionLigneModal({
   const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white";
   const readonlyCls = "w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-slate-100 text-slate-500 cursor-not-allowed";
   const numberCls = inputCls + " text-right font-medium";
+  const dureeNumberCls = "w-16 border border-gray-200 rounded-lg px-2 py-2.5 text-sm text-right focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white";
+
+  // Format "XhYY" (ex: "2h40") ↔ { h, m }
+  const parseDuree = (str: string) => {
+    const match = String(str || '').match(/(\d+)\s*h\s*(\d*)/i);
+    return { h: match ? Number(match[1]) || 0 : 0, m: match ? Number(match[2]) || 0 : 0 };
+  };
+  const formatDuree = (h: number, m: number) => `${Math.max(0, h || 0)}h${String(Math.min(59, Math.max(0, m || 0))).padStart(2, '0')}`;
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-9999 p-4">
@@ -348,15 +386,57 @@ export default function AddProspectionLigneModal({
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">
-                  Durée vol <span className="ml-1 text-gray-400 normal-case font-normal"></span>
-                </label>
-                <input type="text" value={form.dureeVol} onChange={(e) => set('dureeVol', e.target.value)} placeholder="2h00" className={inputCls} />
+                <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Durée vol</label>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number" min="0"
+                    value={parseDuree(form.dureeVol).h}
+                    onChange={(e) => set('dureeVol', formatDuree(Number(e.target.value), parseDuree(form.dureeVol).m))}
+                    className={dureeNumberCls}
+                    placeholder="0"
+                  />
+                  <span className="text-xs text-gray-500">h</span>
+                  <input
+                    type="number" min="0" max="59"
+                    value={parseDuree(form.dureeVol).m}
+                    onChange={(e) => set('dureeVol', formatDuree(parseDuree(form.dureeVol).h, Number(e.target.value)))}
+                    className={dureeNumberCls}
+                    placeholder="0"
+                  />
+                  <span className="text-xs text-gray-500">min</span>
+                </div>
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Durée escale</label>
-                <input type="text" value={form.dureeEscale} onChange={(e) => set('dureeEscale', e.target.value)} placeholder="2h00" className={inputCls} />
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number" min="0"
+                    value={parseDuree(form.dureeEscale).h}
+                    onChange={(e) => set('dureeEscale', formatDuree(Number(e.target.value), parseDuree(form.dureeEscale).m))}
+                    className={dureeNumberCls}
+                    placeholder="0"
+                  />
+                  <span className="text-xs text-gray-500">h</span>
+                  <input
+                    type="number" min="0" max="59"
+                    value={parseDuree(form.dureeEscale).m}
+                    onChange={(e) => set('dureeEscale', formatDuree(parseDuree(form.dureeEscale).h, Number(e.target.value)))}
+                    className={dureeNumberCls}
+                    placeholder="0"
+                  />
+                  <span className="text-xs text-gray-500">min</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Aéroport Départ</label>
+                <input type="text" value={form.aeroportDepart} onChange={(e) => set('aeroportDepart', e.target.value)} placeholder="ex: CDG" className={inputCls} />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Aéroport Arrivée</label>
+                <input type="text" value={form.aeroportArrivee} onChange={(e) => set('aeroportArrivee', e.target.value)} placeholder="ex: JFK" className={inputCls} />
               </div>
             </div>
           </section>
@@ -400,6 +480,48 @@ export default function AddProspectionLigneModal({
                   <span className="ml-1 text-gray-400 normal-case font-normal">(auto)</span>
                 </label>
                 <input type="number" step="0.01" value={form.puPenaliteCompagnieDevise} readOnly className={readonlyCls + " text-right"} placeholder="—" />
+              </div>
+
+              {/* Taux Taxe — saisie du % ou calculé si saisie par montant */}
+              <div>
+                <label className="text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide flex items-center justify-between gap-2">
+                  <span>Taux Taxe (%)</span>
+                  <select
+                    value={form.modeSaisieTaxe}
+                    onChange={(e) => set('modeSaisieTaxe', e.target.value)}
+                    className="text-[10px] normal-case border border-gray-200 rounded px-1 py-0.5 bg-white text-gray-600"
+                  >
+                    <option value="POURCENTAGE">Saisir %</option>
+                    <option value="MONTANT">Saisir prix</option>
+                  </select>
+                </label>
+                {form.modeSaisieTaxe === 'POURCENTAGE' ? (
+                  <input type="number" step="0.01" value={form.tauxTaxe} onChange={(e) => set('tauxTaxe', Number(e.target.value))} className={numberCls} placeholder="0.00" />
+                ) : (
+                  <input readOnly value={tauxTaxe.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} className={readonlyCls + " text-right"} />
+                )}
+              </div>
+
+              {/* Mt Taxe Devise = PU Billet Cie * Taux Taxe % — ou saisie directe */}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">
+                  Mt Taxe {form.devise}
+                  {form.modeSaisieTaxe === 'POURCENTAGE' && <span className="ml-1 text-gray-400 normal-case font-normal">(auto)</span>}
+                </label>
+                {form.modeSaisieTaxe === 'MONTANT' ? (
+                  <input type="number" step="0.01" value={form.montantTaxeDevise} onChange={(e) => set('montantTaxeDevise', Number(e.target.value))} className={numberCls} placeholder="0.00" />
+                ) : (
+                  <input readOnly value={montantTaxeDevise.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} className={readonlyCls + " text-right"} />
+                )}
+              </div>
+
+              {/* Mt Taxe Ariary = Mt Taxe Devise * taux — auto */}
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">
+                  Mt Taxe Ariary
+                  <span className="ml-1 text-gray-400 normal-case font-normal">(auto)</span>
+                </label>
+                <input readOnly value={montantTaxeAriary.toLocaleString('fr-FR')} className={readonlyCls + " text-right"} />
               </div>
 
               {/* Montants Compagnie */}

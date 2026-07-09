@@ -86,6 +86,73 @@ export interface EtatVenteParams {
   limit?: number;
 }
 
+export interface TypeChambrePF {
+  type: string;
+  capacite: number;
+}
+
+export interface FournisseurPF {
+  libelle: string;
+  code: string;
+}
+
+export interface PlateformeInfo {
+  id: string;
+  code: string;
+  nom: string;
+}
+
+export interface PlateformeReservation {
+  id: string;
+  referenceLine: string;
+  numeroResa: string | null;
+  hotel: string;
+  typeChambre: TypeChambrePF;
+  nombreChambre: number;
+  fournisseur: FournisseurPF;
+  pays: string;
+  ville: string;
+  du: string;
+  au: string;
+  nuite: number;
+  statut: string;
+  statusLigne: string;
+  devise: string;
+  puResaNuiteHotelDevise: number;
+  puResaNuiteHotelAriary: number;
+  puResaMontantDevise: number;
+  puResaMontantAriary: number;
+  pourcentageCommission: number;
+  tauxConfirmation: number;
+  puConfPrixNuitHotelAriary: number;
+  puConfMontantNuitHotelAriary: number;
+  puConfPrixNuitClientArary: number;
+  puConfMontantNuitClientAriary: number;
+  confirmationCommissionAriary: number;
+  createdAt: string;
+}
+
+export interface PlateformeStat {
+  plateforme: PlateformeInfo;
+  nombreReservations: number;
+  montantResaAriary: number;
+  montantConfirmationAriary: number;
+  commissionTotaleAriary: number;
+  reservations: PlateformeReservation[];
+}
+
+export interface EtatVenteParPlateformeResultat {
+  periode: { du: string; au: string };
+  totalReservations: number;
+  plateformes: PlateformeStat[];
+}
+
+export interface EtatVenteParPlateformeParams {
+  du?: string;
+  au?: string;
+  statut?: string;
+}
+
 // ─── State ────────────────────────────────────────────────────
 
 interface DashboardState {
@@ -103,6 +170,10 @@ interface DashboardState {
   etatVenteResultat: EtatVenteResultat | null;
   loadingEtatVente: boolean;
   errorEtatVente: string | null;
+
+  etatVenteParPlateformeResultat: EtatVenteParPlateformeResultat | null;
+  loadingEtatVenteParPlateforme: boolean;
+  errorEtatVenteParPlateforme: string | null;
 }
 
 const initialState: DashboardState = {
@@ -120,6 +191,10 @@ const initialState: DashboardState = {
   etatVenteResultat: null,
   loadingEtatVente: false,
   errorEtatVente: null,
+
+  etatVenteParPlateformeResultat: null,
+  loadingEtatVenteParPlateforme: false,
+  errorEtatVenteParPlateforme: null,
 };
 
 // ─── Thunks ───────────────────────────────────────────────────
@@ -192,6 +267,25 @@ export const fetchEtatVente = createAsyncThunk(
   }
 );
 
+export const fetchEtatVenteParPlateforme = createAsyncThunk(
+  'dashboard/fetchEtatVenteParPlateforme',
+  async (params: EtatVenteParPlateformeParams, { rejectWithValue }) => {
+    try {
+      const query = new URLSearchParams();
+      if (params.du) query.set('du', params.du);
+      if (params.au) query.set('au', params.au);
+      if (params.statut) query.set('statut', params.statut);
+
+      const res = await axiosInstance.get(`/hotel/stats/plateforme/par-date?${query.toString()}`);
+      if (!res.data.success) throw new Error();
+      return res.data.data as EtatVenteParPlateformeResultat;
+    } catch (err: any) {
+      return rejectWithValue(err?.response?.data?.message || 'Erreur chargement état de vente par plateforme');
+    }
+  }
+);
+
+
 // ─── Slice ────────────────────────────────────────────────────
 
 const dashboardSlice = createSlice({
@@ -250,6 +344,18 @@ const dashboardSlice = createSlice({
       .addCase(fetchEtatVente.rejected, (state, action) => {
         state.loadingEtatVente = false;
         state.errorEtatVente = action.payload as string;
+      })
+      .addCase(fetchEtatVenteParPlateforme.pending, (state) => {
+        state.loadingEtatVenteParPlateforme = true;
+        state.errorEtatVenteParPlateforme = null;
+      })
+      .addCase(fetchEtatVenteParPlateforme.fulfilled, (state, action) => {
+        state.loadingEtatVenteParPlateforme = false;
+        state.etatVenteParPlateformeResultat = action.payload;
+      })
+      .addCase(fetchEtatVenteParPlateforme.rejected, (state, action) => {
+        state.loadingEtatVenteParPlateforme = false;
+        state.errorEtatVenteParPlateforme = action.payload as string;
       });
   },
 });

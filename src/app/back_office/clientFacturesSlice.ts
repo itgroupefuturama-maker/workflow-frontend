@@ -29,6 +29,7 @@ export interface ClientFacture {
   credit30jrs: number;
   credit60jrs: number;
   credit90jrs: number;
+  creditdefault: string;
   statut: 'ACTIF' | 'INACTIF';
   dateApplication: string;
   beneficiaires: BeneficiaireLink[]; // Structure mise à jour
@@ -127,6 +128,7 @@ export const createClientFacture = createAsyncThunk<
     credit30jrs: number;
     credit60jrs: number;
     credit90jrs: number;
+    creditdefault: string;
     statut: 'ACTIF' | 'INACTIF';
     dateApplication: string;
   },
@@ -170,6 +172,7 @@ export const updateClientFacture = createAsyncThunk<
     credit30jrs: number;
     credit60jrs: number;
     credit90jrs: number;
+    creditdefault: string;
     statut: 'ACTIF' | 'INACTIF';
   },
   { state: { auth: { token: string } } }

@@ -44,6 +44,8 @@ const HomePageTicketing = () => {
     ?.find(colab => colab.module?.nom?.toLowerCase() === "ticketing")
     ?.prestation?.[0]?.id || '';
 
+  const clientFacture = dossierActif?.clientfacture;
+
   // Ajoute dans le useEffect existant :
   useEffect(() => {
     if (!prestationId) return; // ← on attend que prestationId soit défini
@@ -173,6 +175,7 @@ const HomePageTicketing = () => {
           setNewEntete={setNewEntete}
           isCreating={isCreating}
           fournisseurs={fournisseurs}
+          clientFacture={clientFacture}
           fournisseursLoading={fournisseursLoading}
           onCloseCreate={closeCreateModal}
           onConfirmCreate={handleCreateEntete}

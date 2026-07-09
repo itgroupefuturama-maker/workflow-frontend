@@ -150,6 +150,12 @@ export interface Ligne{
     createdAt: string;
     updatedAt: string;
 
+    tauxTaxe: number;
+    montantTaxeDevise: number;
+    montantTaxeAriary: number;
+    aeroportDepart: string | null;
+    aeroportArrivee: string | null;
+    
     // Relation devis (souvent null dans l'exemple)
     devis: any | null;  // à typer plus précisément si besoin
 

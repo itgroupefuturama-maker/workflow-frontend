@@ -143,6 +143,8 @@ export interface AssuranceLigneDetail {
   assuranceEntete:            AssuranceEnteteRef;
   assuranceProspectionLigne:  AssuranceProspectionLigne;
   clientBeneficiaire: ClientBeneficiaire;
+  assuranceDocClient:   AssuranceDocClient[];
+  clientAssuranceForm:  ClientAssuranceForm | null;
   
 }
 
@@ -159,6 +161,30 @@ export interface AssuranceTarifPlein {
   devise: string;
   assuranceParamsId: string;
   createdAt: string;
+}
+
+export interface AssuranceDocClient {
+  id:               string;
+  pj:               string;
+  status:           string;
+  assuranceId:      string;
+  assuranceDocId:   string;
+  createdAt:        string;
+  updatedAt:        string;
+}
+
+export interface ClientAssuranceForm {
+  id:                   string;
+  nom:                  string;
+  prenom:               string;
+  dateNaissance:        string;
+  numero:               string;
+  email:                string;
+  adresse:              string;
+  numeroPassport:       string;
+  clientBeneficiaireId: string;
+  createdAt:            string;
+  updatedAt:            string;
 }
 
 // ── State ──────────────────────────────────────────────────────────────────

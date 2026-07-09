@@ -19,7 +19,15 @@ export default function ServiceSpecifiqueListe({ typeService }: Props) {
   const dispatch = useAppDispatch();
   const { itemsByType, loading } = useSelector((state: RootState) => state.serviceSpecifique);
   const filteredItems = (itemsByType ?? {})[typeService] ?? [];
+
+  // ── Modal création : ouverte avec un type pré-rempli selon le tableau d'origine ──
   const [modalOpen, setModalOpen] = useState(false);
+  const [modalDefaultType, setModalDefaultType] = useState<'SERVICE' | 'SPECIFIQUE'>('SERVICE');
+
+  const openCreateModal = (type: 'SERVICE' | 'SPECIFIQUE') => {
+    setModalDefaultType(type);
+    setModalOpen(true);
+  };
 
   // ── État modal préférence ──────────────────────────────────
   const [prefModal, setPrefModal] = useState<{
@@ -70,129 +78,156 @@ export default function ServiceSpecifiqueListe({ typeService }: Props) {
     setPrefSaving(false);
   };
 
+  // ── Table réutilisable ──────────────────────────────────────
+  const renderTable = (items: ServiceSpecifique[], emptyLabel: string) => (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      {loading ? (
+        <div className="py-16 flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
+          <span className="text-xs text-slate-400">Chargement...</span>
+        </div>
+      ) : items.length === 0 ? (
+        <div className="py-16 flex flex-col items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
+            <span className="text-2xl">📋</span>
+          </div>
+          <p className="text-sm font-semibold text-slate-500">{emptyLabel}</p>
+        </div>
+      ) : (
+        <>
+          <table className="min-w-full">
+            <thead>
+              <tr className="border-b border-slate-100 bg-slate-50/70">
+                {['Code', 'Libellé', 'Préférences', 'Créé le', ''].map((h) => (
+                  <th key={h} className="px-6 py-3.5 text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                    {h}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {items.map((item) => (
+                <tr key={item.id} className="group hover:bg-slate-50/80 transition-colors duration-150">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{item.code}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">{item.libelle}</td>
+
+                  <td className="px-6 py-4">
+                    {(() => {
+                      const prefs = item.servicePreference ?? [];
+                      return prefs.length === 0 ? (
+                        <span className="text-xs text-slate-400 italic">Aucune</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-1.5">
+                          {prefs.map((pref) => (
+                            <span
+                              key={pref.id}
+                              className="px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-md text-xs font-medium"
+                            >
+                              {pref.preference}
+                            </span>
+                          ))}
+                        </div>
+                      );
+                    })()}
+                  </td>
+
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                    {new Date(item.createdAt).toLocaleDateString('fr-FR')}
+                  </td>
+
+                  <td className="px-6 py-4 whitespace-nowrap text-right">
+                    <button
+                      onClick={() => openPrefModal(item)}
+                      className="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-all"
+                    >
+                      <span className="text-sm leading-none">+</span>
+                      Préférence
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="px-6 py-3 bg-slate-50/50 border-t border-slate-100">
+            <span className="text-[11px] text-slate-400">
+              {items.length} résultat{items.length > 1 ? 's' : ''}
+            </span>
+          </div>
+        </>
+      )}
+    </div>
+  );
+
+  const servicesItems = filteredItems.filter((i) => i.type === 'SERVICE');
+  const specifiquesItems = filteredItems.filter((i) => i.type === 'SPECIFIQUE');
+
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-base font-bold text-slate-800">Services & Spécifiques</h2>
-          <p className="text-xs text-slate-400 mt-0.5">
-            {filteredItems.length} service{filteredItems.length > 1 ? 's' : ''} enregistré{filteredItems.length > 1 ? 's' : ''}
-          </p>
+      <div>
+        <h2 className="text-base font-bold text-slate-800">Services & Spécifiques</h2>
+        <p className="text-xs text-slate-400 mt-0.5">
+          {filteredItems.length} élément{filteredItems.length > 1 ? 's' : ''} enregistré{filteredItems.length > 1 ? 's' : ''}
+        </p>
+      </div>
+
+      {typeService === 'TICKET' ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {/* ── Tableau Services ── */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-slate-700">
+                Services <span className="text-slate-400 font-normal">({servicesItems.length})</span>
+              </h3>
+              <button
+                onClick={() => openCreateModal('SERVICE')}
+                className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg shadow-sm transition-all duration-200"
+              >
+                <span className="text-sm leading-none">+</span>
+                Nouveau service
+              </button>
+            </div>
+            {renderTable(servicesItems, 'Aucun service enregistré')}
+          </div>
+
+          {/* ── Tableau Spécifiques ── */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-slate-700">
+                Spécifiques <span className="text-slate-400 font-normal">({specifiquesItems.length})</span>
+              </h3>
+              <button
+                onClick={() => openCreateModal('SPECIFIQUE')}
+                className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg shadow-sm transition-all duration-200"
+              >
+                <span className="text-sm leading-none">+</span>
+                Nouveau spécifique
+              </button>
+            </div>
+            {renderTable(specifiquesItems, 'Aucun spécifique enregistré')}
+          </div>
         </div>
-        <button
-          onClick={() => setModalOpen(true)}
-          className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-xl shadow-sm hover:shadow-md transition-all duration-200"
-        >
-          <span className="text-lg leading-none">+</span>
-          Nouveau service
-        </button>
-      </div>
-
-      {/* Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        {loading ? (
-          <div className="py-16 flex flex-col items-center gap-3">
-            <div className="w-8 h-8 border-2 border-slate-200 border-t-blue-500 rounded-full animate-spin" />
-            <span className="text-xs text-slate-400">Chargement des services...</span>
+      ) : (
+        /* ── HOTEL : pas de distinction de type, tableau unique ── */
+        <div className="space-y-3">
+          <div className="flex items-center justify-end">
+            <button
+              onClick={() => openCreateModal('SERVICE')}
+              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-xl shadow-sm hover:shadow-md transition-all duration-200"
+            >
+              <span className="text-lg leading-none">+</span>
+              Nouveau service
+            </button>
           </div>
-        ) : filteredItems.length === 0 ? (
-          <div className="py-16 flex flex-col items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
-              <span className="text-2xl">📋</span>
-            </div>
-            <p className="text-sm font-semibold text-slate-500">Aucun service enregistré</p>
-          </div>
-        ) : (
-          <>
-            <table className="min-w-full">
-              <thead>
-                <tr className="border-b border-slate-100 bg-slate-50/70">
-                  {['Code', 'Libellé', 'Type', 'Préférences', 'Créé le', ''].map((h) => (
-                    <th
-                      key={h}
-                      className="px-6 py-3.5 text-left text-[11px] font-bold text-slate-400 uppercase tracking-wider"
-                    >
-                      {h}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredItems.map((item) => (
-                  <tr key={item.id} className="group hover:bg-slate-50/80 transition-colors duration-150">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">{item.code}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">{item.libelle}</td>
-
-                    {/* Type */}
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {item.type ? (
-                        <span className={`px-2.5 py-0.5 rounded-full text-xs ${
-                          item.type === 'SPECIFIQUE'
-                            ? 'bg-purple-100 text-purple-800'
-                            : 'bg-blue-100 text-blue-800'
-                        }`}>
-                          {item.type}
-                        </span>
-                      ) : (
-                        <span className="text-slate-400 text-xs">—</span>
-                      )}
-                    </td>
-
-                    {/* Préférences */}
-                    <td className="px-6 py-4">
-                      {(() => {
-                        const prefs = item.servicePreference ?? [];
-                        return prefs.length === 0 ? (
-                          <span className="text-xs text-slate-400 italic">Aucune</span>
-                        ) : (
-                          <div className="flex flex-wrap gap-1.5">
-                            {prefs.map((pref) => (
-                              <span
-                                key={pref.id}
-                                className="px-2 py-0.5 bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-md text-xs font-medium"
-                              >
-                                {pref.preference}
-                              </span>
-                            ))}
-                          </div>
-                        );
-                      })()}
-                    </td>
-
-                    {/* Date */}
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
-                      {new Date(item.createdAt).toLocaleDateString('fr-FR')}
-                    </td>
-
-                    {/* Action */}
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <button
-                        onClick={() => openPrefModal(item)}
-                        className="inline-flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg transition-all"
-                      >
-                        <span className="text-sm leading-none">+</span>
-                        Préférence
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="px-6 py-3 bg-slate-50/50 border-t border-slate-100">
-              <span className="text-[11px] text-slate-400">
-                {filteredItems.length} résultat{filteredItems.length > 1 ? 's' : ''}
-              </span>
-            </div>
-          </>
-        )}
-      </div>
+          {renderTable(filteredItems, 'Aucun service enregistré')}
+        </div>
+      )}
 
       {/* ── Modal création service ── */}
       <ServiceSpecifiqueModal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         typeService={typeService}
+        defaultType={modalDefaultType}
       />
 
       {/* ── Modal ajout préférence ── */}
@@ -214,7 +249,6 @@ export default function ServiceSpecifiqueListe({ typeService }: Props) {
               </div>
             )}
 
-            {/* Préférences existantes */}
             {(prefModal.service.servicePreference ?? []).length > 0 && (
               <div className="mb-4">
                 <p className="text-xs font-semibold text-slate-500 uppercase mb-2">Déjà ajoutées</p>

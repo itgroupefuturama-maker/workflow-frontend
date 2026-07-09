@@ -20,6 +20,15 @@ ChartJS.register(
   PointElement, ArcElement, Filler, Tooltip, Legend
 );
 
+// ─── TYPES ────────────────────────────────────────────────────
+
+type PeriodType = 'month' | '3months' | '6months' | 'year' | 'custom';
+
+interface DateRange {
+  startMonth: number; // 0-based
+  endMonth: number;   // 0-based
+}
+
 // ─── Constantes ───────────────────────────────────────────────
 
 const MOIS_LABELS = [
@@ -46,8 +55,8 @@ const formatMoney = (value: number) =>
 const TABS = [
   { id: 'dossiers',  label: 'Dossiers' },
   { id: 'financier', label: 'CA / Commission / Engagement' },
-  { id: 'ca_detail', label: 'CA par module' },
-  { id: 'fc_detail', label: 'Engagement par module' },
+  { id: 'ca_detail', label: 'CA par Prestation' },
+  { id: 'fc_detail', label: 'Engagement par Prestation' },
 ];
 
 // ─── Options Chart.js ─────────────────────────────────────────
@@ -84,6 +93,37 @@ const moneyOptions = {
       },
     },
   },
+};
+
+// ─── FONCTION UTILITAIRE : CALCULER LA PLAGE DE DATES ──────
+
+const getDateRange = (
+  periodType: PeriodType,
+  currentMonthIndex: number,
+  customStart?: number,
+  customEnd?: number
+): DateRange => {
+  switch (periodType) {
+    case 'month':
+      return { startMonth: currentMonthIndex, endMonth: currentMonthIndex };
+    case '3months':
+      return {
+        startMonth: Math.max(0, currentMonthIndex - 2),
+        endMonth: currentMonthIndex,
+      };
+    case '6months':
+      return {
+        startMonth: Math.max(0, currentMonthIndex - 5),
+        endMonth: currentMonthIndex,
+      };
+    case 'year':
+      return { startMonth: 0, endMonth: 11 };
+    case 'custom':
+      return {
+        startMonth: customStart ?? 0,
+        endMonth: customEnd ?? currentMonthIndex,
+      };
+  }
 };
 
 // ─── Sous-composants ──────────────────────────────────────────
@@ -147,12 +187,141 @@ const ChartCard: React.FC<ChartCardProps> = ({
   </div>
 );
 
+// ─── COMPOSANT FILTRAGE PÉRIODE AVEC PLAGE PERSONNALISÉE ──────
+
+interface PeriodFilterProps {
+  activePeriod: PeriodType;
+  onPeriodChange: (period: PeriodType) => void;
+  customStart: number | null;
+  customEnd: number | null;
+  onCustomRangeChange: (start: number, end: number) => void;
+  currentYearNum: number;
+}
+
+const PeriodFilter: React.FC<PeriodFilterProps> = ({
+  activePeriod,
+  onPeriodChange,
+  customStart,
+  customEnd,
+  onCustomRangeChange,
+  currentYearNum,
+}) => {
+  const buttonBaseClass = "px-4 py-2.5 text-sm font-medium rounded-lg transition-colors";
+  const activeClass   = "bg-indigo-600 text-white";
+  const inactiveClass = "bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200";
+
+  const handleStartMonthChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const startMonth = parseInt(e.target.value, 10);
+    onCustomRangeChange(startMonth, customEnd ?? 11);
+    if (activePeriod !== 'custom') {
+      onPeriodChange('custom');
+    }
+  };
+
+  const handleEndMonthChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const endMonth = parseInt(e.target.value, 10);
+    onCustomRangeChange(customStart ?? 0, endMonth);
+    if (activePeriod !== 'custom') {
+      onPeriodChange('custom');
+    }
+  };
+
+  return (
+    <div className="bg-white border border-gray-100 rounded-2xl p-5 space-y-5">
+      {/* SECTION 1 : Boutons prédéfinis */}
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">
+          Période prédéfinie
+        </p>
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={() => onPeriodChange('month')}
+            className={`${buttonBaseClass} ${activePeriod === 'month' ? activeClass : inactiveClass}`}
+          >
+            Ce mois
+          </button>
+          <button
+            onClick={() => onPeriodChange('3months')}
+            className={`${buttonBaseClass} ${activePeriod === '3months' ? activeClass : inactiveClass}`}
+          >
+            3 derniers mois
+          </button>
+          <button
+            onClick={() => onPeriodChange('6months')}
+            className={`${buttonBaseClass} ${activePeriod === '6months' ? activeClass : inactiveClass}`}
+          >
+            6 derniers mois
+          </button>
+          <button
+            onClick={() => onPeriodChange('year')}
+            className={`${buttonBaseClass} ${activePeriod === 'year' ? activeClass : inactiveClass}`}
+          >
+            Année complète
+          </button>
+        </div>
+      </div>
+
+      {/* SECTION 2 : Plage personnalisée */}
+      <div className="border-t border-gray-100 pt-4">
+        <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">
+          Plage personnalisée
+        </p>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-2">
+              Mois de début
+            </label>
+            <select
+              value={customStart ?? 0}
+              onChange={handleStartMonthChange}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+            >
+              {MOIS_LABELS.map((label, index) => (
+                <option key={index} value={index}>
+                  {label} {currentYearNum}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-2">
+              Mois de fin
+            </label>
+            <select
+              value={customEnd ?? 11}
+              onChange={handleEndMonthChange}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+            >
+              {MOIS_LABELS.map((label, index) => (
+                <option key={index} value={index}>
+                  {label} {currentYearNum}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {activePeriod === 'custom' && customStart !== null && customEnd !== null && (
+          <div className="mt-3 p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
+            <p className="text-xs text-indigo-700 font-medium">
+              📅 Affichage : {MOIS_LABELS[customStart]} - {MOIS_LABELS[customEnd]} {currentYearNum}
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // ─── Composant principal ──────────────────────────────────────
 
 const PageTableauBord: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dossiers');
+  const [activePeriod, setActivePeriod] = useState<PeriodType>('year');
+  const [customStart, setCustomStart] = useState<number | null>(null);
+  const [customEnd, setCustomEnd] = useState<number | null>(null);
 
   const {
     evolutionCurrentYear,
@@ -165,7 +334,10 @@ const PageTableauBord: React.FC = () => {
 
   const currentYearNum    = new Date().getFullYear();
   const previousYearNum   = currentYearNum - 1;
-  const currentMonthIndex = new Date().getMonth(); // 0-based
+  const currentMonthIndex = new Date().getMonth();
+
+  // 👈 CALCULER LA PLAGE SELON LA PÉRIODE SÉLECTIONNÉE
+  const dateRange = getDateRange(activePeriod, currentMonthIndex, customStart ?? undefined, customEnd ?? undefined);
 
   useEffect(() => {
     dispatch(fetchEvolutionCurrentYear(currentYearNum));
@@ -175,13 +347,19 @@ const PageTableauBord: React.FC = () => {
   const isLoading = loadingEvolutionCurrent || loadingEvolutionPrevious;
   const hasError  = errorEvolutionCurrent   || errorEvolutionPrevious;
 
-  // ── Données du mois actuel et précédent (par index) ──
-  const currentMonthData  = evolutionCurrentYear[currentMonthIndex];
-  const previousMonthData = evolutionPreviousYear[currentMonthIndex];
+  // 👈 FILTRER LES DONNÉES SELON LA PÉRIODE
+  const filteredCurrentYear  = evolutionCurrentYear.slice(dateRange.startMonth, dateRange.endMonth + 1);
+  const filteredPreviousYear = evolutionPreviousYear.slice(dateRange.startMonth, dateRange.endMonth + 1);
+  const filteredLabels = MOIS_LABELS.slice(dateRange.startMonth, dateRange.endMonth + 1);
+
+  // Données pour le dernier mois de la sélection
+  const effectiveEndMonth = Math.min(dateRange.endMonth, currentMonthIndex);
+  const currentMonthData  = evolutionCurrentYear[effectiveEndMonth];
+  const previousMonthData = evolutionPreviousYear[effectiveEndMonth];
 
   // ── Section 1 : Dossiers ──
-  const dossiersCurrent  = evolutionCurrentYear.map((m) => m.dossiers);
-  const dossiersPrevious = evolutionPreviousYear.map((m) => m.dossiers);
+  const dossiersCurrent  = filteredCurrentYear.map((m) => m.dossiers);
+  const dossiersPrevious = filteredPreviousYear.map((m) => m.dossiers);
 
   const cumul = (arr: number[]) => {
     let s = 0;
@@ -195,11 +373,11 @@ const PageTableauBord: React.FC = () => {
   const totalDossiersMonth    = currentMonthData?.dossiers ?? 0;
 
   const dossierBarData = {
-    labels: MOIS_LABELS,
+    labels: filteredLabels,
     datasets: [
       {
         label: `${currentYearNum}`,
-        data: dossiersCurrent.map((v, i) => (i <= currentMonthIndex ? v : null)),
+        data: dossiersCurrent,
         backgroundColor: '#3B82F6',
         borderRadius: 4,
         borderSkipped: false as const,
@@ -215,11 +393,11 @@ const PageTableauBord: React.FC = () => {
   };
 
   const dossierLineData = {
-    labels: MOIS_LABELS,
+    labels: filteredLabels,
     datasets: [
       {
         label: `${currentYearNum}`,
-        data: cumulCurrent.map((v, i) => (i <= currentMonthIndex ? v : null)),
+        data: cumulCurrent,
         borderColor: '#3B82F6',
         backgroundColor: 'rgba(59,130,246,0.08)',
         fill: true, tension: 0.4, pointRadius: 3,
@@ -241,7 +419,6 @@ const PageTableauBord: React.FC = () => {
   const modulesCurrentMonth  = currentMonthData?.modules  ?? [];
   const modulesPreviousMonth = previousMonthData?.modules ?? [];
 
-  // Noms de modules présents ce mois
   const moduleNamesMonth = Array.from(
     new Set([
       ...modulesCurrentMonth.map((m) => m.moduleName),
@@ -295,12 +472,12 @@ const PageTableauBord: React.FC = () => {
   });
 
   // ── Section 2 : CA / Commission / Engagement ──
-  const caArr   = evolutionCurrentYear.map((m) => m.ca);
-  const fcArr   = evolutionCurrentYear.map((m) => m.fc);
-  const commArr = evolutionCurrentYear.map((m) => m.commission);
-  const caArr25   = evolutionPreviousYear.map((m) => m.ca);
-  const fcArr25   = evolutionPreviousYear.map((m) => m.fc);
-  const commArr25 = evolutionPreviousYear.map((m) => m.commission);
+  const caArr   = filteredCurrentYear.map((m) => m.ca);
+  const fcArr   = filteredCurrentYear.map((m) => m.fc);
+  const commArr = filteredCurrentYear.map((m) => m.commission);
+  const caArr25   = filteredPreviousYear.map((m) => m.ca);
+  const fcArr25   = filteredPreviousYear.map((m) => m.fc);
+  const commArr25 = filteredPreviousYear.map((m) => m.commission);
 
   const totalCACurrent    = caArr.reduce((a, b) => a + b, 0);
   const totalFCCurrent    = fcArr.reduce((a, b) => a + b, 0);
@@ -314,21 +491,21 @@ const PageTableauBord: React.FC = () => {
 
   // Barres groupées annuelles
   const financierBarData = {
-    labels: MOIS_LABELS.slice(0, currentMonthIndex + 1),
+    labels: filteredLabels,
     datasets: [
-      { label: 'CA',         data: caArr.slice(0, currentMonthIndex + 1),   backgroundColor: '#3B82F6', borderRadius: 3, borderSkipped: false as const },
-      { label: 'Engagement', data: fcArr.slice(0, currentMonthIndex + 1),   backgroundColor: '#F97316', borderRadius: 3, borderSkipped: false as const },
-      { label: 'Commission', data: commArr.slice(0, currentMonthIndex + 1), backgroundColor: '#10B981', borderRadius: 3, borderSkipped: false as const },
+      { label: 'CA',         data: caArr,   backgroundColor: '#3B82F6', borderRadius: 3, borderSkipped: false as const },
+      { label: 'Engagement', data: fcArr,   backgroundColor: '#F97316', borderRadius: 3, borderSkipped: false as const },
+      { label: 'Commission', data: commArr, backgroundColor: '#10B981', borderRadius: 3, borderSkipped: false as const },
     ],
   };
 
   // Courbe CA superposée N vs N-1
   const caLineData = {
-    labels: MOIS_LABELS.slice(0, currentMonthIndex + 1),
+    labels: filteredLabels,
     datasets: [
       {
         label: `CA ${currentYearNum}`,
-        data: caArr.slice(0, currentMonthIndex + 1),
+        data: caArr,
         borderColor: '#3B82F6',
         backgroundColor: 'rgba(59,130,246,0.1)',
         fill: true, tension: 0.4, pointRadius: 4,
@@ -336,7 +513,7 @@ const PageTableauBord: React.FC = () => {
       },
       {
         label: `CA ${previousYearNum}`,
-        data: caArr25.slice(0, currentMonthIndex + 1),
+        data: caArr25,
         borderColor: '#93C5FD',
         borderDash: [6, 4],
         backgroundColor: 'rgba(147,197,253,0.07)',
@@ -347,7 +524,6 @@ const PageTableauBord: React.FC = () => {
   };
 
   // ── Graphe mois actuel — détail par module (financier) ──
-  // Barres horizontales superposées N vs N-1 pour CA, FC, Commission
   const financierMonthBarData = {
     labels: moduleNamesMonth,
     datasets: [
@@ -433,20 +609,19 @@ const PageTableauBord: React.FC = () => {
   // ── Section 3 & 4 : par module annuel ──
   const allModuleNames = Array.from(
     new Set([
-      ...evolutionCurrentYear.flatMap((m) => m.modules.map((mod) => mod.moduleName)),
-      ...evolutionPreviousYear.flatMap((m) => m.modules.map((mod) => mod.moduleName)),
+      ...filteredCurrentYear.flatMap((m) => m.modules.map((mod) => mod.moduleName)),
+      ...filteredPreviousYear.flatMap((m) => m.modules.map((mod) => mod.moduleName)),
     ])
   );
 
   const buildStackedData = (
-    data: typeof evolutionCurrentYear,
+    data: typeof filteredCurrentYear,
     field: 'chiffreAffaire' | 'engagementFournisseur',
-    months: number
   ) => ({
-    labels: MOIS_LABELS.slice(0, months),
+    labels: filteredLabels,
     datasets: allModuleNames.map((name) => ({
       label: name,
-      data: data.slice(0, months).map((m) => {
+      data: data.map((m) => {
         const mod = m.modules.find((mod) => mod.moduleName === name);
         return mod ? mod[field] : 0;
       }),
@@ -456,10 +631,10 @@ const PageTableauBord: React.FC = () => {
     })),
   });
 
-  const caModuleCurrentData  = buildStackedData(evolutionCurrentYear,  'chiffreAffaire',        currentMonthIndex + 1);
-  const caModulePreviousData = buildStackedData(evolutionPreviousYear, 'chiffreAffaire',        currentMonthIndex + 1);
-  const fcModuleCurrentData  = buildStackedData(evolutionCurrentYear,  'engagementFournisseur', currentMonthIndex + 1);
-  const fcModulePreviousData = buildStackedData(evolutionPreviousYear, 'engagementFournisseur', currentMonthIndex + 1);
+  const caModuleCurrentData  = buildStackedData(filteredCurrentYear,  'chiffreAffaire');
+  const caModulePreviousData = buildStackedData(filteredPreviousYear, 'chiffreAffaire');
+  const fcModuleCurrentData  = buildStackedData(filteredCurrentYear,  'engagementFournisseur');
+  const fcModulePreviousData = buildStackedData(filteredPreviousYear, 'engagementFournisseur');
 
   // Donut CA par module — mois actuel
   const donutCAMonthCurrentData = {
@@ -534,14 +709,14 @@ const PageTableauBord: React.FC = () => {
     }],
   };
 
-  const totalCAModuleCurrent  = evolutionCurrentYear.reduce((s, m) => s + m.ca, 0);
-  const totalCAModulePrevious = evolutionPreviousYear.reduce((s, m) => s + m.ca, 0);
+  const totalCAModuleCurrent  = caArr.reduce((s, v) => s + v, 0);
+  const totalCAModulePrevious = caArr25.reduce((s, v) => s + v, 0);
   const totalCAModuleMonth    = currentMonthData?.ca ?? 0;
-  const totalFCModuleCurrent  = evolutionCurrentYear.reduce((s, m) => s + m.fc, 0);
-  const totalFCModulePrevious = evolutionPreviousYear.reduce((s, m) => s + m.fc, 0);
+  const totalFCModuleCurrent  = fcArr.reduce((s, v) => s + v, 0);
+  const totalFCModulePrevious = fcArr25.reduce((s, v) => s + v, 0);
   const totalFCModuleMonth    = currentMonthData?.fc ?? 0;
 
-  const moisLabel = MOIS_LABELS[currentMonthIndex];
+  const moisLabel = MOIS_LABELS[effectiveEndMonth];
 
   // ─────────────────────────────────────────────────────────────
 
@@ -564,6 +739,19 @@ const PageTableauBord: React.FC = () => {
           <p className="text-sm text-gray-400 italic">Vue d'ensemble des performances</p>
         </div>
       </div>
+
+      {/* 👈 FILTRAGE PÉRIODE AVEC PLAGE PERSONNALISÉE */}
+      <PeriodFilter
+        activePeriod={activePeriod}
+        onPeriodChange={setActivePeriod}
+        customStart={customStart}
+        customEnd={customEnd}
+        onCustomRangeChange={(start, end) => {
+          setCustomStart(start);
+          setCustomEnd(end);
+        }}
+        currentYearNum={currentYearNum}
+      />
 
       {/* TABS */}
       <div className="flex gap-1 border-b border-gray-100">
@@ -723,9 +911,9 @@ const PageTableauBord: React.FC = () => {
             <>
               <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">{currentYearNum}</p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <KpiCard label="CA total"          value={formatMoney(totalCACurrent)}   sub={`année ${currentYearNum}`} color="blue" />
-                <KpiCard label="Engagement total"  value={formatMoney(totalFCCurrent)}   sub={`année ${currentYearNum}`} color="orange" />
-                <KpiCard label="Commission totale" value={formatMoney(totalCommCurrent)} sub={`année ${currentYearNum}`} color="green" />
+                <KpiCard label="CA total"          value={formatMoney(totalCACurrent)}   sub={`période ${currentYearNum}`} color="blue" />
+                <KpiCard label="Engagement total"  value={formatMoney(totalFCCurrent)}   sub={`période ${currentYearNum}`} color="orange" />
+                <KpiCard label="Commission totale" value={formatMoney(totalCommCurrent)} sub={`période ${currentYearNum}`} color="green" />
               </div>
 
               <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mt-1">
@@ -739,9 +927,9 @@ const PageTableauBord: React.FC = () => {
 
               <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mt-1">{previousYearNum}</p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <KpiCard label="CA total"          value={formatMoney(totalCAPrevious)}   sub={`année ${previousYearNum}`} color="gray" />
-                <KpiCard label="Engagement total"  value={formatMoney(totalFCPrevious)}   sub={`année ${previousYearNum}`} color="gray" />
-                <KpiCard label="Commission totale" value={formatMoney(totalCommPrevious)} sub={`année ${previousYearNum}`} color="gray" />
+                <KpiCard label="CA total"          value={formatMoney(totalCAPrevious)}   sub={`période ${previousYearNum}`} color="gray" />
+                <KpiCard label="Engagement total"  value={formatMoney(totalFCPrevious)}   sub={`période ${previousYearNum}`} color="gray" />
+                <KpiCard label="Commission totale" value={formatMoney(totalCommPrevious)} sub={`période ${previousYearNum}`} color="gray" />
               </div>
 
               {/* Graphes annuels */}
@@ -840,9 +1028,9 @@ const PageTableauBord: React.FC = () => {
           {activeTab === 'ca_detail' && (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <KpiCard label={`CA total ${currentYearNum}`}       value={formatMoney(totalCAModuleCurrent)}  sub="tous modules" color="blue" />
+                <KpiCard label={`CA total ${currentYearNum}`}       value={formatMoney(totalCAModuleCurrent)}  sub="période sélectionnée" color="blue" />
                 <KpiCard label={`CA ${moisLabel}`}                  value={formatMoney(totalCAModuleMonth)}    sub="mois en cours" color="green" />
-                <KpiCard label={`CA total ${previousYearNum}`}      value={formatMoney(totalCAModulePrevious)} sub="tous modules" color="gray" />
+                <KpiCard label={`CA total ${previousYearNum}`}      value={formatMoney(totalCAModulePrevious)} sub="période sélectionnée" color="gray" />
               </div>
 
               {/* Graphes annuels empilés */}
@@ -944,9 +1132,9 @@ const PageTableauBord: React.FC = () => {
           {activeTab === 'fc_detail' && (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <KpiCard label={`Engagement total ${currentYearNum}`}  value={formatMoney(totalFCModuleCurrent)}  sub="tous modules" color="orange" />
+                <KpiCard label={`Engagement total ${currentYearNum}`}  value={formatMoney(totalFCModuleCurrent)}  sub="période sélectionnée" color="orange" />
                 <KpiCard label={`Engagement ${moisLabel}`}             value={formatMoney(totalFCModuleMonth)}    sub="mois en cours" color="green" />
-                <KpiCard label={`Engagement total ${previousYearNum}`} value={formatMoney(totalFCModulePrevious)} sub="tous modules" color="gray" />
+                <KpiCard label={`Engagement total ${previousYearNum}`} value={formatMoney(totalFCModulePrevious)} sub="période sélectionnée" color="gray" />
               </div>
 
               {/* Graphes annuels empilés */}

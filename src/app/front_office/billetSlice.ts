@@ -115,6 +115,8 @@ export interface ProspectionLigne {
   typePassager: string;
   dateHeureDepart: string;
   dateHeureArrive: string;
+  aeroportDepart: string;
+  aeroportArrivee: string;
   dureeVol: string;
   dureeEscale: string;
   conditionModif: string | null;
@@ -146,6 +148,9 @@ export interface ProspectionLigne {
   createdAt: string;
   updatedAt: string;
   modePaiement: ModePaiement;
+  tauxTaxe: number;
+  montantTaxeDevise: number;
+  montantTaxeAriary: number;
   serviceProspectionLigne: ServiceProspectionLigne[];
 }
 

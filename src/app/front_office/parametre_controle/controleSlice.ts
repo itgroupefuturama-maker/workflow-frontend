@@ -95,6 +95,24 @@ export interface Controle {
   consulat: { id: string; nom: string } | null;
   user: user;
   pjControle: PjControle[];
+  clientBeneficiaire: ClientBeneficiaire [] | null;
+  clientFacture : ClientFacture;
+}
+
+export interface ClientBeneficiaire {
+  id: string;
+  code: string;
+  libelle: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ClientFacture {
+  id: string;
+  code: string;
+  libelle: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 // ── Meta de pagination renvoyée par le serveur ────────────────────────────────

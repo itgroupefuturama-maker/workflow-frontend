@@ -186,6 +186,7 @@ const ClientFacturePage = () => {
                 <th className="px-4 py-5 text-center border-b border-gray-100 whitespace-nowrap">Crd 30j</th>
                 <th className="px-4 py-5 text-center border-b border-gray-100 whitespace-nowrap">Crd 60j</th>
                 <th className="px-4 py-5 text-center border-b border-gray-100 whitespace-nowrap">Crd 90j</th>
+                <th className="px-4 py-5 text-center border-b border-gray-100 whitespace-nowrap">Crd Default</th>
                 <th className="px-6 py-5 text-left border-b border-gray-100 whitespace-nowrap">Bénéficiaires</th>
                 <th className="px-6 py-5 text-center border-b border-gray-100 whitespace-nowrap">Statut</th>
                 <th className="px-6 py-5 text-center border-b border-gray-100 whitespace-nowrap">Date Application</th>
@@ -228,6 +229,7 @@ const ClientFacturePage = () => {
                     <td className="px-4 py-4 whitespace-nowrap text-center text-xs text-gray-600">{client.credit30jrs} %</td>
                     <td className="px-4 py-4 whitespace-nowrap text-center text-xs text-gray-600">{client.credit60jrs} %</td>
                     <td className="px-4 py-4 whitespace-nowrap text-center text-xs text-gray-600">{client.credit90jrs} %</td>
+                    <td className="px-4 py-4 whitespace-nowrap text-center text-xs text-gray-600">{client.creditdefault}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="overflow-hidden">
                         {client.beneficiaires.slice(0, 3).map((link, idx) => (

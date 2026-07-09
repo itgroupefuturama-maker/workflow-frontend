@@ -3,6 +3,21 @@ import { FiFolder, FiCheckCircle, FiTag, FiFileText, FiLock, FiSettings, FiHome,
 
 const CATEGORIES = [
   {
+    key: 'prestation',
+    label: 'Modules prestation',
+    desc: 'Gestion complète des prestations clients : tickets, hébergements, assurances, visas et documents.',
+    icon: FiTag,
+    iconColor: 'text-orange-500',
+    iconBg: 'bg-orange-50',
+    modules: [
+      { label: 'Ticketing',          desc: 'Suivez vos demandes et tickets', path: '/dossiers-communs/ticketing/pages',    defaultTab: 'prospection', icon: FiTag,      color: 'amber'  },
+      { label: 'Hôtel',              desc: 'Gestion des réservations',        path: '/dossiers-communs/hotel/pages',       defaultTab: 'prospection', icon: FiHome,     color: 'orange' },
+      { label: 'Assurance',          desc: 'Contrats et garanties',           path: '/dossiers-communs/assurance/pages',   defaultTab: 'prospection', icon: FiShield,   color: 'green'  },
+      { label: 'Visa',               desc: 'Gestion des visas',               path: '/dossiers-communs/visa/pages',        defaultTab: 'prospection', icon: FiMapPin,   color: 'indigo' },
+      { label: 'Attestation Voyage', desc: 'Générez vos attestations',        path: '/dossiers-communs/attestation/pages', defaultTab: 'prospection', icon: FiFileText, color: 'rose'   },
+    ],
+  },
+  {
     key: 'workspace',
     label: 'Espace de travail',
     desc: 'Ressources partagées, tâches quotidiennes et outils transversaux.',
@@ -44,21 +59,6 @@ const CATEGORIES = [
     iconBg: 'bg-amber-50',
     modules: [
       { label: 'SAV', desc: 'Service après-vente', path: '/dossiers-communs/pageSAV', defaultTab: null, icon: FiPlusCircle, color: 'amber' },
-    ],
-  },
-  {
-    key: 'prestation',
-    label: 'Modules prestation',
-    desc: 'Gestion complète des prestations clients : tickets, hébergements, assurances, visas et documents.',
-    icon: FiTag,
-    iconColor: 'text-orange-500',
-    iconBg: 'bg-orange-50',
-    modules: [
-      { label: 'Ticketing',          desc: 'Suivez vos demandes et tickets', path: '/dossiers-communs/ticketing/pages',    defaultTab: 'prospection', icon: FiTag,      color: 'amber'  },
-      { label: 'Hôtel',              desc: 'Gestion des réservations',        path: '/dossiers-communs/hotel/pages',       defaultTab: 'prospection', icon: FiHome,     color: 'orange' },
-      { label: 'Assurance',          desc: 'Contrats et garanties',           path: '/dossiers-communs/assurance/pages',   defaultTab: 'prospection', icon: FiShield,   color: 'green'  },
-      { label: 'Visa',               desc: 'Gestion des visas',               path: '/dossiers-communs/visa/pages',        defaultTab: 'prospection', icon: FiMapPin,   color: 'indigo' },
-      { label: 'Attestation Voyage', desc: 'Générez vos attestations',        path: '/dossiers-communs/attestation/pages', defaultTab: 'prospection', icon: FiFileText, color: 'rose'   },
     ],
   },
   {

@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { FiCheck, FiCheckCircle, FiChevronRight, FiEye, FiList, FiRefreshCw, FiX } from 'react-icons/fi';
+import { useEffect, useState, useRef } from 'react';
+import { FiCheck, FiCheckCircle, FiChevronDown, FiChevronRight, FiEye, FiMoreVertical, FiRefreshCw, FiX, FiDownload } from 'react-icons/fi';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { AppDispatch, RootState } from '../../../../../app/store';
 import { useDispatch, useSelector } from 'react-redux';
@@ -7,7 +7,6 @@ import { approuverDirectionDevis, fetchDevisByEntete, updateApprouverDevisStatut
 import { annulerDevis } from '../../../../../app/front_office/devisSlice';
 import axios from '../../../../../service/Axios';
 import TabContainer from '../../../../../layouts/TabContainer';
-// import { TicketingHeader } from '../../../../../components/TicketingBreadcrumb';
 import AnnulationDevisModal from '../../../../../components/modals/AnnulationDevisModal';
 import { API_URL } from '../../../../../service/env';
 import { TicketingHeader } from './components.billet/TicketingHeader';
@@ -15,6 +14,140 @@ import { devisListeItems } from './components.billet/utils/ticketingHeaderItems'
 import { PdfDownloadButton } from '../../module.pdf/pdf.generation/components/PdfDownloadButton';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
+
+/* ------------------------------------------------------------------ */
+/*  Badge de statut                                                    */
+/* ------------------------------------------------------------------ */
+const STATUT_CONFIG: Record<string, { label: string; className: string }> = {
+  CREER:               { label: 'Créé',       className: 'bg-slate-100 text-slate-600 border-slate-200' },
+  DEVIS_A_APPROUVER:   { label: 'À approuver', className: 'bg-amber-50 text-amber-700 border-amber-200' },
+  DEVIS_APPROUVE:      { label: 'Approuvé',    className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  ANNULER:             { label: 'Annulé',      className: 'bg-red-50 text-red-700 border-red-200' },
+};
+
+function StatusBadge({ statut }: { statut: string }) {
+  const cfg = STATUT_CONFIG[statut] ?? { label: statut, className: 'bg-slate-100 text-slate-600 border-slate-200' };
+  return (
+    <span className={`inline-flex items-center px-2 py-1 rounded-md border text-[11px] font-medium whitespace-nowrap ${cfg.className}`}>
+      {cfg.label}
+    </span>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Actions par ligne : un bouton principal contextuel (texte) +       */
+/*  un menu "..." pour les actions secondaires                         */
+/* ------------------------------------------------------------------ */
+type PrimaryAction = {
+  label: string;
+  icon: React.ReactNode;
+  onClick: () => void;
+  variant: 'primary' | 'success' | 'neutral';
+  loading?: boolean;
+} | null;
+
+function getPrimaryAction(
+  statut: string,
+  handlers: {
+    onEnvoyerDirection: () => void;
+    onEnvoyerClient: () => void;
+    onApprouverClient: () => void;
+    onTransformer: () => void;
+  },
+  directionLoading: boolean
+): PrimaryAction {
+  switch (statut) {
+    case 'CREER':
+      // Deux actions possibles au même statut : on affiche la plus fréquente
+      // en principal, l'autre part dans le menu "..."
+      return {
+        label: 'Envoyer au client',
+        icon: <FiCheckCircle size={14} />,
+        onClick: handlers.onEnvoyerClient,
+        variant: 'success',
+      };
+    case 'DEVIS_A_APPROUVER':
+      return {
+        label: 'Approuver / Client',
+        icon: <FiCheck size={14} />,
+        onClick: handlers.onApprouverClient,
+        variant: 'primary',
+      };
+    case 'DEVIS_APPROUVE':
+      return {
+        label: 'Transformer / Billet',
+        icon: <FiRefreshCw size={14} />,
+        onClick: handlers.onTransformer,
+        variant: 'success',
+      };
+    default:
+      return null; // ANNULER -> pas d'action principale
+  }
+}
+
+function PrimaryActionButton({ action }: { action: PrimaryAction }) {
+  if (!action) return <span className="text-xs text-slate-300 italic px-2">—</span>;
+  const variants: Record<string, string> = {
+    primary: 'bg-indigo-600 hover:bg-indigo-700 text-white',
+    success: 'bg-emerald-600 hover:bg-emerald-700 text-white',
+    neutral: 'bg-slate-100 hover:bg-slate-200 text-slate-700',
+  };
+  return (
+    <button
+      type="button"
+      onClick={action.onClick}
+      disabled={action.loading}
+      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors whitespace-nowrap disabled:opacity-60 ${variants[action.variant]}`}
+    >
+      {action.loading ? <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-white/70 border-t-transparent" /> : action.icon}
+      {action.loading ? 'En cours…' : action.label}
+    </button>
+  );
+}
+
+function RowMenu({ items }: { items: { label: string; icon: React.ReactNode; onClick: () => void; disabled?: boolean; danger?: boolean }[] }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+        title="Plus d'actions"
+      >
+        <FiMoreVertical size={16} />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 w-52 bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-20">
+          {items.map((item, i) => (
+            <button
+              key={i}
+              type="button"
+              disabled={item.disabled}
+              onClick={() => { item.onClick(); setOpen(false); }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs text-left transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                item.danger ? 'text-red-600 hover:bg-red-50' : 'text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              {item.icon}
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Devis () {
 
@@ -25,10 +158,9 @@ export default function Devis () {
 
   const { items: devisList, loading, error } = useSelector((state: RootState) => state.devis);
   const [openDevisId, setOpenDevisId] = useState<string | null>(null);
-  const [pdfLoading, setPdfLoading] = useState<{ [key: string]: boolean }>({});
 
   const [showAnnulationModal, setShowAnnulationModal] = useState(false);
-  const [selectedDevisForCancel, setSelectedDevisForCancel] = useState<Devis | null>(null);
+  const [selectedDevisForCancel, setSelectedDevisForCancel] = useState<any | null>(null);
   const [annulationLoading, setAnnulationLoading] = useState(false);
 
   const [directionLoading, setDirectionLoading] = useState<{ [key: string]: boolean }>({});
@@ -45,22 +177,17 @@ export default function Devis () {
   const [validateLoading, setValidateLoading] = useState(false);
 
   const [activeTab, setActiveTab] = useState('prospection');
-  
-  // FONCTION DE NAVIGATION INTERCEPTÉE
-    const handleTabChange = (id: string) => {
-      if (id === 'billet') {
-        // On remonte au parent (PageView) en passant le state pour l'onglet
-        navigate(`/dossiers-communs/ticketing/pages`, { 
-          state: { targetTab: 'billet' }
-        });
-      } else {
-        setActiveTab(id);
-      }
-    };
+
+  const handleTabChange = (id: string) => {
+    if (id === 'billet') {
+      navigate(`/dossiers-communs/ticketing/pages`, { state: { targetTab: 'billet' } });
+    } else {
+      setActiveTab(id);
+    }
+  };
 
   useEffect(() => {
     if (enteteId) {
-      console.log('Fetching devis for entete:', enteteId);
       dispatch(fetchDevisByEntete(enteteId));
     }
   }, [enteteId, dispatch]);
@@ -78,7 +205,7 @@ export default function Devis () {
       alert('Erreur lors du changement de statut');
     }
   };
-  
+
   const handleAsValidate = (billetId: string) => {
     setPendingValidateId(billetId);
     setPreuveClient(null);
@@ -91,10 +218,7 @@ export default function Devis () {
     setValidateLoading(true);
     try {
       await dispatch(
-        updateValidateDevisStatut({
-          enteteId: pendingValidateId,
-          preuveClient,
-        })
+        updateValidateDevisStatut({ enteteId: pendingValidateId, preuveClient })
       ).unwrap();
       dispatch(fetchDevisByEntete(enteteId));
       setShowValidateModal(false);
@@ -109,56 +233,34 @@ export default function Devis () {
   };
 
   const handleApprouverDirection = async (devisId: string, reference: string) => {
-  if (!enteteId) return;
+    if (!enteteId) return;
+    if (!window.confirm(`Envoyer le devis ${reference} à la direction ?\nCela générera le PDF commission.`)) return;
 
-  // Optionnel : demander confirmation
-  if (!window.confirm(`Envoyer le devis ${reference} à la direction ?\nCela générera le PDF commission.`)) {
-    return;
-  }
+    setDirectionLoading((prev) => ({ ...prev, [devisId]: true }));
+    try {
+      const payload = {
+        client: "CLIENT EXAMPLE SAS",
+        facture: `FACT-${new Date().getFullYear()}-${reference.split('-')[2] || 'XXXX'}`,
+      };
+      const result = await dispatch(
+        approuverDirectionDevis({ devisId, client: payload.client, facture: payload.facture })
+      ).unwrap();
 
-  setDirectionLoading((prev) => ({ ...prev, [devisId]: true }));
-
-  try {
-    // Valeurs à envoyer – adapte selon tes besoins réels
-    // Ici on utilise des valeurs fictives / placeholders
-    // → À toi de les récupérer du devis ou de demander à l'utilisateur via un modal si besoin
-    const payload = {
-      client: "CLIENT EXAMPLE SAS",          // ← À remplacer dynamiquement
-      facture: `FACT-${new Date().getFullYear()}-${reference.split('-')[2] || 'XXXX'}`,
-    };
-
-    const result = await dispatch(
-      approuverDirectionDevis({
-        devisId,
-        client: payload.client,
-        facture: payload.facture,
-      })
-    ).unwrap();
-
-    // La réponse ressemble à : { success: true, data: { success: true, message: "...", filepath: "..." } }
-    const filepath = result?.data?.filepath;
-
-    if (filepath) {
-      // Construction de l'URL complète
-      // const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://192.168.1.125:5001';
-      const pdfUrl = `${API_URL}/${filepath}`;
-
-      // Ouvrir dans un nouvel onglet
-      window.open(pdfUrl, '_blank');
-      
-      // Optionnel : recharger la liste pour refléter un éventuel changement de statut
-      dispatch(fetchDevisByEntete(enteteId));
-      
-    } else {
-      throw new Error('Chemin du PDF non reçu');
+      const filepath = result?.data?.filepath;
+      if (filepath) {
+        const pdfUrl = `${API_URL}/${filepath}`;
+        window.open(pdfUrl, '_blank');
+        dispatch(fetchDevisByEntete(enteteId));
+      } else {
+        throw new Error('Chemin du PDF non reçu');
+      }
+    } catch (err: any) {
+      console.error('Erreur approuver direction :', err);
+      alert('Erreur : ' + (err.message || 'Impossible de générer le PDF commission'));
+    } finally {
+      setDirectionLoading((prev) => ({ ...prev, [devisId]: false }));
     }
-  } catch (err: any) {
-    console.error('Erreur approuver direction :', err);
-    alert('Erreur : ' + (err.message || 'Impossible de générer le PDF commission'));
-  } finally {
-    setDirectionLoading((prev) => ({ ...prev, [devisId]: false }));
-  }
-};
+  };
 
   if (!enteteId) {
     return (
@@ -172,414 +274,240 @@ export default function Devis () {
     <div className="h-full flex flex-col min-h-0">
       <TabContainer tabs={tabs} activeTab={activeTab} setActiveTab={handleTabChange}>
         <div className="flex h-full min-h-0 overflow-hidden">
-          {/* ── Colonne principale ── */}
-          <div className="flex-1 min-w-0 flex flex-col min-h-0"> 
+          <div className="flex-1 min-w-0 flex flex-col min-h-0">
             <div className="shrink-0 px-4 bg-white">
               <TicketingHeader items={devisListeItems(enteteId)} />
             </div>
+
             {loading && (
               <div className="flex justify-center items-center py-20">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-indigo-600"></div>
-                <span className="ml-4 text-slate-600 font-medium">Chargement des devis...</span>
+                <div className="animate-spin rounded-full h-10 w-10 border-2 border-slate-200 border-t-indigo-600"></div>
+                <span className="ml-3 text-sm text-slate-500 font-medium">Chargement des devis…</span>
               </div>
             )}
 
             {error && !loading && (
-              <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-4 rounded-lg mb-8">
+              <div className="mx-4 mt-4 bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">
                 <strong>Erreur :</strong> {error}
               </div>
             )}
 
-            <div className="flex-1 min-h-0 overflow-y-auto pb-4 px-4">
+            {!loading && !error && (
+              <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
+                {devisList.length === 0 ? (
+                  <div className="bg-white rounded-lg border border-slate-200 p-12 text-center mt-4">
+                    <p className="text-slate-500 text-sm">Aucun devis généré pour cet en-tête.</p>
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-lg border border-slate-200 overflow-hidden mt-3">
+                    <table className="min-w-full text-sm border-collapse">
+                      <thead className="bg-slate-50 sticky top-0 z-10">
+                        <tr className="border-b border-slate-200">
+                          <th className="w-8"></th>
+                          <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Référence</th>
+                          <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Créé le</th>
+                          <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Fournisseur</th>
+                          <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Type de vol</th>
+                          <th className="px-4 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Commission</th>
+                          <th className="px-4 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Total</th>
+                          <th className="px-4 py-3 text-center text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Statut</th>
+                          <th className="px-4 py-3 text-center text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Preuve client</th>
+                          <th className="px-4 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {devisList.map((devis) => {
+                          const entete = devis.data?.entete || {};
+                          const prospectionEntete = devis.prospectionEntete || {};
+                          const lignes = devis.data?.lignes || [];
+                          const isOpen = openDevisId === devis.id;
 
-              {!loading && !error && (
-                <>
-                  {devisList.length === 0 ? (
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-12 text-center">
-                      <p className="text-slate-600 text-lg font-medium">
-                        Aucun devis généré pour cet en-tête.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="space-y-6">
-                      {devisList.map((devis) => {
-                        const entete = devis.data?.entete || {};
-                        const prospectionEntete = devis.prospectionEntete || {}; // ← AJOUTER
-                        const lignes = devis.data?.lignes || [];
-                        const lignesCount = lignes.length;
-                        const isLoadingPdf = pdfLoading[devis.id] || false;
-
-                        const handleCreateBillet = async () => {
-                          try {
-                            const payload = {
-                              devisId: devis.id,
-                              prospectionEnteteId: entete.id,   // ou devis.data?.entete?.id selon ta structure exacte
-                            };
-
-                            const response = await axios.post('/billet/entete', payload);
-
-                            if (response.data?.success && response.data?.data?.id) {
-
-                              navigate(`/dossiers-communs/ticketing/pages/billet/${devis.id}?prospectionEnteteId=${devis.data?.entete?.id}`);
-                              // Option 2 (alternative) : juste l'ID et re-fetch dans la page billet
-                              // navigate(`/dossiers-communs/ticketing/billet/${nouveauBilletId}`);
-                            } else {
-                              alert('Erreur lors de la création du billet');
+                          const handleCreateBillet = async () => {
+                            try {
+                              const payload = {
+                                devisId: devis.id,
+                                prospectionEnteteId: entete.id,
+                              };
+                              const response = await axios.post('/billet/entete', payload);
+                              if (response.data?.success && response.data?.data?.id) {
+                                navigate(`/dossiers-communs/ticketing/pages/billet/${devis.id}?prospectionEnteteId=${devis.data?.entete?.id}`);
+                              } else {
+                                alert('Erreur lors de la création du billet');
+                              }
+                            } catch (err: any) {
+                              console.error('Erreur création billet:', err);
+                              const msg = err.response?.data?.message || 'Erreur serveur';
+                              alert(`Échec création billet : ${msg}`);
                             }
-                          } catch (err: any) {
-                            console.error('Erreur création billet:', err);
-                            const msg = err.response?.data?.message || 'Erreur serveur';
-                            alert(`Échec création billet : ${msg}`);
-                          }
-                        };
+                          };
 
-                        return (
-                          <div
-                            key={devis.id}
-                            className={`bg-white rounded-xl shadow-sm overflow-hidden ${devis.statut == 'ANNULER' ? 'border border-red-200 ' : 'border border-slate-200'}`}
-                          >
-                            {/* En-tête du devis (toujours visible) */}
-                            {/* ── EN-TÊTE (toujours visible) ── */}
-                            <div
-                              className= {`px-5 py-4 flex items-center gap-4 cursor-pointer hover:bg-slate-50 transition-colors`}
-                              onClick={() => toggleDevis(devis.id)}
-                            >
-                              {/* Référence + statut */}
-                              <div className="flex flex-col gap-1 min-w-0">
-                                <div className="flex items-center gap-2.5 flex-wrap">
-                                  <span className="text-sm font-medium text-slate-800">{devis.reference}</span>
-                                  {/* <StatusBadge statut={devis.statut} /> */}
-                                </div>
-                                <span className="text-xs text-slate-400">
-                                  Créé le {new Date(devis.createdAt).toLocaleString('fr-FR', { dateStyle: 'medium', timeStyle: 'short' })}
-                                </span>
-                              </div>
-
-                              {/* Total + nb lignes */}
-                              <div className="ml-auto flex items-center gap-4">
-                                <div className="text-right">
-                                  <p className="text-sm font-medium text-slate-800">{devis.totalGeneral.toLocaleString('fr-FR')} Ar</p>
-                                  <p className="text-xs text-slate-400">{lignesCount} ligne{lignesCount !== 1 ? 's' : ''}</p>
-                                </div>
-                                
-                              </div>
-                              <PdfDownloadButton
-                                data={devis}                           // ← devis est déjà un DevisListItem
-                                filename={`${devis.reference}.pdf`}
-                              />
-                              {devis.statut == 'ANNULER' && (
-                                <button
-                                  className="bg-red-500 hover:bg-red-400 text-white px-4 py-2 rounded-lg"
-                                >
-                                  Devis annulé
-                                </button>
-                              )}
-                              {/* Bouton Voir liste Billet - Toujours actif */}
-                              <button
-                                disabled= { devis.statut == 'ANNULER' || devis.statut == 'DEVIS_A_APPROUVER'}
-                                  onClick={() => navigate(`/dossiers-communs/ticketing/pages/billet/${devis.id}?prospectionEnteteId=${devis.data?.entete?.id}`)}
-                                  className={`p-2.5 rounded-full transition-colors flex items-center gap-2 font-medium ${
-                                    devis.statut === 'DEVIS_APPROUVE'
-                                      ? 'bg-slate-100 text-slate-800 hover:bg-slate-200 cursor-pointer'
-                                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                  }`}
-                                >
-                                <FiChevronRight
-                                  size={16}
-                                  className={`text-slate-400 transition-transform `}
-                                />
-                              </button>
-                            </div>
-
-                            {/* Contenu détaillé (visible quand ouvert) */}
-                            <div className="px-5 pb-6 border-t border-slate-200">
-                              {/* Infos entête */}
-                              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 py-4 border-b border-slate-100">
-                                {[
-                                  { label: 'Fournisseur',         value: entete.fournisseur?.libelle },
-                                  { label: 'Type de vol',         value: entete.typeVol },
-                                  { label: 'Crédit',              value: entete.credit },
-                                  { label: 'Commission proposée', value: entete.commissionPropose != null ? `${entete.commissionPropose} %` : null },
-                                  { label: 'Commission appliquée',value: entete.commissionAppliquer != null ? `${entete.commissionAppliquer} %` : null },
-                                ].map(({ label, value }) => (
-                                  <div key={label}>
-                                    <p className="text-[10px] uppercase tracking-wide text-slate-400 font-medium mb-1">{label}</p>
-                                    <p className="text-sm text-slate-700 font-medium">{value || '—'}</p>
-                                  </div>
-                                ))}
-
-                                {/* Preuve client — image séparée car pas un simple texte */}
-                                <div>
-                                  <p className="text-[10px] uppercase tracking-wide text-slate-400 font-medium mb-1">Preuve client</p>
+                          return (
+                            <>
+                              <tr
+                                key={devis.id}
+                                onClick={() => toggleDevis(devis.id)}
+                                className={`border-b border-slate-100 cursor-pointer transition-colors ${isOpen ? 'bg-indigo-50/40' : 'hover:bg-slate-50'}`}
+                              >
+                                <td className="pl-4">
+                                  {isOpen ? <FiChevronDown size={14} className="text-slate-400" /> : <FiChevronRight size={14} className="text-slate-400" />}
+                                </td>
+                                <td className="px-4 py-3 font-medium text-slate-800">{devis.reference}</td>
+                                <td className="px-4 py-3 text-slate-500">
+                                  {new Date(devis.createdAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
+                                </td>
+                                <td className="px-4 py-3 text-slate-600">{entete.fournisseur?.libelle || '—'}</td>
+                                <td className="px-4 py-3 text-slate-600">{entete.typeVol || '—'}</td>
+                                <td className="px-4 py-3 text-right text-slate-600">
+                                  {entete.commissionAppliquer != null ? `${entete.commissionAppliquer} %` : '—'}
+                                </td>
+                                <td className="px-4 py-3 text-right font-medium text-slate-800">
+                                  {devis.totalGeneral.toLocaleString('fr-FR')} Ar
+                                </td>
+                                <td className="px-4 py-3 text-center">
+                                  <StatusBadge statut={devis.statut} />
+                                </td>
+                                <td className="px-4 py-3 text-center" onClick={(e) => e.stopPropagation()}>
                                   {prospectionEntete?.preuveClient ? (
                                     <a
                                       href={`${API_URL}/${prospectionEntete.preuveClient}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="inline-block"
+                                      className="inline-flex items-center justify-center"
                                     >
                                       <img
                                         src={`${API_URL}/${prospectionEntete.preuveClient}`}
                                         alt="Preuve client"
-                                        className="h-10 w-16 object-cover rounded border border-slate-200 hover:opacity-80 transition-opacity cursor-pointer"
+                                        className="h-9 w-14 object-cover rounded border border-slate-200 hover:opacity-80 transition-opacity"
                                       />
                                     </a>
                                   ) : (
-                                    <p className="text-sm text-slate-400 italic">—</p>
+                                    <span className="text-slate-300 text-xs">—</span>
                                   )}
-                                </div>
-                              </div>
+                                </td>
+                                <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                                  <div className="flex items-center justify-end gap-1.5">
+                                    <PrimaryActionButton
+                                      action={getPrimaryAction(
+                                        devis.statut,
+                                        {
+                                          onEnvoyerDirection: () => handleApprouverDirection(devis.id, devis.reference),
+                                          onEnvoyerClient: () => handleAsAapprouved(devis.id),
+                                          onApprouverClient: () => handleAsValidate(devis.id),
+                                          onTransformer: handleCreateBillet,
+                                        },
+                                        !!directionLoading[devis.id]
+                                      )}
+                                    />
+                                    <PdfDownloadButton
+                                    data={devis}                           // ← devis est déjà un DevisListItem
+                                    filename={`${devis.reference}.pdf`}
+                                  />
+                                    <RowMenu
+                                      items={[
+                                        {
+                                          label: 'Envoyer à la direction',
+                                          icon: <FiCheck size={14} />,
+                                          disabled: devis.statut !== 'CREER',
+                                          onClick: () => handleApprouverDirection(devis.id, devis.reference),
+                                        },
+                                        {
+                                          label: 'Voir les billets',
+                                          icon: <FiEye size={14} />,
+                                          disabled: devis.statut === 'ANNULER' || devis.statut === 'DEVIS_A_APPROUVER',
+                                          onClick: () => navigate(`/dossiers-communs/ticketing/pages/billet/${devis.id}?prospectionEnteteId=${devis.data?.entete?.id}`),
+                                        },
+                                        {
+                                          label: 'Annuler le devis',
+                                          icon: <FiX size={14} />,
+                                          danger: true,
+                                          disabled: devis.statut === 'ANNULER' || devis.statut === 'DEVIS_APPROUVE',
+                                          onClick: () => {
+                                            setSelectedDevisForCancel(devis);
+                                            setShowAnnulationModal(true);
+                                          },
+                                        },
+                                      ]}
+                                    />
+                                  </div>
+                                </td>
+                              </tr>
 
-                              {/* Tableau des lignes */}
-                              {lignes.length > 0 ? (
-                                <div className="mt-4 overflow-x-auto rounded-lg border border-slate-200">
-                                  <table className="min-w-full divide-y divide-slate-100 text-xs">
-                                    <thead className="bg-slate-50">
-                                      <tr>
-                                        <th className="px-4 py-3 text-left text-[10px] font-medium text-slate-400 uppercase tracking-wider">Vol & itinéraire</th>
-                                        <th className="px-4 py-3 text-left text-[10px] font-medium text-slate-400 uppercase tracking-wider">Passager / classe</th>
-                                        <th className="px-4 py-3 text-left text-[10px] font-medium text-slate-400 uppercase tracking-wider">Horaires</th>
-                                        <th className="px-4 py-3 text-right text-[10px] font-medium text-emerald-600 uppercase tracking-wider">Tarif compagnie</th>
-                                        <th className="px-4 py-3 text-right text-[10px] font-medium text-indigo-500 uppercase tracking-wider">Tarif client</th>
-                                        <th className="px-4 py-3 text-left text-[10px] font-medium text-slate-400 uppercase tracking-wider">Services & conditions</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100 bg-white">
-                                      {lignes.map((ligne: Ligne) => (
-                                        <tr key={ligne.id} className="hover:bg-slate-50/60 transition-colors">
-
-                                          {/* Vol & itinéraire */}
-                                          <td className="px-4 py-3">
-                                            <p className="font-medium text-indigo-600">{ligne.numeroVol || 'N/A'}</p>
-                                            <p className="text-slate-700 mt-0.5">{ligne.itineraire}</p>
-                                            <p className="text-slate-400 mt-1 text-[10px] uppercase">Réf : {ligne.numeroDosRef || '—'}</p>
-                                            <p className="text-slate-400 text-[10px]">Nb lignes : {ligne.nombre || '—'}</p>
-                                          </td>
-
-                                          {/* Passager / classe */}
-                                          <td className="px-4 py-3">
-                                            <p className="text-slate-700">{ligne.typePassager}</p>
-                                            <span className="inline-block mt-1 px-2 py-0.5 rounded bg-slate-100 text-slate-500 text-[10px] font-medium">
-                                              Classe {ligne.classe}
-                                            </span>
-                                          </td>
-
-                                          {/* Horaires */}
-                                          <td className="px-4 py-3">
-                                            <div className="space-y-1 text-slate-600">
-                                              <p><span className="text-slate-400 w-12 inline-block">Départ</span>
-                                                {new Date(ligne.dateHeureDepart).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
-                                              </p>
-                                              <p><span className="text-slate-400 w-12 inline-block">Arrivée</span>
-                                                {ligne.dateHeureArrive ? new Date(ligne.dateHeureArrive).toLocaleString('fr-FR', { timeStyle: 'short' }) : '—'}
-                                              </p>
-                                              <p className="text-indigo-400 font-medium text-[10px] uppercase mt-1">
-                                                {ligne.avion || 'N/A'} · {ligne.dureeVol || '—'}
-                                              </p>
-                                            </div>
-                                          </td>
-
-                                          {/* Tarif compagnie */}
-                                          <td className="px-4 py-3 text-right">
-                                            <p className="text-slate-400">Billet <span className="text-slate-700 font-medium">{ligne.montantBilletCompagnieDevise?.toLocaleString()} {ligne.devise}</span></p>
-                                            <p className="text-slate-400 mt-0.5">Service <span className="text-slate-700">{ligne.montantServiceCompagnieDevise?.toLocaleString()} {ligne.devise}</span></p>
-                                            <p className="text-emerald-700 font-medium mt-1.5 pt-1.5 border-t border-slate-100">
-                                              {(ligne.montantBilletCompagnieDevise + ligne.montantServiceCompagnieDevise).toLocaleString()} {ligne.devise}
-                                            </p>
-                                          </td>
-
-                                          {/* Tarif client */}
-                                          <td className="px-4 py-3 text-right">
-                                            <p className="text-slate-400">Billet <span className="text-slate-700 font-medium">{ligne.montantBilletClientDevise?.toLocaleString()} {ligne.devise}</span></p>
-                                            <p className="text-indigo-400 mt-0.5">+{ligne.commissionEnDevise?.toLocaleString()} {ligne.devise}</p>
-                                            <p className="text-indigo-700 font-medium mt-1.5 pt-1.5 border-t border-slate-100">
-                                              {(ligne.montantBilletClientDevise + ligne.montantServiceClientDevise).toLocaleString()} {ligne.devise}
-                                            </p>
-                                          </td>
-
-                                          {/* Services & conditions */}
-                                          <td className="px-4 py-3">
-                                            <div className="flex flex-wrap gap-1">
-                                              {ligne.serviceProspectionLigne?.length > 0
-                                                ? ligne.serviceProspectionLigne.map((svc) => (
-                                                    <span key={svc.id} className="px-2 py-0.5 bg-indigo-50 text-indigo-500 text-[10px] font-medium rounded border border-indigo-100">
-                                                      {svc.serviceSpecifique?.libelle}: {svc.valeur === 'true' ? 'Oui' : svc.valeur === 'false' ? 'Non' : svc.valeur}
-                                                    </span>
-                                                  ))
-                                                : <span className="text-slate-300 italic text-[10px]">Aucun service</span>
-                                              }
-                                            </div>
-                                            {(ligne.conditionModif || ligne.conditionAnnul) && (
-                                              <div className="grid grid-cols-2 gap-1.5 mt-2">
-                                                <div className="p-1.5 bg-orange-50 rounded text-center">
-                                                  <p className="text-[9px] font-medium text-orange-500 uppercase mb-0.5">Modif</p>
-                                                  <p className="text-[10px] text-orange-800 font-medium truncate" title={ligne.conditionModif || 'N/A'}>{ligne.conditionModif || 'N/A'}</p>
-                                                </div>
-                                                <div className="p-1.5 bg-red-50 rounded text-center">
-                                                  <p className="text-[9px] font-medium text-red-500 uppercase mb-0.5">Annul</p>
-                                                  <p className="text-[10px] text-red-800 font-medium truncate" title={ligne.conditionAnnul || 'N/A'}>{ligne.conditionAnnul || 'N/A'}</p>
-                                                </div>
-                                              </div>
-                                            )}
-                                          </td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              ) : (
-                                <p className="text-sm text-slate-400 italic mt-4">Aucune ligne dans ce devis</p>
+                              {isOpen && (
+                                <tr className="bg-slate-50/60">
+                                  <td colSpan={10} className="px-4 pb-5 pt-1">
+                                    {lignes.length > 0 ? (
+                                      <div className="overflow-x-auto rounded-md border border-slate-200 bg-white">
+                                        <table className="min-w-full text-xs">
+                                          <thead className="bg-slate-50">
+                                            <tr>
+                                              <th className="px-3 py-2 text-left font-medium text-slate-400 uppercase tracking-wide">Vol & itinéraire</th>
+                                              <th className="px-3 py-2 text-left font-medium text-slate-400 uppercase tracking-wide">Passager / classe</th>
+                                              <th className="px-3 py-2 text-left font-medium text-slate-400 uppercase tracking-wide">Horaires</th>
+                                              <th className="px-3 py-2 text-right font-medium text-emerald-600 uppercase tracking-wide">Tarif compagnie</th>
+                                              <th className="px-3 py-2 text-right font-medium text-indigo-500 uppercase tracking-wide">Tarif client</th>
+                                              <th className="px-3 py-2 text-left font-medium text-slate-400 uppercase tracking-wide">Services & conditions</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody className="divide-y divide-slate-100">
+                                            {lignes.map((ligne: Ligne) => (
+                                              <tr key={ligne.id} className="hover:bg-slate-50/60">
+                                                <td className="px-3 py-2">
+                                                  <p className="font-medium text-indigo-600">{ligne.numeroVol || 'N/A'}</p>
+                                                  <p className="text-slate-600 mt-0.5">{ligne.itineraire}</p>
+                                                  <p className="text-slate-400 mt-1 text-[10px] uppercase">Réf : {ligne.numeroDosRef || '—'}</p>
+                                                </td>
+                                                <td className="px-3 py-2">
+                                                  <p className="text-slate-600">{ligne.typePassager}</p>
+                                                  <span className="inline-block mt-1 px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 text-[10px] font-medium">
+                                                    Classe {ligne.classe}
+                                                  </span>
+                                                </td>
+                                                <td className="px-3 py-2 text-slate-600">
+                                                  <p>Départ : {new Date(ligne.dateHeureDepart).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</p>
+                                                  <p>Arrivée : {ligne.dateHeureArrive ? new Date(ligne.dateHeureArrive).toLocaleString('fr-FR', { timeStyle: 'short' }) : '—'}</p>
+                                                  <p className="text-indigo-400 font-medium text-[10px] uppercase mt-1">
+                                                    {ligne.avion || 'N/A'} · {ligne.aeroportDepart || 'N/A'} → {ligne.aeroportArrivee || 'N/A'}
+                                                  </p>
+                                                </td>
+                                                <td className="px-3 py-2 text-right text-slate-700">
+                                                  {(ligne.montantBilletCompagnieDevise + ligne.montantServiceCompagnieDevise).toLocaleString()} {ligne.devise}
+                                                </td>
+                                                <td className="px-3 py-2 text-right text-indigo-700 font-medium">
+                                                  {(ligne.montantBilletClientDevise + ligne.montantServiceClientDevise).toLocaleString()} {ligne.devise}
+                                                </td>
+                                                <td className="px-3 py-2">
+                                                  <div className="flex flex-wrap gap-1">
+                                                    {ligne.serviceProspectionLigne?.length > 0
+                                                      ? ligne.serviceProspectionLigne.map((svc) => (
+                                                          <span key={svc.id} className="px-1.5 py-0.5 bg-indigo-50 text-indigo-500 text-[10px] font-medium rounded border border-indigo-100">
+                                                            {svc.serviceSpecifique?.libelle}: {svc.valeur === 'true' ? 'Oui' : svc.valeur === 'false' ? 'Non' : svc.valeur}
+                                                          </span>
+                                                        ))
+                                                      : <span className="text-slate-300 italic text-[10px]">Aucun service</span>}
+                                                  </div>
+                                                </td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    ) : (
+                                      <p className="text-xs text-slate-400 italic py-3">Aucune ligne dans ce devis</p>
+                                    )}
+                                  </td>
+                                </tr>
                               )}
-                              <div className="mt-6 flex flex-wrap justify-end gap-3 items-center">
-                                
+                            </>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
 
-                                
-                                {/* Bouton Voir/Télécharger PDF - Toujours actif */}
-                                {/* <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleDownloadPdf(devis.id, devis.reference);
-                                  }}
-                                  disabled={isLoadingPdf || devis.statut == 'ANNULER'}
-                                  className="px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors flex items-center gap-2 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                  {isLoadingPdf ? (
-                                    <>
-                                      <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-white"></div>
-                                      Génération...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <FiEye size={16} />
-                                      PDF
-                                    </>
-                                  )}
-                                </button> */}
-
-                                {/* Séparateur */}
-                                {/* <div className="w-px h-6 bg-gray-300 mx-1" /> */}
-
-                                <button
-                                  onClick={() => {
-                                    if (devis.statut === 'CREER') {   
-                                      handleApprouverDirection(devis.id, devis.reference);
-                                    }
-                                  }}
-                                  disabled={devis.statut !== 'CREER' || directionLoading[devis.id]}
-                                  className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-2 font-medium min-w-[180px] justify-center ${
-                                    devis.statut === 'CREER' && !directionLoading[devis.id]
-                                      ? 'bg-indigo-600 text-white hover:bg-indigo-700 cursor-pointer'
-                                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                  }`}
-                                  title={devis.statut !== 'DEVIS_APPROUVE' ? 'Disponible uniquement pour les devis approuvés' : ''}
-                                >
-                                  {directionLoading[devis.id] ? (
-                                    <>
-                                      <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-white"></div>
-                                      En cours...
-                                    </>
-                                  ) : (
-                                    <>
-                                      <FiCheck size={16} />
-                                      Envoyer Direction
-                                    </>
-                                  )}
-                                </button>
-
-                                {/* Bouton Devis à approuver */}
-                                <button
-                                  onClick={() => {
-                                    if (devis.statut === 'CREER') {
-                                      handleAsAapprouved(devis.id);
-                                    }
-                                  }}
-                                  disabled={devis.statut !== 'CREER'}
-                                  className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-2 font-medium ${
-                                    devis.statut === 'CREER'
-                                      ? 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
-                                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                  }`}
-                                  title={devis.statut !== 'CREER' ? 'Disponible uniquement pour les devis créés' : ''}
-                                >
-                                  <FiCheckCircle size={16} />
-                                  Envoyer Client
-                                </button>
-
-                                {/* Bouton Devis à valider */}
-                                <button
-                                  onClick={() => {
-                                    if (devis.statut === 'DEVIS_A_APPROUVER') {
-                                      handleAsValidate(devis.id);
-                                    }
-                                  }}
-                                  disabled={devis.statut !== 'DEVIS_A_APPROUVER'}
-                                  className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-2 font-medium ${
-                                    devis.statut === 'DEVIS_A_APPROUVER'
-                                      ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
-                                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                  }`}
-                                  title={devis.statut !== 'DEVIS_A_APPROUVER' ? 'Disponible uniquement pour les devis à approuver' : ''}
-                                >
-                                  <FiCheck size={16} />
-                                  Approuver / Client
-                                </button>
-
-                                {/* Séparateur */}
-                                <div className="w-px h-6 bg-gray-300 mx-1" />
-
-                                {/* Bouton Devis à transformer */}
-                                <button
-                                  onClick={() => {
-                                    if (devis.statut === 'DEVIS_APPROUVE') {
-                                      handleCreateBillet();
-                                    }
-                                  }}
-                                  disabled={devis.statut !== 'DEVIS_APPROUVE'}
-                                  className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-2 font-medium ${
-                                    devis.statut === 'DEVIS_APPROUVE'
-                                      ? 'bg-green-600 text-white hover:bg-green-700 cursor-pointer'
-                                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                  }`}
-                                  title={devis.statut !== 'DEVIS_APPROUVE' ? 'Disponible uniquement pour les devis approuvés' : ''}
-                                >
-                                  <FiRefreshCw size={16} />
-                                  Transformer / Billet
-                                </button>
-
-                                {/* Séparateur */}
-                                <div className="w-px h-6 bg-gray-300 mx-1" />
-
-                                {/* Nouveau bouton Annuler */}
-                                {/* Bouton Annuler - Visible selon le statut */}
-                                {/* {['CREER', 'DEVIS_A_APPROUVER'].includes(devis.statut) && ( */}
-                                  <button
-                                  disabled= { devis.statut == 'ANNULER' || devis.statut == 'DEVIS_APPROUVE'}
-                                    onClick={() => {
-                                      setSelectedDevisForCancel(devis);
-                                      setShowAnnulationModal(true);
-                                    }}
-                                    className={`px-4 py-2.5 rounded-lg transition-colors flex items-center gap-2 font-medium ${
-                                      devis.statut === 'CREER' || devis.statut === 'DEVIS_A_APPROUVER'
-                                        ? 'bg-red-600 text-white hover:bg-red-700 cursor-pointer'
-                                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                    }`}
-                                  >
-                                    <FiX size={16} />
-                                    Annuler
-                                  </button>
-                                {/* )} */}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
             {selectedDevisForCancel && (
-              // Dans Devis.tsx, cherchez le composant AnnulationDevisModal
               <AnnulationDevisModal
                 isOpen={showAnnulationModal}
                 onClose={() => {
@@ -588,23 +516,10 @@ export default function Devis () {
                 }}
                 onSubmit={async (data) => {
                   if (!selectedDevisForCancel) return;
-                  
                   setAnnulationLoading(true);
                   try {
-                    // 1. On lance l'annulation
-                    await dispatch(
-                      annulerDevis({
-                        devisId: selectedDevisForCancel.id,
-                        payload: data,
-                      })
-                    ).unwrap();
-                    
-                    // 2. ICI : On réactualise la liste immédiatement
-                    if (enteteId) {
-                      dispatch(fetchDevisByEntete(enteteId));
-                    }
-
-                    // alert('Devis annulé avec succès');
+                    await dispatch(annulerDevis({ devisId: selectedDevisForCancel.id, payload: data })).unwrap();
+                    if (enteteId) dispatch(fetchDevisByEntete(enteteId));
                     setShowAnnulationModal(false);
                     setSelectedDevisForCancel(null);
                   } catch (err: any) {
@@ -613,7 +528,7 @@ export default function Devis () {
                     setAnnulationLoading(false);
                   }
                 }}
-                lignes={selectedDevisForCancel?.data?.lignes || []} // Ajout du ? au cas où
+                lignes={selectedDevisForCancel?.data?.lignes || []}
                 loading={annulationLoading}
               />
             )}
@@ -621,8 +536,6 @@ export default function Devis () {
             {showValidateModal && (
               <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
-                  
-                  {/* Header */}
                   <div className="bg-gray-50 border-b border-gray-200 px-6 py-4 flex items-center justify-between">
                     <div>
                       <h3 className="text-base font-semibold text-gray-900 flex items-center gap-2">
@@ -646,23 +559,17 @@ export default function Devis () {
                     </button>
                   </div>
 
-                  {/* Body */}
                   <div className="p-6 space-y-4">
                     <p className="text-sm text-gray-700">
                       Confirmez-vous l'approbation du devis par le client ?
                     </p>
-
-                    {/* Upload zone */}
                     <div>
                       <label className="block text-xs font-medium text-gray-700 mb-2">
                         Preuve client <span className="text-gray-400 font-normal">(image optionnelle)</span>
                       </label>
-
                       <label className="cursor-pointer group block">
                         <div className={`border-2 border-dashed rounded-lg p-5 text-center transition-colors ${
-                          preuveClient
-                            ? 'border-green-400 bg-green-50'
-                            : 'border-gray-300 hover:border-gray-400 bg-gray-50 hover:bg-white'
+                          preuveClient ? 'border-green-400 bg-green-50' : 'border-gray-300 hover:border-gray-400 bg-gray-50 hover:bg-white'
                         }`}>
                           <div className="flex flex-col items-center gap-2">
                             {preuveClient ? (
@@ -691,7 +598,6 @@ export default function Devis () {
                       </label>
                     </div>
 
-                    {/* Aperçu */}
                     {preuveClientPreview && (
                       <div className="relative inline-block">
                         <img
@@ -710,7 +616,6 @@ export default function Devis () {
                     )}
                   </div>
 
-                  {/* Footer */}
                   <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
                     <button
                       onClick={() => {

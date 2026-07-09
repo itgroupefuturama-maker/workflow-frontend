@@ -199,38 +199,38 @@ const PageViewAttestation = () => {
 
                   {/* Dans le canCreate*/}
                   {canCreate && activeTabSousSection === 'lignes' && (
-                    <div className="flex gap-3 items-center">
-                      {items.length > 0 && activeTabSousSection === 'lignes' && (
-                        <button
-                          onClick={() => setShowPdfModal(true)}
-                          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium
-                            bg-white border border-indigo-200 text-indigo-700 rounded-xl
-                            hover:bg-indigo-50 transition-colors"
-                        >
-                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                          </svg>
-                          Générer PDF
-                        </button>
-                      )}
-                      <select
-                        value={selectedFournisseurId}
-                        onChange={(e) => {
-                          const id = e.target.value;
-                          setSelectedFournisseurId(id);
-                          if (id) dispatch(fetchLastCommentaireFournisseur(id));
-                          else dispatch(clearCommentaireFournisseur());
-                        }}
-                        className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      >
-                        <option value="">— Choisir un fournisseur —</option>
-                        {fournisseurs.map((f) => (
-                          <option key={f.id} value={f.id}>{f.code} - {f.libelle}</option>
-                        ))}
-                      </select>
+                    <div className="flex gap-3 items-center flex-wrap">
 
-                      {/* Input prix — pré-rempli depuis attestationParams, modifiable */}
+                      {/* Sélecteur fournisseur */}
+                      <div className="relative">
+                        <select
+                          value={selectedFournisseurId}
+                          onChange={(e) => {
+                            const id = e.target.value;
+                            setSelectedFournisseurId(id);
+                            if (id) dispatch(fetchLastCommentaireFournisseur(id));
+                            else dispatch(clearCommentaireFournisseur());
+                          }}
+                          className="h-10 appearance-none border border-gray-300 rounded-xl pl-3 pr-9 text-sm
+                            text-slate-700 bg-white
+                            hover:border-gray-400
+                            focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400
+                            transition-colors cursor-pointer"
+                        >
+                          <option value="">— Choisir un fournisseur —</option>
+                          {fournisseurs.map((f) => (
+                            <option key={f.id} value={f.id}>{f.code} - {f.libelle}</option>
+                          ))}
+                        </select>
+                        <svg
+                          className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+                          fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+
+                      {/* Prix unitaire */}
                       <div className="relative">
                         <input
                           type="number"
@@ -239,31 +239,70 @@ const PageViewAttestation = () => {
                           placeholder="Prix unitaire"
                           value={puAriary}
                           onChange={(e) => setPuAriary(e.target.value === '' ? '' : Number(e.target.value))}
-                          className={`w-44 border rounded-lg px-3 py-2 pr-8 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-colors ${
+                          className={`h-10 w-44 border rounded-xl pl-3 pr-9 text-sm font-semibold
+                            focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-colors ${
                             puAriary !== prixActif && puAriary !== ''
                               ? 'border-indigo-400 bg-indigo-50 text-indigo-700'
-                              : 'border-gray-300 bg-white text-slate-700'
+                              : 'border-gray-300 bg-white text-slate-700 hover:border-gray-400'
                           }`}
                         />
-                        <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400 pointer-events-none">
                           Ar
                         </span>
                       </div>
 
+                      {/* Créer entête */}
                       <button
                         onClick={handleCreate}
                         disabled={loading || !selectedFournisseurId || !puAriary || isBlocked}
-                        className={`inline-flex items-center gap-2 px-4 py-2 text-white text-sm font-semibold rounded-xl shadow-sm transition-all ${
+                        className={`h-10 inline-flex items-center gap-2 px-4 text-sm font-semibold rounded-xl transition-all ${
                           loading || !selectedFournisseurId || !puAriary || isBlocked
-                            ? 'bg-gray-400 cursor-not-allowed'
-                            : 'bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800'
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                            : 'bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 active:bg-indigo-800'
                         }`}
                       >
-                        <span className="flex items-center justify-center w-4 h-4 rounded-md bg-white/20 font-bold leading-none">+</span>
+                        {loading ? (
+                          <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                        ) : (
+                          <span className={`flex items-center justify-center w-4 h-4 rounded-md font-bold leading-none ${
+                            !selectedFournisseurId || !puAriary || isBlocked ? 'bg-gray-300 text-gray-500' : 'bg-white/20'
+                          }`}>
+                            +
+                          </span>
+                        )}
                         {loading ? 'Création...' : 'Créer entête'}
                       </button>
 
                       <FournisseurAlerteBadge />
+
+                      {items.length > 0 && activeTabSousSection === 'lignes' && (
+                        <>
+                          {/* Séparateur visuel avant l'action principale */}
+                          <div className="w-px h-6 bg-gray-200 mx-1" />
+
+                          <button
+                            onClick={() => setShowPdfModal(true)}
+                            className="group h-10 inline-flex items-center gap-2.5 px-5 text-sm font-semibold
+                              text-white rounded-xl
+                              bg-linear-to-br from-indigo-600 to-indigo-700
+                              shadow-md shadow-indigo-600/25
+                              hover:from-indigo-500 hover:to-indigo-600
+                              hover:shadow-lg hover:shadow-indigo-600/35
+                              hover:-translate-y-0.5
+                              active:translate-y-0 active:shadow-md
+                              transition-all duration-200"
+                          >
+                            <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-white/15
+                              group-hover:bg-white/20 transition-colors">
+                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                              </svg>
+                            </span>
+                            Générer PDF
+                          </button>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>

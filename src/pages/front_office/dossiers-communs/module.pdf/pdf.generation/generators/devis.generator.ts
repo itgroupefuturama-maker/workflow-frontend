@@ -95,7 +95,7 @@ function drawEmiExigences(
   doc.text('EXIGENCES DE VOYAGE', MARGIN + 5, cur.y + 6);
 
   // Badge IMPORTANT inline
-  doc.setFillColor(215, 25, 33);
+  doc.setFillColor(0, 140, 210);
   doc.rect(MARGIN + 58, cur.y + 1, 20, 6, 'F');
   doc.setFontSize(5.5);
   doc.setFont('helvetica', 'bold');
@@ -108,8 +108,8 @@ function drawEmiExigences(
   exigences.forEach(e => {
     checkPage(doc, cur, 7, design);
 
-    // Point rouge devant le type
-    doc.setFillColor(215, 25, 33);
+    // Blue dot before type
+    doc.setFillColor(0, 140, 210);
     doc.circle(MARGIN + 1.5, cur.y - 0.5, 1.2, 'F');
 
     // Type en gras
@@ -293,7 +293,7 @@ function drawEmiSegmentWithFare(
 
   if (l.dureeEscale && l.dureeEscale !== '0' && l.dureeEscale !== '') {
     doc.setFontSize(5.5);
-    setColor(doc, [215, 25, 33], 'text');
+    setColor(doc, [0, 140, 210], 'text');
     doc.text(sanitize(`Escale : ${l.dureeEscale}`), midX, cur.y + 19, { align: 'center' });
   }
 
@@ -309,10 +309,12 @@ function drawEmiSegmentWithFare(
   doc.rect(MARGIN - 2, cur.y, CONTENT_W + 4, metaH, 'F');
 
   const metas = [
-    { label: 'AVION',       value: sanitize(l.avion ?? '-') },
-    { label: 'CLASSE',      value: sanitize(l.classe ?? '-') },
-    { label: 'PASSAGERS',   value: sanitize(`${l.nombre ?? 1} ${fmt.replace_(l.typePassager ?? '')}`) },
-    { label: 'DESTINATION', value: sanitize(l.destinationVoyage?.pays?.pays ?? l.destinationVoyage?.ville ?? '-') },
+    { label: 'AVION',          value: sanitize(l.avion ?? '-') },
+    { label: 'CLASSE',         value: sanitize(l.classe ?? '-') },
+    { label: 'PASSAGERS',      value: sanitize(`${l.nombre ?? 1} ${fmt.replace_(l.typePassager ?? '')}`) },
+    { label: 'DESTINATION',    value: sanitize(l.destinationVoyage?.pays?.pays ?? l.destinationVoyage?.ville ?? '-') },
+    { label: 'AEROPORT DEP.',  value: sanitize(l.aeroportDepart ?? '-') },
+    { label: 'AEROPORT ARR.',  value: sanitize(l.aeroportArrivee ?? '-') },
   ];
   const mw = CONTENT_W / metas.length;
   metas.forEach((m, i) => {
@@ -451,7 +453,7 @@ function drawEmiFooter(
     cur.move(stampSize + 4);
   }
 
-  doc.setDrawColor(215, 25, 33);
+  doc.setDrawColor(0, 140, 210);
   doc.setLineWidth(0.8);
   doc.line(MARGIN - 2, cur.y, MARGIN + CONTENT_W + 2, cur.y);
   cur.move(5);
@@ -745,7 +747,7 @@ export function generateDevisPdf(
 
   // ── Exigences (thèmes classiques, client uniquement) ──────────────
   if (!isEmirates && !isDirection && exigences.length > 0) {
-    drawSectionTitle(doc, cur, 'EXIGENCES DE VOYAGE', design);
+    drawSectionTitle(doc, cur, 'EXIGENCES DE VOYAGEssss', design);
     doc.setFontSize(7.5);
     exigences.forEach(e => {
       checkPage(doc, cur, 7, design);

@@ -24,13 +24,13 @@ export const PDF_DESIGNS: Record<string, PdfDesign> = {
     description: 'Style document compagnie aérienne, formel et paginé',
     preview: '#1A2744',
     colors: {
-      headerBg:      [26,  39,  68],
+      headerBg:      [15,  23,  42],
       headerText:    [255, 255, 255],
-      accentBg:      [26,  39,  68],
+      accentBg:      [15,  23,  42],
       accentText:    [255, 255, 255],
-      tableHeadBg:   [244, 246, 250],
-      tableHeadText: [26,  39,  68],
-      accentLine:    [215, 25,  33],
+      accentLine:    [59,  130, 246],
+      tableHeadBg:   [15,  23,  42],
+      tableHeadText: [255, 255, 255],
     },
     staticTexts: {
       headerSubtitle: 'Agence de voyages agréée IATA · Madagascar',
