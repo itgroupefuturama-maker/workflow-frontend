@@ -1,9 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import {
-  fetchEvolutionCurrentYear,
-  fetchEvolutionPreviousYear,
-} from '../../../../app/front_office/parametre_dashboard/dashboardSlice';
+import { fetchEvolutionByYear } from '../../../../app/front_office/parametre_dashboard/dashboardSlice';
+import type { ModuleEvolution } from '../../../../app/front_office/parametre_dashboard/dashboardSlice';
 import type { AppDispatch, RootState } from '../../../../app/store';
 import { FiArrowLeft } from 'react-icons/fi';
 import { LayoutDashboard } from 'lucide-react';
@@ -19,15 +17,6 @@ ChartJS.register(
   CategoryScale, LinearScale, BarElement, LineElement,
   PointElement, ArcElement, Filler, Tooltip, Legend
 );
-
-// ─── TYPES ────────────────────────────────────────────────────
-
-type PeriodType = 'month' | '3months' | '6months' | 'year' | 'custom';
-
-interface DateRange {
-  startMonth: number; // 0-based
-  endMonth: number;   // 0-based
-}
 
 // ─── Constantes ───────────────────────────────────────────────
 
@@ -46,6 +35,26 @@ const MODULE_COLORS: Record<string, string> = {
 
 const getModuleColor = (name: string) =>
   MODULE_COLORS[name.toLowerCase()] ?? '#6B7280';
+
+// Couleur de l'année de référence + palette pour les années de comparaison (max 4)
+const REFERENCE_YEAR_COLOR = '#3B82F6';
+const COMPARISON_YEAR_COLORS = ['#9CA3AF', '#F59E0B', '#10B981', '#8B5CF6'];
+const MAX_COMPARISON_YEARS = 4;
+
+// Repli stable (redux-persist peut restaurer un state antérieur à l'ajout de ces champs).
+const EMPTY_EVOLUTION_BY_YEAR: Record<number, MoisEvolution[]> = {};
+const EMPTY_LOADING_YEARS: Record<number, boolean> = {};
+const EMPTY_ERROR_YEARS: Record<number, string | null> = {};
+
+const hexToRgba = (hex: string, alpha: number) => {
+  const clean = hex.replace('#', '');
+  const full = clean.length === 3 ? clean.split('').map((c) => c + c).join('') : clean;
+  const bigint = parseInt(full, 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return `rgba(${r},${g},${b},${alpha})`;
+};
 
 const formatMoney = (value: number) =>
   new Intl.NumberFormat('fr-FR', {
@@ -95,35 +104,64 @@ const moneyOptions = {
   },
 };
 
-// ─── FONCTION UTILITAIRE : CALCULER LA PLAGE DE DATES ──────
+const financierMonthOptions = {
+  ...moneyOptions,
+  indexAxis: 'y' as const,
+  scales: {
+    x: {
+      grid: { color: 'rgba(0,0,0,0.04)' },
+      ticks: {
+        font: { size: 11 },
+        callback: (v: any) => {
+          if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
+          if (v >= 1_000)     return `${(v / 1_000).toFixed(0)}k`;
+          return v;
+        },
+      },
+    },
+    y: {
+      grid: { color: 'rgba(0,0,0,0.04)' },
+      ticks: { font: { size: 11 } },
+    },
+  },
+};
 
-const getDateRange = (
-  periodType: PeriodType,
-  currentMonthIndex: number,
-  customStart?: number,
-  customEnd?: number
-): DateRange => {
-  switch (periodType) {
-    case 'month':
-      return { startMonth: currentMonthIndex, endMonth: currentMonthIndex };
-    case '3months':
-      return {
-        startMonth: Math.max(0, currentMonthIndex - 2),
-        endMonth: currentMonthIndex,
-      };
-    case '6months':
-      return {
-        startMonth: Math.max(0, currentMonthIndex - 5),
-        endMonth: currentMonthIndex,
-      };
-    case 'year':
-      return { startMonth: 0, endMonth: 11 };
-    case 'custom':
-      return {
-        startMonth: customStart ?? 0,
-        endMonth: customEnd ?? currentMonthIndex,
-      };
-  }
+const donutOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  cutout: '62%',
+  plugins: {
+    legend: {
+      display: true,
+      position: 'right' as const,
+      labels: { font: { size: 12 }, boxWidth: 12, padding: 12 },
+    },
+    tooltip: {
+      callbacks: {
+        label: (ctx: any) =>
+          `${ctx.label}: ${ctx.parsed} dossier${ctx.parsed > 1 ? 's' : ''}`,
+      },
+    },
+  },
+};
+
+const donutMoneyOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  cutout: '62%',
+  plugins: {
+    legend: {
+      display: true,
+      position: 'right' as const,
+      labels: { font: { size: 12 }, boxWidth: 12, padding: 12 },
+    },
+    tooltip: {
+      callbacks: {
+        label: (ctx: any) =>
+          `${ctx.label}: ${formatMoney(Number(ctx.raw))}`,
+      },
+    },
+  },
 };
 
 // ─── Sous-composants ──────────────────────────────────────────
@@ -132,21 +170,13 @@ interface KpiCardProps {
   label: string;
   value: string;
   sub: string;
-  color: 'blue' | 'green' | 'orange' | 'violet' | 'gray';
+  colorHex: string;
 }
 
-const COLOR_MAP: Record<KpiCardProps['color'], string> = {
-  blue:   'text-blue-600',
-  green:  'text-emerald-600',
-  orange: 'text-orange-500',
-  violet: 'text-violet-600',
-  gray:   'text-gray-500',
-};
-
-const KpiCard: React.FC<KpiCardProps> = ({ label, value, sub, color }) => (
+const KpiCard: React.FC<KpiCardProps> = ({ label, value, sub, colorHex }) => (
   <div className="bg-gray-50 rounded-xl p-4">
     <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400 mb-1">{label}</p>
-    <p className={`text-2xl font-semibold truncate ${COLOR_MAP[color]}`}>{value}</p>
+    <p className="text-2xl font-semibold truncate" style={{ color: colorHex }}>{value}</p>
     <p className="text-[11px] text-gray-400 mt-1">{sub}</p>
   </div>
 );
@@ -187,99 +217,105 @@ const ChartCard: React.FC<ChartCardProps> = ({
   </div>
 );
 
-// ─── COMPOSANT FILTRAGE PÉRIODE AVEC PLAGE PERSONNALISÉE ──────
+// ─── COMPOSANT FILTRAGE : ANNÉES + PLAGE DE MOIS ───────────────
 
-interface PeriodFilterProps {
-  activePeriod: PeriodType;
-  onPeriodChange: (period: PeriodType) => void;
-  customStart: number | null;
-  customEnd: number | null;
+interface YearFilterProps {
+  referenceYear: number;
+  referenceYearOptions: number[];
+  onReferenceYearChange: (year: number) => void;
+  comparisonYears: number[];
+  comparisonYearOptions: number[];
+  onToggleComparisonYear: (year: number) => void;
+  customStart: number;
+  customEnd: number;
   onCustomRangeChange: (start: number, end: number) => void;
-  currentYearNum: number;
 }
 
-const PeriodFilter: React.FC<PeriodFilterProps> = ({
-  activePeriod,
-  onPeriodChange,
+const YearFilter: React.FC<YearFilterProps> = ({
+  referenceYear,
+  referenceYearOptions,
+  onReferenceYearChange,
+  comparisonYears,
+  comparisonYearOptions,
+  onToggleComparisonYear,
   customStart,
   customEnd,
   onCustomRangeChange,
-  currentYearNum,
 }) => {
-  const buttonBaseClass = "px-4 py-2.5 text-sm font-medium rounded-lg transition-colors";
-  const activeClass   = "bg-indigo-600 text-white";
-  const inactiveClass = "bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200";
+  const pillBase = "px-3.5 py-2 text-sm font-medium rounded-lg transition-colors border";
+  const pillActive   = "bg-indigo-600 text-white border-indigo-600";
+  const pillInactive = "bg-gray-50 text-gray-600 hover:bg-gray-100 border-gray-200";
+  const pillDisabled = "bg-gray-50 text-gray-300 border-gray-100 cursor-not-allowed";
 
-  const handleStartMonthChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const startMonth = parseInt(e.target.value, 10);
-    onCustomRangeChange(startMonth, customEnd ?? 11);
-    if (activePeriod !== 'custom') {
-      onPeriodChange('custom');
-    }
-  };
+  const comparisonLimitReached = comparisonYears.length >= MAX_COMPARISON_YEARS;
 
-  const handleEndMonthChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const endMonth = parseInt(e.target.value, 10);
-    onCustomRangeChange(customStart ?? 0, endMonth);
-    if (activePeriod !== 'custom') {
-      onPeriodChange('custom');
-    }
-  };
+  // Le mois de début prend toujours le 1er jour, le mois de fin son dernier jour
+  // (28/29/30/31 selon le mois et l'année de référence, pour gérer les années bissextiles).
+  const getLastDayOfMonth = (monthIndex: number) => new Date(referenceYear, monthIndex + 1, 0).getDate();
+  const lastDayEnd = getLastDayOfMonth(customEnd);
 
   return (
     <div className="bg-white border border-gray-100 rounded-2xl p-5 space-y-5">
-      {/* SECTION 1 : Boutons prédéfinis */}
+      {/* SECTION 1 : Année de référence */}
       <div>
         <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">
-          Période prédéfinie
+          Année de référence
+        </p>
+        <select
+          value={referenceYear}
+          onChange={(e) => onReferenceYearChange(parseInt(e.target.value, 10))}
+          className="px-3 py-2.5 border border-gray-200 rounded-lg text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+        >
+          {referenceYearOptions.map((y) => (
+            <option key={y} value={y}>{y}</option>
+          ))}
+        </select>
+      </div>
+
+      {/* SECTION 2 : Années de comparaison */}
+      <div className="border-t border-gray-100 pt-4">
+        <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-1">
+          Années à comparer (jusqu'à {MAX_COMPARISON_YEARS})
+        </p>
+        <p className="text-[11px] text-gray-400 mb-3">
+          Uniquement des années antérieures à {referenceYear}. {comparisonYears.length}/{MAX_COMPARISON_YEARS} sélectionnée(s).
         </p>
         <div className="flex gap-2 flex-wrap">
-          <button
-            onClick={() => onPeriodChange('month')}
-            className={`${buttonBaseClass} ${activePeriod === 'month' ? activeClass : inactiveClass}`}
-          >
-            Ce mois
-          </button>
-          <button
-            onClick={() => onPeriodChange('3months')}
-            className={`${buttonBaseClass} ${activePeriod === '3months' ? activeClass : inactiveClass}`}
-          >
-            3 derniers mois
-          </button>
-          <button
-            onClick={() => onPeriodChange('6months')}
-            className={`${buttonBaseClass} ${activePeriod === '6months' ? activeClass : inactiveClass}`}
-          >
-            6 derniers mois
-          </button>
-          <button
-            onClick={() => onPeriodChange('year')}
-            className={`${buttonBaseClass} ${activePeriod === 'year' ? activeClass : inactiveClass}`}
-          >
-            Année complète
-          </button>
+          {comparisonYearOptions.map((y) => {
+            const active = comparisonYears.includes(y);
+            const disabled = !active && comparisonLimitReached;
+            return (
+              <button
+                key={y}
+                type="button"
+                disabled={disabled}
+                onClick={() => onToggleComparisonYear(y)}
+                className={`${pillBase} ${active ? pillActive : disabled ? pillDisabled : pillInactive}`}
+              >
+                {y}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* SECTION 2 : Plage personnalisée */}
+      {/* SECTION 3 : Plage de mois */}
       <div className="border-t border-gray-100 pt-4">
         <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">
-          Plage personnalisée
+          Plage de mois
         </p>
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-4 max-w-md">
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-2">
               Mois de début
             </label>
             <select
-              value={customStart ?? 0}
-              onChange={handleStartMonthChange}
+              value={customStart}
+              onChange={(e) => onCustomRangeChange(parseInt(e.target.value, 10), customEnd)}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
             >
               {MOIS_LABELS.map((label, index) => (
-                <option key={index} value={index}>
-                  {label} {currentYearNum}
-                </option>
+                <option key={index} value={index}>{label} (jour 1)</option>
               ))}
             </select>
           </div>
@@ -288,26 +324,22 @@ const PeriodFilter: React.FC<PeriodFilterProps> = ({
               Mois de fin
             </label>
             <select
-              value={customEnd ?? 11}
-              onChange={handleEndMonthChange}
+              value={customEnd}
+              onChange={(e) => onCustomRangeChange(customStart, parseInt(e.target.value, 10))}
               className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
             >
               {MOIS_LABELS.map((label, index) => (
-                <option key={index} value={index}>
-                  {label} {currentYearNum}
-                </option>
+                <option key={index} value={index}>{label} (jour {getLastDayOfMonth(index)})</option>
               ))}
             </select>
           </div>
         </div>
 
-        {activePeriod === 'custom' && customStart !== null && customEnd !== null && (
-          <div className="mt-3 p-3 bg-indigo-50 border border-indigo-200 rounded-lg">
-            <p className="text-xs text-indigo-700 font-medium">
-              📅 Affichage : {MOIS_LABELS[customStart]} - {MOIS_LABELS[customEnd]} {currentYearNum}
-            </p>
-          </div>
-        )}
+        <div className="mt-3 p-3 bg-indigo-50 border border-indigo-200 rounded-lg max-w-md">
+          <p className="text-xs text-indigo-700 font-medium">
+            📅 Période retenue : du 1 {MOIS_LABELS[customStart]} au {lastDayEnd} {MOIS_LABELS[customEnd]} (base {referenceYear})
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -319,309 +351,220 @@ const PageTableauBord: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dossiers');
-  const [activePeriod, setActivePeriod] = useState<PeriodType>('year');
-  const [customStart, setCustomStart] = useState<number | null>(null);
-  const [customEnd, setCustomEnd] = useState<number | null>(null);
+
+  const currentYearActual  = new Date().getFullYear();
+  const currentMonthActual = new Date().getMonth();
+
+  const [referenceYear, setReferenceYear] = useState<number>(currentYearActual);
+  const [comparisonYears, setComparisonYears] = useState<number[]>([currentYearActual - 1]);
+  const [customStart, setCustomStart] = useState<number>(0);
+  const [customEnd, setCustomEnd] = useState<number>(
+    currentYearActual === referenceYear ? currentMonthActual : 11
+  );
+
+  const referenceYearOptions = useMemo(
+    () => Array.from({ length: 11 }, (_, i) => currentYearActual - i),
+    [currentYearActual]
+  );
+  const comparisonYearOptions = useMemo(
+    () => Array.from({ length: 15 }, (_, i) => referenceYear - 1 - i),
+    [referenceYear]
+  );
+
+  // Empêche qu'une année de comparaison devienne >= à l'année de référence
+  const handleReferenceYearChange = (year: number) => {
+    setReferenceYear(year);
+    setComparisonYears((prev) => prev.filter((y) => y < year));
+  };
+
+  const handleToggleComparisonYear = (year: number) => {
+    setComparisonYears((prev) => {
+      if (prev.includes(year)) return prev.filter((y) => y !== year);
+      if (prev.length >= MAX_COMPARISON_YEARS) return prev;
+      return [...prev, year];
+    });
+  };
 
   const {
-    evolutionCurrentYear,
-    evolutionPreviousYear,
-    loadingEvolutionCurrent,
-    loadingEvolutionPrevious,
-    errorEvolutionCurrent,
-    errorEvolutionPrevious,
+    evolutionByYear: evolutionByYearRaw,
+    loadingYears: loadingYearsRaw,
+    errorYears: errorYearsRaw,
   } = useSelector((state: RootState) => state.dashboard);
+  const evolutionByYear = evolutionByYearRaw ?? EMPTY_EVOLUTION_BY_YEAR;
+  const loadingYears = loadingYearsRaw ?? EMPTY_LOADING_YEARS;
+  const errorYears = errorYearsRaw ?? EMPTY_ERROR_YEARS;
 
-  const currentYearNum    = new Date().getFullYear();
-  const previousYearNum   = currentYearNum - 1;
-  const currentMonthIndex = new Date().getMonth();
-
-  // 👈 CALCULER LA PLAGE SELON LA PÉRIODE SÉLECTIONNÉE
-  const dateRange = getDateRange(activePeriod, currentMonthIndex, customStart ?? undefined, customEnd ?? undefined);
+  // Années effectivement affichées : référence en tête, puis comparaisons triées (plus récente d'abord)
+  const sortedYears = useMemo(() => {
+    const comps = [...comparisonYears].sort((a, b) => b - a);
+    return [referenceYear, ...comps];
+  }, [referenceYear, comparisonYears]);
 
   useEffect(() => {
-    dispatch(fetchEvolutionCurrentYear(currentYearNum));
-    dispatch(fetchEvolutionPreviousYear(previousYearNum));
-  }, [dispatch, currentYearNum, previousYearNum]);
+    sortedYears.forEach((y) => {
+      if (!evolutionByYear[y] && !loadingYears[y]) {
+        dispatch(fetchEvolutionByYear(y));
+      }
+    });
+  }, [dispatch, sortedYears, evolutionByYear, loadingYears]);
 
-  const isLoading = loadingEvolutionCurrent || loadingEvolutionPrevious;
-  const hasError  = errorEvolutionCurrent   || errorEvolutionPrevious;
+  const getYearColor = (year: number) => {
+    if (year === referenceYear) return REFERENCE_YEAR_COLOR;
+    const idx = comparisonYears.slice().sort((a, b) => b - a).indexOf(year);
+    return COMPARISON_YEAR_COLORS[idx % COMPARISON_YEAR_COLORS.length];
+  };
 
-  // 👈 FILTRER LES DONNÉES SELON LA PÉRIODE
-  const filteredCurrentYear  = evolutionCurrentYear.slice(dateRange.startMonth, dateRange.endMonth + 1);
-  const filteredPreviousYear = evolutionPreviousYear.slice(dateRange.startMonth, dateRange.endMonth + 1);
-  const filteredLabels = MOIS_LABELS.slice(dateRange.startMonth, dateRange.endMonth + 1);
+  const isLoading = sortedYears.some((y) => loadingYears[y] || (!evolutionByYear[y] && !errorYears[y]));
+  const hasError  = sortedYears.some((y) => errorYears[y]);
+  const errorMessage = sortedYears.map((y) => errorYears[y]).find(Boolean) ?? null;
 
-  // Données pour le dernier mois de la sélection
-  const effectiveEndMonth = Math.min(dateRange.endMonth, currentMonthIndex);
-  const currentMonthData  = evolutionCurrentYear[effectiveEndMonth];
-  const previousMonthData = evolutionPreviousYear[effectiveEndMonth];
+  const filteredLabels = MOIS_LABELS.slice(customStart, customEnd + 1);
+  const moisLabel = MOIS_LABELS[customEnd];
 
-  // ── Section 1 : Dossiers ──
-  const dossiersCurrent  = filteredCurrentYear.map((m) => m.dossiers);
-  const dossiersPrevious = filteredPreviousYear.map((m) => m.dossiers);
+  const getFilteredForYear = (y: number) =>
+    (evolutionByYear[y] ?? []).slice(customStart, customEnd + 1);
+  const getMonthDataForYear = (y: number) => (evolutionByYear[y] ?? [])[customEnd];
 
   const cumul = (arr: number[]) => {
     let s = 0;
     return arr.map((v) => (s += v));
   };
-  const cumulCurrent  = cumul(dossiersCurrent);
-  const cumulPrevious = cumul(dossiersPrevious);
 
-  const totalDossiersCurrent  = dossiersCurrent.reduce((a, b) => a + b, 0);
-  const totalDossiersPrevious = dossiersPrevious.reduce((a, b) => a + b, 0);
-  const totalDossiersMonth    = currentMonthData?.dossiers ?? 0;
+  // ── Section Dossiers ──
+  const dossiersByYear = sortedYears.map((y) => {
+    const monthly = getFilteredForYear(y).map((m) => m.dossiers);
+    return {
+      year: y,
+      color: getYearColor(y),
+      monthly,
+      cumulative: cumul(monthly),
+      total: monthly.reduce((a, b) => a + b, 0),
+      month: getMonthDataForYear(y)?.dossiers ?? 0,
+    };
+  });
 
   const dossierBarData = {
     labels: filteredLabels,
-    datasets: [
-      {
-        label: `${currentYearNum}`,
-        data: dossiersCurrent,
-        backgroundColor: '#3B82F6',
-        borderRadius: 4,
-        borderSkipped: false as const,
-      },
-      {
-        label: `${previousYearNum}`,
-        data: dossiersPrevious,
-        backgroundColor: '#E5E7EB',
-        borderRadius: 4,
-        borderSkipped: false as const,
-      },
-    ],
+    datasets: dossiersByYear.map((d) => ({
+      label: `${d.year}`,
+      data: d.monthly,
+      backgroundColor: d.color,
+      borderRadius: 4,
+      borderSkipped: false as const,
+    })),
   };
 
   const dossierLineData = {
     labels: filteredLabels,
-    datasets: [
-      {
-        label: `${currentYearNum}`,
-        data: cumulCurrent,
-        borderColor: '#3B82F6',
-        backgroundColor: 'rgba(59,130,246,0.08)',
-        fill: true, tension: 0.4, pointRadius: 3,
-        pointBackgroundColor: '#3B82F6',
-      },
-      {
-        label: `${previousYearNum}`,
-        data: cumulPrevious,
-        borderColor: '#9CA3AF',
-        borderDash: [5, 4],
-        backgroundColor: 'transparent',
-        fill: false, tension: 0.4, pointRadius: 2,
-        pointBackgroundColor: '#9CA3AF',
-      },
-    ],
+    datasets: dossiersByYear.map((d) => ({
+      label: `${d.year}`,
+      data: d.cumulative,
+      borderColor: d.color,
+      backgroundColor: hexToRgba(d.color, d.year === referenceYear ? 0.08 : 0),
+      fill: d.year === referenceYear,
+      tension: 0.4,
+      pointRadius: d.year === referenceYear ? 3 : 2,
+      pointBackgroundColor: d.color,
+      borderDash: d.year === referenceYear ? undefined : [5, 4] as [number, number],
+    })),
   };
 
-  // ── Donut dossiers par module — mois actuel vs précédent ──
-  const modulesCurrentMonth  = currentMonthData?.modules  ?? [];
-  const modulesPreviousMonth = previousMonthData?.modules ?? [];
+  // ── Modules du mois sélectionné, par année ──
+  const modulesByYearMonth: Record<number, ModuleEvolution[]> = {};
+  sortedYears.forEach((y) => {
+    modulesByYearMonth[y] = getMonthDataForYear(y)?.modules ?? [];
+  });
 
   const moduleNamesMonth = Array.from(
-    new Set([
-      ...modulesCurrentMonth.map((m) => m.moduleName),
-      ...modulesPreviousMonth.map((m) => m.moduleName),
-    ])
+    new Set(sortedYears.flatMap((y) => modulesByYearMonth[y].map((m) => m.moduleName)))
   );
 
-  const donutDossiersCurrentData = {
+  const buildDonutDataForYear = (y: number, field: 'nombreDossiers' | 'chiffreAffaire' | 'engagementFournisseur') => ({
     labels: moduleNamesMonth,
     datasets: [{
       data: moduleNamesMonth.map((name) =>
-        modulesCurrentMonth.find((m) => m.moduleName === name)?.nombreDossiers ?? 0
+        modulesByYearMonth[y].find((m) => m.moduleName === name)?.[field] ?? 0
       ),
       backgroundColor: moduleNamesMonth.map(getModuleColor),
       borderWidth: 2,
       borderColor: '#fff',
       hoverOffset: 6,
     }],
-  };
-
-  const donutDossiersPreviousData = {
-    labels: moduleNamesMonth,
-    datasets: [{
-      data: moduleNamesMonth.map((name) =>
-        modulesPreviousMonth.find((m) => m.moduleName === name)?.nombreDossiers ?? 0
-      ),
-      backgroundColor: moduleNamesMonth.map((n) => getModuleColor(n) + 'BB'),
-      borderWidth: 2,
-      borderColor: '#fff',
-      hoverOffset: 6,
-    }],
-  };
-
-  const donutOptions = (title: string) => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    cutout: '62%',
-    plugins: {
-      legend: {
-        display: true,
-        position: 'right' as const,
-        labels: { font: { size: 12 }, boxWidth: 12, padding: 12 },
-      },
-      tooltip: {
-        callbacks: {
-          label: (ctx: any) =>
-            `${ctx.label}: ${ctx.parsed} dossier${ctx.parsed > 1 ? 's' : ''}`,
-        },
-      },
-    },
   });
 
-  // ── Section 2 : CA / Commission / Engagement ──
-  const caArr   = filteredCurrentYear.map((m) => m.ca);
-  const fcArr   = filteredCurrentYear.map((m) => m.fc);
-  const commArr = filteredCurrentYear.map((m) => m.commission);
-  const caArr25   = filteredPreviousYear.map((m) => m.ca);
-  const fcArr25   = filteredPreviousYear.map((m) => m.fc);
-  const commArr25 = filteredPreviousYear.map((m) => m.commission);
+  // ── Section Financier ──
+  const financierByYear = sortedYears.map((y) => {
+    const data = getFilteredForYear(y);
+    const ca   = data.map((m) => m.ca);
+    const fc   = data.map((m) => m.fc);
+    const comm = data.map((m) => m.commission);
+    return {
+      year: y,
+      color: getYearColor(y),
+      ca, fc, comm,
+      totalCA:   ca.reduce((a, b) => a + b, 0),
+      totalFC:   fc.reduce((a, b) => a + b, 0),
+      totalComm: comm.reduce((a, b) => a + b, 0),
+      monthCA:   getMonthDataForYear(y)?.ca ?? 0,
+      monthFC:   getMonthDataForYear(y)?.fc ?? 0,
+      monthComm: getMonthDataForYear(y)?.commission ?? 0,
+    };
+  });
 
-  const totalCACurrent    = caArr.reduce((a, b) => a + b, 0);
-  const totalFCCurrent    = fcArr.reduce((a, b) => a + b, 0);
-  const totalCommCurrent  = commArr.reduce((a, b) => a + b, 0);
-  const totalCAPrevious   = caArr25.reduce((a, b) => a + b, 0);
-  const totalFCPrevious   = fcArr25.reduce((a, b) => a + b, 0);
-  const totalCommPrevious = commArr25.reduce((a, b) => a + b, 0);
-  const totalCAMonth      = currentMonthData?.ca ?? 0;
-  const totalFCMonth      = currentMonthData?.fc ?? 0;
-  const totalCommMonth    = currentMonthData?.commission ?? 0;
+  const referenceFinancier = financierByYear.find((f) => f.year === referenceYear)!;
 
-  // Barres groupées annuelles
+  // Barres groupées : composition CA/Engagement/Commission de l'année de référence
   const financierBarData = {
     labels: filteredLabels,
     datasets: [
-      { label: 'CA',         data: caArr,   backgroundColor: '#3B82F6', borderRadius: 3, borderSkipped: false as const },
-      { label: 'Engagement', data: fcArr,   backgroundColor: '#F97316', borderRadius: 3, borderSkipped: false as const },
-      { label: 'Commission', data: commArr, backgroundColor: '#10B981', borderRadius: 3, borderSkipped: false as const },
+      { label: 'CA',         data: referenceFinancier.ca,   backgroundColor: '#3B82F6', borderRadius: 3, borderSkipped: false as const },
+      { label: 'Engagement', data: referenceFinancier.fc,   backgroundColor: '#F97316', borderRadius: 3, borderSkipped: false as const },
+      { label: 'Commission', data: referenceFinancier.comm, backgroundColor: '#10B981', borderRadius: 3, borderSkipped: false as const },
     ],
   };
 
-  // Courbe CA superposée N vs N-1
+  // Courbe CA superposée sur toutes les années sélectionnées
   const caLineData = {
     labels: filteredLabels,
-    datasets: [
-      {
-        label: `CA ${currentYearNum}`,
-        data: caArr,
-        borderColor: '#3B82F6',
-        backgroundColor: 'rgba(59,130,246,0.1)',
-        fill: true, tension: 0.4, pointRadius: 4,
-        pointBackgroundColor: '#3B82F6',
-      },
-      {
-        label: `CA ${previousYearNum}`,
-        data: caArr25,
-        borderColor: '#93C5FD',
-        borderDash: [6, 4],
-        backgroundColor: 'rgba(147,197,253,0.07)',
-        fill: true, tension: 0.4, pointRadius: 3,
-        pointBackgroundColor: '#93C5FD',
-      },
-    ],
+    datasets: financierByYear.map((f) => ({
+      label: `CA ${f.year}`,
+      data: f.ca,
+      borderColor: f.color,
+      backgroundColor: hexToRgba(f.color, f.year === referenceYear ? 0.1 : 0.07),
+      fill: true,
+      tension: 0.4,
+      pointRadius: f.year === referenceYear ? 4 : 3,
+      pointBackgroundColor: f.color,
+      borderDash: f.year === referenceYear ? undefined : [6, 4] as [number, number],
+    })),
   };
 
-  // ── Graphe mois actuel — détail par module (financier) ──
-  const financierMonthBarData = {
+  const buildMonthlyMetricBarData = (field: 'chiffreAffaire' | 'engagementFournisseur' | 'commission') => ({
     labels: moduleNamesMonth,
-    datasets: [
-      {
-        label: `CA ${currentYearNum}`,
-        data: moduleNamesMonth.map((name) =>
-          modulesCurrentMonth.find((m) => m.moduleName === name)?.chiffreAffaire ?? 0
-        ),
-        backgroundColor: '#3B82F6',
-        borderRadius: 4,
-        borderSkipped: false as const,
-      },
-      {
-        label: `CA ${previousYearNum}`,
-        data: moduleNamesMonth.map((name) =>
-          modulesPreviousMonth.find((m) => m.moduleName === name)?.chiffreAffaire ?? 0
-        ),
-        backgroundColor: '#BFDBFE',
-        borderRadius: 4,
-        borderSkipped: false as const,
-      },
-      {
-        label: `Engagement ${currentYearNum}`,
-        data: moduleNamesMonth.map((name) =>
-          modulesCurrentMonth.find((m) => m.moduleName === name)?.engagementFournisseur ?? 0
-        ),
-        backgroundColor: '#F97316',
-        borderRadius: 4,
-        borderSkipped: false as const,
-      },
-      {
-        label: `Engagement ${previousYearNum}`,
-        data: moduleNamesMonth.map((name) =>
-          modulesPreviousMonth.find((m) => m.moduleName === name)?.engagementFournisseur ?? 0
-        ),
-        backgroundColor: '#FED7AA',
-        borderRadius: 4,
-        borderSkipped: false as const,
-      },
-      {
-        label: `Commission ${currentYearNum}`,
-        data: moduleNamesMonth.map((name) =>
-          modulesCurrentMonth.find((m) => m.moduleName === name)?.commission ?? 0
-        ),
-        backgroundColor: '#10B981',
-        borderRadius: 4,
-        borderSkipped: false as const,
-      },
-      {
-        label: `Commission ${previousYearNum}`,
-        data: moduleNamesMonth.map((name) =>
-          modulesPreviousMonth.find((m) => m.moduleName === name)?.commission ?? 0
-        ),
-        backgroundColor: '#A7F3D0',
-        borderRadius: 4,
-        borderSkipped: false as const,
-      },
-    ],
-  };
+    datasets: sortedYears.map((y) => ({
+      label: `${y}`,
+      data: moduleNamesMonth.map((name) =>
+        modulesByYearMonth[y].find((m) => m.moduleName === name)?.[field] ?? 0
+      ),
+      backgroundColor: getYearColor(y),
+      borderRadius: 4,
+      borderSkipped: false as const,
+    })),
+  });
 
-  const financierMonthOptions = {
-    ...moneyOptions,
-    indexAxis: 'y' as const,
-    scales: {
-      x: {
-        grid: { color: 'rgba(0,0,0,0.04)' },
-        ticks: {
-          font: { size: 11 },
-          callback: (v: any) => {
-            if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`;
-            if (v >= 1_000)     return `${(v / 1_000).toFixed(0)}k`;
-            return v;
-          },
-        },
-      },
-      y: {
-        grid: { color: 'rgba(0,0,0,0.04)' },
-        ticks: { font: { size: 11 } },
-      },
-    },
-  };
-
-  // ── Section 3 & 4 : par module annuel ──
+  // ── Sections CA / Engagement par module (annuel, empilé) ──
   const allModuleNames = Array.from(
-    new Set([
-      ...filteredCurrentYear.flatMap((m) => m.modules.map((mod) => mod.moduleName)),
-      ...filteredPreviousYear.flatMap((m) => m.modules.map((mod) => mod.moduleName)),
-    ])
+    new Set(sortedYears.flatMap((y) => getFilteredForYear(y).flatMap((m) => m.modules.map((mod) => mod.moduleName))))
   );
 
-  const buildStackedData = (
-    data: typeof filteredCurrentYear,
+  const buildStackedDataForYear = (
+    y: number,
     field: 'chiffreAffaire' | 'engagementFournisseur',
   ) => ({
     labels: filteredLabels,
     datasets: allModuleNames.map((name) => ({
       label: name,
-      data: data.map((m) => {
+      data: getFilteredForYear(y).map((m) => {
         const mod = m.modules.find((mod) => mod.moduleName === name);
         return mod ? mod[field] : 0;
       }),
@@ -631,92 +574,22 @@ const PageTableauBord: React.FC = () => {
     })),
   });
 
-  const caModuleCurrentData  = buildStackedData(filteredCurrentYear,  'chiffreAffaire');
-  const caModulePreviousData = buildStackedData(filteredPreviousYear, 'chiffreAffaire');
-  const fcModuleCurrentData  = buildStackedData(filteredCurrentYear,  'engagementFournisseur');
-  const fcModulePreviousData = buildStackedData(filteredPreviousYear, 'engagementFournisseur');
+  const caModuleTotalsByYear = sortedYears.map((y) => ({
+    year: y,
+    color: getYearColor(y),
+    total: getFilteredForYear(y).reduce((s, m) => s + m.ca, 0),
+    month: getMonthDataForYear(y)?.ca ?? 0,
+  }));
 
-  // Donut CA par module — mois actuel
-  const donutCAMonthCurrentData = {
-    labels: moduleNamesMonth,
-    datasets: [{
-      data: moduleNamesMonth.map((name) =>
-        modulesCurrentMonth.find((m) => m.moduleName === name)?.chiffreAffaire ?? 0
-      ),
-      backgroundColor: moduleNamesMonth.map(getModuleColor),
-      borderWidth: 2,
-      borderColor: '#fff',
-      hoverOffset: 6,
-    }],
-  };
+  const fcModuleTotalsByYear = sortedYears.map((y) => ({
+    year: y,
+    color: getYearColor(y),
+    total: getFilteredForYear(y).reduce((s, m) => s + m.fc, 0),
+    month: getMonthDataForYear(y)?.fc ?? 0,
+  }));
 
-  const donutCAMonthPreviousData = {
-    labels: moduleNamesMonth,
-    datasets: [{
-      data: moduleNamesMonth.map((name) =>
-        modulesPreviousMonth.find((m) => m.moduleName === name)?.chiffreAffaire ?? 0
-      ),
-      backgroundColor: moduleNamesMonth.map((n) => getModuleColor(n) + 'BB'),
-      borderWidth: 2,
-      borderColor: '#fff',
-      hoverOffset: 6,
-    }],
-  };
-
-  const donutMoneyOptions = (year: number) => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    cutout: '62%',
-    plugins: {
-      legend: {
-        display: true,
-        position: 'right' as const,
-        labels: { font: { size: 12 }, boxWidth: 12, padding: 12 },
-      },
-      tooltip: {
-        callbacks: {
-          label: (ctx: any) =>
-            `${ctx.label}: ${formatMoney(Number(ctx.raw))}`,
-        },
-      },
-    },
-  });
-
-  // Donut Engagement par module — mois actuel
-  const donutFCMonthCurrentData = {
-    labels: moduleNamesMonth,
-    datasets: [{
-      data: moduleNamesMonth.map((name) =>
-        modulesCurrentMonth.find((m) => m.moduleName === name)?.engagementFournisseur ?? 0
-      ),
-      backgroundColor: moduleNamesMonth.map(getModuleColor),
-      borderWidth: 2,
-      borderColor: '#fff',
-      hoverOffset: 6,
-    }],
-  };
-
-  const donutFCMonthPreviousData = {
-    labels: moduleNamesMonth,
-    datasets: [{
-      data: moduleNamesMonth.map((name) =>
-        modulesPreviousMonth.find((m) => m.moduleName === name)?.engagementFournisseur ?? 0
-      ),
-      backgroundColor: moduleNamesMonth.map((n) => getModuleColor(n) + 'BB'),
-      borderWidth: 2,
-      borderColor: '#fff',
-      hoverOffset: 6,
-    }],
-  };
-
-  const totalCAModuleCurrent  = caArr.reduce((s, v) => s + v, 0);
-  const totalCAModulePrevious = caArr25.reduce((s, v) => s + v, 0);
-  const totalCAModuleMonth    = currentMonthData?.ca ?? 0;
-  const totalFCModuleCurrent  = fcArr.reduce((s, v) => s + v, 0);
-  const totalFCModulePrevious = fcArr25.reduce((s, v) => s + v, 0);
-  const totalFCModuleMonth    = currentMonthData?.fc ?? 0;
-
-  const moisLabel = MOIS_LABELS[effectiveEndMonth];
+  // Évolution vs référence uniquement pertinente quand une seule année de comparaison est active
+  const singleComparisonYear = comparisonYears.length === 1 ? comparisonYears[0] : null;
 
   // ─────────────────────────────────────────────────────────────
 
@@ -740,17 +613,20 @@ const PageTableauBord: React.FC = () => {
         </div>
       </div>
 
-      {/* 👈 FILTRAGE PÉRIODE AVEC PLAGE PERSONNALISÉE */}
-      <PeriodFilter
-        activePeriod={activePeriod}
-        onPeriodChange={setActivePeriod}
+      {/* FILTRAGE ANNÉES + PLAGE DE MOIS */}
+      <YearFilter
+        referenceYear={referenceYear}
+        referenceYearOptions={referenceYearOptions}
+        onReferenceYearChange={handleReferenceYearChange}
+        comparisonYears={comparisonYears}
+        comparisonYearOptions={comparisonYearOptions}
+        onToggleComparisonYear={handleToggleComparisonYear}
         customStart={customStart}
         customEnd={customEnd}
         onCustomRangeChange={(start, end) => {
           setCustomStart(start);
           setCustomEnd(end);
         }}
-        currentYearNum={currentYearNum}
       />
 
       {/* TABS */}
@@ -774,7 +650,7 @@ const PageTableauBord: React.FC = () => {
         <p className="text-sm text-gray-400 animate-pulse pt-4">Chargement des données...</p>
       )}
       {!isLoading && hasError && (
-        <p className="text-sm text-red-500 pt-4">{errorEvolutionCurrent || errorEvolutionPrevious}</p>
+        <p className="text-sm text-red-500 pt-4">{errorMessage}</p>
       )}
 
       {!isLoading && !hasError && (
@@ -784,92 +660,87 @@ const PageTableauBord: React.FC = () => {
           {activeTab === 'dossiers' && (
             <>
               {/* KPI */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <KpiCard label={`Total ${currentYearNum}`}  value={totalDossiersCurrent.toString()}  sub="dossiers" color="blue" />
-                <KpiCard label={`${moisLabel} ${currentYearNum}`} value={totalDossiersMonth.toString()} sub="dossiers ce mois" color="green" />
-                <KpiCard label={`Total ${previousYearNum}`} value={totalDossiersPrevious.toString()} sub="dossiers" color="gray" />
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                {dossiersByYear.map((d) => (
+                  <KpiCard
+                    key={d.year}
+                    label={`Total ${d.year}`}
+                    value={d.total.toString()}
+                    sub="dossiers"
+                    colorHex={d.color}
+                  />
+                ))}
+                <KpiCard
+                  label={`${moisLabel} ${referenceYear}`}
+                  value={(dossiersByYear.find((d) => d.year === referenceYear)?.month ?? 0).toString()}
+                  sub="dossiers ce mois"
+                  colorHex={REFERENCE_YEAR_COLOR}
+                />
               </div>
 
               {/* Graphes annuels */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <ChartCard
-                  title={`Dossiers mensuels — ${currentYearNum} vs ${previousYearNum}`}
-                  legend={
-                    <>
-                      <LegendItem color="#3B82F6" label={`${currentYearNum}`} />
-                      <LegendItem color="#E5E7EB" label={`${previousYearNum}`} />
-                    </>
-                  }
+                  title="Dossiers mensuels — comparaison par année"
+                  legend={dossiersByYear.map((d) => (
+                    <LegendItem key={d.year} color={d.color} label={`${d.year}`} />
+                  ))}
                 >
                   <Bar data={dossierBarData} options={baseOptions} />
                 </ChartCard>
 
                 <ChartCard
                   title="Cumul dossiers — tendance"
-                  legend={
-                    <>
-                      <LegendItem color="#3B82F6" label={`${currentYearNum}`} />
-                      <LegendItem color="#9CA3AF" label={`${previousYearNum}`} dashed />
-                    </>
-                  }
+                  legend={dossiersByYear.map((d) => (
+                    <LegendItem key={d.year} color={d.color} label={`${d.year}`} dashed={d.year !== referenceYear} />
+                  ))}
                 >
                   <Line data={dossierLineData} options={baseOptions} />
                 </ChartCard>
               </div>
 
-              {/* ─── Détail mois actuel par module ─── */}
+              {/* ─── Détail mois sélectionné par module ─── */}
               <div className="border-t border-gray-100 pt-4">
                 <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">
-                  Détail par prestation — {moisLabel} {currentYearNum} vs {moisLabel} {previousYearNum}
+                  Détail par prestation — {moisLabel}
                 </p>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  <ChartCard
-                    title={`Dossiers par module — ${moisLabel} ${currentYearNum}`}
-                    subtitle={`${totalDossiersMonth} dossiers au total ce mois`}
-                    legend={
-                      <>
-                        {moduleNamesMonth.map((name) => (
-                          <LegendItem key={name} color={getModuleColor(name)} label={name} />
-                        ))}
-                      </>
-                    }
-                    height={240}
-                  >
-                    <Doughnut data={donutDossiersCurrentData} options={donutOptions(`${currentYearNum}`)} />
-                  </ChartCard>
-
-                  <ChartCard
-                    title={`Dossiers par module — ${moisLabel} ${previousYearNum}`}
-                    subtitle={`${previousMonthData?.dossiers ?? 0} dossiers au total ce mois`}
-                    legend={
-                      <>
-                        {moduleNamesMonth.map((name) => (
-                          <LegendItem key={name} color={getModuleColor(name) + 'BB'} label={name} />
-                        ))}
-                      </>
-                    }
-                    height={240}
-                  >
-                    <Doughnut data={donutDossiersPreviousData} options={donutOptions(`${previousYearNum}`)} />
-                  </ChartCard>
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {sortedYears.map((y) => (
+                    <ChartCard
+                      key={y}
+                      title={`Dossiers par module — ${moisLabel} ${y}`}
+                      subtitle={`${modulesByYearMonth[y].reduce((s, m) => s + m.nombreDossiers, 0)} dossiers au total ce mois`}
+                      legend={moduleNamesMonth.map((name) => (
+                        <LegendItem key={name} color={getModuleColor(name)} label={name} />
+                      ))}
+                      height={240}
+                    >
+                      <Doughnut data={buildDonutDataForYear(y, 'nombreDossiers')} options={donutOptions} />
+                    </ChartCard>
+                  ))}
                 </div>
 
                 {/* Tableau récap par module */}
-                <div className="mt-4 bg-white border border-gray-100 rounded-2xl overflow-hidden">
+                <div className="mt-4 bg-white border border-gray-100 rounded-2xl overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-gray-50 text-gray-400 text-xs uppercase tracking-wide">
                         <th className="text-left px-4 py-3 font-medium">Module</th>
-                        <th className="text-right px-4 py-3 font-medium">Dossiers {currentYearNum}</th>
-                        <th className="text-right px-4 py-3 font-medium">Dossiers {previousYearNum}</th>
-                        <th className="text-right px-4 py-3 font-medium">Évolution</th>
+                        {sortedYears.map((y) => (
+                          <th key={y} className="text-right px-4 py-3 font-medium whitespace-nowrap">Dossiers {y}</th>
+                        ))}
+                        {singleComparisonYear !== null && (
+                          <th className="text-right px-4 py-3 font-medium">Évolution</th>
+                        )}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                       {moduleNamesMonth.map((name) => {
-                        const curr = modulesCurrentMonth.find((m) => m.moduleName === name)?.nombreDossiers ?? 0;
-                        const prev = modulesPreviousMonth.find((m) => m.moduleName === name)?.nombreDossiers ?? 0;
+                        const curr = modulesByYearMonth[referenceYear]?.find((m) => m.moduleName === name)?.nombreDossiers ?? 0;
+                        const prev = singleComparisonYear !== null
+                          ? modulesByYearMonth[singleComparisonYear]?.find((m) => m.moduleName === name)?.nombreDossiers ?? 0
+                          : 0;
                         const diff = curr - prev;
                         const pct  = prev > 0 ? ((diff / prev) * 100).toFixed(1) : '—';
                         return (
@@ -881,21 +752,26 @@ const PageTableauBord: React.FC = () => {
                               />
                               <span className="font-medium text-gray-700">{name}</span>
                             </td>
-                            <td className="px-4 py-3 text-right font-semibold text-gray-800">{curr}</td>
-                            <td className="px-4 py-3 text-right text-gray-500">{prev}</td>
-                            <td className="px-4 py-3 text-right">
-                              {prev > 0 ? (
-                                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                                  diff >= 0
-                                    ? 'bg-emerald-50 text-emerald-600'
-                                    : 'bg-red-50 text-red-500'
-                                }`}>
-                                  {diff >= 0 ? '+' : ''}{pct}%
-                                </span>
-                              ) : (
-                                <span className="text-gray-300 text-xs">—</span>
-                              )}
-                            </td>
+                            {sortedYears.map((y) => (
+                              <td key={y} className="px-4 py-3 text-right text-gray-700">
+                                {modulesByYearMonth[y]?.find((m) => m.moduleName === name)?.nombreDossiers ?? 0}
+                              </td>
+                            ))}
+                            {singleComparisonYear !== null && (
+                              <td className="px-4 py-3 text-right">
+                                {prev > 0 ? (
+                                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                                    diff >= 0
+                                      ? 'bg-emerald-50 text-emerald-600'
+                                      : 'bg-red-50 text-red-500'
+                                  }`}>
+                                    {diff >= 0 ? '+' : ''}{pct}%
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-300 text-xs">—</span>
+                                )}
+                              </td>
+                            )}
                           </tr>
                         );
                       })}
@@ -909,33 +785,32 @@ const PageTableauBord: React.FC = () => {
           {/* ══ FINANCIER ══ */}
           {activeTab === 'financier' && (
             <>
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">{currentYearNum}</p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <KpiCard label="CA total"          value={formatMoney(totalCACurrent)}   sub={`période ${currentYearNum}`} color="blue" />
-                <KpiCard label="Engagement total"  value={formatMoney(totalFCCurrent)}   sub={`période ${currentYearNum}`} color="orange" />
-                <KpiCard label="Commission totale" value={formatMoney(totalCommCurrent)} sub={`période ${currentYearNum}`} color="green" />
-              </div>
+              {financierByYear.map((f) => (
+                <div key={f.year}>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">{f.year}</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <KpiCard label="CA total"          value={formatMoney(f.totalCA)}   sub={`période ${f.year}`} colorHex={f.color} />
+                    <KpiCard label="Engagement total"  value={formatMoney(f.totalFC)}   sub={`période ${f.year}`} colorHex={f.color} />
+                    <KpiCard label="Commission totale" value={formatMoney(f.totalComm)} sub={`période ${f.year}`} colorHex={f.color} />
+                  </div>
+                </div>
+              ))}
 
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mt-1">
-                {moisLabel} {currentYearNum}
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <KpiCard label="CA du mois"          value={formatMoney(totalCAMonth)}   sub="mois en cours" color="blue" />
-                <KpiCard label="Engagement du mois"  value={formatMoney(totalFCMonth)}   sub="mois en cours" color="orange" />
-                <KpiCard label="Commission du mois"  value={formatMoney(totalCommMonth)} sub="mois en cours" color="green" />
-              </div>
-
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mt-1">{previousYearNum}</p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <KpiCard label="CA total"          value={formatMoney(totalCAPrevious)}   sub={`période ${previousYearNum}`} color="gray" />
-                <KpiCard label="Engagement total"  value={formatMoney(totalFCPrevious)}   sub={`période ${previousYearNum}`} color="gray" />
-                <KpiCard label="Commission totale" value={formatMoney(totalCommPrevious)} sub={`période ${previousYearNum}`} color="gray" />
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mt-1">
+                  {moisLabel} {referenceYear}
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <KpiCard label="CA du mois"          value={formatMoney(referenceFinancier.monthCA)}   sub="mois sélectionné" colorHex={REFERENCE_YEAR_COLOR} />
+                  <KpiCard label="Engagement du mois"  value={formatMoney(referenceFinancier.monthFC)}   sub="mois sélectionné" colorHex="#F97316" />
+                  <KpiCard label="Commission du mois"  value={formatMoney(referenceFinancier.monthComm)} sub="mois sélectionné" colorHex="#10B981" />
+                </div>
               </div>
 
               {/* Graphes annuels */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <ChartCard
-                  title={`CA / Engagement / Commission — ${currentYearNum}`}
+                  title={`CA / Engagement / Commission — ${referenceYear}`}
                   legend={
                     <>
                       <LegendItem color="#3B82F6" label="CA" />
@@ -948,75 +823,92 @@ const PageTableauBord: React.FC = () => {
                 </ChartCard>
 
                 <ChartCard
-                  title={`Évolution CA — ${currentYearNum} vs ${previousYearNum}`}
-                  legend={
-                    <>
-                      <LegendItem color="#3B82F6" label={`${currentYearNum}`} />
-                      <LegendItem color="#93C5FD" label={`${previousYearNum}`} dashed />
-                    </>
-                  }
+                  title="Évolution CA — comparaison par année"
+                  legend={financierByYear.map((f) => (
+                    <LegendItem key={f.year} color={f.color} label={`${f.year}`} dashed={f.year !== referenceYear} />
+                  ))}
                 >
                   <Line data={caLineData} options={moneyOptions} />
                 </ChartCard>
               </div>
 
-              {/* ─── Détail mois actuel par module ─── */}
+              {/* ─── Détail mois sélectionné par module ─── */}
               <div className="border-t border-gray-100 pt-4">
                 <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">
-                  Détail par prestation — {moisLabel} {currentYearNum} vs {moisLabel} {previousYearNum}
+                  Détail par prestation — {moisLabel}
                 </p>
 
-                <ChartCard
-                  title={`CA / Engagement / Commission par module — ${moisLabel}`}
-                  subtitle="Comparaison année courante (plein) vs année précédente (clair)"
-                  legend={
-                    <>
-                      <LegendItem color="#3B82F6" label={`CA ${currentYearNum}`} />
-                      <LegendItem color="#BFDBFE" label={`CA ${previousYearNum}`} />
-                      <LegendItem color="#F97316" label={`Engagement ${currentYearNum}`} />
-                      <LegendItem color="#FED7AA" label={`Engagement ${previousYearNum}`} />
-                      <LegendItem color="#10B981" label={`Commission ${currentYearNum}`} />
-                      <LegendItem color="#A7F3D0" label={`Commission ${previousYearNum}`} />
-                    </>
-                  }
-                  height={moduleNamesMonth.length * 60 + 60}
-                >
-                  <Bar data={financierMonthBarData} options={financierMonthOptions} />
-                </ChartCard>
+                <div className="space-y-4">
+                  <ChartCard
+                    title={`CA par module — ${moisLabel}`}
+                    legend={sortedYears.map((y) => (
+                      <LegendItem key={y} color={getYearColor(y)} label={`${y}`} />
+                    ))}
+                    height={moduleNamesMonth.length * 40 + 60}
+                  >
+                    <Bar data={buildMonthlyMetricBarData('chiffreAffaire')} options={financierMonthOptions} />
+                  </ChartCard>
+
+                  <ChartCard
+                    title={`Engagement par module — ${moisLabel}`}
+                    legend={sortedYears.map((y) => (
+                      <LegendItem key={y} color={getYearColor(y)} label={`${y}`} />
+                    ))}
+                    height={moduleNamesMonth.length * 40 + 60}
+                  >
+                    <Bar data={buildMonthlyMetricBarData('engagementFournisseur')} options={financierMonthOptions} />
+                  </ChartCard>
+
+                  <ChartCard
+                    title={`Commission par module — ${moisLabel}`}
+                    legend={sortedYears.map((y) => (
+                      <LegendItem key={y} color={getYearColor(y)} label={`${y}`} />
+                    ))}
+                    height={moduleNamesMonth.length * 40 + 60}
+                  >
+                    <Bar data={buildMonthlyMetricBarData('commission')} options={financierMonthOptions} />
+                  </ChartCard>
+                </div>
 
                 {/* Tableau récap */}
-                <div className="mt-4 bg-white border border-gray-100 rounded-2xl overflow-hidden">
+                <div className="mt-4 bg-white border border-gray-100 rounded-2xl overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-gray-50 text-gray-400 text-xs uppercase tracking-wide">
-                        <th className="text-left px-4 py-3 font-medium">Module</th>
-                        <th className="text-right px-4 py-3 font-medium">CA {currentYearNum}</th>
-                        <th className="text-right px-4 py-3 font-medium">CA {previousYearNum}</th>
-                        <th className="text-right px-4 py-3 font-medium">Eng. {currentYearNum}</th>
-                        <th className="text-right px-4 py-3 font-medium">Eng. {previousYearNum}</th>
-                        <th className="text-right px-4 py-3 font-medium">Comm. {currentYearNum}</th>
-                        <th className="text-right px-4 py-3 font-medium">Comm. {previousYearNum}</th>
+                        <th rowSpan={2} className="text-left px-4 py-3 font-medium align-bottom">Module</th>
+                        {sortedYears.map((y) => (
+                          <th key={y} colSpan={3} className="text-center px-4 py-2 font-medium border-l border-gray-100">{y}</th>
+                        ))}
+                      </tr>
+                      <tr className="bg-gray-50 text-gray-400 text-xs uppercase tracking-wide">
+                        {sortedYears.map((y) => (
+                          <React.Fragment key={y}>
+                            <th className="text-right px-4 py-2 font-medium border-l border-gray-100">CA</th>
+                            <th className="text-right px-4 py-2 font-medium">Eng.</th>
+                            <th className="text-right px-4 py-2 font-medium">Comm.</th>
+                          </React.Fragment>
+                        ))}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
-                      {moduleNamesMonth.map((name) => {
-                        const curr = modulesCurrentMonth.find((m) => m.moduleName === name);
-                        const prev = modulesPreviousMonth.find((m) => m.moduleName === name);
-                        return (
-                          <tr key={name} className="hover:bg-gray-50 transition-colors">
-                            <td className="px-4 py-3 flex items-center gap-2">
-                              <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: getModuleColor(name) }} />
-                              <span className="font-medium text-gray-700">{name}</span>
-                            </td>
-                            <td className="px-4 py-3 text-right font-semibold text-blue-600">{formatMoney(curr?.chiffreAffaire ?? 0)}</td>
-                            <td className="px-4 py-3 text-right text-gray-400">{formatMoney(prev?.chiffreAffaire ?? 0)}</td>
-                            <td className="px-4 py-3 text-right font-semibold text-orange-500">{formatMoney(curr?.engagementFournisseur ?? 0)}</td>
-                            <td className="px-4 py-3 text-right text-gray-400">{formatMoney(prev?.engagementFournisseur ?? 0)}</td>
-                            <td className="px-4 py-3 text-right font-semibold text-emerald-600">{formatMoney(curr?.commission ?? 0)}</td>
-                            <td className="px-4 py-3 text-right text-gray-400">{formatMoney(prev?.commission ?? 0)}</td>
-                          </tr>
-                        );
-                      })}
+                      {moduleNamesMonth.map((name) => (
+                        <tr key={name} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-4 py-3 flex items-center gap-2 whitespace-nowrap">
+                            <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: getModuleColor(name) }} />
+                            <span className="font-medium text-gray-700">{name}</span>
+                          </td>
+                          {sortedYears.map((y) => {
+                            const mod = modulesByYearMonth[y]?.find((m) => m.moduleName === name);
+                            return (
+                              <React.Fragment key={y}>
+                                <td className="px-4 py-3 text-right text-blue-600 font-semibold border-l border-gray-50 whitespace-nowrap">{formatMoney(mod?.chiffreAffaire ?? 0)}</td>
+                                <td className="px-4 py-3 text-right text-orange-500 font-semibold whitespace-nowrap">{formatMoney(mod?.engagementFournisseur ?? 0)}</td>
+                                <td className="px-4 py-3 text-right text-emerald-600 font-semibold whitespace-nowrap">{formatMoney(mod?.commission ?? 0)}</td>
+                              </React.Fragment>
+                            );
+                          })}
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>
@@ -1027,78 +919,75 @@ const PageTableauBord: React.FC = () => {
           {/* ══ CA PAR MODULE ══ */}
           {activeTab === 'ca_detail' && (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <KpiCard label={`CA total ${currentYearNum}`}       value={formatMoney(totalCAModuleCurrent)}  sub="période sélectionnée" color="blue" />
-                <KpiCard label={`CA ${moisLabel}`}                  value={formatMoney(totalCAModuleMonth)}    sub="mois en cours" color="green" />
-                <KpiCard label={`CA total ${previousYearNum}`}      value={formatMoney(totalCAModulePrevious)} sub="période sélectionnée" color="gray" />
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                {caModuleTotalsByYear.map((c) => (
+                  <KpiCard key={c.year} label={`CA total ${c.year}`} value={formatMoney(c.total)} sub="période sélectionnée" colorHex={c.color} />
+                ))}
+                <KpiCard
+                  label={`CA ${moisLabel}`}
+                  value={formatMoney(caModuleTotalsByYear.find((c) => c.year === referenceYear)?.month ?? 0)}
+                  sub="mois sélectionné"
+                  colorHex={REFERENCE_YEAR_COLOR}
+                />
               </div>
 
               {/* Graphes annuels empilés */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <ChartCard
-                  title={`CA par module — ${currentYearNum}`}
-                  legend={allModuleNames.map((name) => (
-                    <LegendItem key={name} color={getModuleColor(name)} label={name} />
-                  ))}
-                >
-                  <Bar data={caModuleCurrentData} options={moneyOptions} />
-                </ChartCard>
-
-                <ChartCard
-                  title={`CA par module — ${previousYearNum}`}
-                  legend={allModuleNames.map((name) => (
-                    <LegendItem key={name} color={getModuleColor(name)} label={name} />
-                  ))}
-                >
-                  <Bar data={caModulePreviousData} options={moneyOptions} />
-                </ChartCard>
-              </div>
-
-              {/* ─── Détail mois actuel ─── */}
-              <div className="border-t border-gray-100 pt-4">
-                <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">
-                  Détail CA par prestation — {moisLabel} {currentYearNum} vs {moisLabel} {previousYearNum}
-                </p>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {sortedYears.map((y) => (
                   <ChartCard
-                    title={`CA par module — ${moisLabel} ${currentYearNum}`}
-                    subtitle={`Total : ${formatMoney(totalCAModuleMonth)}`}
-                    legend={moduleNamesMonth.map((name) => (
+                    key={y}
+                    title={`CA par module — ${y}`}
+                    legend={allModuleNames.map((name) => (
                       <LegendItem key={name} color={getModuleColor(name)} label={name} />
                     ))}
-                    height={240}
                   >
-                    <Doughnut data={donutCAMonthCurrentData} options={donutMoneyOptions(currentYearNum)} />
+                    <Bar data={buildStackedDataForYear(y, 'chiffreAffaire')} options={moneyOptions} />
                   </ChartCard>
+                ))}
+              </div>
 
-                  <ChartCard
-                    title={`CA par module — ${moisLabel} ${previousYearNum}`}
-                    subtitle={`Total : ${formatMoney(previousMonthData?.ca ?? 0)}`}
-                    legend={moduleNamesMonth.map((name) => (
-                      <LegendItem key={name} color={getModuleColor(name) + 'BB'} label={name} />
-                    ))}
-                    height={240}
-                  >
-                    <Doughnut data={donutCAMonthPreviousData} options={donutMoneyOptions(previousYearNum)} />
-                  </ChartCard>
+              {/* ─── Détail mois sélectionné ─── */}
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">
+                  Détail CA par prestation — {moisLabel}
+                </p>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {sortedYears.map((y) => (
+                    <ChartCard
+                      key={y}
+                      title={`CA par module — ${moisLabel} ${y}`}
+                      subtitle={`Total : ${formatMoney(modulesByYearMonth[y].reduce((s, m) => s + m.chiffreAffaire, 0))}`}
+                      legend={moduleNamesMonth.map((name) => (
+                        <LegendItem key={name} color={getModuleColor(name)} label={name} />
+                      ))}
+                      height={240}
+                    >
+                      <Doughnut data={buildDonutDataForYear(y, 'chiffreAffaire')} options={donutMoneyOptions} />
+                    </ChartCard>
+                  ))}
                 </div>
 
                 {/* Tableau récap CA */}
-                <div className="mt-4 bg-white border border-gray-100 rounded-2xl overflow-hidden">
+                <div className="mt-4 bg-white border border-gray-100 rounded-2xl overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-gray-50 text-gray-400 text-xs uppercase tracking-wide">
                         <th className="text-left px-4 py-3 font-medium">Module</th>
-                        <th className="text-right px-4 py-3 font-medium">CA {currentYearNum}</th>
-                        <th className="text-right px-4 py-3 font-medium">CA {previousYearNum}</th>
-                        <th className="text-right px-4 py-3 font-medium">Évolution</th>
+                        {sortedYears.map((y) => (
+                          <th key={y} className="text-right px-4 py-3 font-medium whitespace-nowrap">CA {y}</th>
+                        ))}
+                        {singleComparisonYear !== null && (
+                          <th className="text-right px-4 py-3 font-medium">Évolution</th>
+                        )}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                       {moduleNamesMonth.map((name) => {
-                        const curr = modulesCurrentMonth.find((m) => m.moduleName === name)?.chiffreAffaire ?? 0;
-                        const prev = modulesPreviousMonth.find((m) => m.moduleName === name)?.chiffreAffaire ?? 0;
+                        const curr = modulesByYearMonth[referenceYear]?.find((m) => m.moduleName === name)?.chiffreAffaire ?? 0;
+                        const prev = singleComparisonYear !== null
+                          ? modulesByYearMonth[singleComparisonYear]?.find((m) => m.moduleName === name)?.chiffreAffaire ?? 0
+                          : 0;
                         const diff = curr - prev;
                         const pct  = prev > 0 ? ((diff / prev) * 100).toFixed(1) : '—';
                         return (
@@ -1107,17 +996,22 @@ const PageTableauBord: React.FC = () => {
                               <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: getModuleColor(name) }} />
                               <span className="font-medium text-gray-700">{name}</span>
                             </td>
-                            <td className="px-4 py-3 text-right font-semibold text-blue-600">{formatMoney(curr)}</td>
-                            <td className="px-4 py-3 text-right text-gray-400">{formatMoney(prev)}</td>
-                            <td className="px-4 py-3 text-right">
-                              {prev > 0 ? (
-                                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                                  diff >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'
-                                }`}>
-                                  {diff >= 0 ? '+' : ''}{pct}%
-                                </span>
-                              ) : <span className="text-gray-300 text-xs">—</span>}
-                            </td>
+                            {sortedYears.map((y) => (
+                              <td key={y} className="px-4 py-3 text-right text-gray-700 whitespace-nowrap">
+                                {formatMoney(modulesByYearMonth[y]?.find((m) => m.moduleName === name)?.chiffreAffaire ?? 0)}
+                              </td>
+                            ))}
+                            {singleComparisonYear !== null && (
+                              <td className="px-4 py-3 text-right">
+                                {prev > 0 ? (
+                                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                                    diff >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'
+                                  }`}>
+                                    {diff >= 0 ? '+' : ''}{pct}%
+                                  </span>
+                                ) : <span className="text-gray-300 text-xs">—</span>}
+                              </td>
+                            )}
                           </tr>
                         );
                       })}
@@ -1131,78 +1025,75 @@ const PageTableauBord: React.FC = () => {
           {/* ══ ENGAGEMENT PAR MODULE ══ */}
           {activeTab === 'fc_detail' && (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <KpiCard label={`Engagement total ${currentYearNum}`}  value={formatMoney(totalFCModuleCurrent)}  sub="période sélectionnée" color="orange" />
-                <KpiCard label={`Engagement ${moisLabel}`}             value={formatMoney(totalFCModuleMonth)}    sub="mois en cours" color="green" />
-                <KpiCard label={`Engagement total ${previousYearNum}`} value={formatMoney(totalFCModulePrevious)} sub="période sélectionnée" color="gray" />
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                {fcModuleTotalsByYear.map((c) => (
+                  <KpiCard key={c.year} label={`Engagement total ${c.year}`} value={formatMoney(c.total)} sub="période sélectionnée" colorHex={c.color} />
+                ))}
+                <KpiCard
+                  label={`Engagement ${moisLabel}`}
+                  value={formatMoney(fcModuleTotalsByYear.find((c) => c.year === referenceYear)?.month ?? 0)}
+                  sub="mois sélectionné"
+                  colorHex={REFERENCE_YEAR_COLOR}
+                />
               </div>
 
               {/* Graphes annuels empilés */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <ChartCard
-                  title={`Engagement par module — ${currentYearNum}`}
-                  legend={allModuleNames.map((name) => (
-                    <LegendItem key={name} color={getModuleColor(name)} label={name} />
-                  ))}
-                >
-                  <Bar data={fcModuleCurrentData} options={moneyOptions} />
-                </ChartCard>
-
-                <ChartCard
-                  title={`Engagement par module — ${previousYearNum}`}
-                  legend={allModuleNames.map((name) => (
-                    <LegendItem key={name} color={getModuleColor(name)} label={name} />
-                  ))}
-                >
-                  <Bar data={fcModulePreviousData} options={moneyOptions} />
-                </ChartCard>
-              </div>
-
-              {/* ─── Détail mois actuel ─── */}
-              <div className="border-t border-gray-100 pt-4">
-                <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">
-                  Détail engagement par prestation — {moisLabel} {currentYearNum} vs {moisLabel} {previousYearNum}
-                </p>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {sortedYears.map((y) => (
                   <ChartCard
-                    title={`Engagement par module — ${moisLabel} ${currentYearNum}`}
-                    subtitle={`Total : ${formatMoney(totalFCModuleMonth)}`}
-                    legend={moduleNamesMonth.map((name) => (
+                    key={y}
+                    title={`Engagement par module — ${y}`}
+                    legend={allModuleNames.map((name) => (
                       <LegendItem key={name} color={getModuleColor(name)} label={name} />
                     ))}
-                    height={240}
                   >
-                    <Doughnut data={donutFCMonthCurrentData} options={donutMoneyOptions(currentYearNum)} />
+                    <Bar data={buildStackedDataForYear(y, 'engagementFournisseur')} options={moneyOptions} />
                   </ChartCard>
+                ))}
+              </div>
 
-                  <ChartCard
-                    title={`Engagement par module — ${moisLabel} ${previousYearNum}`}
-                    subtitle={`Total : ${formatMoney(previousMonthData?.fc ?? 0)}`}
-                    legend={moduleNamesMonth.map((name) => (
-                      <LegendItem key={name} color={getModuleColor(name) + 'BB'} label={name} />
-                    ))}
-                    height={240}
-                  >
-                    <Doughnut data={donutFCMonthPreviousData} options={donutMoneyOptions(previousYearNum)} />
-                  </ChartCard>
+              {/* ─── Détail mois sélectionné ─── */}
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-xs font-semibold uppercase tracking-widest text-gray-400 mb-3">
+                  Détail engagement par prestation — {moisLabel}
+                </p>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {sortedYears.map((y) => (
+                    <ChartCard
+                      key={y}
+                      title={`Engagement par module — ${moisLabel} ${y}`}
+                      subtitle={`Total : ${formatMoney(modulesByYearMonth[y].reduce((s, m) => s + m.engagementFournisseur, 0))}`}
+                      legend={moduleNamesMonth.map((name) => (
+                        <LegendItem key={name} color={getModuleColor(name)} label={name} />
+                      ))}
+                      height={240}
+                    >
+                      <Doughnut data={buildDonutDataForYear(y, 'engagementFournisseur')} options={donutMoneyOptions} />
+                    </ChartCard>
+                  ))}
                 </div>
 
                 {/* Tableau récap Engagement */}
-                <div className="mt-4 bg-white border border-gray-100 rounded-2xl overflow-hidden">
+                <div className="mt-4 bg-white border border-gray-100 rounded-2xl overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-gray-50 text-gray-400 text-xs uppercase tracking-wide">
                         <th className="text-left px-4 py-3 font-medium">Module</th>
-                        <th className="text-right px-4 py-3 font-medium">Engagement {currentYearNum}</th>
-                        <th className="text-right px-4 py-3 font-medium">Engagement {previousYearNum}</th>
-                        <th className="text-right px-4 py-3 font-medium">Évolution</th>
+                        {sortedYears.map((y) => (
+                          <th key={y} className="text-right px-4 py-3 font-medium whitespace-nowrap">Engagement {y}</th>
+                        ))}
+                        {singleComparisonYear !== null && (
+                          <th className="text-right px-4 py-3 font-medium">Évolution</th>
+                        )}
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                       {moduleNamesMonth.map((name) => {
-                        const curr = modulesCurrentMonth.find((m) => m.moduleName === name)?.engagementFournisseur ?? 0;
-                        const prev = modulesPreviousMonth.find((m) => m.moduleName === name)?.engagementFournisseur ?? 0;
+                        const curr = modulesByYearMonth[referenceYear]?.find((m) => m.moduleName === name)?.engagementFournisseur ?? 0;
+                        const prev = singleComparisonYear !== null
+                          ? modulesByYearMonth[singleComparisonYear]?.find((m) => m.moduleName === name)?.engagementFournisseur ?? 0
+                          : 0;
                         const diff = curr - prev;
                         const pct  = prev > 0 ? ((diff / prev) * 100).toFixed(1) : '—';
                         return (
@@ -1211,17 +1102,22 @@ const PageTableauBord: React.FC = () => {
                               <span className="inline-block w-2.5 h-2.5 rounded-sm" style={{ background: getModuleColor(name) }} />
                               <span className="font-medium text-gray-700">{name}</span>
                             </td>
-                            <td className="px-4 py-3 text-right font-semibold text-orange-500">{formatMoney(curr)}</td>
-                            <td className="px-4 py-3 text-right text-gray-400">{formatMoney(prev)}</td>
-                            <td className="px-4 py-3 text-right">
-                              {prev > 0 ? (
-                                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                                  diff >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'
-                                }`}>
-                                  {diff >= 0 ? '+' : ''}{pct}%
-                                </span>
-                              ) : <span className="text-gray-300 text-xs">—</span>}
-                            </td>
+                            {sortedYears.map((y) => (
+                              <td key={y} className="px-4 py-3 text-right text-gray-700 whitespace-nowrap">
+                                {formatMoney(modulesByYearMonth[y]?.find((m) => m.moduleName === name)?.engagementFournisseur ?? 0)}
+                              </td>
+                            ))}
+                            {singleComparisonYear !== null && (
+                              <td className="px-4 py-3 text-right">
+                                {prev > 0 ? (
+                                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                                    diff >= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-500'
+                                  }`}>
+                                    {diff >= 0 ? '+' : ''}{pct}%
+                                  </span>
+                                ) : <span className="text-gray-300 text-xs">—</span>}
+                              </td>
+                            )}
                           </tr>
                         );
                       })}

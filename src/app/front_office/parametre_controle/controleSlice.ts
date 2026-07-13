@@ -97,6 +97,11 @@ export interface Controle {
   pjControle: PjControle[];
   clientBeneficiaire: ClientBeneficiaire [] | null;
   clientFacture : ClientFacture;
+  tauxTaxe: number;
+  montantTaxeDevise: number;
+  montantTaxeAriary: number;
+  aeroportDepart: string;
+  aeroportArrivee: string;
 }
 
 export interface ClientBeneficiaire {

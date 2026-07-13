@@ -163,6 +163,10 @@ interface DashboardState {
   errorEvolutionCurrent: string | null;
   errorEvolutionPrevious: string | null;
 
+  evolutionByYear: Record<number, MoisEvolution[]>;
+  loadingYears: Record<number, boolean>;
+  errorYears: Record<number, string | null>;
+
   statResultat: StatResultat | null;
   loadingStat: boolean;
   errorStat: string | null;
@@ -183,6 +187,10 @@ const initialState: DashboardState = {
   loadingEvolutionPrevious: false,
   errorEvolutionCurrent: null,
   errorEvolutionPrevious: null,
+
+  evolutionByYear: {},
+  loadingYears: {},
+  errorYears: {},
 
   statResultat: null,
   loadingStat: false,
@@ -221,6 +229,22 @@ export const fetchEvolutionPreviousYear = createAsyncThunk(
       return res.data.data as MoisEvolution[];
     } catch (err: any) {
       return rejectWithValue(err?.response?.data?.message || 'Erreur chargement évolution année précédente');
+    }
+  }
+);
+
+export const fetchEvolutionByYear = createAsyncThunk(
+  'dashboard/fetchEvolutionByYear',
+  async (year: number, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.get(`/dashboard/evolution-mensuelle?year=${year}`);
+      if (!res.data.success) throw new Error();
+      return { year, data: res.data.data as MoisEvolution[] };
+    } catch (err: any) {
+      return rejectWithValue({
+        year,
+        message: err?.response?.data?.message || `Erreur chargement évolution ${year}`,
+      });
     }
   }
 );
@@ -318,6 +342,29 @@ const dashboardSlice = createSlice({
       .addCase(fetchEvolutionPreviousYear.rejected, (state, action) => {
         state.loadingEvolutionPrevious = false;
         state.errorEvolutionPrevious = action.payload as string;
+      })
+
+      .addCase(fetchEvolutionByYear.pending, (state, action) => {
+        if (!state.loadingYears) state.loadingYears = {};
+        if (!state.errorYears) state.errorYears = {};
+        const year = action.meta.arg;
+        state.loadingYears[year] = true;
+        state.errorYears[year] = null;
+      })
+      .addCase(fetchEvolutionByYear.fulfilled, (state, action) => {
+        if (!state.loadingYears) state.loadingYears = {};
+        if (!state.evolutionByYear) state.evolutionByYear = {};
+        const { year, data } = action.payload;
+        state.loadingYears[year] = false;
+        state.evolutionByYear[year] = data;
+      })
+      .addCase(fetchEvolutionByYear.rejected, (state, action) => {
+        if (!state.loadingYears) state.loadingYears = {};
+        if (!state.errorYears) state.errorYears = {};
+        const year = action.meta.arg;
+        const payload = action.payload as { year: number; message: string } | undefined;
+        state.loadingYears[year] = false;
+        state.errorYears[year] = payload?.message ?? 'Erreur chargement évolution';
       })
 
       .addCase(fetchStatParDossier.pending, (state) => {

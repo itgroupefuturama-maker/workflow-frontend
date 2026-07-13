@@ -172,6 +172,7 @@ const PageControle = () => {
     'Catégorie Prestation', 'Bénéficiaire',
     'N° Dos. commun', 'N° Dos. prestation', 'Origine ligne',
     'Prestation', 'Commentaire', 'Partenaire', 'Prestataire',
+    'Taux Taxe','M Taxe Devise', 'M Taxe Ariary',
     'Com PU Devise', 'Com CU Devise', 'Com Devise', 'Com Taux change',
     'Com PU Ariary', 'Com CU Ariary', 'Com M Devise', 'Com C Devise',
     'Com M Ariary', 'Com C Ariary',
@@ -378,6 +379,9 @@ const PageControle = () => {
                       {/* <Td mono muted>{item.clientBeneficiaire?.[0]?.libelle ?? '—'}</Td> */}
                       <Td mono muted>{item.transaction === 'VENTE' ? item.clientFacture?.libelle : item.fournisseur?.libelle ?? 'Fournisseur A'}</Td>
                       <Td mono muted>{item.user?.nom} {item.user?.prenom}</Td>
+                      <Td right>{formatDevise(item.tauxTaxe, '%')}</Td>
+                      <Td right>{formatDevise(item.montantTaxeDevise, item.cmDevise)}</Td>
+                      <Td right>{formatAriary(item.montantTaxeAriary)}</Td>
                       <Td right>{formatDevise(item.cmPuDevise, item.cmDevise)}</Td>
                       <Td right>{formatDevise(item.cmCuDevise, item.cmDevise)}</Td>
                       <Td>{item.cmDevise}</Td>

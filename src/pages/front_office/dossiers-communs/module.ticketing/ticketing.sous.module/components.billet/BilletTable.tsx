@@ -39,7 +39,23 @@ const PassagersCell: React.FC<PassagersCellProps> = ({ billets, handleReporter, 
   const [styleIds, setStyleIds]       = useState<Record<string, BilletStyleId>>({});
   const [billetAReporter, setBilletAReporter] = useState<BilletLigne['billet'][0] | null>(null);
   const [dateReport, setDateReport]   = useState('');
+  const [exigenceModal, setExigenceModal] = useState<{ billet: BilletLigne['billet'][0]; action: 'preview' | 'generate' } | null>(null);
+  const [importantIdsByBillet, setImportantIdsByBillet] = useState<Record<string, Set<string>>>({});
   const { generate, preview, loading: pdfLoading } = useBilletPassagerPdf();
+
+  // Liste dédupliquée des exigences de voyage rattachées à la ligne (identique pour tous les passagers de la ligne)
+  const collectExigences = (): BilletPassagerExigence[] => {
+    const p = ligne.prospectionLigne;
+    const raw = p.destinationVoyage?.pays?.paysVoyage
+      ?.map(pv => pv.exigenceVoyage)
+      .filter(Boolean) ?? [];
+    const seen = new Set<string>();
+    return raw.filter(e => {
+      if (seen.has(e.id)) return false;
+      seen.add(e.id);
+      return true;
+    });
+  };
 
   const toggleExpand = (id: string) =>
     setExpandedIds(prev => {
@@ -309,7 +325,7 @@ const PassagersCell: React.FC<PassagersCellProps> = ({ billets, handleReporter, 
                     </button>
 
                     {/* Aperçu */}
-                    <button onClick={() => preview(buildBilletData(b, ligne, billetEntete), styleId)} disabled={pdfLoading}
+                    <button onClick={() => setExigenceModal({ billet: b, action: 'preview' })} disabled={pdfLoading}
                       className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border w-full
                                  border-violet-200 text-violet-700 hover:bg-violet-50 disabled:opacity-40 transition-colors">
                       <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -321,7 +337,7 @@ const PassagersCell: React.FC<PassagersCellProps> = ({ billets, handleReporter, 
                     </button>
 
                     {/* Billet PDF */}
-                    <button onClick={() => generate(buildBilletData(b, ligne, billetEntete), styleId)} disabled={pdfLoading}
+                    <button onClick={() => setExigenceModal({ billet: b, action: 'generate' })} disabled={pdfLoading}
                       className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[11px] font-medium border w-full
                                  border-blue-200 text-blue-700 hover:bg-blue-50 disabled:opacity-40 transition-colors">
                       <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -404,6 +420,125 @@ const PassagersCell: React.FC<PassagersCellProps> = ({ billets, handleReporter, 
           </div>
         </div>
       )}
+
+      {/* ── Modal de sélection des exigences de voyage importantes ── */}
+      {exigenceModal && (() => {
+        const { billet: b, action } = exigenceModal;
+        const info = b.clientbeneficiaireInfo;
+        const nomPassager = `${info?.prenom ?? ''} ${info?.nom ?? ''}`.trim() || 'Passager inconnu';
+        const list = collectExigences();
+        const selected = importantIdsByBillet[b.id] ?? new Set<string>();
+
+        const toggleImportant = (exigenceId: string) =>
+          setImportantIdsByBillet(prev => {
+            const next = new Set(prev[b.id] ?? []);
+            if (next.has(exigenceId)) {
+              next.delete(exigenceId);
+            } else {
+              next.add(exigenceId);
+            }
+            return { ...prev, [b.id]: next };
+          });
+
+        const confirmExigences = () => {
+          const data = buildBilletData(b, ligne, billetEntete);
+          if (selected.size > 0) data.exigencesImportantesIds = Array.from(selected);
+          const styleId = getStyle(b.id);
+          if (action === 'preview') preview(data, styleId);
+          else generate(data, styleId);
+          setExigenceModal(null);
+        };
+
+        return (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+            onClick={() => setExigenceModal(null)}
+          >
+            <div
+              className="bg-white rounded-2xl w-full max-w-md mx-4 overflow-hidden"
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-start gap-3 px-5 pt-5 pb-4">
+                <div className="w-9 h-9 rounded-full bg-violet-100 flex items-center justify-center shrink-0">
+                  <svg className="w-5 h-5 text-violet-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                      d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                  </svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-[15px] font-semibold text-slate-800">Exigences de voyage</h3>
+                  <p className="text-[12px] text-slate-500 mt-0.5 truncate">{nomPassager}</p>
+                </div>
+                <button onClick={() => setExigenceModal(null)}
+                  className="text-slate-400 hover:text-slate-600 transition-colors">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              {/* Liste des exigences */}
+              <div className="mx-5 mb-4">
+                {list.length === 0 ? (
+                  <p className="text-[12px] text-slate-400 italic px-1">
+                    Aucune exigence de voyage pour cette destination.
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-[11px] text-slate-400 px-1 mb-2">
+                      Cliquez sur une exigence pour la mettre en valeur (rouge) dans le PDF généré.
+                    </p>
+                    <ul className="border border-slate-200 rounded-xl divide-y divide-slate-100 max-h-72 overflow-y-auto">
+                      {list.map(e => {
+                        const isImportant = selected.has(e.id);
+                        return (
+                          <li
+                            key={e.id}
+                            onClick={() => toggleImportant(e.id)}
+                            className={`px-3.5 py-2.5 cursor-pointer flex items-center gap-2 transition-colors ${
+                              isImportant ? 'bg-red-50' : 'hover:bg-slate-50'
+                            }`}
+                          >
+                            <span className={`flex-1 min-w-0 text-[12px] ${
+                              isImportant ? 'text-red-700 font-semibold' : 'text-slate-600'
+                            }`}>
+                              <span className="font-medium">{e.type}</span>
+                              {e.description ? ` — ${e.description}` : ''}
+                            </span>
+                            {isImportant && (
+                              <span className="text-[9px] font-bold uppercase bg-red-600 text-white px-1.5 py-0.5 rounded-full shrink-0">
+                                Important
+                              </span>
+                            )}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </>
+                )}
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2.5 px-5 pb-5">
+                <button onClick={() => setExigenceModal(null)}
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200
+                            text-[13px] font-medium text-slate-600 hover:bg-slate-50 transition-colors">
+                  Annuler
+                </button>
+                <button
+                  onClick={confirmExigences}
+                  disabled={pdfLoading}
+                  className="flex-1 px-4 py-2.5 rounded-xl text-[13px] font-semibold text-white
+                            bg-violet-600 hover:bg-violet-700 active:scale-[0.98] transition-all disabled:opacity-40"
+                >
+                  {action === 'preview' ? 'Aperçu' : 'Générer le PDF'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </>
   );
 };

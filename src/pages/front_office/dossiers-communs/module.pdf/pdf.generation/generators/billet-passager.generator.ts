@@ -117,6 +117,8 @@ export interface BilletPassagerData {
   agence?: string;
   ligne: BilletPassagerLigne;
   exigences: BilletPassagerExigence[];
+  /** ids des exigences (BilletPassagerExigence.id) à mettre en valeur en rouge dans le PDF */
+  exigencesImportantesIds?: string[];
 }
 
 // ─── Sanitize ─────────────────────────────────────────────────────────
@@ -317,80 +319,114 @@ function drawBilletConsignes(
   drawSeparator(doc, cur);
 }
 
-// ─── Exigences de voyage en rouge ────────────────────────────────────
+// ─── Exigences de voyage — importantes en rouge, autres en liste simple ──
 function drawBilletExigences(
   doc: jsPDF,
   cur: Cursor,
   data: BilletPassagerData,
   style: BilletStyle,
 ) {
+  const importantIds = new Set(data.exigencesImportantesIds ?? []);
   const seen = new Set<string>();
-  const exigences: Array<{ type: string; description: string; perimetre: string }> = [];
+  const exigences: Array<{ id: string; type: string; description: string; perimetre: string; important: boolean }> = [];
 
-  data.exigences.forEach(e => {
-    const key = `${e.type}|${e.description}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      exigences.push({
-        type:        sanitize(e.type ?? '-'),
-        description: sanitize(e.description ?? '-'),
-        perimetre:   sanitize(e.perimetre ?? '-'),
-      });
-    }
-  });
+  const pushExigence = (e: BilletPassagerExigence | null | undefined) => {
+    if (!e || seen.has(e.id)) return;
+    seen.add(e.id);
+    exigences.push({
+      id:          e.id,
+      type:        sanitize(e.type ?? '-'),
+      description: sanitize(e.description ?? '-'),
+      perimetre:   sanitize(e.perimetre ?? '-'),
+      important:   importantIds.has(e.id),
+    });
+  };
+
+  data.exigences.forEach(pushExigence);
 
   const l = data.ligne;
-  (l.destinationVoyage?.pays?.paysVoyage ?? []).forEach(pv => {
-    const e = pv.exigenceVoyage;
-    if (!e) return;
-    const key = `${e.type}|${e.description}`;
-    if (!seen.has(key)) {
-      seen.add(key);
-      exigences.push({
-        type:        sanitize(e.type ?? '-'),
-        description: sanitize(e.description ?? '-'),
-        perimetre:   sanitize(e.perimetre ?? '-'),
-      });
-    }
-  });
+  (l.destinationVoyage?.pays?.paysVoyage ?? []).forEach(pv => pushExigence(pv.exigenceVoyage));
 
   if (exigences.length === 0) return;
 
-  checkPage(doc, cur, 14 + exigences.length * 13, style as any);
+  const accentColor = (style.colors.accentLine ?? style.colors.accentBg) as [number, number, number];
 
-  // Bandeau rouge titre
-  doc.setFillColor(215, 25, 33);
-  doc.rect(MARGIN - 2, cur.y - 1, CONTENT_W + 4, 10, 'F');
+  checkPage(doc, cur, 14, style as any);
+
+  // Titre — cohérent avec les autres sections du document (barre d'accent + libellé)
+  setColor(doc, accentColor, 'fill');
+  doc.rect(MARGIN, cur.y - 1, 2, 9, 'F');
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
-  setColor(doc, [255, 255, 255], 'text');
-  doc.text('EXIGENCES DE VOYAGE - IMPORTANT', MARGIN + 3, cur.y + 6);
+  setColor(doc, accentColor, 'text');
+  doc.text('EXIGENCES DE VOYAGE', MARGIN + 5, cur.y + 6);
   cur.move(13);
 
-  exigences.forEach(e => {
-    checkPage(doc, cur, 14, style as any);
+  exigences.forEach((e, i) => {
+    if (e.important) {
+      const rowH = 14;
+      checkPage(doc, cur, rowH + 2, style as any);
 
-    // Fond rose très pâle + bordure rouge gauche
-    doc.setFillColor(255, 250, 250);
-    doc.rect(MARGIN - 2, cur.y - 1, CONTENT_W + 4, 11, 'F');
-    doc.setFillColor(215, 25, 33);
-    doc.rect(MARGIN - 2, cur.y - 1, 2, 11, 'F');
+      // Carte à bordure rouge complète + fond rosé pâle
+      doc.setFillColor(255, 245, 245);
+      doc.setDrawColor(215, 25, 33);
+      doc.setLineWidth(0.4);
+      doc.roundedRect(MARGIN - 2, cur.y - 1, CONTENT_W + 4, rowH, 1.8, 1.8, 'FD');
+      doc.setFillColor(215, 25, 33);
+      doc.roundedRect(MARGIN - 2, cur.y - 1, 2.5, rowH, 1.2, 1.2, 'F');
 
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'bold');
-    setColor(doc, [160, 20, 20], 'text');
-    doc.text(e.type, MARGIN + 3, cur.y + 4.5);
+      doc.setFontSize(7.2);
+      doc.setFont('helvetica', 'bold');
+      setColor(doc, [160, 20, 20], 'text');
+      doc.text(e.type, MARGIN + 4, cur.y + 5.5);
 
-    doc.setFont('helvetica', 'normal');
-    setColor(doc, [70, 70, 70], 'text');
-    const desc = doc.splitTextToSize(e.description, CONTENT_W - 52);
-    doc.text(desc[0] ?? '', MARGIN + 46, cur.y + 4.5);
+      // Badge "IMPORTANT"
+      const badgeW = 21;
+      const badgeX = MARGIN + 40;
+      doc.setFillColor(215, 25, 33);
+      doc.roundedRect(badgeX, cur.y + 1.4, badgeW, 4.4, 1.4, 1.4, 'F');
+      doc.setFontSize(5.3);
+      doc.setFont('helvetica', 'bold');
+      setColor(doc, [255, 255, 255], 'text');
+      doc.text('IMPORTANT', badgeX + badgeW / 2, cur.y + 4.5, { align: 'center' });
 
-    doc.setFontSize(6.5);
-    setColor(doc, [150, 150, 150], 'text');
-    doc.text(e.perimetre, MARGIN + CONTENT_W, cur.y + 4.5, { align: 'right' });
+      doc.setFontSize(6.8);
+      doc.setFont('helvetica', 'normal');
+      setColor(doc, [90, 55, 55], 'text');
+      const desc = doc.splitTextToSize(e.description, CONTENT_W - 92);
+      doc.text(desc[0] ?? '', badgeX + badgeW + 4, cur.y + 5.5);
 
-    cur.move(13);
+      doc.setFontSize(6.2);
+      setColor(doc, [175, 120, 120], 'text');
+      doc.text(e.perimetre, MARGIN + CONTENT_W - 1, cur.y + 5.5, { align: 'right' });
+
+      cur.move(rowH + 2);
+    } else {
+      // Ligne simple, zébrage léger pour la lisibilité de la liste
+      const rowH = 7;
+      checkPage(doc, cur, rowH, style as any);
+
+      if (i % 2 === 0) {
+        doc.setFillColor(247, 248, 249);
+        doc.rect(MARGIN - 2, cur.y - 1, CONTENT_W + 4, rowH, 'F');
+      }
+
+      doc.setFontSize(6.8);
+      doc.setFont('helvetica', 'bold');
+      setColor(doc, [110, 112, 122], 'text');
+      doc.text(e.type, MARGIN + 2, cur.y + 4);
+
+      doc.setFont('helvetica', 'normal');
+      setColor(doc, [80, 80, 85], 'text');
+      const desc = doc.splitTextToSize(e.description, CONTENT_W - 60);
+      doc.text(desc[0] ?? '', MARGIN + 34, cur.y + 4);
+
+      doc.setFontSize(6);
+      setColor(doc, [155, 155, 160], 'text');
+      doc.text(e.perimetre, MARGIN + CONTENT_W - 1, cur.y + 4, { align: 'right' });
+
+      cur.move(rowH);
+    }
   });
 
   cur.move(3);
@@ -790,92 +826,6 @@ function drawBilletSegment(
   drawSeparator(doc, cur);
 }
 
-// ─── Franchise bagage avec icônes texte ───────────────────────────────
-function drawBilletBagage(
-  doc: jsPDF,
-  cur: Cursor,
-  style: BilletStyle,
-) {
-  checkPage(doc, cur, 32, style as any);
-
-  const accentColor = (style.colors.accentLine ?? style.colors.accentBg) as [number, number, number];
-
-  setColor(doc, accentColor, 'fill');
-  doc.rect(MARGIN, cur.y - 1, 2, 9, 'F');
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
-  setColor(doc, accentColor, 'text');
-  doc.text('EXIGENCE DE VOYAGE', MARGIN + 5, cur.y + 6);
-  cur.move(13);
-
-  const bagages = [
-    {
-      icon:   '[=]',          // soute
-      symbol: '23kg x3',
-      label:  'BAGAGE SOUTE',
-      value:  '3 pieces incluses',
-      detail: 'Max 23 kg . Max 150 cm total',
-    },
-    {
-      icon:   '[^]',          // cabine
-      symbol: '7kg x1',
-      label:  'BAGAGE CABINE',
-      value:  '1 piece incluse',
-      detail: 'Max 7 kg . Max 115 cm total',
-    },
-    {
-      icon:   '[o]',          // article personnel
-      symbol: '1 art.',
-      label:  'ARTICLE PERSONNEL',
-      value:  '1 article personnel',
-      detail: 'Sac a main ou porte-document',
-    },
-  ];
-
-  const bColW = (CONTENT_W - 8) / 3;
-  const bGap  = 4;
-  const bH    = 22;
-
-  bagages.forEach((b, i) => {
-    const x = MARGIN + i * (bColW + bGap);
-
-    // Fond gris sobre
-    doc.setFillColor(246, 247, 249);
-    doc.rect(x, cur.y, bColW, bH, 'F');
-
-    // Trait top coloré (accent) à la place de la bordure gauche
-    setColor(doc, accentColor, 'fill');
-    doc.rect(x, cur.y, bColW, 2, 'F');
-
-    // Symbole poids en grand — style "badge"
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    setColor(doc, (style.colors.headerBg as [number, number, number]), 'text');
-    doc.text(b.symbol, x + bColW / 2, cur.y + 8, { align: 'center' });
-
-    // Label petit
-    doc.setFontSize(5.5);
-    doc.setFont('helvetica', 'normal');
-    setColor(doc, [140, 140, 150], 'text');
-    doc.text(b.label, x + bColW / 2, cur.y + 12, { align: 'center' });
-
-    // Valeur
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'bold');
-    setColor(doc, [40, 40, 40], 'text');
-    doc.text(b.value, x + bColW / 2, cur.y + 16, { align: 'center' });
-
-    // Détail
-    doc.setFontSize(5.5);
-    doc.setFont('helvetica', 'normal');
-    setColor(doc, [120, 120, 130], 'text');
-    doc.text(b.detail, x + bColW / 2, cur.y + 20, { align: 'center' });
-  });
-
-  cur.move(bH + 6);
-  drawSeparator(doc, cur);
-}
-
 // ─── PAGE 3 : Reçu complet avec tous les prix ────────────────────────
 function drawRecuComplet(
   doc: jsPDF,
@@ -1260,7 +1210,6 @@ export function generateBilletPassagerPdf(
   drawBilletMeta(doc, cur, data, style);
   drawBilletCheckin(doc, cur, style);
   drawBilletConsignes(doc, cur, data, style);
-  drawBilletBagage(doc, cur, style);
   drawBilletExigences(doc, cur, data, style);
 
   // ── PAGE 2 ────────────────────────────────────────────────────────
