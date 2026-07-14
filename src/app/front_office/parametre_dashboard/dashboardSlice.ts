@@ -54,11 +54,32 @@ export interface StatParams {
   limit?: number;
 }
 
+export interface EtatVenteBilletInfo {
+  id: string;
+  numeroBillet: string | null;
+}
+
+export interface EtatVenteClientBeneficiaireInfo {
+  id: string;
+  nom: string;
+  prenom: string;
+  billet: EtatVenteBilletInfo[];
+}
+
+export interface EtatVenteClientBeneficiaire {
+  id: string;
+  code: string;
+  libelle: string;
+  clientbeneficiaireInfo?: EtatVenteClientBeneficiaireInfo[];
+}
+
 export interface EtatVenteLigne {
   id: string;
   numDosCommun: string;
   numDosPrestation: string;
   clientFacture: { id: string; code: string; libelle: string };
+  fournisseur: { id: string; code: string; libelle: string };
+  clientBeneficiaire?: EtatVenteClientBeneficiaire[];
   prestation: string;
   dateTransaction: string;
   createdAt: string;
@@ -66,6 +87,9 @@ export interface EtatVenteLigne {
   fcCAriary: number;
   commissionAppliquer: number;
   commission: number;
+  tauxTaxe: number;
+  montantTaxeDevise: number;
+  montantTaxeAriary: number;
   module: { id: string; nom: string };
 }
 
@@ -78,9 +102,11 @@ export interface EtatVenteResultat {
 }
 
 export interface EtatVenteParams {
-  dateDebut?: string;
-  dateFin?: string;
+  year?: number;
+  month?: number;
+  quinzaine?: 1 | 2;
   moduleId?: string;
+  fournisseurId?: string;
   clientFacture?: string;
   page?: number;
   limit?: number;
@@ -275,9 +301,11 @@ export const fetchEtatVente = createAsyncThunk(
   async (params: EtatVenteParams, { rejectWithValue }) => {
     try {
       const query = new URLSearchParams();
-      if (params.dateDebut)     query.set('dateDebut',     params.dateDebut);
-      if (params.dateFin)       query.set('dateFin',       params.dateFin);
+      if (params.year)          query.set('year',          String(params.year));
+      if (params.month)         query.set('month',         String(params.month));
+      if (params.quinzaine)     query.set('quinzaine',     String(params.quinzaine));
       if (params.moduleId)      query.set('moduleId',      params.moduleId);
+      if (params.fournisseurId) query.set('fournisseurId', params.fournisseurId);
       if (params.clientFacture) query.set('clientFacture', params.clientFacture);
       query.set('page',  String(params.page  ?? 1));
       query.set('limit', String(params.limit ?? 100));

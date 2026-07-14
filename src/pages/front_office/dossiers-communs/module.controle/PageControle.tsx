@@ -169,7 +169,7 @@ const PageControle = () => {
 
   const COLUMNS = [
     'Date transaction', 'Type', 'Statut transaction',
-    'Catégorie Prestation', 'Bénéficiaire',
+    'Catégorie Prestation', 'Bénéficiaire', 'N° Billet',
     'N° Dos. commun', 'N° Dos. prestation', 'Origine ligne',
     'Prestation', 'Commentaire', 'Partenaire', 'Prestataire',
     'Taux Taxe','M Taxe Devise', 'M Taxe Ariary',
@@ -369,7 +369,15 @@ const PageControle = () => {
                         <Badge label={item.module.nom} color="gray" />
                       </td>
                       <Td mono muted>
-                        {item.clientBeneficiaire?.map(cb => cb.libelle).join(', ') || '—'}
+                        {item.clientBeneficiaire
+                          ?.flatMap(cb => cb.clientbeneficiaireInfo?.map(info => `${info.prenom} ${info.nom}`) ?? [])
+                          .join(', ') || '—'}
+                      </Td>
+                      <Td mono muted>
+                        {item.clientBeneficiaire
+                          ?.flatMap(cb => cb.clientbeneficiaireInfo?.flatMap(info => info.billet.map(b => b.numeroBillet)) ?? [])
+                          .filter(Boolean)
+                          .join(', ') || '—'}
                       </Td>
                       <Td>N° {item.numDosCommun}</Td>
                       <Td>{item.numDosPrestation}</Td>

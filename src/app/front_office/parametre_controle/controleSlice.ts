@@ -104,12 +104,25 @@ export interface Controle {
   aeroportArrivee: string;
 }
 
+export interface BilletInfo {
+  id: string;
+  numeroBillet: string | null;
+}
+
+export interface ClientBeneficiaireInfo {
+  id: string;
+  nom: string;
+  prenom: string;
+  billet: BilletInfo[];
+}
+
 export interface ClientBeneficiaire {
   id: string;
   code: string;
   libelle: string;
   createdAt: string;
   updatedAt: string;
+  clientbeneficiaireInfo?: ClientBeneficiaireInfo[];
 }
 
 export interface ClientFacture {
