@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { FiX, FiSave } from 'react-icons/fi';
+import { toast } from '../../../../../components/Toast/toast';
 
 interface AddProspectionLigneModalProps {
   isOpen: boolean;
@@ -172,11 +173,31 @@ export default function AddProspectionLigneModal({
 
   const handleSubmit = async () => {
     if (!form.departId || !form.destinationId) {
-      alert('Veuillez sélectionner un aéroport de départ et une destination');
+      toast.error('Veuillez sélectionner un aéroport de départ et une destination');
       return;
     }
     if (!form.numeroVol.trim() || !form.dateHeureDepart) {
-      alert('Veuillez remplir : numéro vol et date de départ');
+      toast.error('Veuillez remplir : numéro vol et date de départ');
+      return;
+    }
+    if (!form.avion?.trim()) {
+      toast.error('Veuillez renseigner l\'avion');
+      return;
+    }
+    if (!form.aeroportDepart?.trim() || !form.aeroportArrivee?.trim()) {
+      toast.error('Veuillez renseigner les aéroports de départ et d\'arrivée');
+      return;
+    }
+    if (!form.classe || !form.typePassager) {
+      toast.error('Veuillez sélectionner une classe et un type de passager');
+      return;
+    }
+    if (!Number(form.puBilletCompagnieDevise) || Number(form.puBilletCompagnieDevise) <= 0) {
+      toast.error('Veuillez renseigner le PU Billet Compagnie');
+      return;
+    }
+    if (!Number(form.tauxEchange) || Number(form.tauxEchange) <= 0) {
+      toast.error('Veuillez renseigner le taux de change');
       return;
     }
 
@@ -196,7 +217,7 @@ export default function AddProspectionLigneModal({
       });
       onClose();
     } catch (err: any) {
-      alert('Erreur : ' + (err?.message || 'voir console'));
+      toast.error(err?.message || 'Voir console', 'Erreur');
     } finally {
       setIsSaving(false);
     }

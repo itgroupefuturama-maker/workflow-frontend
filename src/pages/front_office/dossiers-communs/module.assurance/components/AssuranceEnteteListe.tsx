@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../../../../app/store';
-import { fetchAssuranceEntetes, type AssuranceLigne } from '../../../../../app/front_office/parametre_assurance/assuranceEnteteSlice';
+import { fetchAssuranceEntetes, type AssuranceLigne, type AssuranceProspectionLigne, type AssuranceTarifPlein } from '../../../../../app/front_office/parametre_assurance/assuranceEnteteSlice';
 import { AssuranceHeader } from './AssuranceHeader';
 import { useNavigate } from 'react-router-dom';
 import { FiArrowRight, FiFile } from 'react-icons/fi';
@@ -13,6 +13,15 @@ import InfoMessage from '../../../../../components/InfoMessage/InfoMessage';
 import { Spinner, Td, Th } from './atoms';
 import StatusBadge from '../../module.visa/components/StatusBadge';
 import { fmtDate } from '../utils/formatters';
+
+// NOTE: le type `AssuranceProspectionLigne` de `assuranceEnteteSlice.ts` n'a pas été mis à jour
+// lors de l'unification assurance/visa (contrairement à celui de `assuranceProspectionSlice.ts`,
+// qui expose bien `assuranceTarifPlein` en tarif applicable direct sur la ligne — cf.
+// PageDetailProspectionAssurance.tsx / AssuranceProspectionListe.tsx). L'API renvoie réellement
+// ce champ à plat ; on complète ici le type localement plutôt que de modifier ce slice partagé.
+type AssuranceProspectionLigneAvecTarif = AssuranceProspectionLigne & {
+  assuranceTarifPlein?: AssuranceTarifPlein;
+};
 
 const AssuranceEnteteListe = () => {
   const { entetes, loading, error } = useSelector((s: RootState) => s.assuranceEntete);
@@ -228,7 +237,7 @@ const AssuranceEnteteListe = () => {
                           </thead>
                           <tbody>
                             {entete.assurance.map((ligne) => {
-                              const tarif = ligne.assuranceProspectionLigne?.assuranceTarifPlein;
+                              const tarif = (ligne.assuranceProspectionLigne as AssuranceProspectionLigneAvecTarif | undefined)?.assuranceTarifPlein;
                               const devise = tarif?.devise ?? '—';
                               const tauxChange = ligne.assuranceProspectionLigne?.tauxChange;
 

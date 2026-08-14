@@ -1,24 +1,6 @@
-import { useState } from 'react';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../../app/store';
-import { User, Phone, FileText, Tag, XCircle, Calendar, Building2, Hash, ChevronDown } from 'lucide-react';
-
-const extractColorFromGradient = (gradient: string): string => {
-  const match = gradient.match(/from-(\w+)-/);
-  return match?.[1] ?? 'amber';
-};
-
-const colorMap: Record<string, { bg: string; bgLight: string; text: string; border: string }> = {
-  amber:  { bg: '#f59e0b', bgLight: '#fef3c7', text: '#d97706', border: '#fde68a' },
-  orange: { bg: '#f97316', bgLight: '#ffedd5', text: '#ea580c', border: '#fed7aa' },
-  indigo: { bg: '#6366f1', bgLight: '#eef2ff', text: '#4f46e5', border: '#c7d2fe' },
-  violet: { bg: '#8b5cf6', bgLight: '#f5f3ff', text: '#7c3aed', border: '#ddd6fe' },
-  blue:   { bg: '#3b82f6', bgLight: '#eff6ff', text: '#2563eb', border: '#bfdbfe' },
-  green:  { bg: '#22c55e', bgLight: '#f0fdf4', text: '#16a34a', border: '#bbf7d0' },
-  rose:   { bg: '#f43f5e', bgLight: '#fff1f2', text: '#e11d48', border: '#fecdd3' },
-  sky:    { bg: '#0ea5e9', bgLight: '#f0f9ff', text: '#0284c7', border: '#bae6fd' },
-  teal:   { bg: '#14b8a6', bgLight: '#f0fdfa', text: '#0d9488', border: '#99f6e4' },
-};
+import { User, Phone, FileText, Tag, XCircle, Calendar, Building2, Hash } from 'lucide-react';
 
 interface DossierActifCardProps {
   gradient?: string;
@@ -29,31 +11,15 @@ interface DossierActifCardProps {
 }
 
 export default function DossierActifCard({
-  gradient = 'from-amber-400 via-orange-400 to-amber-500',
+  gradient: _gradient = 'from-amber-400 via-orange-400 to-amber-500',
 }: DossierActifCardProps) {
   const dossierActif = useSelector(
     (state: RootState) => state.dossierCommun.currentClientFactureId
   );
 
-  const [isOpen, setIsOpen] = useState<boolean>(() => {
-    const saved = localStorage.getItem('dossierActifCard_isOpen');
-    return saved !== null ? saved === 'true' : true;
-  });
-
-  const handleToggle = () => {
-    setIsOpen(prev => {
-      const next = !prev;
-      localStorage.setItem('dossierActifCard_isOpen', String(next));
-      return next;
-    });
-  };
-
   if (!dossierActif) return null;
 
   const isAnnule = !!dossierActif.raisonAnnulation;
-
-  const colorKey = extractColorFromGradient(gradient);
-  const color    = colorMap[colorKey] ?? colorMap['amber'];
 
   const rows = [
     { label: 'Contact principal',   value: dossierActif.contactPrincipal,               icon: User      },

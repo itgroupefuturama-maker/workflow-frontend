@@ -70,12 +70,6 @@ const EMPTY_FORM: ClientFormPayload = {
   typeDoc: "", dateDelivranceDoc: "", dateValiditeDoc: "",
 };
 
-// Convertir une date ISO en format date input (YYYY-MM-DD)
-const toDateInput = (iso: string | null | undefined) => {
-  if (!iso) return "";
-  return iso.split("T")[0];
-};
-
 interface Props {
   initialData?: Partial<ClientFormPayload>;
   prefillPersons?: Array<{
@@ -90,7 +84,9 @@ interface Props {
     email: string;
     adresse: string;
     paysResidence: string;
-    typePerson: string;
+    // Aligné sur ClientPersonPayload.typePerson (clientFormSlice.ts) : ce sont les 2 seules
+    // valeurs jamais produites (voir le rendu "💍/👶" plus bas selon CONJOINT/ENFANT).
+    typePerson: 'CONJOINT' | 'ENFANT';
   }>;
   userIdClient: string;
 }
@@ -117,7 +113,7 @@ const InlineClientForm = ({ initialData, prefillPersons = [], userIdClient }: Pr
     // 1. Créer le formulaire principal
     // console.log('id tonga eto ********************', userIdClient);
     
-    const result = await dispatch(createClientForm({ userId: userIdClient!, payload: form , beneficiaireId: userId }));
+    const result = await dispatch(createClientForm({ userId: userIdClient!, payload: form, beneficiaireId: userId! }));
     if (!createClientForm.fulfilled.match(result)) return;
 
     const newFormId = (result.payload as any)?.id;
@@ -129,12 +125,12 @@ const InlineClientForm = ({ initialData, prefillPersons = [], userIdClient }: Pr
       setCreatingPersons(true);
       for (const person of prefillPersons) {
         await dispatch(createClientPerson({
+          beneficiaireId: userId!,
           userId: userIdClient!,
           payload: {
             ...person,
-            userId: userIdClient!,
             dateNaissance: person.dateNaissance?.split('T')[0] ?? '',
-            clientBeneficiaireFormId: userId,
+            clientBeneficiaireFormId: userId!,
           },
         }));
       }

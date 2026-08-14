@@ -1,6 +1,13 @@
 import { FiCheck, FiChevronRight } from "react-icons/fi";
+import type { NavigateFunction } from "react-router-dom";
 
-export const AttestationHeader = ({ numeroAttestation, navigate, isDetail = false }) => {
+interface AttestationHeaderProps {
+  numeroAttestation?: string | number;
+  navigate: NavigateFunction;
+  isDetail?: boolean;
+}
+
+export const AttestationHeader = ({ numeroAttestation, navigate, isDetail = false }: AttestationHeaderProps) => {
 
   const steps = isDetail ? [
     {

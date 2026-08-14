@@ -1,4 +1,4 @@
-import { FiX, FiLoader, FiUsers, FiArrowLeft } from 'react-icons/fi';
+import { FiLoader, FiUsers, FiArrowLeft } from 'react-icons/fi';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../../../app/store';
 

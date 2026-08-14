@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from '../../service/Axios';
 import type { ModePaiement } from './prospectionsLignesSlice';
+import type { Devis } from './devisSlice';
 
 export interface AnnulationBilletPayload {
   tauxChange: number;
@@ -152,6 +153,21 @@ export interface ProspectionLigne {
   montantTaxeDevise: number;
   montantTaxeAriary: number;
   serviceProspectionLigne: ServiceProspectionLigne[];
+  // Relation incluse par l'API (même shape que côté module Devis/Attestation)
+  destinationVoyage?: {
+    ville: string;
+    pays: {
+      pays: string;
+      paysVoyage?: {
+        exigenceVoyage: {
+          id: string;
+          type: string;
+          description: string;
+          perimetre: string;
+        };
+      }[];
+    };
+  };
 }
 
 export interface ServiceProspectionLigne {
@@ -276,6 +292,8 @@ export interface BilletEntete {
   prospectionEntete: ProspectionEntete;
   billetLigne: BilletLigne[];
   passager: any[]; // à typer plus tard si besoin
+  // Relation devis incluse par l'API (même pattern que prospectionEntete ci-dessus)
+  devis?: Devis;
 }
 
 export interface EmissionPayload {
@@ -461,7 +479,7 @@ export const emitBilletLigne = createAsyncThunk<
       formData.append('billets', JSON.stringify(payload.billets));
 
       // Tous les fichiers PDF (un par passager)
-      payload.pjBillets.forEach((file: File, index: number) => {
+      payload.pjBillets.forEach((file: File) => {
         if (file) {
           formData.append('pjBillets', file);
         }
@@ -762,7 +780,7 @@ const billetSlice = createSlice({
       state.loading = true;
       state.error = null;
     })
-    .addCase(annulerBillet.fulfilled, (state, action) => {
+    .addCase(annulerBillet.fulfilled, (state) => {
       state.loading = false;
       state.error = null;
 

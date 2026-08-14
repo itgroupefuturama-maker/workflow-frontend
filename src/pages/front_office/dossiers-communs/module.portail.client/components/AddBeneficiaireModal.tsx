@@ -127,7 +127,7 @@ const AddBeneficiaireModal = ({ beneficiaireId, userId, onClose }: Props) => {
 
         {/* Stepper */}
         <div className="flex gap-1 px-6 pt-4">
-          {SECTIONS.map((s, idx) => (
+          {SECTIONS.map((_s, idx) => (
             <div
               key={idx}
               className={`flex-1 h-1 rounded-full transition-all ${

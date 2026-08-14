@@ -11,7 +11,7 @@ import TabContainer from '../../../../../../layouts/TabContainer';
 import LoadingButton from '../../components/LoadingButton';
 import ConfirmBenchmarkModal from '../../../../../../components/modals/Hotel/ConfirmBenchmarkModal';
 import PanneauPreferencesClient from '../../components/PanneauPreferencesClient';
-import { ChevronDown, Heart } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { setShowPreferences, togglePreferences } from '../../../../../../app/uiSlice';
 
 const BenchmarkingDetailPage = () => {
@@ -76,7 +76,7 @@ const BenchmarkingDetailPage = () => {
 
   const hasLigneClient = detail?.benchmarkingLigne.some(
     (ligne) => ligne.plateforme?.nom?.toLowerCase() === 'client'
-  );
+  ) ?? false;
 
   const [nbChambreClient, setNbChambreClient] = useState(benchmarkLine?.nombreChambre);
 
@@ -92,7 +92,7 @@ const BenchmarkingDetailPage = () => {
 
   const hasBenchmarkLine = detail?.benchmarkingLigne.some(
     (ligne) => ligne.isBenchMark === true
-  );
+  ) ?? false;
 
   useEffect(() => {
     if (selectedId) {
@@ -428,17 +428,36 @@ const BenchmarkingDetailPage = () => {
     );
   }
 
+  if (loadingDetail && !detail) {
+    return (
+      <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-10 h-10 border-2 border-neutral-200 border-t-neutral-900 rounded-full animate-spin mx-auto mb-3" />
+          <p className="text-sm text-neutral-500">Chargement du benchmarking...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (errorDetail || !detail) {
     return (
       <div className="min-h-screen bg-neutral-50 flex items-center justify-center p-6">
         <div className="max-w-md w-full bg-red-50 border-l-4 border-red-600 p-6 rounded-lg">
           <p className="text-red-800">{errorDetail || 'Impossible de charger les détails du benchmarking'}</p>
-          <button 
-            onClick={() => navigate(-1)}
-            className="mt-4 text-sm text-red-900 hover:underline"
-          >
-            ← Retour à la liste
-          </button>
+          <div className="mt-4 flex items-center gap-4">
+            <button
+              onClick={() => selectedId && dispatch(fetchBenchmarkingDetail(selectedId))}
+              className="text-sm text-red-900 font-medium hover:underline"
+            >
+              Réessayer
+            </button>
+            <button
+              onClick={() => navigate(-1)}
+              className="text-sm text-red-900 hover:underline"
+            >
+              ← Retour à la liste
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -715,7 +734,7 @@ const BenchmarkingDetailPage = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {detail.benchmarkingLigne.map((ligne, index) => {
+                        {detail.benchmarkingLigne.map((ligne) => {
                           const devises = ligne.deviseHotel ?? [];
                           const rowSpan = devises.length || 1;
 
@@ -997,7 +1016,7 @@ const BenchmarkingDetailPage = () => {
                                             {dv.devise?.devise}
                                           </td>
 
-                                          {/* Taux change — éditable par devise */}
+                                          {/* Taux change — éditable par devise, verrouillé une fois la commission validée */}
                                           <td className="px-3 py-2 border border-neutral-200">
                                             <input
                                               type="number"
@@ -1005,7 +1024,13 @@ const BenchmarkingDetailPage = () => {
                                               onChange={(e) =>
                                                 handleClientChange(dv.id, 'tauxChange', parseFloat(e.target.value) || 0)
                                               }
-                                              className="w-full px-2 py-1 text-right font-mono border border-neutral-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                              disabled={hasLigneClient}
+                                              title={hasLigneClient ? 'Commission déjà validée : taux de change verrouillé' : undefined}
+                                              className={`w-full px-2 py-1 text-right font-mono border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                                                hasLigneClient
+                                                  ? 'bg-neutral-100 text-neutral-400 border-neutral-200 cursor-not-allowed'
+                                                  : 'border-neutral-300'
+                                              }`}
                                             />
                                           </td>
 
@@ -1083,7 +1108,13 @@ const BenchmarkingDetailPage = () => {
                                   step="0.01"
                                   value={commissionData.tauxPrixUnitaire}
                                   onChange={(e) => handleCommissionChange('tauxPrixUnitaire', parseFloat(e.target.value) || 0)}
-                                  className="w-full px-3 py-2 pr-8 text-center font-mono text-sm border border-neutral-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                  disabled={hasLigneClient}
+                                  title={hasLigneClient ? 'Commission déjà validée : champ verrouillé' : undefined}
+                                  className={`w-full px-3 py-2 pr-8 text-center font-mono text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                                    hasLigneClient
+                                      ? 'bg-neutral-100 text-neutral-400 border-neutral-200 cursor-not-allowed'
+                                      : 'border-neutral-300'
+                                  }`}
                                   placeholder="0"
                                 />
                                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 text-sm">%</span>
@@ -1102,7 +1133,13 @@ const BenchmarkingDetailPage = () => {
                                 step="0.01"
                                 value={commissionData.forfaitaireUnitaire}
                                 onChange={(e) => handleCommissionChange('forfaitaireUnitaire', parseFloat(e.target.value) || 0)}
-                                className="w-full px-3 py-2 text-center font-mono text-sm border border-neutral-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                disabled={hasLigneClient}
+                                title={hasLigneClient ? 'Commission déjà validée : champ verrouillé' : undefined}
+                                className={`w-full px-3 py-2 text-center font-mono text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                                  hasLigneClient
+                                    ? 'bg-neutral-100 text-neutral-400 border-neutral-200 cursor-not-allowed'
+                                    : 'border-neutral-300'
+                                }`}
                                 placeholder="0"
                               />
                             </div>
@@ -1119,7 +1156,13 @@ const BenchmarkingDetailPage = () => {
                                 step="0.01"
                                 value={commissionData.forfaitaireGlobal}
                                 onChange={(e) => handleCommissionChange('forfaitaireGlobal', parseFloat(e.target.value) || 0)}
-                                className="w-full px-3 py-2 text-center font-mono text-sm border border-neutral-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                disabled={hasLigneClient}
+                                title={hasLigneClient ? 'Commission déjà validée : champ verrouillé' : undefined}
+                                className={`w-full px-3 py-2 text-center font-mono text-sm border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                                  hasLigneClient
+                                    ? 'bg-neutral-100 text-neutral-400 border-neutral-200 cursor-not-allowed'
+                                    : 'border-neutral-300'
+                                }`}
                                 placeholder="0"
                               />
                             </div>

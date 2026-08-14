@@ -76,6 +76,7 @@ export interface EtatVenteClientBeneficiaire {
 export interface EtatVenteLigne {
   id: string;
   numDosCommun: string;
+  statutTransaction: string;
   numDosPrestation: string;
   clientFacture: { id: string; code: string; libelle: string };
   fournisseur: { id: string; code: string; libelle: string };

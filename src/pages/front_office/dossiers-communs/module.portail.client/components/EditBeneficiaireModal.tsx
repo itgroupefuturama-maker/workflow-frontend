@@ -69,7 +69,9 @@ const toDateInput = (iso?: string) => {
 
 // ── Construit le form initial depuis les données existantes ──
 const buildInitialForm = (b: ClientBeneficiaireForm): ClientFormPayload => ({
-  userId: b.userId,
+  // Pas de champ userId ici : ClientFormPayload ne le déclare pas, et updateClientForm()
+  // (clientFormSlice.ts) ne l'utilise pas non plus dans le body du PATCH — l'enregistrement
+  // est identifié par `id`. Le userId de la route (useParams) sert uniquement au refetch après coup.
   nom:                   b.nom               ?? "",
   prenom:                b.prenom            ?? "",
   sexe:                  b.sexe              ?? "",

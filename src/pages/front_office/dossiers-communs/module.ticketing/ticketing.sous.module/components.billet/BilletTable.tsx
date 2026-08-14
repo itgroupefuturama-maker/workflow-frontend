@@ -6,6 +6,7 @@ import type { BilletPassagerData, BilletPassagerExigence, BilletPassagerService 
 import { useBilletPassagerPdf } from '../../../module.pdf/pdf.generation/hooks/usePdfGenerator';
 import type { BilletStyleId } from '../../../module.pdf/pdf.generation/types/pdf-design.types';
 import { BILLET_STYLES } from '../../../module.pdf/pdf.generation/config/billet-styles';
+import { BilletActions } from './BilletActions';
 
 // --- Sous-composant pour les cellules de prix (évite la répétition et les erreurs de rendu) ---
 const PriceCell = ({ value, isCurrency = false, className = "" }: { value: number, isCurrency?: boolean, className?: string }) => (
@@ -24,7 +25,15 @@ interface BilletTableProps {
   handleReprogrammer: (ligne: BilletLigne) => void;   // ← CHANGEMENT ICI : une seule ligne
   handleRemove: (ligne: BilletLigne) => void;
   serviceById: Map<string, ServiceSpecifique>;
-  handleReporter: (ligne: BilletLigne) => void; 
+  handleReporter: (ligne: BilletLigne) => void;
+  allLinesEmission: boolean;
+  allLinesReservation: boolean;
+  onShowFacture: () => void;
+  onRegler: () => void;
+  onApprouver: (billetId: string) => void;
+  onShowEmission: () => void;
+  onAnnulerReservation?: () => void;
+  onAnnulerEmission?: () => void;
 }
 
 interface PassagersCellProps {
@@ -38,7 +47,7 @@ const PassagersCell: React.FC<PassagersCellProps> = ({ billets, handleReporter, 
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [styleIds, setStyleIds]       = useState<Record<string, BilletStyleId>>({});
   const [billetAReporter, setBilletAReporter] = useState<BilletLigne['billet'][0] | null>(null);
-  const [dateReport, setDateReport]   = useState('');
+  const [, setDateReport]   = useState('');
   const [exigenceModal, setExigenceModal] = useState<{ billet: BilletLigne['billet'][0]; action: 'preview' | 'generate' } | null>(null);
   const [importantIdsByBillet, setImportantIdsByBillet] = useState<Record<string, Set<string>>>({});
   const { generate, preview, loading: pdfLoading } = useBilletPassagerPdf();
@@ -47,10 +56,10 @@ const PassagersCell: React.FC<PassagersCellProps> = ({ billets, handleReporter, 
   const collectExigences = (): BilletPassagerExigence[] => {
     const p = ligne.prospectionLigne;
     const raw = p.destinationVoyage?.pays?.paysVoyage
-      ?.map(pv => pv.exigenceVoyage)
+      ?.map((pv: { exigenceVoyage: BilletPassagerExigence }) => pv.exigenceVoyage)
       .filter(Boolean) ?? [];
     const seen = new Set<string>();
-    return raw.filter(e => {
+    return raw.filter((e: BilletPassagerExigence) => {
       if (seen.has(e.id)) return false;
       seen.add(e.id);
       return true;
@@ -81,7 +90,7 @@ const PassagersCell: React.FC<PassagersCellProps> = ({ billets, handleReporter, 
     // Collecte des exigences depuis la destination (comme le devis)
     const exigences: BilletPassagerExigence[] =
       p.destinationVoyage?.pays?.paysVoyage
-        ?.map(pv => pv.exigenceVoyage)
+        ?.map((pv: { exigenceVoyage: BilletPassagerExigence }) => pv.exigenceVoyage)
         .filter(Boolean) ?? [];
 
     // Services depuis prospectionLigne (comme le devis)
@@ -179,7 +188,7 @@ const PassagersCell: React.FC<PassagersCellProps> = ({ billets, handleReporter, 
         emissionCommissionEnAriary:              ligne.emissionCommissionEnAriary,
         // Services & destination
         services,
-        destinationVoyage: p.destinationVoyage as any,
+        destinationVoyage: p.destinationVoyage,
       },
       exigences,
     };
@@ -192,7 +201,9 @@ const PassagersCell: React.FC<PassagersCellProps> = ({ billets, handleReporter, 
 
   const confirmerReport = () => {
     if (!billetAReporter) return;
-    handleReporter(billetAReporter);
+    // `handleReporter` reporte la ligne de vol entière (reporterLigne utilise ligne.id,
+    // pas l'id du billet passager) — on passe donc `ligne`, pas `billetAReporter`.
+    handleReporter(ligne);
     setBilletAReporter(null);
   };
 
@@ -580,14 +591,20 @@ const ServicesSpecifiquesCell = ({
 
 const BilletTable: React.FC<BilletTableProps> = ({
   lignes,
-  groups,
   billet,
   handleOpenReservation,
   handleOpenEmission,
   handleReprogrammer,
   handleRemove,
   handleReporter,
-  serviceById,
+  allLinesEmission,
+  allLinesReservation,
+  onShowFacture,
+  onRegler,
+  onApprouver,
+  onShowEmission,
+  onAnnulerReservation,
+  onAnnulerEmission,
 }) => {
   const [sortOriginAsc, setSortOriginAsc] = useState(true);
 
@@ -639,24 +656,40 @@ const BilletTable: React.FC<BilletTableProps> = ({
       <div className="bg-white overflow-hidden border border-slate-300">
         {/* Titre + icône filtre */}
         <div className="border-b p-3 border-slate-300 flex items-center justify-between">
-          <h2 className="text-[13px] font-semibold text-slate-800 flex items-center gap-2">
-            Lignes du billet
-          </h2>
-          <button
-            onClick={toggleSortOrigin}
-            className="flex items-center gap-2 px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-600 hover:text-slate-800 rounded-xl border border-slate-300 transition-all text-xs font-semibold"
-            title="Trier par Origin Ligne"
-          >
-            <FiFilter size={14} />
-            <span>Origin Ligne</span>
-            <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
-              sortOriginAsc
-                ? 'bg-blue-100 text-blue-700'
-                : 'bg-amber-100 text-amber-700'
-            }`}>
-              {sortOriginAsc ? '▲ A→Z' : '▼ Z→A'}
-            </span>
-          </button>
+          <div className="flex items-center gap-2">
+            <h2 className="text-[13px] font-semibold text-slate-800 flex items-center gap-2">
+              Lignes du billet
+            </h2>
+            <button
+                onClick={toggleSortOrigin}
+                className="flex items-center gap-2 px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-600 hover:text-slate-800 rounded-xl border border-slate-300 transition-all text-xs font-semibold"
+                title="Trier par Origin Ligne"
+              >
+              <FiFilter size={14} />
+              <span>Origin Ligne</span>
+              <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-bold transition-colors ${
+                sortOriginAsc
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'bg-amber-100 text-amber-700'
+              }`}>
+                {sortOriginAsc ? '▲ A→Z' : '▼ Z→A'}
+              </span>
+            </button>
+          </div>
+          <div className="flex items-center gap-3">
+            <BilletActions
+              billet={billet}
+              allLinesEmission={allLinesEmission}
+              allLinesReservation={allLinesReservation}
+              onShowFacture={onShowFacture}
+              onRegler={onRegler}
+              onApprouver={onApprouver}
+              onShowEmission={onShowEmission}
+              onAnnulerReservation={onAnnulerReservation}
+              onAnnulerEmission={onAnnulerEmission}
+            />
+            
+          </div>
         </div>
 
         {/* Dans le div header, après le titre */}

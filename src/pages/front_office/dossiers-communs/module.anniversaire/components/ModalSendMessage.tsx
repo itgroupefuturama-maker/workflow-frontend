@@ -1,5 +1,5 @@
 import { AlertCircle, CakeIcon, CheckIcon, Loader2Icon, SendIcon, XIcon } from 'lucide-react';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import type { AnnivClient } from '../types';
 import type { AppDispatch } from '../../../../../app/store';

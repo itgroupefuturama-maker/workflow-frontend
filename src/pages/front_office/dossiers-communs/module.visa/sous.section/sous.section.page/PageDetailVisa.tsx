@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import type { AppDispatch, RootState } from '../../../../../../app/store';
-import { FiArrowRight, FiCheck, FiChevronDown, FiFile } from 'react-icons/fi';
+import { FiArrowRight, FiCheck } from 'react-icons/fi';
 import {
   clearVisaEnteteDetail,
   fetchVisaEnteteDetail,
@@ -774,7 +774,7 @@ const PageDetailVisa = () => {
             )}
 
             {/* ── Modal accès portail ── */}
-            {showAccesPortail && (
+            {showAccesPortail && detail && (
               <CreateAccesPortailModal
                 visaEnteteId={detail.id}
                 lignes={detail.visaLigne}
@@ -783,7 +783,7 @@ const PageDetailVisa = () => {
             )}
 
             {/* ── Modal soumission ligne ── */}
-            {submitModal && (
+            {submitModal && detail && (
               <SubmitVisaLigneModal
                 ligneId={submitModal.ligneId}
                 visaEnteteId={detail.id}

@@ -70,6 +70,7 @@ export type FournisseurLight = {
   id: string;
   code: string;
   libelle: string;
+  status: string;
 };
 
 export type PrestationLight = {
@@ -110,6 +111,7 @@ export type BenchmarkingEntete = {
     nombreChambre: number;
     isBenchMark: boolean;
     isRefundable: boolean;
+    dateLimiteAnnulation: string | null;
     deviseHotel: DeviseHotel[];  // ← ajout
   }>;
 };
@@ -170,8 +172,10 @@ export type BenchmarkingDetail = {
 
 export type DeviseHotel = {
   id: string;
-  nuiteDevise: string;
-  nuiteAriary: string;
+  // L'API sérialise parfois ces deux champs en string (cf. usage défensif
+  // Number(dv.nuiteDevise) dans ConfirmBenchmarkModal.tsx) :
+  nuiteDevise: number | string;
+  nuiteAriary: number | string;
   montantDevise: number;
   montantAriary: number;
   tauxChange: number;

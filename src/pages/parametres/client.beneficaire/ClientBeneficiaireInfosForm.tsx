@@ -100,7 +100,9 @@ export default function ClientBeneficiaireInfosForm() {
     setPrenom(editingInfo.prenom);
     setNom(editingInfo.nom);
     setNationalite(editingInfo.nationalite || '');
-    setClientType(editingInfo.clientType);
+    // clientType peut être null en base (anciennes données) ; le <select> n'a pas d'option
+    // "vide", donc on retombe sur ADULTE par défaut plutôt que de propager le null.
+    setClientType(editingInfo.clientType ?? 'ADULTE');
     setTypeDoc(editingInfo.typeDoc as any);
     setReferenceDoc(editingInfo.referenceDoc);
     setDateDelivranceDoc(editingInfo.dateDelivranceDoc.split('T')[0]);
@@ -131,19 +133,35 @@ export default function ClientBeneficiaireInfosForm() {
       document:  document || undefined,
     };
 
-    const result = editingInfo
-      ? await dispatch(updateClientBeneficiaireInfo({ id: editingInfo.id, ...payload }))
-      : await dispatch(createClientBeneficiaireInfos({ clientbeneficiaireId: id, ...payload }));
-
-    const ok = createClientBeneficiaireInfos.fulfilled.match(result)
-             || updateClientBeneficiaireInfo.fulfilled.match(result);
-
-    if (ok) {
-      setMessage({ text: editingInfo ? 'Modifications enregistrées.' : 'Informations enregistrées.', isError: false });
-      setEditingInfo(null);
-      setTimeout(() => setMessage(null), 3000);
+    // Les deux branches sont séparées (plutôt qu'un ternaire partagé) car chaque thunk a un
+    // ThunkApiConfig distinct : mélanger leurs résultats dans une seule variable `result` fait
+    // perdre à TS l'inférence du type d'action résolue (fulfilled/rejected) et empêche d'y lire
+    // `.payload`. Les deux thunks utilisent rejectWithValue : le message d'erreur est donc dans
+    // `result.payload` (string), jamais dans `result.error`.
+    if (editingInfo) {
+      const result = await dispatch(updateClientBeneficiaireInfo({ id: editingInfo.id, ...payload }));
+      if (updateClientBeneficiaireInfo.fulfilled.match(result)) {
+        setMessage({ text: 'Modifications enregistrées.', isError: false });
+        setEditingInfo(null);
+        setTimeout(() => setMessage(null), 3000);
+      } else if (updateClientBeneficiaireInfo.rejected.match(result)) {
+        // Le ThunkApiConfig de ce thunk (clientBeneficiaireInfosSlice.ts) ne déclare pas
+        // `rejectValue: string`, donc TS type result.payload en `{}` par défaut ; en pratique
+        // rejectWithValue() y est toujours appelé avec un message string (voir le slice).
+        setMessage({ text: (result.payload as string) || 'Une erreur est survenue.', isError: true });
+      }
     } else {
-      setMessage({ text: result.error?.message || 'Une erreur est survenue.', isError: true });
+      const result = await dispatch(createClientBeneficiaireInfos({ clientbeneficiaireId: id, ...payload }));
+      if (createClientBeneficiaireInfos.fulfilled.match(result)) {
+        setMessage({ text: 'Informations enregistrées.', isError: false });
+        setEditingInfo(null);
+        setTimeout(() => setMessage(null), 3000);
+      } else if (createClientBeneficiaireInfos.rejected.match(result)) {
+        // Le ThunkApiConfig de ce thunk (clientBeneficiaireInfosSlice.ts) ne déclare pas
+        // `rejectValue: string`, donc TS type result.payload en `{}` par défaut ; en pratique
+        // rejectWithValue() y est toujours appelé avec un message string (voir le slice).
+        setMessage({ text: (result.payload as string) || 'Une erreur est survenue.', isError: true });
+      }
     }
 
     setIsSubmitting(false);

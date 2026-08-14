@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchEvolutionByYear } from '../../../../app/front_office/parametre_dashboard/dashboardSlice';
-import type { ModuleEvolution } from '../../../../app/front_office/parametre_dashboard/dashboardSlice';
+import type { ModuleEvolution, MoisEvolution } from '../../../../app/front_office/parametre_dashboard/dashboardSlice';
 import type { AppDispatch, RootState } from '../../../../app/store';
 import { FiArrowLeft } from 'react-icons/fi';
 import { LayoutDashboard } from 'lucide-react';

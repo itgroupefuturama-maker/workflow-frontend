@@ -1,6 +1,6 @@
 // src/components/modals/ReprogrammationModal.tsx
-import React, { useEffect, useState } from 'react';
-import { FiX, FiAlertTriangle, FiCheckCircle, FiTrash2, FiCheck, FiAlertCircle } from 'react-icons/fi';
+import { useEffect, useState } from 'react';
+import { FiX, FiAlertTriangle, FiCheckCircle, FiTrash2, FiCheck } from 'react-icons/fi';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../app/store';
 import { fetchClientBeneficiaireInfos } from '../../app/portail_client/clientBeneficiaireInfosSlice';
@@ -82,11 +82,11 @@ export default function ReprogrammationModal({
 
   // ─── Autres états du formulaire ───────────────────────────
   const [typeModif, setTypeModif] = useState<ModifType>('COM_PEN');
-  const [conditionModif, setConditionModif] = useState('');
+  const [conditionModif] = useState('');
   const [tauxChange, setTauxChange] = useState<number | ''>(
     ligne?.prospectionLigne?.tauxEchange || 4500
   );
-  const [numeroVol, setNumeroVol] = useState(ligne?.prospectionLigne?.numeroVol || '');
+  const [numeroVol] = useState(ligne?.prospectionLigne?.numeroVol || '');
   const [dateHeureDepartRaw, setDateHeureDepartRaw] = useState(
     ligne?.prospectionLigne?.dateHeureDepart
       ? new Date(ligne.prospectionLigne.dateHeureDepart).toISOString().slice(0, 16)

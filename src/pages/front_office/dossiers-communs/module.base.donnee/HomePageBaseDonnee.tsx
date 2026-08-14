@@ -1,8 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useLayoutEffect } from 'react';
+import { createPortal } from 'react-dom';
 import type { AppDispatch, RootState } from '../../../../app/store';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { fetchClientBeneficiaires } from '../../../../app/back_office/clientBeneficiairesSlice';
+
+const FILTER_MENU_WIDTH = 140; // min-w-[140px]
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -17,8 +20,43 @@ const HomePageBaseDonnee = () => {
   const [filterStatut, setFilterStatut] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [showFilter,  setShowFilter]  = useState(false);
+  const [filterMenuStyle, setFilterMenuStyle] = useState<{ top: number; left: number; visibility: 'visible' | 'hidden' }>({
+    top: 0,
+    left: 0,
+    visibility: 'hidden',
+  });
+  const filterBtnRef = useRef<HTMLButtonElement>(null);
+  const filterMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { dispatch(fetchClientBeneficiaires()); }, [dispatch]);
+
+  // Positionne le menu filtre en `fixed` (calculé depuis le bouton) pour qu'il ne soit
+  // jamais coupé par le conteneur `overflow-hidden` de la page, et le fait s'ouvrir
+  // vers le haut si besoin (même logique que RowMenu / PdfDownloadButton).
+  useLayoutEffect(() => {
+    if (!showFilter) {
+      setFilterMenuStyle((s) => ({ ...s, visibility: 'hidden' }));
+      return;
+    }
+    const btnRect = filterBtnRef.current?.getBoundingClientRect();
+    if (!btnRect) return;
+
+    const menuHeight = filterMenuRef.current?.offsetHeight ?? 0;
+    const openUpward = btnRect.bottom + menuHeight + 8 > window.innerHeight;
+    setFilterMenuStyle({
+      top: openUpward ? Math.max(8, btnRect.top - menuHeight - 4) : btnRect.bottom + 6,
+      left: Math.max(8, btnRect.left),
+      visibility: 'visible',
+    });
+
+    const close = () => setShowFilter(false);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    return () => {
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
+    };
+  }, [showFilter]);
 
   const filtered = beneficiaires.filter(c => {
     const matchSearch = !search ||
@@ -87,6 +125,7 @@ const HomePageBaseDonnee = () => {
             {/* Filtre statut */}
             <div className="relative">
               <button
+                ref={filterBtnRef}
                 onClick={() => setShowFilter(p => !p)}
                 className={`inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg border transition ${
                   filterStatut
@@ -103,8 +142,11 @@ const HomePageBaseDonnee = () => {
                 </svg>
               </button>
 
-              {showFilter && (
-                <div className="absolute top-full mt-1.5 left-0 z-20 bg-white border border-gray-200 rounded-xl shadow-lg py-1 min-w-[140px] overflow-hidden">
+              {showFilter && createPortal(
+                <div
+                  ref={filterMenuRef}
+                  style={{ position: 'fixed', top: filterMenuStyle.top, left: filterMenuStyle.left, visibility: filterMenuStyle.visibility, width: FILTER_MENU_WIDTH }}
+                  className="z-50 bg-white border border-gray-200 rounded-xl shadow-lg py-1 overflow-hidden">
                   <button
                     onClick={() => handleFilter('')}
                     className={`w-full flex items-center gap-2.5 px-4 py-2.5 text-xs text-left hover:bg-gray-50 transition ${!filterStatut ? 'font-semibold text-indigo-600' : 'text-gray-700'}`}
@@ -131,7 +173,8 @@ const HomePageBaseDonnee = () => {
                       )}
                     </button>
                   ))}
-                </div>
+                </div>,
+                document.body
               )}
             </div>
 

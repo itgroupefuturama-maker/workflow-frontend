@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchDossiersCommuns, setCurrentClientFactureId, type DossierCommun } from '../../../../app/front_office/dossierCommunSlice';
+import { fetchDossiersCommuns, setCurrentClientFactureId } from '../../../../app/front_office/dossierCommunSlice';
 import type { RootState, AppDispatch } from '../../../../app/store';
 import { FiPlus, FiFolder, FiSearch, FiRefreshCw, FiGrid, FiFilter, FiChevronDown, FiX, FiArrowUp, FiArrowDown, FiArrowLeft } from 'react-icons/fi';
 

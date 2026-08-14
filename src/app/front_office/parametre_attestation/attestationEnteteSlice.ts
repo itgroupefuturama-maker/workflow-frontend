@@ -46,7 +46,10 @@ export interface AttestationLigne {
   id: string;
   numeroDosRef: string;
   numeroVol: string;
+  origineLine: string | null;
   referenceLine: string;
+  status: string;
+  statusLigne: string;
   avion: string;
   itineraire: string;
   departId: string;
@@ -60,7 +63,6 @@ export interface AttestationLigne {
   puAriary: number;
   numeroReservation: string;
   attestationEnteteId: string;
-  status: string;
   createdAt: string;
   updatedAt: string;
   destinationVoyage?: { id: string; code: string; ville: string; /* ... */ };
@@ -484,7 +486,7 @@ const attestationEnteteSlice = createSlice({
       state.loading = true;
       state.error = null;
     })
-    .addCase(createAttestationLigne.fulfilled, (state, action) => {
+    .addCase(createAttestationLigne.fulfilled, (state) => {
       state.loading = false;
       // On ne met pas à jour ici → on recharge le détail complet après
     })

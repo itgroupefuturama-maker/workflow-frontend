@@ -24,7 +24,7 @@ export const billetDetailItems = (numeroBillet: string | number): BreadcrumbItem
 ];
 
 /** Détail d'une prospection */
-export const prospectionDetailItems = (enteteId: string | number): BreadcrumbItem[] => [
+export const prospectionDetailItems = (_enteteId: string | number): BreadcrumbItem[] => [
   {
     label: "Liste des Prospection",
     path: TICKETING_BASE,

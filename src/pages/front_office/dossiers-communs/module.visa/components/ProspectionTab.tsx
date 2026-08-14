@@ -176,7 +176,6 @@ const ProspectionTab = ({ prestationId }: Props) => {
                   : a.id.localeCompare(b.id)
                 )
                 .map((entete) => {
-                  const dossier = entete.prestation.dossierCommunColab.dossierCommun;
                   return (
                     <div
                       key={entete.id}

@@ -27,7 +27,7 @@ const PageViewAttestation = () => {
     (state: RootState) => state.attestationEntete
   );
 
-  const { items: attestationParams, loading: loadingAttestationParams, error: errorAttestationParams } = useSelector(
+  const { items: attestationParams } = useSelector(
       (state: RootState) => state.attestationParams
     );
 
@@ -197,9 +197,78 @@ const PageViewAttestation = () => {
                     navigate={navigate}
                   />
 
+                  {items.length > 0 && activeTabSousSection === 'lignes' && (
+                    <>
+                      {/* Séparateur visuel avant l'action principale */}
+                      <div className="w-px h-6 bg-gray-200 mx-1" />
+
+                      <button
+                        onClick={() => setShowPdfModal(true)}
+                        className="group h-10 inline-flex items-center gap-2.5 px-5 text-sm font-semibold
+                          text-white rounded-xl
+                          bg-linear-to-br from-indigo-600 to-indigo-700
+                          shadow-md shadow-indigo-600/25
+                          hover:from-indigo-500 hover:to-indigo-600
+                          hover:shadow-lg hover:shadow-indigo-600/35
+                          hover:-translate-y-0.5
+                          active:translate-y-0 active:shadow-md
+                          transition-all duration-200"
+                      >
+                        <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-white/15
+                          group-hover:bg-white/20 transition-colors">
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                              d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                        </span>
+                        Générer PDF
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {formError && (
+                <div className="m-6 bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
+                  {formError}
+                </div>
+              )}
+
+              <div className='px-4 bg-slate-200 rounded-b-xl'>
+                <DossierActifCard gradient="from-rose-400 via-pink-400 to-rose-500" />
+                <div className="flex items-center justify-between">
+                  {/* Bouton + formulaire création */}
+                  <nav className="flex  mb-2 gap-1" aria-label="Tabs">
+                    <button
+                      onClick={() => setActiveTabSousSection('lignes')}
+                      className={`px-4 py-1.5 text-sm font-medium rounded-sm transition-all duration-200 ${
+                        activeTabSousSection === 'lignes'
+                          ? 'bg-white text-slate-800 shadow-sm ring-1 ring-slate-200/50'
+                          : 'text-slate-500 hover:text-slate-700 bg-slate-300'
+                      }`}
+                    >
+                      Liste des attestations
+                      <span className={`ml-2 px-1.5 py-0.5 rounded-md text-[10px] ${
+                        activeTabSousSection === 'lignes' ? 'bg-slate-100 text-slate-600' : 'bg-slate-300 text-slate-500'
+                      }`}>
+                        {items.length}
+                      </span>
+                    </button>
+                    
+                    <button
+                      onClick={() => setActiveTabSousSection('suivi')}
+                      className={`px-10 py-1.5 text-sm font-medium rounded-sm transition-all duration-200 ${
+                        activeTabSousSection === 'suivi'
+                          ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/50'
+                          : 'text-slate-500 hover:text-slate-700 bg-slate-300'
+                      }`}
+                    >
+                      Suivi
+                    </button>
+                  </nav>
                   {/* Dans le canCreate*/}
                   {canCreate && activeTabSousSection === 'lignes' && (
-                    <div className="flex gap-3 items-center flex-wrap">
+                    <div className="flex gap-3 items-center p-2">
 
                       {/* Sélecteur fournisseur */}
                       <div className="relative">
@@ -274,80 +343,8 @@ const PageViewAttestation = () => {
                       </button>
 
                       <FournisseurAlerteBadge />
-
-                      {items.length > 0 && activeTabSousSection === 'lignes' && (
-                        <>
-                          {/* Séparateur visuel avant l'action principale */}
-                          <div className="w-px h-6 bg-gray-200 mx-1" />
-
-                          <button
-                            onClick={() => setShowPdfModal(true)}
-                            className="group h-10 inline-flex items-center gap-2.5 px-5 text-sm font-semibold
-                              text-white rounded-xl
-                              bg-linear-to-br from-indigo-600 to-indigo-700
-                              shadow-md shadow-indigo-600/25
-                              hover:from-indigo-500 hover:to-indigo-600
-                              hover:shadow-lg hover:shadow-indigo-600/35
-                              hover:-translate-y-0.5
-                              active:translate-y-0 active:shadow-md
-                              transition-all duration-200"
-                          >
-                            <span className="flex items-center justify-center w-6 h-6 rounded-lg bg-white/15
-                              group-hover:bg-white/20 transition-colors">
-                              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                  d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                              </svg>
-                            </span>
-                            Générer PDF
-                          </button>
-                        </>
-                      )}
                     </div>
                   )}
-                </div>
-              </div>
-
-              {formError && (
-                <div className="m-6 bg-red-50 border border-red-200 text-red-700 p-4 rounded-lg">
-                  {formError}
-                </div>
-              )}
-
-              <div className='px-4 bg-slate-200 rounded-b-xl'>
-                <DossierActifCard gradient="from-rose-400 via-pink-400 to-rose-500" />
-                <div className="flex items-center justify-between">
-                  {/* Bouton + formulaire création */}
-                  <div className="flex items-center justify-between">
-                    <nav className="flex  mb-2 gap-1" aria-label="Tabs">
-                      <button
-                        onClick={() => setActiveTabSousSection('lignes')}
-                        className={`px-4 py-1.5 text-sm font-medium rounded-sm transition-all duration-200 ${
-                          activeTabSousSection === 'lignes'
-                            ? 'bg-white text-slate-800 shadow-sm ring-1 ring-slate-200/50'
-                            : 'text-slate-500 hover:text-slate-700 bg-slate-300'
-                        }`}
-                      >
-                        Liste des attestations
-                        <span className={`ml-2 px-1.5 py-0.5 rounded-md text-[10px] ${
-                          activeTabSousSection === 'lignes' ? 'bg-slate-100 text-slate-600' : 'bg-slate-300 text-slate-500'
-                        }`}>
-                          {items.length}
-                        </span>
-                      </button>
-                      
-                      <button
-                        onClick={() => setActiveTabSousSection('suivi')}
-                        className={`px-10 py-1.5 text-sm font-medium rounded-sm transition-all duration-200 ${
-                          activeTabSousSection === 'suivi'
-                            ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/50'
-                            : 'text-slate-500 hover:text-slate-700 bg-slate-300'
-                        }`}
-                      >
-                        Suivi
-                      </button>
-                    </nav>
-                  </div>
                 </div>
               </div>
 

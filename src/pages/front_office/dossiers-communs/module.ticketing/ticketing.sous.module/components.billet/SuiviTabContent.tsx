@@ -45,7 +45,7 @@ const SuiviTabContent: React.FC<SuiviTabContentProps> = ({
     ?.prestation?.[0]?.id || '';
 
   // ── États Commentaires ───────────────────────────────────────
-  const { list: commentaires, loading: loadingCommentaires } = useSelector(
+  const { list: commentaires } = useSelector(
     (state: RootState) => state.commentaire
   );
   const [newComment, setNewComment] = useState('');
@@ -53,7 +53,7 @@ const SuiviTabContent: React.FC<SuiviTabContentProps> = ({
   const [editingCommentText, setEditingCommentText] = useState('');
 
   // ── États Rappels ────────────────────────────────────────────
-  const { items: todos, loading: loadingTodos } = useSelector(
+  const { items: todos } = useSelector(
     (state: RootState) => state.todos
   );
   const [newObjet, setNewObjet] = useState('');

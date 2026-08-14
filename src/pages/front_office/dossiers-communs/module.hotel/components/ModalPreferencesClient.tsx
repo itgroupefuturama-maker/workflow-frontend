@@ -1,4 +1,4 @@
-import { X, Star, MapPin, Calendar, Users, Clock, Bed, Coffee, Car, Baby, Cigarette, DollarSign, MessageSquare, Heart } from 'lucide-react';
+import { X, Star, Calendar, Users, Bed, Coffee, DollarSign, MessageSquare } from 'lucide-react';
 
 type Props = {
   isOpen: boolean;

@@ -7,7 +7,7 @@ import {
 } from '../../../../../app/back_office/clientBeneficiairesSlice';
 import type { ClientBeneficiaire } from '../../../../../app/back_office/clientBeneficiairesSlice';
 import type { RootState, AppDispatch } from '../../../../../app/store';
-import { FiAlertTriangle, FiLoader, FiSearch, FiTag, FiTrash2, FiUserCheck, FiUserPlus } from 'react-icons/fi';
+import { FiAlertTriangle, FiLoader, FiSearch, FiTag, FiTrash2, FiUserCheck } from 'react-icons/fi';
 import AuditModal from '../../../../../components/AuditModal';
 import { useNavigate } from 'react-router-dom';
 import ModalFormBeneficiaire from '../modals/ModalFormBeneficiaire';

@@ -13,8 +13,6 @@ import {
   FiArrowLeft, FiLoader, FiPlus, FiTruck,
   FiUserCheck, FiCreditCard, FiAward, FiEdit2,
   FiSearch, FiX,
-  FiClock,
-  FiArrowDown,
   FiArrowDownCircle,
 } from 'react-icons/fi';
 import type { FormState } from './components/ModalCreateCompagnie';

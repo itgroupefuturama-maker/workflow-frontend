@@ -27,7 +27,6 @@ import { fetchSuivis } from '../../../../../app/front_office/suiviSlice';
 import EmissionBilletModal from '../../../../../components/modals/EmissionBilletModal';
 import FactureClientModal from '../../../../../components/modals/FactureClientModal';
 import { fetchCommentairesByPrestation,  } from '../../../../../app/front_office/commentaireSlice';
-import { BilletActions } from './components.billet/BilletActions';
 import BilletInfoCards from './components.billet/BilletInfoCards';
 import BilletTable from './components.billet/BilletTable';
 import ServiceTable from './components.billet/ServiceTable';
@@ -392,24 +391,6 @@ const Billet = () => {
             <div className="shrink-0 px-4 bg-slate-200 rounded-t-xl">
               <div className='flex items-center justify-between'>
                 <TicketingHeader items={billetDetailItems(billet?.numeroBillet)} />
-
-                <BilletActions
-                  billet={billet}
-                  allLinesEmission={allLinesEmission}
-                  allLinesReservation={allLinesReservation}
-                  onShowFacture={() => setShowFactureModal(true)}
-                  onRegler={handleReglerFacture}
-                  onApprouver={() => handleMarkAsReserved(billet.id)}
-                  onShowEmission={() => setShowEmissionModal(true)}
-                  onAnnulerReservation={() => {
-                    setAnnulType('reservation');
-                    setShowAnnulModal(true);
-                  }}
-                  onAnnulerEmission={() => {
-                    setAnnulType('emission');
-                    setShowAnnulModal(true);
-                  }}
-                />
               </div>
             </div>
 
@@ -461,7 +442,21 @@ const Billet = () => {
                   handleReprogrammer={handleReprogrammer}
                   handleRemove={handleAnnulerLigne}
                   handleReporter={handleReporter}
-                  serviceById={serviceById} 
+                  serviceById={serviceById}
+                  allLinesEmission={allLinesEmission}
+                  allLinesReservation={allLinesReservation}
+                  onShowFacture={() => setShowFactureModal(true)}
+                  onRegler={handleReglerFacture}
+                  onApprouver={() => handleMarkAsReserved(billet.id)}
+                  onShowEmission={() => setShowEmissionModal(true)}
+                  onAnnulerReservation={() => {
+                    setAnnulType('reservation');
+                    setShowAnnulModal(true);
+                  }}
+                  onAnnulerEmission={() => {
+                    setAnnulType('emission');
+                    setShowAnnulModal(true);
+                  }}
                 />
               )}
 

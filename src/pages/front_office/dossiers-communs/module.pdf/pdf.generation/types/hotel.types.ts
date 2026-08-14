@@ -1,44 +1,50 @@
 
 // ─── Entités de base ─────────────────────────────────────────────────
 
-import type { BenchmarkingEntete, HotelDevisData } from "../../../../../../../app/front_office/parametre_hotel/hotelDevisSlice";
+import type { BenchmarkingEntete, HotelDevisData, BenchService, DeviseHotelDevis } from "../../../../../../app/front_office/parametre_hotel/hotelDevisSlice";
 
 export interface HotelFournisseur {
   id: string;
   code: string;
   libelle: string;
-  dateApplication: string;
   status: string;
-  dateActivation: string;
-  dateDesactivation: string | null;
-  createdAt: string;
-  updatedAt: string;
+  // Non garantis par l'entête de prospection (hotelProspectionEnteteSlice.FournisseurLight
+  // ne fournit que id/code/libelle/status) ; renseignés côté devis (normalizeDevisToEntete) :
+  dateApplication?: string;
+  dateActivation?: string;
+  dateDesactivation?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface HotelPrestation {
   id: string;
   numeroDos: string;
-  status: string;
-  dossierCommunColabId: string;
-  dossierId: string;
-  createdAt: string;
-  updatedAt: string;
+  // Non garantis par l'entête de prospection (hotelProspectionEnteteSlice.PrestationLight
+  // ne fournit que id/numeroDos) ; renseignés côté devis (normalizeDevisToEntete) :
+  status?: string;
+  dossierCommunColabId?: string;
+  dossierId?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface HotelDevise {
   id: string;
   devise: string;
   status: string;
-  createdAt: string;
-  updatedAt: string;
+  // Non garantis par hotelProspectionEnteteSlice.DeviseHotel.devise (non lus par le générateur PDF) :
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface HotelTypeChambre {
   id: string;
   type: string;
   capacite: number;
-  createdAt: string;
-  updatedAt: string;
+  // Non garantis par hotelProspectionEnteteSlice (typeChambre inline, non lus par le générateur PDF) :
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface HotelPlateforme {
@@ -46,8 +52,9 @@ export interface HotelPlateforme {
   code: string;
   nom: string;
   status: string;
-  createdAt: string;
-  updatedAt: string;
+  // Non garantis par hotelProspectionEnteteSlice (plateforme inline, non lus par le générateur PDF) :
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface HotelServiceSpecifique {
@@ -56,23 +63,28 @@ export interface HotelServiceSpecifique {
   libelle: string;
   type: string | null;
   typeService: string;
-  createdAt: string;
-  updatedAt: string;
+  // Non garantis par hotelProspectionEnteteSlice.BenchService.serviceSpecifique (non lus par le générateur PDF) :
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // ─── DeviseHotel (par ligne) ─────────────────────────────────────────
 
 export interface HotelDeviseHotel {
   id: string;
-  benchmarkingLigneId: string;
-  deviseId: string;
-  nuiteDevise: number;
-  nuiteAriary: number;
+  // Non lu par le générateur PDF ; l'API sérialise parfois ces champs en string
+  // (cf. hotelProspectionEnteteSlice.DeviseHotel) :
+  nuiteDevise: number | string;
+  nuiteAriary: number | string;
   montantDevise: number;
   montantAriary: number;
   tauxChange: number;
-  createdAt: string;
-  updatedAt: string;
+  // Non lus par le générateur PDF (cf. hotelProspectionEnteteSlice.DeviseHotel /
+  // hotelDevisSlice.DeviseHotelDevis, dont le type ne les expose pas tous) :
+  benchmarkingLigneId?: string;
+  deviseId?: string;
+  createdAt?: string | number;
+  updatedAt?: string | number;
   devise: HotelDevise;
 }
 
@@ -81,29 +93,31 @@ export interface HotelDeviseHotel {
 export interface HotelBenchmarkingLigne {
   id: string;
   hotel: string;
-  benchmarkingEnteteId: string;
-  plateformeId: string;
-  typeChambreId: string;
   nombreChambre: number;
   isBenchMark: boolean;
   isRefundable: boolean;
   dateLimiteAnnulation: string | null;
-  createdAt: string;
-  updatedAt: string;
   plateforme: HotelPlateforme;
   typeChambre: HotelTypeChambre;
   deviseHotel: HotelDeviseHotel[];
+  // Non garantis par hotelProspectionEnteteSlice.BenchmarkingEntete.benchmarkingLigne (non lus par le générateur PDF) :
+  benchmarkingEnteteId?: string;
+  plateformeId?: string;
+  typeChambreId?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // ─── Service d'un benchmarking ───────────────────────────────────────
 
 export interface HotelBenchService {
   id: string;
-  benchmarkingEnteteId: string;
   serviceSpecifiqueId: string;
-  createdAt: string;
-  updatedAt: string;
   serviceSpecifique: HotelServiceSpecifique;
+  // Non garantis par hotelProspectionEnteteSlice.BenchService (non lus par le générateur PDF) :
+  benchmarkingEnteteId?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // ─── Entête de benchmarking ──────────────────────────────────────────
@@ -116,16 +130,17 @@ export interface HotelBenchmarkingEntete {
   nuite: number;
   pays: string;
   ville: string;
-  hotelProspectionEnteteId: string;
   tauxPrixUnitaire: number;
   forfaitaireUnitaire: number;
   forfaitaireGlobal: number;
   montantCommission: number;
-  dateLimitePaiement: string | null;
-  createdAt: string;
-  updatedAt: string;
   benchService: HotelBenchService[];
   benchmarkingLigne: HotelBenchmarkingLigne[];
+  // Non garantis par hotelProspectionEnteteSlice.BenchmarkingEntete (non lus par le générateur PDF) :
+  hotelProspectionEnteteId?: string;
+  dateLimitePaiement?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // ─── Ligne client du devis (structure différente du benchmarking) ────
@@ -215,7 +230,7 @@ export interface HotelDevisApiResponse {
 
 export type HotelPdfInput =
   | { mode: 'prospection'; entete: HotelProspectionEnteteItem }
-  | { mode: 'devis';       devis: HotelDevisItem };
+  | { mode: 'devis';       devis: HotelDevisData };
 
 // ─── Entête de prospection (HPE-X) ───────────────────────────────────
 
@@ -224,15 +239,19 @@ export interface HotelProspectionEnteteItem {
   prestationId: string;
   numeroEntete: string;
   fournisseurId: string;
-  rasionAnnulationId: string | null;
-  demandeClientId: string | null;
   createdAt: string;
-  updatedAt: string;
   isDevis: boolean;
-  prestation: HotelPrestation;
-  fournisseur: HotelFournisseur;
-  RaisonAnnulation: null;
+  // Optionnels : l'API peut renvoyer une entête sans prestation/fournisseur résolus
+  // (cf. hotelProspectionEnteteSlice.HotelProspectionEntete) — voir garde dans hotel.generator.ts.
+  prestation?: HotelPrestation;
+  fournisseur?: HotelFournisseur;
   benchmarkingEntete: HotelBenchmarkingEntete[];
+  // Champs non garantis par l'endpoint liste prospection (cf. hotelProspectionEnteteSlice.HotelProspectionEntete) —
+  // pas de raison d'annulation tant que l'entête n'est pas passée en devis/réservation :
+  rasionAnnulationId?: string | null;
+  demandeClientId?: string | null;
+  updatedAt?: string;
+  RaisonAnnulation?: null;
 }
 
 // ─── Réponse API liste ───────────────────────────────────────────────
@@ -321,7 +340,7 @@ export function normalizeDevisToEntete(
         dateLimitePaiement:       b.dateLimitePaiement,
         createdAt:                b.createdAt,
         updatedAt:                b.updatedAt,
-        benchService:             b.benchService.map((s) => ({
+        benchService:             b.benchService.map((s: BenchService) => ({
           id:                    s.id,
           benchmarkingEnteteId:  b.id,
           serviceSpecifiqueId:   s.serviceSpecifiqueId,
@@ -366,7 +385,7 @@ export function normalizeDevisToEntete(
             createdAt: '',
             updatedAt: '',
           },
-          deviseHotel: b.ligneClient.deviseHotel.map((dv) => ({
+          deviseHotel: b.ligneClient.deviseHotel.map((dv: DeviseHotelDevis) => ({
             id:                  dv.id,
             benchmarkingLigneId: dv.benchmarkingLigneId,
             deviseId:            dv.deviseId,

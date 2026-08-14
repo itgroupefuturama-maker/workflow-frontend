@@ -23,6 +23,7 @@ import { useHotelPdf } from '../../module.pdf/pdf.generation/hooks/usePdfGenerat
 import type { PdfAudience, PdfDesignId } from '../../module.pdf/pdf.generation/types/pdf-design.types';
 import { ModalHotelPdfSelector } from '../components/ModalHotelPdfSelector';
 import { selectServicesByType } from '../../../../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
+import ConfirmDialog from '../../../../../components/ConfirmDialog';
 
 const PageViewHotel = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -61,7 +62,6 @@ const PageViewHotel = () => {
   const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'prospection');
 
   const servicesDisponibles = useSelector(selectServicesByType("HOTEL"));
-  const loadingServices = useSelector((state: RootState) => state.serviceSpecifique.loading);
 
   // const {
   //     items: services,
@@ -94,6 +94,7 @@ const PageViewHotel = () => {
   });
 
   const [selectedFournisseurId, setSelectedFournisseurId] = useState<string>('');
+  const [showCreateConfirm, setShowCreateConfirm] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   // État pour savoir quelle entête est ouverte (un seul à la fois ou plusieurs possibles)
@@ -255,41 +256,6 @@ const PageViewHotel = () => {
 
                   {activeTabSousSection === 'lignes' && prestationId && fournisseurs.length > 0 && !fournisseursLoading && (
                     <div className="flex items-end gap-4 flex-wrap">
-                      
-                      <div className="flex-1 min-w-[280px]">
-                        <select
-                          value={selectedFournisseurId}
-                          onChange={(e) => {
-                            const id = e.target.value;
-                            setSelectedFournisseurId(id);
-                            if (id) {
-                              dispatch(fetchLastCommentaireFournisseur(id));
-                            } else {
-                              dispatch(clearCommentaireFournisseur());
-                            }
-                          }}
-                          className="w-full border border-neutral-300 rounded-md px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent transition-all"
-                          disabled={creating}
-                        >
-                          <option value="">Sélectionner un fournisseur</option>
-                          {fournisseurs.map((f: any) => (
-                            <option key={f.id} value={f.id}>
-                              {f.code} - {f.libelle}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <button
-                        onClick={handleCreate}
-                        disabled={creating || !selectedFournisseurId || isBlocked}
-                        className={`px-6 py-2.5 rounded-md text-sm font-medium transition-all ${
-                          creating || !selectedFournisseurId || isBlocked
-                            ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed' 
-                            : 'bg-neutral-900 text-white hover:bg-neutral-800 active:scale-95'
-                        }`}
-                      >
-                        {creating ? 'Création en cours...' : 'Créer une en-tête'}
-                      </button>
                       <button
                         onClick={() => dispatch(togglePreferences())}
                         className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-md transition-colors ${
@@ -315,37 +281,72 @@ const PageViewHotel = () => {
 
                 <DossierActifCard gradient="from-orange-400 via-red-400 to-orange-500 " />
 
-                <div className="flex items-center justify-between">
-                  {/* Bouton + formulaire création */}
-                  <div className="flex items-center justify-between">
-                    <nav className="flex p-1 bg-slate-100/80 rounded-lg mb-2" aria-label="Tabs">
-                      <button
-                        onClick={() => setActiveTabSousSection('lignes')}
-                        className={`px-4 py-1.5 text-sm font-medium rounded-sm transition-all duration-200 ${
-                          activeTabSousSection === 'lignes'
-                            ? 'bg-white text-slate-800 shadow-sm ring-1 ring-slate-200/50'
-                            : 'text-slate-500 hover:text-slate-700'
-                        }`}
+                <div className="flex items-center justify-between gap-4 mb-2">
+                  <nav className="flex p-1 bg-slate-100/80 rounded-lg" aria-label="Tabs">
+                    <button
+                      onClick={() => setActiveTabSousSection('lignes')}
+                      className={`px-4 py-1.5 text-sm font-medium rounded-sm transition-all duration-200 ${
+                        activeTabSousSection === 'lignes'
+                          ? 'bg-white text-slate-800 shadow-sm ring-1 ring-slate-200/50'
+                          : 'text-slate-500 hover:text-slate-700'
+                      }`}
+                    >
+                      Liste des Benchmarking
+                      <span className={`ml-2 px-1.5 py-0.5 rounded-md text-[10px] ${
+                        activeTabSousSection === 'lignes' ? 'bg-slate-100 text-slate-600' : 'bg-slate-200/50 text-slate-500'
+                      }`}>
+                        {entetes.length}
+                      </span>
+                    </button>
+
+                    <button
+                      onClick={() => setActiveTabSousSection('suivi')}
+                      className={`px-10 py-1.5 text-sm font-medium rounded-sm transition-all duration-200 ${
+                        activeTabSousSection === 'suivi'
+                          ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/50'
+                          : 'text-slate-500 hover:text-slate-700'
+                      }`}
+                    >
+                      Suivi
+                    </button>
+                  </nav>
+
+                  {/* Sélection fournisseur + création, alignés à droite */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-72">
+                      <select
+                        value={selectedFournisseurId}
+                        onChange={(e) => {
+                          const id = e.target.value;
+                          setSelectedFournisseurId(id);
+                          if (id) {
+                            dispatch(fetchLastCommentaireFournisseur(id));
+                          } else {
+                            dispatch(clearCommentaireFournisseur());
+                          }
+                        }}
+                        className="w-full border border-neutral-300 rounded-md px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent transition-all"
+                        disabled={creating}
                       >
-                        Liste des Benchmarking
-                        <span className={`ml-2 px-1.5 py-0.5 rounded-md text-[10px] ${
-                          activeTabSousSection === 'lignes' ? 'bg-slate-100 text-slate-600' : 'bg-slate-200/50 text-slate-500'
-                        }`}>
-                          {entetes.length}
-                        </span>
-                      </button>
-                      
-                      <button
-                        onClick={() => setActiveTabSousSection('suivi')}
-                        className={`px-10 py-1.5 text-sm font-medium rounded-sm transition-all duration-200 ${
-                          activeTabSousSection === 'suivi'
-                            ? 'bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/50'
-                            : 'text-slate-500 hover:text-slate-700'
-                        }`}
-                      >
-                        Suivi
-                      </button>
-                    </nav>
+                        <option value="">Sélectionner un fournisseur</option>
+                        {fournisseurs.map((f: any) => (
+                          <option key={f.id} value={f.id}>
+                            {f.code} - {f.libelle}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <button
+                      onClick={() => setShowCreateConfirm(true)}
+                      disabled={creating || !selectedFournisseurId || isBlocked}
+                      className={`shrink-0 px-6 py-2.5 rounded-md text-sm font-medium transition-all ${
+                        creating || !selectedFournisseurId || isBlocked
+                          ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
+                          : 'bg-neutral-900 text-white hover:bg-neutral-800 active:scale-95'
+                      }`}
+                    >
+                      {creating ? 'Création en cours...' : 'Créer une en-tête'}
+                    </button>
                   </div>
                 </div>
               </div>
@@ -745,6 +746,20 @@ const PageViewHotel = () => {
                     loading={hotelPdfLoading}
                   />
                 )}
+
+                <ConfirmDialog
+                  isOpen={showCreateConfirm}
+                  title="Créer une nouvelle en-tête ?"
+                  message={`Une en-tête de benchmarking sera créée pour le fournisseur "${fournisseurs.find((f: any) => f.id === selectedFournisseurId)?.libelle ?? ''}".`}
+                  confirmLabel="Créer"
+                  tone="primary"
+                  isLoading={creating}
+                  onClose={() => setShowCreateConfirm(false)}
+                  onConfirm={() => {
+                    handleCreate();
+                    setShowCreateConfirm(false);
+                  }}
+                />
 
               </div>
             </div> 

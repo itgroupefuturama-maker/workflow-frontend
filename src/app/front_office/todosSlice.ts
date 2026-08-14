@@ -10,6 +10,7 @@ interface Todo {
     objet: string;
     moment: string;
     status: 'FAIT' | 'INACTIF' | 'SUPPRIMER';
+    type: 'NORMAL' | 'URGENT';
   };
   prestation: {
     id: string;
@@ -55,9 +56,13 @@ export const fetchTodos = createAsyncThunk(
 export const createTodo = createAsyncThunk(
   'todos/create',
   async (
-    payload: 
-      | { prestationId: string; objet: string; moment: string; type?: never; googleAccountId?: never }
-      | { prestationId: string; objet: string; moment: string; type: 'URGENT'; googleAccountId: string },
+    payload: {
+      prestationId: string;
+      objet: string;
+      moment: string;
+      type?: 'NORMAL' | 'URGENT';
+      googleAccountId?: string;
+    },
     { rejectWithValue }
   ) => {
     try {
@@ -69,7 +74,7 @@ export const createTodo = createAsyncThunk(
 
       if (payload.type === 'URGENT') {
         body.type = 'URGENT';
-        body.googleAccountId = payload.googleAccountId;
+        if (payload.googleAccountId) body.googleAccountId = payload.googleAccountId;
       }
 
       const res = await axiosInstance.post('/todolists', body);

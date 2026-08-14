@@ -1,6 +1,17 @@
 import { FiCheck, FiChevronRight } from "react-icons/fi";
+import type { NavigateFunction } from "react-router-dom";
 
-export const VisaHeader = ({ numerovisa, nomPassager, navigate, isDetail = false, isProspection = false, isDevis = false, isPassager = false }) => {
+interface VisaHeaderProps {
+  numerovisa: string | number;
+  nomPassager: string;
+  navigate: NavigateFunction;
+  isDetail?: boolean;
+  isProspection?: boolean;
+  isDevis?: boolean;
+  isPassager?: boolean;
+}
+
+export const VisaHeader = ({ numerovisa, nomPassager, navigate, isDetail = false, isProspection = false, isDevis = false, isPassager = false }: VisaHeaderProps) => {
 
   // Construction des étapes selon le contexte
   const steps = isDetail ? [

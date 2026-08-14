@@ -15,7 +15,6 @@ const ViewDevisModal: React.FC<ViewDevisModalProps> = ({
   isOpen,
   onClose,
   devisData,
-  attestationEnteteId,
   loading,
 }) => {
   if (!isOpen) return null;

@@ -4,8 +4,10 @@ import { FiCheck, FiDollarSign, FiHome, FiInfo, FiX } from "react-icons/fi";
 // --- Tes Types (exportés pour être réutilisables) ---
 export type DeviseHotel = {
   id: string;
-  nuiteDevise: string;
-  nuiteAriary: string;
+  // L'API sérialise parfois ces champs en number (cf. hotelProspectionEnteteSlice.DeviseHotel) ;
+  // toujours coercés via Number(...) avant affichage plus bas dans ce fichier.
+  nuiteDevise: string | number;
+  nuiteAriary: string | number;
   montantDevise: number;
   montantAriary: number;
   tauxChange: number;

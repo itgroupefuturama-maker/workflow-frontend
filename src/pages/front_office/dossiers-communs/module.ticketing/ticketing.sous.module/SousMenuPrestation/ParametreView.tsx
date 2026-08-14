@@ -12,6 +12,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import RaisonAnnulationListe from '../../../module.parametre/RaisonAnnulation/RaisonAnnulationListe';
 import GestionPrixListe from '../../../module.attestation.voyage/SousMenuPrestation/GestionPrixListe';
 import ServiceSpecifiqueListe from '../../../module.parametre/ServiceSpecifique/ServiceSpecifiqueListe';
+import { API_URL } from '../../../../../../service/env';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -66,7 +67,6 @@ export default function ParametreView() {
   const [modalAssociationOpen, setModalAssociationOpen] = useState(false);
 
   // Selectors
-  const serviceState = useSelector((state: RootState) => state.serviceSpecifique);
   const exigenceState = useSelector((state: RootState) => state.exigence);
   const destinationState = useSelector((state: RootState) => state.destination);
   const paysState = useSelector((state: RootState) => state.pays);
@@ -241,7 +241,7 @@ export default function ParametreView() {
                           <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-4">
                             {paysDetails.photo && (
                               <img
-                                src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:6060/'}${paysDetails.photo}`}
+                                src={`${API_URL}/${paysDetails.photo}`}
                                 alt={paysDetails.pays}
                                 className="h-12 w-16 object-cover rounded-xl shadow-sm"
                               />
@@ -432,7 +432,7 @@ export default function ParametreView() {
       </TabContainer>
 
       {/* ══ MODALS ══ */}
-      <ServiceSpecifiqueModal isOpen={modalServiceOpen} onClose={() => setModalServiceOpen(false)} />
+      <ServiceSpecifiqueModal isOpen={modalServiceOpen} onClose={() => setModalServiceOpen(false)} typeService="TICKET" />
       <ExigenceModal isOpen={modalExigenceOpen} onClose={() => setModalExigenceOpen(false)} />
       <PaysModal isOpen={modalPaysOpen} onClose={() => setModalPaysOpen(false)} />
       <DestinationModal isOpen={modalDestinationOpen} onClose={() => setModalDestinationOpen(false)} />

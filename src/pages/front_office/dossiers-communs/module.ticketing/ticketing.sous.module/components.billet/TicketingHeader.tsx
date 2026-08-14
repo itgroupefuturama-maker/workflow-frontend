@@ -2,7 +2,7 @@
 import { FiCheck, FiChevronRight } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 
-interface BreadcrumbItem {
+export interface BreadcrumbItem {
   label: string;
   path?: string;
   state?: any;

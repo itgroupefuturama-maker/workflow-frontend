@@ -22,9 +22,7 @@ export default function AnnulationBilletModal({
   onClose,
   onSubmit,
   lignes,
-  type,
   loading = false,
-  enteteId,
 }: Props) {
   const dispatch = useDispatch<AppDispatch>();
 

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../../../../app/store';
-import { fetchDemandeClient } from '../../../../../app/front_office/parametre_specification/demandeClientSlice';
+import { fetchDemandeClient, type DemandeClientGroupe, type DemandeClientItem } from '../../../../../app/front_office/parametre_specification/demandeClientSlice';
 import FormulaireDemandeClientFormulaire from './FormulaireDemandeClient';
 import { Plus } from 'lucide-react';
 import { FiArrowLeft } from 'react-icons/fi';
@@ -16,7 +16,7 @@ const SpecificationClient = () => {
   const { groupesParPrestation = {}, loading, error } = useSelector(
     (state: RootState) => state.demandeClient
   );
-  const groupes = groupesParPrestation?.[id] ?? [];
+  const groupes = groupesParPrestation?.[id ?? ''] ?? [];
 
   const [activeTab, setActiveTab] = useState<number>(1);
 
@@ -32,12 +32,12 @@ const SpecificationClient = () => {
   }, [groupes.length]);
 
   const nextNumero = groupes.length > 0
-    ? Math.max(...groupes.map(g => g.numero)) + 1
+    ? Math.max(...groupes.map((g: DemandeClientGroupe) => g.numero)) + 1
     : 1;
 
   // Tous les onglets = groupes existants + un onglet "nouveau"
   const allTabs = [
-    ...groupes.map(g => g.numero),
+    ...groupes.map((g: DemandeClientGroupe) => g.numero),
     nextNumero,
   ];
 
@@ -59,7 +59,7 @@ const SpecificationClient = () => {
     );
   }
 
-  const activeGroupe = groupes.find(g => g.numero === activeTab);
+  const activeGroupe = groupes.find((g: DemandeClientGroupe) => g.numero === activeTab);
   const isNewTab = activeTab === nextNumero;
 
   return (
@@ -108,7 +108,7 @@ const SpecificationClient = () => {
                         </p>
                     </div>
                     <div className="divide-y divide-neutral-100">
-                        {activeGroupe.items.map((item) => (
+                        {activeGroupe.items.map((item: DemandeClientItem) => (
                             <div key={item.id} className="px-5 py-3 flex items-start justify-between gap-6 hover:bg-neutral-50/50 transition-colors">
                                 <div className="min-w-0">
                                     <p className="text-xs font-semibold text-neutral-600 mb-0.5">

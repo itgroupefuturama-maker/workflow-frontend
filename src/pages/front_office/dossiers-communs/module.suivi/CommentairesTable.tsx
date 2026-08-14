@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../../../app/store';
-import { MessageSquare, Send, Edit2, Trash2, X, Check, Clock } from 'lucide-react';
+import { MessageSquare, Send, Edit2, Trash2, Clock } from 'lucide-react';
 import {
   createCommentaire,
   updateCommentaire,
   deleteCommentaire,
   fetchCommentairesByPrestation,
-  type Commentaire,
 } from '../../../../app/front_office/commentaireSlice';
 
 const CommentairesTable: React.FC<{ prestationId: string }> = ({ prestationId }) => {

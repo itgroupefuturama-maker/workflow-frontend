@@ -50,7 +50,7 @@ export const generateAssurancePdf = (
     { label: 'Date création',   value: fmt.date(devis.createdAt) },
     // Direction uniquement — suivi
     ...(isDirection ? [
-      { label: 'Évolution',       value: fmt.replace_(suivi.evolution) },
+      { label: 'Évolution',       value: suivi.evolution ? fmt.replace_(suivi.evolution) : '—' },
       { label: 'Date envoi',      value: suivi.dateEnvoieDevis ? fmt.date(suivi.dateEnvoieDevis) : '—' },
       { label: 'Date approbation',value: suivi.dateApprobation ? fmt.date(suivi.dateApprobation) : '—' },
     ] : []),

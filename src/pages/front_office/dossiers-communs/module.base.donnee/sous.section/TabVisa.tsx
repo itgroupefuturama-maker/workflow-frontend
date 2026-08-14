@@ -51,7 +51,7 @@ const TabVisa = ({ infos }: { infos: ClientBeneficiaireDetail["clientbeneficiair
                 {[
                   { key: "infos",     label: "Informations" },
                   { key: "personnes", label: "Personnes liées", count: persons.length },
-                ].map((tab, tabIdx) => {
+                ].map((tab) => {
                   const isActive = visaSubTab === tab.key;
                   return (
                     <React.Fragment key={tab.key}>

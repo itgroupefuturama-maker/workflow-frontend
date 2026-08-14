@@ -56,18 +56,23 @@ const ParametreViewHotel = () => {
   // Handlers de création
   const handleCreatePlateforme = (data: any) => {
     dispatch(createPlateforme(data)).then((result) => {
-      if (!result.payload?.error) {  // ou vérifie !result.error selon ta config
+      if (createPlateforme.fulfilled.match(result)) {
         setShowAddPlateforme(false);
         // Le slice peut déjà ajouter l'élément ou alors re-fetch
         dispatch(fetchPlateformes()); // option safe
       }
+      // En cas d'échec, result.payload contient le message d'erreur (rejectWithValue) ;
+      // il est déjà répercuté dans state.plateforme.error et affiché par TableParametre.
     });
   };
 
   const handleCreateTypeChambre = (data: any) => {
-    dispatch(createTypeChambre(data)).then(() => {
-      setShowAddTypeChambre(false);
-      dispatch(fetchTypesChambre());
+    dispatch(createTypeChambre(data)).then((result) => {
+      if (createTypeChambre.fulfilled.match(result)) {
+        setShowAddTypeChambre(false);
+        dispatch(fetchTypesChambre());
+      }
+      // En cas d'échec, state.typeChambre.error est déjà mis à jour et affiché par TableParametre.
     });
   };
 

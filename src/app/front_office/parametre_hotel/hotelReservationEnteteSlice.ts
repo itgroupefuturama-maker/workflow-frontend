@@ -375,7 +375,7 @@ const slice = createSlice({
         state.detailLoading = true;
         state.detailError = null;
       })
-      .addCase(confirmerHotelLigne.fulfilled, (state, action) => {
+      .addCase(confirmerHotelLigne.fulfilled, (state) => {
         state.detailLoading = false;
       })
       .addCase(confirmerHotelLigne.rejected, (state, action) => {

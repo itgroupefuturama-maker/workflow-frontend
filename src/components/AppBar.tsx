@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { FiHelpCircle, FiBell, FiUser, FiChevronDown, FiLogOut, FiX, FiTrash2, FiHome, FiCheck, FiUsers, FiSettings } from "react-icons/fi";
+import { FiHelpCircle, FiBell, FiUser, FiChevronDown, FiLogOut, FiX, FiTrash2, FiHome, FiCheck, FiSettings } from "react-icons/fi";
 import { useState, useRef, useEffect } from "react";
 import { logout } from '../app/authSlice';
 import { useDispatch, useSelector } from 'react-redux';

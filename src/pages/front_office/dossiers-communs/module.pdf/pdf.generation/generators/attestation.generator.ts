@@ -173,7 +173,7 @@ function _buildGroupesParEntete(entetes: AttestationEnteteItem[]): LettreGroupe[
     parPnr.forEach((lignes, pnr) => {
       const passagersMap = new Map<string, LettrePassager>();
       lignes.forEach((l) =>
-        l.attestationPassager.forEach((p) => {
+        (l.attestationPassager ?? []).forEach((p) => {
           const c = p.clientbeneficiaireInfo;
           passagersMap.set(c.id, {
             nom: sanitizeForPdf(c.nom),
@@ -198,7 +198,7 @@ function _buildGroupesParPassager(entetes: AttestationEnteteItem[]): LettreGroup
 
   entetes.forEach((entete) => {
     entete.attestationLigne.forEach((ligne) => {
-      ligne.attestationPassager.forEach((p) => {
+      (ligne.attestationPassager ?? []).forEach((p) => {
         const id = p.clientbeneficiaireInfo.id;
         if (!parPassager.has(id)) {
           parPassager.set(id, { info: p.clientbeneficiaireInfo, lignes: [] });
@@ -358,7 +358,7 @@ function _drawLettreTitre(
   cursor.move(14);
 }
 
-function _drawIntro(doc: jsPDF, cursor: Cursor, design: PdfDesign, layout: PageLayout): void {
+function _drawIntro(doc: jsPDF, cursor: Cursor, _design: PdfDesign, layout: PageLayout): void {
   const { margin, contentW } = layout;
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
@@ -383,7 +383,6 @@ function _sectionLabel(
   doc.setFontSize(7.5);
   doc.setFont('helvetica', 'bold');
   const spaced = text.toUpperCase();
-  const w = doc.getTextWidth(spaced) + 8;
 
   setColor(doc, design.colors.accentLine, 'fill');
   // doc.roundedRect(pageW / 2 - w / 2, cursor.y - 4.5, w, 6, 1.5, 1.5, 'F');
@@ -428,7 +427,7 @@ function _drawVolsBlock(
   vols: LettreVol[],
   layout: PageLayout
 ): void {
-  const { margin, pageW, contentW } = layout;
+  const { margin, contentW } = layout;
 
   _sectionLabel(doc, cursor, 'Ont bien réservé sur les vols suivants', design, layout);
   cursor.move(2);

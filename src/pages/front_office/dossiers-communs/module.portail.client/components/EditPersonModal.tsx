@@ -4,7 +4,6 @@ import type { RootState, AppDispatch } from "../../../../../app/store";
 import { updateClientPerson } from "../../../../../app/portail_client/clientFormSlice";
 import type { ClientBeneficiairePerson } from "../../../../../app/portail_client/clientFormSlice";
 import { X, Loader2, CheckCircle } from "lucide-react";
-import { useParams } from "react-router-dom";
 
 const FIELDS: { name: string; label: string; type: string }[] = [
   { name: 'nom',           label: 'Nom',              type: 'text'  },

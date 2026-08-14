@@ -200,8 +200,8 @@ export const fetchClientInfo = createAsyncThunk(
 export const createClientForm = createAsyncThunk(
   'client/createClientForm',
   async (
-    { beneficiaireId, userId, payload }: { beneficiaireId: string; userId: string; payload: ClientFormPayload },
-    { dispatch, rejectWithValue }
+    { userId, payload }: { beneficiaireId: string; userId: string; payload: ClientFormPayload },
+    { rejectWithValue }
   ) => {
     try {
       await axios.post(`${API_URL_PORTAIL}/client-form`, {

@@ -4,7 +4,6 @@ import { X, Plus } from 'lucide-react'; // Ajout de Plus pour le style si besoin
 import type { AppDispatch, RootState } from '../../../../../app/store';
 import { fetchDemandeClient, setActiveTabForPrestation } from '../../../../../app/front_office/parametre_specification/demandeClientSlice';
 import { useNavigate } from 'react-router-dom';
-import { API_URL } from '../../../../../service/env';
 
 type Props = {
   isOpen: boolean;
@@ -18,8 +17,6 @@ const PanneauPreferencesClient = ({ isOpen, onClose, prestationId }: Props) => {
   const { groupesParPrestation = {}, activeTabParPrestation = {}, loading, error } = useSelector(
     (state: RootState) => state.demandeClient
   );
-
-  const url = `${window.location.origin}/formulaire/${prestationId}`;
 
   const groupes = useMemo(() => groupesParPrestation?.[prestationId] ?? [], [groupesParPrestation, prestationId]);
   const [copied, setCopied] = useState(false);

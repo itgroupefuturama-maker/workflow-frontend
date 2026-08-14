@@ -68,25 +68,6 @@ const ActionButton = ({
   );
 };
 
-/* ── Section header ── */
-const SectionHeader = ({ icon, label, color = 'indigo', count }: {
-  icon: React.ReactNode; label: string; color?: string; count?: number;
-}) => (
-  <tr className={`bg-slate-600`}>
-    <td colSpan={99} className="px-4 py-2">
-      <div className="flex items-center gap-2">
-        <div className={`w-5 h-5 rounded-md bg-${color}-100 flex items-center justify-center shrink-0`}>
-          {icon}
-        </div>
-        <span className="text-[11px] font-black uppercase tracking-widest text-white">{label}</span>
-        {count !== undefined && (
-          <span className="text-[10px] bg-white/20 text-white px-1.5 py-0.5 rounded-full font-bold">{count}</span>
-        )}
-      </div>
-    </td>
-  </tr>
-);
-
 /* ─────────────────────── page ────────────────────────── */
 
 const PageDetailPassager = () => {
@@ -97,7 +78,7 @@ const PageDetailPassager = () => {
 
   const nomPassager = location.state?.nomPassager ?? 'Passager';
   const numeroDos   = location.state?.numeroDos ?? null;
-  const { detail, loading, error } = useSelector((s: RootState) => s.passagerDetail);
+  const { detail, loading } = useSelector((s: RootState) => s.passagerDetail);
 
   const [formLoading,   setFormLoading]   = useState<Record<string, boolean>>({});
   const [formDone,      setFormDone]      = useState<Record<string, boolean>>({});

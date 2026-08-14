@@ -201,7 +201,7 @@ export const ModalHotelPdfSelector: React.FC<Props> = ({
               Générer un PDF — {entete.numeroEntete}
             </h2>
             <p className="text-xs text-neutral-500 mt-0.5">
-              {entete.fournisseur.libelle} • {entete.prestation.numeroDos}
+              {entete.fournisseur?.libelle ?? '—'} • {entete.prestation?.numeroDos ?? '—'}
             </p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-neutral-100 text-neutral-400">
@@ -493,10 +493,10 @@ export const ModalHotelPdfSelector: React.FC<Props> = ({
                                                   Taux : {dv.tauxChange.toLocaleString('fr-FR')}
                                                 </span>
                                                 <span className="text-[10px] text-neutral-600">
-                                                  {dv.nuiteDevise.toLocaleString('fr-FR')} {dv.devise.devise} / nuit
+                                                  {Number(dv.nuiteDevise).toLocaleString('fr-FR')} {dv.devise.devise} / nuit
                                                 </span>
                                                 <span className="text-[10px] text-neutral-600">
-                                                  → {dv.nuiteAriary.toLocaleString('fr-FR')} Ar / nuit
+                                                  → {Number(dv.nuiteAriary).toLocaleString('fr-FR')} Ar / nuit
                                                 </span>
                                                 <span className="text-[10px] font-medium text-neutral-800">
                                                   Total : {dv.montantAriary.toLocaleString('fr-FR')} Ar

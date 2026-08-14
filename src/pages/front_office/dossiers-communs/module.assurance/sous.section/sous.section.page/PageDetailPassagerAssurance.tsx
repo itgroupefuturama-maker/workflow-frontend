@@ -165,7 +165,7 @@ const PageDetailPassager = () => {
           <div className="shrink-0 px-4 bg-slate-200 rounded-xl">
             <div className="flex items-center justify-between">
               <AssuranceHeader
-                numeroassurance={detail?.assurance?.zoneDestination}
+                numeroassurance={detail?.assurance?.zoneDestination || ''}
                 nomPassager={nomPassager}
                 navigate={navigate}
                 isDetail={true}

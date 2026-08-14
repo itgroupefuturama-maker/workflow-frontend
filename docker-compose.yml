@@ -1,5 +1,9 @@
 services:
   react-app:
-    build: .
+    build:
+      context: .
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+        VITE_API_URL_PORTAIL: ${VITE_API_URL_PORTAIL}
     ports:
       - "3000:80"

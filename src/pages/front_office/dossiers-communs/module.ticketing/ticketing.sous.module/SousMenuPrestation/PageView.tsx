@@ -89,24 +89,6 @@ export default function PageView() {
               <div className="shrink-0 px-4 bg-slate-200 rounded-t-xl">
                 <div className='flex items-center justify-between'>
                   <TicketingHeader items={prospectionListeItems()} />
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setSortEntetes(o => o === 'desc' ? 'asc' : 'desc')}
-                      className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-all"
-                    >
-                      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-                        className={`transition-transform duration-200 ${sortEntetes === 'asc' ? 'rotate-180' : ''}`}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h13M3 8h9M3 12h5m10-4v12m0 0l-4-4m4 4l4-4" />
-                      </svg>
-                      {sortEntetes === 'desc' ? 'Plus récent' : 'Plus ancien'}
-                    </button>
-                    <button
-                      onClick={openCreateModal}
-                      className="shrink-0 inline-flex items-center gap-2 bg-linear-to-r from-indigo-500 to-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:from-indigo-600 hover:to-indigo-700 transition-all"
-                    >
-                      <FiPlus size={15} /> Ajouter un en-tête
-                    </button>
-                  </div>
                 </div>
               </div>
 
@@ -143,6 +125,24 @@ export default function PageView() {
                       Suivi
                     </button>
                   </nav>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setSortEntetes(o => o === 'desc' ? 'asc' : 'desc')}
+                      className="inline-flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-all"
+                    >
+                      <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                        className={`transition-transform duration-200 ${sortEntetes === 'asc' ? 'rotate-180' : ''}`}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h13M3 8h9M3 12h5m10-4v12m0 0l-4-4m4 4l4-4" />
+                      </svg>
+                      {sortEntetes === 'desc' ? 'Plus récent' : 'Plus ancien'}
+                    </button>
+                    <button
+                      onClick={openCreateModal}
+                      className="shrink-0 inline-flex items-center gap-2 bg-linear-to-r from-indigo-500 to-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:from-indigo-600 hover:to-indigo-700 transition-all"
+                    >
+                      <FiPlus size={15} /> Ajouter un en-tête
+                    </button>
+                  </div>
                 </div>
               </div>
 

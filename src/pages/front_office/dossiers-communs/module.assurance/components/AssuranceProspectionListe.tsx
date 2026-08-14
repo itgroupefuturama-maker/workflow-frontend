@@ -15,7 +15,7 @@ import ModalCreationDevis, { type DevisModalData } from '../modals/ModalCreation
 import ModalAjoutLigne, { type LigneModalData } from '../modals/ModalAjoutLigne';
 import { fmtDate } from '../utils/formatters';
 import { Badge, Spinner, Td, Th } from './atoms';
-import { ArrowRight, ChevronDown, ClipboardCheck, FileText, Layers, Plus } from 'lucide-react';
+import { ArrowRight, ChevronDown, ClipboardCheck, FileText, Plus } from 'lucide-react';
 
 
 /* ── composant principal ── */

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../../../../app/store';
 import { fetchSavSondages, updateSavSondageStatus } from '../../../../../app/front_office/parametre_sav/savSondageSlice';
@@ -210,7 +210,7 @@ function ModalEnvoiSondage({
 
 export default function TabSondage() {
   const dispatch = useDispatch<AppDispatch>();
-  const { items, loading, error } = useSelector((state: RootState) => state.savSondage);
+  const { items, loading } = useSelector((state: RootState) => state.savSondage);
   const { liensSondage } = useSelector((state: RootState) => state.savParams);
 
   const [modalItem, setModalItem]   = useState<SavSondage | null>(null);

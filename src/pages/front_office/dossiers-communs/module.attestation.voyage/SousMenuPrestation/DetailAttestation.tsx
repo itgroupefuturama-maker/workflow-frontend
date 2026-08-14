@@ -8,10 +8,8 @@ import { fetchAttestationEnteteDetail, fetchAttestationSuivi } from '../../../..
 import AddLigneModal from './AddLigneModal';
 import { AttestationHeader } from './components.attestation/AttestationHeader';
 import ViewDevisModal from '../../../../../components/modals/Attestation/ViewDevisModal';
-import { API_URL } from '../../../../../service/env';
 import TabContainer from '../../../../../layouts/TabContainer';
 import SuiviTabSection from '../../module.suivi/SuiviTabSection';
-import axios from '../../../../../service/Axios';
 import { FileText, PlaneTakeoff, Users, Info } from 'lucide-react';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
@@ -30,8 +28,6 @@ const DetailAttestation = () => {
 
   const { items: destinations } = useSelector((state: RootState) => state.destination);
   const { current: clientFactureDetail } = useSelector((state: RootState) => state.clientFactures);
-
-  const [generatingPdf, setGeneratingPdf] = useState(false);
 
   const tabs = [
     { id: 'prospection', label: 'Listes des entête attestation' },
@@ -77,25 +73,6 @@ const DetailAttestation = () => {
       dispatch(fetchAttestationSuivi(selectedId));
     }
   }, [dispatch, selectedId]);
-
-  const handleOpenPdfItineraire = (ligneId: string) => {
-    const pdfUrl = `${API_URL}/attestation/pdf-itineraire/${selectedEntete?.id}/${ligneId}`;
-    window.open(pdfUrl, '_blank', 'noopener,noreferrer');
-  };
-
-  const handleGenerateAndOpenPdf = async () => {
-    if (!selectedEntete?.id) return;
-    setGeneratingPdf(true);
-    try {
-      const pdfUrl = `${API_URL}/attestation/pdf/${selectedEntete.id}`;
-      await axios.get(pdfUrl);
-      window.open(pdfUrl, '_blank', 'noopener,noreferrer');
-    } catch (err) {
-      console.error('Erreur génération PDF:', err);
-    } finally {
-      setGeneratingPdf(false);
-    }
-  };
 
   const handleTabChange = (id: string) => {
     if (id === 'beneficiaire') {

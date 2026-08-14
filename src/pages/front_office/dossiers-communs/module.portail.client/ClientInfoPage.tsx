@@ -34,7 +34,6 @@ const ClientInfoPage = () => {
 
   console.log(`userId @@@@@@@@@@: ${userId}`);
   const { data: client, loading, error } = useSelector((state: RootState) => state.clientForm);
-  const numeroDos  = location.state?.numeroDos  ?? '—';
 
   const tabs = client?.userType === 'ASSURANCE'
   ? [

@@ -22,7 +22,7 @@ const PageDetailProspectionAssurance = () => {
   const location     = useLocation();
 
   const numeroDos = location.state?.numeroDos ?? '—';
-  const { devisDetail, loadingDevis, actioning, actionError, actionSuccess, error } =
+  const { devisDetail, loadingDevis, actionError, actionSuccess, error } =
     useSelector((s: RootState) => s.assuranceProspection);
 
   const tabs = [

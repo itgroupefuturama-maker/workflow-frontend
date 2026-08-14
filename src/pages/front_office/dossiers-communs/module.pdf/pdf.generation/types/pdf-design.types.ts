@@ -10,7 +10,7 @@ export interface PdfStaticTexts {
 }
 
 export interface PdfDesign {
-  id:          string;
+  id:          PdfDesignId;
   label:       string;
   description: string;
   preview:     string;

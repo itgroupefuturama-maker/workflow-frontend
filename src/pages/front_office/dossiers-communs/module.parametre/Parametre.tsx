@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FiArrowLeft, FiSearch, FiType, FiLayout, FiSliders,
-  FiMoon, FiBell, FiGlobe, FiEye, FiToggleLeft, FiToggleRight,
+  FiBell, FiGlobe, FiEye,
 } from 'react-icons/fi';
 
 // ── Types ──────────────────────────────────────────────────────────────────

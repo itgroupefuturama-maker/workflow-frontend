@@ -113,18 +113,7 @@ export interface AssuranceDevisDetail {
       status: string;
     };
   };
-  assuranceProspectionLignes: {
-    id: string;
-    duree: number;
-    dateDepart: string;
-    dateRetour: string;
-    tauxChange: number;
-    referenceDevis: string | null;
-    dateDevis: string | null;
-    assuranceParamsId: string;
-    createdAt: string;
-    assuranceTarifPlein: AssuranceTarifPlein;
-  }[];
+  assuranceProspectionLignes: AssuranceProspectionLigne[];
   suivi: {
     id: string;
     evolution: string | null;

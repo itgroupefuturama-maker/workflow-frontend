@@ -32,7 +32,8 @@ export interface ServiceSpecifique {
 
 export interface CreateServiceSpecifiqueDto {
   libelle: string;
-  type: 'SERVICE' | 'SPECIFIQUE';
+  // Optionnel : les services HOTEL n'ont pas de distinction SERVICE/SPECIFIQUE
+  type?: 'SERVICE' | 'SPECIFIQUE';
   typeService: TypeService;
 }
 
@@ -107,10 +108,6 @@ const serviceSpecifiqueSlice = createSlice({
     const handlePending = (state: ServiceState) => {
       state.loading = true;
       state.error = null;
-    };
-    const handleFulfilled = (state: ServiceState, action: PayloadAction<ServiceSpecifique[]>) => {
-      state.loading = false;
-      state.items = action.payload;
     };
     const handleRejected = (state: ServiceState, action: any) => {
       state.loading = false;

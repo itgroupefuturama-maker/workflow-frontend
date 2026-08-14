@@ -1,6 +1,17 @@
 import { FiCheck, FiChevronRight } from "react-icons/fi";
+import type { NavigateFunction } from "react-router-dom";
 
-export const AssuranceHeader = ({ numeroassurance, nomPassager, navigate, isDetail = false, isProspection = false, isDevis = false, isPassager = false }) => {
+interface AssuranceHeaderProps {
+  numeroassurance: string;
+  nomPassager: string;
+  navigate: NavigateFunction;
+  isDetail?: boolean;
+  isProspection?: boolean;
+  isDevis?: boolean;
+  isPassager?: boolean;
+}
+
+export const AssuranceHeader = ({ numeroassurance, nomPassager, navigate, isDetail = false, isProspection = false, isDevis = false, isPassager = false }: AssuranceHeaderProps) => {
 
   const steps = isDetail ? [
     {

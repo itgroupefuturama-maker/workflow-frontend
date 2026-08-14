@@ -67,8 +67,8 @@ export interface DossierCommun {
 // Payload de création (sans clients)
 interface CreateDossierCommunPayload {
   referenceTravelPlaner?: string;
-  description: string;
-  contactPrincipal: string;
+  description?: string;
+  contactPrincipal?: string;
   whatsapp?: string;
   clientFactureId: string;
   colabs: Array<{
@@ -179,5 +179,5 @@ const dossierCommunSlice = createSlice({
   },
 });
 
-export const { setCurrentClientFacture, resetCreateStatus } = dossierCommunSlice.actions;
+export const { resetCreateStatus } = dossierCommunSlice.actions;
 export default dossierCommunSlice.reducer;

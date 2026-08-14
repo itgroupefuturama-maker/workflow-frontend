@@ -14,16 +14,6 @@ type Props = {
   onLigneCreated: () => void;
 };
 
-const calculerDuree = (depart: string, arrivee: string): string => {
-  if (!depart || !arrivee) return '';
-  const diff = new Date(arrivee).getTime() - new Date(depart).getTime();
-  if (diff <= 0) return '';
-  const totalMinutes = Math.floor(diff / 60000);
-  const h = Math.floor(totalMinutes / 60);
-  const m = totalMinutes % 60;
-  return `${h}h${m.toString().padStart(2, '0')}`;
-};
-
 const AddLigneModal = ({
   isOpen,
   onClose,
@@ -108,7 +98,7 @@ const AddLigneModal = ({
       dispatch(fetchClientBeneficiaireInfos(id)).then((action) => {
         setBeneficiairePassagers(prev => ({
           ...prev,
-          [id]: action.meta.requestStatus === 'fulfilled'
+          [id]: fetchClientBeneficiaireInfos.fulfilled.match(action)
             ? (action.payload || [])
             : [], // tableau vide même en cas d'erreur
         }));
@@ -291,7 +281,7 @@ const AddLigneModal = ({
                   const ben = beneficiaires.find(b => b.clientBeneficiaire.id === benId)?.clientBeneficiaire;
                   const passagers = beneficiairePassagers[benId] || [];
                   const isLoading = loadingBeneficiaires[benId] === true;
-                  const initials = ben?.libelle?.split(' ').map(w => w[0]).slice(0,2).join('').toUpperCase() ?? '?';
+                  const initials = ben?.libelle?.split(' ').map((w: string) => w[0]).slice(0,2).join('').toUpperCase() ?? '?';
 
                   return (
                     <div key={benId} className="p-4">

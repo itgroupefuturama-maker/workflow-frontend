@@ -663,34 +663,27 @@ function NewLineRow({
       </td>
 
       <td className="px-4 py-3">
-        <div className="flex flex-col gap-2 min-w-[100px]">
+        <div className="flex items-center gap-2">
           <button
             onClick={handleSaveNewLine}
             disabled={newLine.isSaving}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium shadow-sm"
+            className="flex items-center justify-center w-9 h-9 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shrink-0"
             title="Enregistrer"
           >
             {newLine.isSaving ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-white"></div>
-                Enregistrement...
-              </>
+              <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-white"></div>
             ) : (
-              <>
-                <FiSave size={16} />
-                Enregistrer
-              </>
+              <FiSave size={16} />
             )}
           </button>
 
           <button
             onClick={handleCancelNewLine}
             disabled={newLine.isSaving}
-            className="flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium shadow-sm"
+            className="flex items-center justify-center w-9 h-9 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shrink-0"
             title="Annuler"
           >
             <FiX size={16} />
-            Annuler
           </button>
         </div>
       </td>

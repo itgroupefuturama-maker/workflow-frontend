@@ -172,9 +172,19 @@ const AccueilView = ({ module }: { module?: Module }) => {
   }, [dispatch]);
 
   const handleSearchEtat = () => {
+    // `fetchEtatVente` (dashboardSlice) ne connaît pas de plage de dates : son
+    // endpoint (`/dashboard/liste-par-periode-module-client`) filtre par
+    // year/month/quinzaine, comme dans PageEtatVente.tsx. Les sélecteurs
+    // <input type="month"> de cet écran ne fournissent donc que le point de
+    // départ ("YYYY-MM") réellement exploitable par l'API ; `dateFin` reste
+    // un simple repère affiché dans les filtres actifs.
+    const [anneeDebut, moisDebut] = dateDebut
+      ? dateDebut.split('-').map(Number)
+      : [undefined, undefined];
+
     dispatch(fetchEtatVente({
-      dateDebut,
-      dateFin,
+      year: anneeDebut,
+      month: moisDebut,
       moduleId: moduleIdResolu,
       clientFacture,
     }));

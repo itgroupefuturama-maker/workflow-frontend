@@ -24,8 +24,6 @@ const MODULE_CONFIG = [
   { key: 'assurance',   label: 'Assurance',   color: '#10b981', bg: 'bg-emerald-50', text: 'text-emerald-600', icon: <Shield size={14} />   },
 ] as const;
 
-type ModuleKey = typeof MODULE_CONFIG[number]['key'];
-
 const TYPE_STYLE: Record<string, { badge: string; dot: string }> = {
   SIMPLE:    { badge: 'bg-gray-100   text-gray-600   border-gray-200',   dot: 'bg-gray-400'    },
   BRONZE:    { badge: 'bg-orange-50  text-orange-700 border-orange-200', dot: 'bg-orange-400'  },
@@ -258,7 +256,7 @@ const PageProfilage = () => {
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
                 <Pie data={pieData} cx="50%" cy="50%" outerRadius={75} dataKey="value" labelLine={false}
-                  label={({ percent }) => percent > 0.06 ? `${(percent * 100).toFixed(0)}%` : ''}>
+                  label={({ percent }) => (percent ?? 0) > 0.06 ? `${((percent ?? 0) * 100).toFixed(0)}%` : ''}>
                   {pieData.map((entry, i) => <Cell key={i} fill={entry.fill} />)}
                 </Pie>
                 <Tooltip content={<CustomTooltip />} />

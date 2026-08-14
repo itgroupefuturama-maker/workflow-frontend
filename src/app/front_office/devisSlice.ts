@@ -3,7 +3,9 @@ import axios from '../../service/Axios';
 
 export interface AnnulationPayload {
   raisonAnnul: string;
-  lignes: {
+  // Optionnel : la saisie de pénalités par ligne n'est pas (encore) exposée dans
+  // AnnulationDevisModal (UI commentée) — seule raisonAnnul est envoyée aujourd'hui.
+  lignes?: {
     id: string;
     puPenaliteCompagnieDevise: number;
     montantPenaliteCompagnieDevise: number;

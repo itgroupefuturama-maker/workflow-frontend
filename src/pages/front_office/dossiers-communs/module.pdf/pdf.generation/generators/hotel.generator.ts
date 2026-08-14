@@ -42,9 +42,9 @@ export const generateHotelPdf = (
 
   drawKeyValues(doc, cursor, [
     { label: 'N° Entête',          value: data.numeroEntete },
-    { label: 'Dossier',            value: data.prestation.numeroDos },
-    { label: 'Fournisseur',        value: `${data.fournisseur.libelle} (${data.fournisseur.code})` },
-    { label: 'Statut fournisseur', value: data.fournisseur.status },
+    { label: 'Dossier',            value: data.prestation?.numeroDos ?? '—' },
+    { label: 'Fournisseur',        value: data.fournisseur ? `${data.fournisseur.libelle} (${data.fournisseur.code})` : '—' },
+    { label: 'Statut fournisseur', value: data.fournisseur?.status ?? '—' },
     { label: 'Date création',      value: fmt.date(data.createdAt) },
     { label: 'Statut devis',       value: data.isDevis ? 'Devis établi' : 'En prospection' },
   ]);
@@ -120,7 +120,7 @@ export const generateHotelPdf = (
   if (options?.returnDoc) return doc;
 
   doc.save(
-    filename ?? `benchmarking-hotel-${data.numeroEntete}-${data.prestation.numeroDos}.pdf`
+    filename ?? `benchmarking-hotel-${data.numeroEntete}-${data.prestation?.numeroDos ?? data.id}.pdf`
   );
 };
 

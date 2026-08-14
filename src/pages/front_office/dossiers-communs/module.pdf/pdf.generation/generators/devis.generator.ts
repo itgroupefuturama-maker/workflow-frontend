@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import type { DevisListItem, DevisLigne, DevisExigence } from '../types/devis.types';
+import type { DevisListItem, DevisLigne } from '../types/devis.types';
 import type { PdfDesign, PdfAudience } from '../types/pdf-design.types';
 import {
   Cursor, checkPage, drawWatermark, drawSeparator, drawSectionTitle,
@@ -206,7 +206,6 @@ function drawEmiSegmentWithFare(
   checkPage(doc, cur, 70, design);
 
   const accentLine = design.colors.accentLine as [number, number, number];
-  const headerBg   = design.colors.headerBg   as [number, number, number];
 
   // ── Label section ─────────────────────────────────────────────────
   setColor(doc, accentLine, 'fill');
@@ -265,8 +264,8 @@ function drawEmiSegmentWithFare(
   doc.setFontSize(7);
   doc.setFont('helvetica', 'normal');
   setColor(doc, [120, 120, 130], 'text');
-  doc.text(fmt.time(l.dateHeureArrive), MARGIN + CONTENT_W, cur.y + 16, { align: 'right' });
-  doc.text(fmt.date(l.dateHeureArrive), MARGIN + CONTENT_W, cur.y + 21, { align: 'right' });
+  doc.text(l.dateHeureArrive ? fmt.time(l.dateHeureArrive) : '-', MARGIN + CONTENT_W, cur.y + 16, { align: 'right' });
+  doc.text(l.dateHeureArrive ? fmt.date(l.dateHeureArrive) : '-', MARGIN + CONTENT_W, cur.y + 21, { align: 'right' });
 
   // Ligne pointillée centrale
   const midX  = MARGIN + CONTENT_W / 2;
@@ -588,7 +587,7 @@ export function generateDevisPdf(
           sanitize(`${l.nombre ?? 1} ${l.typePassager ?? '-'}`),
           fmt.date(l.dateHeureDepart),
           fmt.time(l.dateHeureDepart),
-          fmt.time(l.dateHeureArrive),
+          l.dateHeureArrive ? fmt.time(l.dateHeureArrive) : '-',
           sanitize(l.dureeVol ?? '-'),
           sanitize(l.destinationVoyage?.pays?.pays ?? l.destinationVoyage?.ville ?? '-'),
         ]),

@@ -5,7 +5,6 @@ import { useState, useEffect } from "react";
 import type { RootState, AppDispatch } from "../../../../app/store";
 import {
   fetchClientBeneficiaireInfos,
-  type ClientBeneficiaireInfo,
 } from "../../../../app/portail_client/clientBeneficiaireInfosSlice";
 import axiosInstance from "../../../../service/Axios";
 import { fetchDossiersCommuns } from "../../../../app/front_office/dossierCommunSlice";
@@ -151,9 +150,7 @@ export default function DossierCommunManage() {
   };
 
   // === ÉTATS POUR LES DOCUMENTS ===
-  const [displayedBeneficiaireId, setDisplayedBeneficiaireId] = useState<string | null>(null);
-  const [selectedNewInfos, setSelectedNewInfos] = useState<ClientBeneficiaireInfo[]>([]);
-  const [isAddingClients, setIsAddingClients] = useState(false);
+  const [displayedBeneficiaireId] = useState<string | null>(null);
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   // Charger les infos quand on change d'onglet bénéficiaire
@@ -172,38 +169,6 @@ export default function DossierCommunManage() {
       return () => clearTimeout(timer);
     }
   }, [notification]);
-
-  const toggleNewInfo = (info: ClientBeneficiaireInfo) => {
-    setSelectedNewInfos((prev) =>
-      prev.find((i) => i.id === info.id) ? prev.filter((i) => i.id !== info.id) : [...prev, info]
-    );
-  };
-
-  const handleAddClients = async () => {
-    if (!dossier || selectedNewInfos.length === 0) return;
-    setIsAddingClients(true);
-    try {
-      // Calcul du code suivant (1001, 1002...)
-      const maxCode = dossier.dossierCommunClient?.reduce(
-        (max, c) => Math.max(max, c.code || 0), 1000
-      ) || 1000;
-
-      for (let i = 0; i < selectedNewInfos.length; i++) {
-        await axiosInstance.post(`/dossier-commun/${dossier.id}/clients`, {
-          clientbeneficiaireInfoId: selectedNewInfos[i].id,
-          code: maxCode + i + 1,
-        });
-      }
-
-      setNotification({ type: "success", message: `${selectedNewInfos.length} document(s) ajouté(s) !` });
-      setSelectedNewInfos([]);
-      // Optionnel: refresh le dossier ici
-    } catch (err: any) {
-      setNotification({ type: "error", message: "Erreur lors de l'ajout" });
-    } finally {
-      setIsAddingClients(false);
-    }
-  };
 
   if (!dossier) return <div className="p-10 text-center">Dossier introuvable</div>;
 

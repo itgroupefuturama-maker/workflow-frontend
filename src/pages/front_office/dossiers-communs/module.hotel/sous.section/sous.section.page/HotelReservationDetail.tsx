@@ -441,7 +441,7 @@ const HotelReservationDetail = () => {
 
   const showPreferences = useSelector((state: RootState) => state.ui.showPreferences);
 
-  const { selectedDetail, detailLoading, detailError } = useSelector(
+  const { selectedDetail, detailLoading } = useSelector(
     (state: RootState) => state.hotelReservationEntete
   );
   const clientFactureId = useSelector(
@@ -485,8 +485,6 @@ const HotelReservationDetail = () => {
   const { items: raisonsAnnulation, loading: raisonsLoading } = useSelector(
     (state: RootState) => state.raisonAnnulation
   );
-
-  const [selectedBenefForPrefs, setSelectedBenefForPrefs] = useState<any>(null);
 
   const tabs = [
     { id: 'prospection', label: 'Listes des entête benchmarking' },
@@ -625,51 +623,18 @@ const HotelReservationDetail = () => {
             <div className="shrink-0 px-4 bg-slate-200 rounded-lg">
               <div className="flex justify-between">
                 <HotelHeader numerohotel={entete?.HotelProspectionEntete.numeroEntete} navigate={navigate} isDetail={true} />
-                {/* ── Titre + actions ── */}
-                <div className="flex items-center justify-between flex-wrap gap-3">
-                  <div className="flex items-center gap-2 flex-wrap justify-end">
-                    <ActionButton label="BC Approuver" enabled={canApprouverBillet} variant="success"
-                      onClick={() => { setApprouverForm({ totalHotel, totalCommission }); setShowApprouverModal(true); }}
-                      icon={<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>}
-                    />
-                    <ActionButton
-                      label="Émission Billet"
-                      enabled={canEmissionBillet}
-                      variant="primary"
-                      onClick={() => {
-                        setEmissionBilletForm({ referenceBcClient: '', totalHotel, totalCommission });
-                        setShowEmissionBilletModal(true);
-                      }}
-                      icon={
-                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
-                        </svg>
-                      }
-                    />
-                    <ActionButton label="Émission Facture" enabled={entete?.statut === 'BILLET_EMIS'} variant="purple"
-                      onClick={() => { setEmissionFactureForm({ referenceFacClient: '' }); setShowEmissionFactureModal(true); }}
-                      icon={<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
-                    />
-                    <ActionButton label="Régler Facture" enabled={entete?.statut === 'FACTURE_EMISE'} variant="warning"
-                      onClick={() => setShowReglerModal(true)}
-                      icon={<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>}
-                    />
-                    <ActionButton label="Annuler" enabled={entete?.statut !== 'ANNULER'} variant="danger"
-                      onClick={() => { setAnnulationForm({ rasionAnnulationId: '', conditionAnnul: '' }); setShowAnnulationModal(true); }}
-                      icon={<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>}
-                    />
-                    <button
-                      onClick={() => dispatch(togglePreferences())}
-                      className={`inline-flex items-center gap-2 px-4 py-2.5 text-xs font-medium rounded-md transition-colors ${
-                        showPreferences
-                          ? 'bg-slate-700 text-white border border-neutral-300'
-                          : 'bg-white border border-neutral-300 text-neutral-700 hover:bg-neutral-50'
-                      }`}
-                    >
-                      {/* {showPreferences ? 'Préférences' : 'Préférences'} */}
-                      Préférences
-                    </button> 
-                  </div>
+                <div className='flex items-center gap-2 flex-wrap justify-end'>
+                  <button
+                    onClick={() => dispatch(togglePreferences())}
+                    className={`inline-flex items-center gap-2 px-4 py-2.5 text-xs font-medium rounded-md transition-colors ${
+                      showPreferences
+                        ? 'bg-slate-700 text-white border border-neutral-300'
+                        : 'bg-white border border-neutral-300 text-neutral-700 hover:bg-neutral-50'
+                    }`}
+                  >
+                    {/* {showPreferences ? 'Préférences' : 'Préférences'} */}
+                    Préférences
+                  </button> 
                 </div>
               </div>
 
@@ -725,7 +690,8 @@ const HotelReservationDetail = () => {
                 </div>
               </div>
 
-              <nav className="flex py-2 rounded-xl w-fit gap-2" aria-label="Tabs">
+              <div className='flex justify-between'>
+                <nav className="flex py-2 rounded-xl w-fit gap-2" aria-label="Tabs">
                 {(['lignes', 'suivi'] as const).map((tab) => {
                   const isActive = activeTabSousSection === tab;
                   const count = entete?.hotelLigne.length ?? 0;
@@ -760,7 +726,43 @@ const HotelReservationDetail = () => {
                     </button>
                   );
                 })}
-              </nav>
+                </nav>
+                {/* ── Titre + actions ── */}
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div className="flex items-center gap-2 flex-wrap justify-end">
+                    <ActionButton label="BC Approuver" enabled={canApprouverBillet} variant="success"
+                      onClick={() => { setApprouverForm({ totalHotel, totalCommission }); setShowApprouverModal(true); }}
+                      icon={<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>}
+                    />
+                    <ActionButton
+                      label="Émission Billet"
+                      enabled={canEmissionBillet}
+                      variant="primary"
+                      onClick={() => {
+                        setEmissionBilletForm({ referenceBcClient: '', totalHotel, totalCommission });
+                        setShowEmissionBilletModal(true);
+                      }}
+                      icon={
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                        </svg>
+                      }
+                    />
+                    <ActionButton label="Émission Facture" enabled={entete?.statut === 'BILLET_EMIS'} variant="purple"
+                      onClick={() => { setEmissionFactureForm({ referenceFacClient: '' }); setShowEmissionFactureModal(true); }}
+                      icon={<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
+                    />
+                    <ActionButton label="Régler Facture" enabled={entete?.statut === 'FACTURE_EMISE'} variant="warning"
+                      onClick={() => setShowReglerModal(true)}
+                      icon={<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>}
+                    />
+                    <ActionButton label="Annuler" enabled={entete?.statut !== 'ANNULER'} variant="danger"
+                      onClick={() => { setAnnulationForm({ rasionAnnulationId: '', conditionAnnul: '' }); setShowAnnulationModal(true); }}
+                      icon={<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>}
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="flex-1 min-h-0 overflow-y-auto py-2">

@@ -21,7 +21,7 @@ type Props = {
 const FormulaireDemandeClientFormulaire = ({ prestationId, numero, onSuccess }: Props) => {
   const dispatch = useDispatch<AppDispatch>();
 
-  const { items: attributs, loading: loadingAttributs } = useSelector(
+  const { items: attributs } = useSelector(
     (state: RootState) => state.demandeClientAttribut
   );
   const { creating } = useSelector((state: RootState) => state.demandeClient);
@@ -104,7 +104,10 @@ const FormulaireDemandeClientFormulaire = ({ prestationId, numero, onSuccess }: 
       prestationId,
       numero,
       fields: filled.map((f) => ({
-        demandeClientAttributId: f.demandeClientAttributId || undefined,
+        // La chaîne vide est le marqueur métier "nouvel attribut" attendu par l'API
+        // (cf. commentaire sur CreateDemandeClientBatchPayload) : on ne doit pas la
+        // convertir en undefined ici.
+        demandeClientAttributId: f.demandeClientAttributId,
         nom: f.nom,
         valeur: f.valeur,
       })),

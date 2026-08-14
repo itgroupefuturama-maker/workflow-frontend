@@ -1,26 +1,9 @@
 // ─── Entités de base ─────────────────────────────────────────────────
-
-export interface AttestationFournisseur {
-  id: string;
-  code: string;
-  libelle: string;
-  dateApplication: string;
-  status: string;
-  dateActivation: string;
-  dateDesactivation: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface AttestationPrestation {
-  id: string;
-  numeroDos: string;
-  status: string;
-  dossierCommunColabId: string;
-  dossierId: string;
-  createdAt: string;
-  updatedAt: string;
-}
+// prestation/fournisseur réexportés depuis le slice, source unique de vérité :
+// l'API /attestation/entete/... ne renvoie pas les champs étendus
+// (dossierCommunColabId, dossierId, dateApplication, ...), seulement ce sous-ensemble.
+import type { PrestationMini, FournisseurMini } from '../../../../../../app/front_office/parametre_attestation/attestationEnteteSlice';
+export type { PrestationMini as AttestationPrestation, FournisseurMini as AttestationFournisseur };
 
 // ─── Ligne d'attestation ─────────────────────────────────────────────
 
@@ -59,8 +42,8 @@ export interface AttestationEnteteItem {
   puAriary: number;
   createdAt: string;
   updatedAt: string;
-  prestation: AttestationPrestation;
-  fournisseur: AttestationFournisseur;
+  prestation: PrestationMini;
+  fournisseur: FournisseurMini;
   attestationLigne: AttestationLigne[];
 }
 
@@ -77,9 +60,10 @@ export interface AttestationDestinationVoyage {
   id: string;
   code: string;
   ville: string;
-  createdAt: string;
-  updatedAt: string;
-  paysId: string;
+  // Champs non garantis par l'endpoint /attestation/entete/... (voir slice AttestationLigne) :
+  createdAt?: string;
+  updatedAt?: string;
+  paysId?: string;
 }
 
 export interface ClientBeneficiaireInfo {
@@ -87,27 +71,29 @@ export interface ClientBeneficiaireInfo {
   nom: string;
   prenom: string;
   nationalite: string;
-  document: string;
   referenceDoc: string;
   typeDoc: string;
   dateDelivranceDoc: string;
   dateValiditeDoc: string;
-  clientType: string | null;
-  whatsapp: string | null;
-  tel: string;
-  clientbeneficiaireId: string;
-  clientBeneficiaireFormId: string;
   statut: string;
-  createdAt: string;
-  updatedAt: string;
+  // Champs non garantis par l'endpoint liste attestation (cf. attestationEnteteSlice.ClientBeneficiaireInfo) :
+  document?: string;
+  clientType?: string | null;
+  whatsapp?: string | null;
+  tel?: string;
+  clientbeneficiaireId?: string;
+  clientBeneficiaireFormId?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface AttestationPassager {
   id: string;
   clientbeneficiaireInfoId: string;
-  attestationLigneId: string;
-  createdAt: string;
-  updatedAt: string;
+  // Non garantis par l'endpoint liste (cf. attestationEnteteSlice.AttestationLigne.attestationPassager) :
+  attestationLigneId?: string;
+  createdAt?: string;
+  updatedAt?: string;
   clientbeneficiaireInfo: ClientBeneficiaireInfo;
 }
 
@@ -135,7 +121,8 @@ export interface AttestationLigne {
   createdAt: string;
   updatedAt: string;
   destinationVoyage?: AttestationDestinationVoyage;
-  attestationPassager: AttestationPassager[];  // ← ajout
+  // Optionnel : l'API ne renvoie pas toujours ce tableau (cf. attestationEnteteSlice.AttestationLigne).
+  attestationPassager?: AttestationPassager[];
 }
 
 // ─── Mode de rendu PDF ───────────────────────────────────────────────

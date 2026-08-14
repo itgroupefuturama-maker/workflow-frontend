@@ -1,5 +1,3 @@
-import React from "react";
-
 export const InfoField = ({ label, value }: { label: string; value?: string | null }) => (
   <div className="flex flex-col gap-0.5">
     <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">{label}</span>

@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
-import { FiCheck, FiCheckCircle, FiChevronDown, FiChevronRight, FiEye, FiMoreVertical, FiRefreshCw, FiX, FiDownload } from 'react-icons/fi';
+import { createPortal } from 'react-dom';
+import { FiCheck, FiCheckCircle, FiChevronDown, FiChevronRight, FiEye, FiMoreVertical, FiRefreshCw, FiX } from 'react-icons/fi';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { AppDispatch, RootState } from '../../../../../app/store';
 import { useDispatch, useSelector } from 'react-redux';
@@ -54,7 +55,7 @@ function getPrimaryAction(
     onApprouverClient: () => void;
     onTransformer: () => void;
   },
-  directionLoading: boolean
+  _directionLoading: boolean
 ): PrimaryAction {
   switch (statut) {
     case 'CREER':
@@ -105,30 +106,73 @@ function PrimaryActionButton({ action }: { action: PrimaryAction }) {
   );
 }
 
-function RowMenu({ items }: { items: { label: string; icon: React.ReactNode; onClick: () => void; disabled?: boolean; danger?: boolean }[] }) {
+const ROW_MENU_WIDTH = 208; // w-52
+
+function RowMenu({ items, onOpen }: { items: { label: string; icon: React.ReactNode; onClick: () => void; disabled?: boolean; danger?: boolean }[]; onOpen?: () => void }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (btnRef.current?.contains(target) || menuRef.current?.contains(target)) return;
+      setOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  useEffect(() => {
+    if (!open) return;
+    // Ferme le menu si la ligne défile hors de l'écran, pour éviter qu'il reste affiché ailleurs.
+    const close = () => setOpen(false);
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    return () => {
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
+    };
+  }, [open]);
+
+  const menuHeight = items.length * 34 + 8;
+
+  const handleToggle = () => {
+    setOpen((o) => {
+      const next = !o;
+      if (next) {
+        onOpen?.();
+        const rect = btnRef.current?.getBoundingClientRect();
+        if (rect) {
+          const openUpward = rect.bottom + menuHeight > window.innerHeight;
+          setPosition({
+            top: openUpward ? rect.top - menuHeight : rect.bottom + 4,
+            left: rect.right - ROW_MENU_WIDTH,
+          });
+        }
+      }
+      return next;
+    });
+  };
+
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative">
       <button
+        ref={btnRef}
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={handleToggle}
         className="p-1.5 rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
         title="Plus d'actions"
       >
         <FiMoreVertical size={16} />
       </button>
-      {open && (
-        <div className="absolute right-0 top-full mt-1 w-52 bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-20">
+      {open && position && createPortal(
+        <div
+          ref={menuRef}
+          style={{ position: 'fixed', top: position.top, left: position.left, width: ROW_MENU_WIDTH }}
+          className="bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-50"
+        >
           {items.map((item, i) => (
             <button
               key={i}
@@ -143,7 +187,8 @@ function RowMenu({ items }: { items: { label: string; icon: React.ReactNode; onC
               {item.label}
             </button>
           ))}
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
@@ -308,7 +353,8 @@ export default function Devis () {
                           <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Créé le</th>
                           <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Fournisseur</th>
                           <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Type de vol</th>
-                          <th className="px-4 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Commission</th>
+                          <th className="px-4 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Commission Appliquée</th>
+                          <th className="px-4 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Commission Proposée</th>
                           <th className="px-4 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Total</th>
                           <th className="px-4 py-3 text-center text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Statut</th>
                           <th className="px-4 py-3 text-center text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Preuve client</th>
@@ -360,6 +406,9 @@ export default function Devis () {
                                 <td className="px-4 py-3 text-right text-slate-600">
                                   {entete.commissionAppliquer != null ? `${entete.commissionAppliquer} %` : '—'}
                                 </td>
+                                <td className="px-4 py-3 text-right text-slate-600">
+                                  {entete.commissionPropose != null ? `${entete.commissionPropose} %` : '—'}
+                                </td>
                                 <td className="px-4 py-3 text-right font-medium text-slate-800">
                                   {devis.totalGeneral.toLocaleString('fr-FR')} Ar
                                 </td>
@@ -403,6 +452,7 @@ export default function Devis () {
                                     filename={`${devis.reference}.pdf`}
                                   />
                                     <RowMenu
+                                      onOpen={() => setOpenDevisId(devis.id)}
                                       items={[
                                         {
                                           label: 'Envoyer à la direction',
@@ -413,7 +463,7 @@ export default function Devis () {
                                         {
                                           label: 'Voir les billets',
                                           icon: <FiEye size={14} />,
-                                          disabled: devis.statut === 'ANNULER' || devis.statut === 'DEVIS_A_APPROUVER',
+                                          disabled: devis.statut !== 'DEVIS_APPROUVE',
                                           onClick: () => navigate(`/dossiers-communs/ticketing/pages/billet/${devis.id}?prospectionEnteteId=${devis.data?.entete?.id}`),
                                         },
                                         {
@@ -434,7 +484,7 @@ export default function Devis () {
 
                               {isOpen && (
                                 <tr className="bg-slate-50/60">
-                                  <td colSpan={10} className="px-4 pb-5 pt-1">
+                                  <td colSpan={11} className="px-4 pb-5 pt-1">
                                     {lignes.length > 0 ? (
                                       <div className="overflow-x-auto rounded-md border border-slate-200 bg-white">
                                         <table className="min-w-full text-xs">

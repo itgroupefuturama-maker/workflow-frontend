@@ -10,6 +10,7 @@ import { frontOfficeRoutes } from "./routes/FrontOffice.routes"; // Nouveau impo
 import FrontOfficeLayout from "./layouts/FrontOfficeLayout";
 import SuccesCreateCompte from "./pages/front_office/dossiers-communs/module.calendar/succesCreateCompte";
 import SpecificationClientForClient from "./pages/front_office/dossiers-communs/module.dossier.commun/specification.client/specificationClientForClient";
+import ToastContainer from "./components/Toast/ToastContainer";
 
 
 export function App() {
@@ -17,6 +18,7 @@ export function App() {
 
   return (
     <BrowserRouter>
+      <ToastContainer />
 
       <Routes>
         {/* LOGIN : Ne redirige pas vers "/" ici, laisse le composant LoginPage gérer le succès */}

@@ -23,9 +23,12 @@ const DeviseListe = () => {
   // ── Création ──
   const handleCreate = (data: any) => {
     dispatch(createDevise({ devise: data.devise.toUpperCase() })).then((result) => {
-      if (!result.payload?.error) {
+      if (createDevise.fulfilled.match(result)) {
         setShowAddDevise(false);
         dispatch(fetchDevises());
+      } else {
+        // rejectWithValue renvoie le message d'erreur directement dans result.payload (string)
+        console.error('Erreur lors de la création de la devise :', result.payload);
       }
     });
   };

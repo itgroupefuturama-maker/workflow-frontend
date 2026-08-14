@@ -72,7 +72,6 @@ export async function exportCompagnieAerienneExcel(opts: CompagnieExportOptions)
   row += 2;
 
   // ── En-tête tableau ──
-  const headerTopRow = row;
   sheet.mergeCells(row, 1, row + 1, 1);
   sheet.getCell(row, 1).value = codeAirlineNumeric;
   sheet.mergeCells(row, 2, row + 1, 2);

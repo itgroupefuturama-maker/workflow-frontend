@@ -83,7 +83,11 @@ const ClientFactureFormPage = () => {
         code: currentClient.code,
         libelle: currentClient.libelle,
         profilRisque: currentClient.profilRisque,
-        creditdefault: currentClient.creditdefault,
+        // ClientFacture.creditdefault est typé `string` côté slice (src/app/back_office/clientFacturesSlice.ts),
+        // mais le domaine réel n'a que ces 5 valeurs — ce sont les seules jamais écrites par ce formulaire
+        // (voir les <option> du <select> "Crédit par défaut" plus bas) et donc les seules que l'API peut renvoyer ici.
+        creditdefault: currentClient.creditdefault as
+          | 'CREDIT_0' | 'CREDIT_15' | 'CREDIT_30' | 'CREDIT_60' | 'CREDIT_90',
         tauxBase: currentClient.tauxBase,
         volDomestique: currentClient.volDomestique,
         volRegional: currentClient.volRegional,

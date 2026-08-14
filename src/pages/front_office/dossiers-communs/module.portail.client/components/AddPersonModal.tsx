@@ -4,7 +4,6 @@ import type { RootState, AppDispatch } from "../../../../../app/store";
 import { createClientPerson } from "../../../../../app/portail_client/clientFormSlice";
 import type { ClientPersonPayload } from "../../../../../app/portail_client/clientFormSlice";
 import { X, Loader2 } from "lucide-react";
-import { useParams } from "react-router-dom";
 
 const EMPTY_FORM: Omit<ClientPersonPayload, 'clientBeneficiaireFormId'> = {
   nom: '',

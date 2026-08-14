@@ -1,14 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../../../app/store';
-import { 
-  Bell, Calendar, Clock, MoreHorizontal, CheckCircle2, 
-  Trash2, Edit3, AlertCircle, ExternalLink, X, Check 
+import {
+  Bell, Clock, CheckCircle2,
+  Edit3, X, Check
 } from 'lucide-react';
 import {
   createTodo,
-  deactivateTodo,
-  deleteTodo,
   fetchTodosByPrestation,
   markAsDone,
   updateTodo,

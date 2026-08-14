@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { FiX, FiAlertTriangle } from 'react-icons/fi';
-// import type { Ligne } from '../../app/front_office/devisSlice'; // ajuste le chemin
+import type { Ligne } from '../../app/front_office/devisSlice';
 
 interface AnnulationModalProps {
   isOpen: boolean;
@@ -14,7 +14,9 @@ interface AnnulationModalProps {
     //   conditionAnnul: string;
     // }[];
   }) => void;
-  // lignes: Ligne[];
+  // Lignes du devis à annuler : réservé pour la saisie de pénalités par ligne
+  // (UI encore désactivée ci-dessous), non utilisé dans le payload envoyé pour l'instant.
+  lignes?: Ligne[];
   loading?: boolean;
 }
 

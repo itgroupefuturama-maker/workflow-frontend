@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState, AppDispatch } from '../../../../../app/store';
-import { FiLoader, FiAward } from 'react-icons/fi';
+import { FiLoader } from 'react-icons/fi';
 import { fetchAllMiles } from '../../../../../app/front_office/parametre_client_beneficiaire/clientMilesSlice';
 
 const typeClientColor: Record<string, string> = {

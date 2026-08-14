@@ -18,12 +18,21 @@ export interface VisaDevisDetail {
   prospectionVisa: {
     id: string;
     prestationId: string;
+    consulatId: string;
+    clientFacture: string;
+    numeroDossierCommun: number;
     prestation: {
       id: string;
       numeroDos: string;
       status: string;
       dossierId: string;
       dossierCommunColabId: string;
+      createdAt: string;
+      updatedAt: string;
+    };
+    consulat: {
+      id: string;
+      nom: string;
       createdAt: string;
       updatedAt: string;
     };

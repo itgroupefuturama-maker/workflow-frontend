@@ -72,21 +72,24 @@ export const Modal = ({ title, onClose, children }: { title: string; onClose: ()
   </div>
 );
 
-export const SubmitBtn = ({ loading, label }: { loading: boolean; label: string }) => (
+export const SubmitBtn = ({ loading, label, className = '' }: { loading: boolean; label: string; className?: string }) => (
   <button
     type="submit"
     disabled={loading}
-    className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-semibold rounded-lg transition"
+    className={`inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-xs font-semibold rounded-lg transition ${className}`}
   >
     {loading ? <Spinner /> : null}
     {loading ? 'Enregistrement…' : label}
   </button>
 );
 
-export const TableHeader = ({ title, count, onAdd }: { title: string; count: number; onAdd: () => void }) => (
+export const TableHeader = ({ title, subtitle, count, onAdd }: { title: string; subtitle?: string; count: number; onAdd: () => void }) => (
   <div className="flex items-center justify-between mb-4">
     <div className="flex items-center gap-2">
-      <h2 className="text-base font-bold text-gray-900">{title}</h2>
+      <div>
+        <h2 className="text-base font-bold text-gray-900">{title}</h2>
+        {subtitle && <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>}
+      </div>
       <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full font-medium">{count}</span>
     </div>
     <button
@@ -121,7 +124,7 @@ export const Card = ({ title, children, action, defaultCollapsed = false }: any)
     <div className="bg-white border border-slate-300 rounded-xl shadow-sm overflow-hidden transition-all">
       <div className="px-5 py-3.5 bg-slate-50/50 flex items-center justify-between border-b border-slate-300">
         <button
-          onClick={() => setCollapsed((p) => !p)}
+          onClick={() => setCollapsed((p: boolean) => !p)}
           className="flex items-center gap-3 group"
         >
           <div className={`p-1 rounded-lg bg-white border border-slate-200 shadow-sm transition-transform duration-300 ${collapsed ? '-rotate-90' : ''}`}>

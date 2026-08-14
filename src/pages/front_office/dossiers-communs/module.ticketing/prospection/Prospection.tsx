@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
-import { FiPlus, FiCheckSquare, FiX, FiFileText, FiLayout } from 'react-icons/fi';
+import { FiPlus, FiCheckSquare, FiX, FiFileText, FiSave } from 'react-icons/fi';
 import type { AppDispatch, RootState } from '../../../../../app/store';
-import { fetchProspectionLignes, createProspectionLigne, type CreateProspectionLignePayload, type ModePaiement } from '../../../../../app/front_office/prospectionsLignesSlice';
+import { fetchProspectionLignes, createProspectionLigne, type CreateProspectionLignePayload, type ServiceProspectionLigne, type ModePaiement } from '../../../../../app/front_office/prospectionsLignesSlice';
 import { fetchDestinations } from '../../../../../app/front_office/parametre_ticketing/destinationSlice';
 import { fetchPays } from '../../../../../app/front_office/parametre_ticketing/paysSlice';
 import TabContainer from '../../../../../layouts/TabContainer';
@@ -18,7 +18,8 @@ import axios from '../../../../../service/Axios';
 import { createPortal } from 'react-dom';
 import SuiviTabSection from '../../module.suivi/SuiviTabSection';
 import { ChevronDown } from 'lucide-react';
-import { fetchServicesByType, selectServicesByType } from '../../../../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
+import { selectServicesByType } from '../../../../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
+import { toast } from '../../../../../components/Toast/toast';
 
 export default function ProspectionDetail() {
   const { enteteId } = useParams<{ enteteId: string }>();
@@ -51,8 +52,8 @@ export default function ProspectionDetail() {
 
   const [showPenalite, setShowPenalite] = useState(false);
 
-  const { items: destinations, loading: loadingDest } = useSelector((state: RootState) => state.destination);
-  const { items: pays, loading: loadingPays } = useSelector((state: RootState) => state.pays);
+  const { items: destinations } = useSelector((state: RootState) => state.destination);
+  const { items: pays } = useSelector((state: RootState) => state.pays);
 
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedLigneIds, setSelectedLigneIds] = useState<string[]>([]);
@@ -60,17 +61,13 @@ export default function ProspectionDetail() {
   const {
       items: lignes,
       loading: loadingLignes,
-      error: errorLignes,
   } = useSelector((state: RootState) => state.prospectionsLignes);
 
   const servicesDisponibles = useSelector(selectServicesByType("TICKET"));
-  const loadingServices = useSelector((state: RootState) => state.serviceSpecifique.loading);
 
   const { data: fournisseurs, loading: fournisseursLoading } = useSelector(
     (state: RootState) => state.fournisseurs
   );
-
-  const loading = loadingLignes || loadingServices || loadingDest || loadingPays;
 
   const [newLine, setNewLine] = useState<any>(null);
   
@@ -268,7 +265,7 @@ export default function ProspectionDetail() {
       aeroportDepart:     formData.aeroportDepart || null,
       aeroportArrivee:    formData.aeroportArrivee || null,
 
-      // modePaiement: formData.modePaiement || 'COMPTANT',
+      modePaiement: (formData.modePaiement || 'COMPTANT') as ModePaiement,
 
       services: (formData.services || []).map((s: any) => ({
         serviceSpecifiqueId: s.serviceSpecifiqueId,
@@ -334,7 +331,7 @@ export default function ProspectionDetail() {
     updateNewLineField('typePassager',   s.typePassager   || 'ADULTE');
     updateNewLineField('dureeVol',       s.dureeVol       || '');
     updateNewLineField('dureeEscale',    s.dureeEscale    || '');
-    // updateNewLineField('modePaiement',   s.modePaiement   || 'COMPTANT');
+    updateNewLineField('modePaiement',   s.modePaiement   || 'COMPTANT');
     updateNewLineField('devise',                    s.devise      || 'EUR');
     updateNewLineField('tauxEchange',               s.tauxEchange || 4900);
     updateNewLineField('puBilletCompagnieDevise',   s.puBilletCompagnieDevise   || 0);
@@ -373,11 +370,31 @@ export default function ProspectionDetail() {
     if (!newLine || !enteteId) return;
 
     if (!newLine.departId || !newLine.destinationId) {
-      alert('Veuillez sélectionner un aéroport de départ et une destination');
+      toast.error('Veuillez sélectionner un aéroport de départ et une destination');
       return;
     }
     if (!newLine.numeroVol.trim() || !newLine.dateHeureDepart) {
-      alert('Veuillez remplir : numéro vol et date de départ');
+      toast.error('Veuillez remplir : numéro vol et date de départ');
+      return;
+    }
+    if (!newLine.avion?.trim()) {
+      toast.error('Veuillez renseigner l\'avion');
+      return;
+    }
+    if (!newLine.aeroportDepart?.trim() || !newLine.aeroportArrivee?.trim()) {
+      toast.error('Veuillez renseigner les aéroports de départ et d\'arrivée');
+      return;
+    }
+    if (!newLine.classe || !newLine.typePassager) {
+      toast.error('Veuillez sélectionner une classe et un type de passager');
+      return;
+    }
+    if (!Number(newLine.puBilletCompagnieDevise) || Number(newLine.puBilletCompagnieDevise) <= 0) {
+      toast.error('Veuillez renseigner le PU Billet Compagnie');
+      return;
+    }
+    if (!Number(newLine.tauxEchange) || Number(newLine.tauxEchange) <= 0) {
+      toast.error('Veuillez renseigner le taux de change');
       return;
     }
 
@@ -400,7 +417,7 @@ export default function ProspectionDetail() {
       dispatch(fetchProspectionLignes(enteteId));
       setNewLine(null);
     } catch (err: any) {
-      alert('Erreur création : ' + (err?.message || 'voir console'));
+      toast.error(err?.message || 'Veuillez vérifier la console', 'Erreur création');
       setNewLine((prev: any) => ({ ...prev, isSaving: false }));
     }
   };
@@ -429,11 +446,11 @@ export default function ProspectionDetail() {
       ).unwrap();
 
       // Optionnel : toast de succès
-      // alert("Commission appliquée mise à jour avec succès");
+      // toast.success("Commission appliquée mise à jour avec succès");
       closeModal();
     } catch (err: any) {
       console.error(err);
-      alert("Erreur lors de la sauvegarde : " + (err?.message || "Erreur inconnue"));
+      toast.error(err?.message || "Erreur inconnue", "Erreur lors de la sauvegarde");
     } finally {
       setIsSaving(false);
     }
@@ -443,7 +460,7 @@ export default function ProspectionDetail() {
     
     if (!entete?.prestationId) return;
     if (!newEntete.fournisseurId) {
-      alert("Veuillez sélectionner un fournisseur");
+      toast.error("Veuillez sélectionner un fournisseur");
       return;
     }
 
@@ -459,12 +476,12 @@ export default function ProspectionDetail() {
         })
       ).unwrap();
 
-      alert("En-tête créé avec succès !");
+      toast.success("En-tête créé avec succès !");
       closeCreateModal();
       // La liste est déjà mise à jour via le slice (push optimiste)
     } catch (err: any) {
       console.error(err);
-      alert("Erreur lors de la création : " + (err?.message || "Vérifiez la console"));
+      toast.error(err?.message || "Vérifiez la console", "Erreur lors de la création");
     } finally {
       setIsCreating(false);
     }
@@ -490,7 +507,7 @@ export default function ProspectionDetail() {
   };
 
   const updateNewLineField = (field: string, value: any) => {
-    setNewLine(prev => {
+    setNewLine((prev: any) => {
       let updated = { ...prev, [field]: value };
 
       if (field === 'departId' || field === 'destinationId') {
@@ -560,7 +577,7 @@ export default function ProspectionDetail() {
       aeroportDepart: '',
       aeroportArrivee: '',
       serviceValues: initialServiceValues,
-      // modePaiement: 'COMPTANT' as ModePaiement,
+      modePaiement: 'COMPTANT' as ModePaiement,
       isSaving: false,
     });
   };
@@ -596,11 +613,11 @@ export default function ProspectionDetail() {
         setSelectionMode(false);
         navigate(`/dossiers-communs/ticketing/pages/devis/${enteteId}`)
       } else {
-        alert('Réponse invalide du serveur');
+        toast.error('Réponse invalide du serveur');
       }
     } catch (err: any) {
       console.error(err);
-      alert('Erreur lors de la création du devis : ' + (err.response?.data?.message || err.message));
+      toast.error(err.response?.data?.message || err.message, 'Erreur lors de la création du devis');
     }
   };
 
@@ -617,8 +634,8 @@ export default function ProspectionDetail() {
   };
 
   const PANEL_HEIGHT = 320; // hauteur estimée du panneau (max-h-72 = 288px + header + footer)
-  const spaceBelow = window.innerHeight - (suggestionAnchor?.bottom + 4);
-  const spaceAbove = suggestionAnchor?.top - 4;
+  const spaceBelow = window.innerHeight - ((suggestionAnchor?.bottom ?? 0) + 4);
+  const spaceAbove = (suggestionAnchor?.top ?? 0) - 4;
   const showAbove = spaceBelow < PANEL_HEIGHT && spaceAbove > spaceBelow;
 
   const suggestionPortal = showSuggestions && suggestionAnchor && suggestions.length > 0
@@ -722,7 +739,7 @@ export default function ProspectionDetail() {
                 {/* Services Optionnels - Version Badges Épurés */}
                 {s.serviceProspectionLigne?.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-slate-100">
-                    {s.serviceProspectionLigne.map((svc) => (
+                    {s.serviceProspectionLigne.map((svc: ServiceProspectionLigne) => (
                       <span
                         key={svc.id}
                         className={`inline-flex items-center px-2 py-0.5 rounded text-[9px] font-bold border ${
@@ -777,98 +794,6 @@ export default function ProspectionDetail() {
             <div className="shrink-0 px-4 bg-slate-200 rounded-t-xl">
               <div className='flex items-center justify-between'>
                 <TicketingHeader items={prospectionDetailItems(enteteId)} />
-
-                {/* Barre d'Actions - Toolbar */}
-                <div className="flex items-center gap-3 flex-wrap">
-                  {selectionMode ? (
-                    <>
-                      {/* Mode Sélection - On se concentre sur l'action finale */}
-                      <button
-                        onClick={toggleSelectionMode}
-                        className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 hover:text-slate-800 transition-all active:scale-95 shadow-sm"
-                      >
-                        <FiX size={15} className="text-slate-400" />
-                        Annuler
-                      </button>
-
-                      <button
-                        onClick={handleCreateDevis}
-                        disabled={selectedLigneIds.length === 0}
-                        className={`flex items-center gap-2 px-5 py-2 text-sm font-bold rounded-lg transition-all active:scale-95 shadow-sm ${
-                          selectedLigneIds.length === 0
-                            ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                            : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-100'
-                        }`}
-                      >
-                        <FiCheckSquare size={15} />
-                        Créer le devis
-                        {selectedLigneIds.length > 0 && (
-                          <span className="ml-2 inline-flex items-center justify-center w-5 h-5 bg-white/20 backdrop-blur-md rounded-full text-[10px] font-black">
-                            {selectedLigneIds.length}
-                          </span>
-                        )}
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      {/* Navigation & Consultation */}
-                      <button
-                        onClick={() => navigate(`/dossiers-communs/ticketing/pages/devis/${enteteId}`)}
-                        className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-blue-700 bg-blue-50/50 border border-blue-300 rounded-lg hover:bg-blue-100 hover:text-blue-800 transition-all active:scale-95"
-                      >
-                        <FiFileText size={15} />
-                        Voir les devis
-                      </button>
-
-                      <div className="w-px h-6 bg-slate-200 mx-1 hidden md:block" />
-
-                      {/* Actions de Sélection */}
-                      <button
-                        onClick={toggleSelectionMode}
-                        disabled={lignes.length === 0 || !!newLine || loadingLignes}
-                        className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all active:scale-95 ${
-                          lignes.length === 0 || !!newLine || loadingLignes
-                            ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                            : 'text-emerald-700 bg-emerald-50/50 border border-emerald-300 hover:bg-emerald-100 hover:text-emerald-800'
-                        }`}
-                      >
-                        <FiCheckSquare size={15} />
-                        Sélectionner
-                      </button>
-
-                      <div className="w-px h-6 bg-slate-200 mx-1 hidden md:block" />
-
-                      {/* Actions d'Ajout - Groupées par style */}
-                      <div className="flex items-center gap-2 ml-auto">
-                        <button
-                          onClick={handleAddNewLine}
-                          disabled={!!newLine || loadingLignes || selectionMode || isModalOpen}
-                          className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all active:scale-95 border ${
-                            !!newLine || loadingLignes || selectionMode || isModalOpen
-                              ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed'
-                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-sm'
-                          }`}
-                        >
-                          <FiPlus size={15} />
-                          Ligne
-                        </button>
-
-                        <button
-                          onClick={() => setIsModalOpen(true)}
-                          disabled={!!newLine || loadingLignes || selectionMode}
-                          className={`flex items-center gap-2 px-5 py-2 text-sm font-bold rounded-lg transition-all active:scale-95 shadow-lg ${
-                            !!newLine || loadingLignes || selectionMode
-                              ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                              : 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-100'
-                          }`}
-                        >
-                          <FiPlus size={15} />
-                          Modals
-                        </button>
-                      </div>
-                    </>
-                  )}
-                </div>
               </div>
             </div>
 
@@ -905,7 +830,7 @@ export default function ProspectionDetail() {
                       {/* Actions */}
                       <div className="flex items-center gap-2 mr-2">
                         <button
-                          onClick={(e) => { e.stopPropagation(); openEditModal(entete); }}
+                          onClick={(e) => { e.stopPropagation(); if (entete) openEditModal(entete); }}
                           className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold text-slate-600 bg-white border border-slate-200 hover:border-indigo-500 hover:text-indigo-600 rounded-lg transition-all shadow-sm"
                         >
                           Modifier
@@ -987,6 +912,14 @@ export default function ProspectionDetail() {
                     Suivi
                   </button>
                 </nav>
+                {/* Navigation & Consultation */}
+                <button
+                  onClick={() => navigate(`/dossiers-communs/ticketing/pages/devis/${enteteId}`)}
+                  className="flex items-center gap-2 px-4 py-2 mb-2 text-sm font-semibold text-blue-600 bg-white border border-blue-500 rounded-lg hover:bg-blue-600 hover:text-white transition-all active:scale-95"
+                >
+                  <FiFileText size={15} />
+                  Voir les devis
+                </button>
               </div>
             </div>
 
@@ -994,23 +927,6 @@ export default function ProspectionDetail() {
               {activeTabSousSection === 'lignes' && (
                 <section className="bg-white shadow-sm border border-slate-300 overflow-hidden">
                   <div className="bg-white border-b border-gray-300">
-                    {/* Mode indicator bar */}
-                    {selectionMode && (
-                      <div className="bg-green-50 border-b border-green-200 px-6 py-2">
-                        <div className="flex items-center gap-2 text-sm">
-                          <div className="flex items-center justify-center w-5 h-5 bg-green-600 rounded-full">
-                            <FiCheckSquare className="text-white" size={12} />
-                          </div>
-                          <span className="font-medium text-green-900">
-                            Mode sélection activé
-                          </span>
-                          <span className="text-green-700">
-                            • Sélectionnez les lignes à inclure dans le devis
-                          </span>
-                        </div>
-                      </div>
-                    )}
-
                     {/* Main action bar */}
                     <div className="px-6 py-2">
                       <div className="flex flex-wrap justify-between items-center gap-4">
@@ -1032,10 +948,133 @@ export default function ProspectionDetail() {
                           </p>
                         </div>
 
-                        
+                        <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-3 flex-wrap">
+                            {selectionMode ? (
+                              <>
+                                <button
+                                  onClick={handleCreateDevis}
+                                  disabled={selectedLigneIds.length === 0}
+                                  className={`flex items-center gap-2 px-5 py-2 text-sm font-bold rounded-lg transition-all active:scale-95 shadow-sm ${
+                                    selectedLigneIds.length === 0
+                                      ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                                      : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-emerald-100'
+                                  }`}
+                                >
+                                  <FiCheckSquare size={15} />
+                                  Créer le devis
+                                  {selectedLigneIds.length > 0 && (
+                                    <span className="ml-2 inline-flex items-center justify-center w-5 h-5 bg-white/20 backdrop-blur-md rounded-full text-[10px] font-black">
+                                      {selectedLigneIds.length}
+                                    </span>
+                                  )}
+                                </button>
+                                {/* Mode Sélection - On se concentre sur l'action finale */}
+                                <button
+                                  onClick={toggleSelectionMode}
+                                  className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                                >
+                                  <FiX size={15} className="text-red-600" />
+                                  Annuler
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                {/* Actions d'Ajout - Groupées par style */}
+                                <div className="flex items-center gap-2 ml-auto">
+                                  {/* Actions de Sélection */}
+                                  <button
+                                    onClick={toggleSelectionMode}
+                                    disabled={lignes.length === 0 || !!newLine || loadingLignes}
+                                    className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all active:scale-95 ${
+                                      lignes.length === 0 || !!newLine || loadingLignes
+                                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                                        : 'text-emerald-700 bg-emerald-50/50 border border-emerald-300 hover:bg-emerald-100 hover:text-emerald-800'
+                                    }`}
+                                  >
+                                    <FiCheckSquare size={15} />
+                                    Sélectionner
+                                  </button>
+                                  <div className="w-px h-6 bg-slate-200 mx-1 hidden md:block" />
+                                  <button
+                                    onClick={handleAddNewLine}
+                                    disabled={!!newLine || loadingLignes || selectionMode || isModalOpen}
+                                    className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-lg transition-all active:scale-95 border ${
+                                      !!newLine || loadingLignes || selectionMode || isModalOpen
+                                        ? 'bg-slate-50 text-slate-300 border-slate-100 cursor-not-allowed'
+                                        : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-slate-300 shadow-sm'
+                                    }`}
+                                  >
+                                    <FiPlus size={15} />
+                                    Ligne
+                                  </button>
+                                  <button
+                                    onClick={() => setIsModalOpen(true)}
+                                    disabled={!!newLine || loadingLignes || selectionMode}
+                                    className={`flex items-center gap-2 px-5 py-2 text-sm font-bold rounded-lg transition-all active:scale-95 shadow-lg ${
+                                      !!newLine || loadingLignes || selectionMode
+                                        ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                                        : 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-100'
+                                    }`}
+                                  >
+                                    <FiPlus size={15} />
+                                    Modals
+                                  </button>
+                                </div>
+                                {/* Actions rapides pour la nouvelle ligne — visibles sans scroll horizontal */}
+                                {newLine && (
+                                  <div className="flex items-center gap-2">
+                                    <button
+                                      onClick={handleSaveNewLine}
+                                      disabled={newLine.isSaving}
+                                      className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium shadow-sm"
+                                    >
+                                      {newLine.isSaving ? (
+                                        <>
+                                          <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-white"></div>
+                                          Enregistrement...
+                                        </>
+                                      ) : (
+                                        <>
+                                          <FiSave size={15} />
+                                          Enregistrer la ligne
+                                        </>
+                                      )}
+                                    </button>
+                                    <button
+                                      onClick={handleCancelNewLine}
+                                      disabled={newLine.isSaving}
+                                      className="flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                                    >
+                                      <FiX size={15} />
+                                      Annuler
+                                    </button>
+                                  </div>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
+
+                  {/* Mode indicator bar */}
+                  {selectionMode && (
+                    <div className="bg-green-50 border-b border-green-200 px-6 py-2">
+                      <div className="flex items-center gap-2 text-sm">
+                        <div className="flex items-center justify-center w-5 h-5 bg-green-600 rounded-full">
+                          <FiCheckSquare className="text-white" size={12} />
+                        </div>
+                        <span className="font-medium text-green-900">
+                          Mode sélection activé
+                        </span>
+                        <span className="text-green-700">
+                          • Sélectionnez les lignes à inclure dans le devis
+                        </span>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Barre de contrôle des groupes */}
                   <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-2 flex-wrap">

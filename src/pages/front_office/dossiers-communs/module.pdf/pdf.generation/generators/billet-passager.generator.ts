@@ -246,7 +246,7 @@ function drawBilletCheckin(
 function drawBilletConsignes(
   doc: jsPDF,
   cur: Cursor,
-  data: BilletPassagerData,
+  _data: BilletPassagerData,
   style: BilletStyle,
 ) {
   checkPage(doc, cur, 70, style as any);
@@ -530,7 +530,6 @@ function drawBilletSegment(
 ) {
   const l              = data.ligne;
   const accentColor    = (style.colors.accentLine ?? style.colors.accentBg) as [number, number, number];
-  const headerBg       = style.colors.headerBg as [number, number, number];
   const servicesInclus = (l.services ?? []).filter(s => s.valeur !== 'false');
   const srvRows        = Math.ceil(servicesInclus.length / 3);
 

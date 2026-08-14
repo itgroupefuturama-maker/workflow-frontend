@@ -2,10 +2,9 @@ import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import type { AppDispatch, RootState } from '../../../../../../app/store';
-import { approuverDevis, clearVisaDevis, creerVisaEntete, envoyerDevis, fetchVisaDevis, genererPdfClient, genererPdfDirection } from '../../../../../../app/front_office/parametre_visa/visaDevisSlice';
+import { approuverDevis, clearVisaDevis, creerVisaEntete, envoyerDevis, fetchVisaDevis } from '../../../../../../app/front_office/parametre_visa/visaDevisSlice';
 import TabContainer from '../../../../../../layouts/TabContainer';
 import { VisaHeader } from '../../components/VisaHeader';
-import { API_URL } from '../../../../../../service/env';
 import { useVisaPdf } from '../../../module.pdf/pdf.generation/hooks/usePdfGenerator';
 import { Download, Eye } from 'lucide-react';
 
@@ -214,7 +213,7 @@ const PageDetailProspection = () => {
 
     if (!detail) return null;
 
-    const { devis, prospectionVisa, visaProspectionLignes, suivi } = detail;
+    const { devis, prospectionVisa, visaProspectionLignes } = detail;
 
     return (
         <div className="h-full flex flex-col min-h-0">

@@ -1,6 +1,15 @@
 import { FiCheck, FiChevronRight } from "react-icons/fi";
+import type { NavigateFunction } from "react-router-dom";
 
-export const HotelHeader = ({ numerohotel, navigate, isDetail = false, isBenchmarking = false, isDevis = false }) => {
+type HotelHeaderProps = {
+  numerohotel?: string | number | null;
+  navigate: NavigateFunction;
+  isDetail?: boolean;
+  isBenchmarking?: boolean;
+  isDevis?: boolean;
+};
+
+export const HotelHeader = ({ numerohotel, navigate, isDetail = false, isBenchmarking = false, isDevis = false }: HotelHeaderProps) => {
 
   const steps = isDetail ? [
     {
