@@ -21,6 +21,7 @@ import { fetchDevisTransactions } from '../app/back_office/devisTransactionsSlic
 import { fetchClientFactures } from '../app/back_office/clientFacturesSlice';
 import { fetchArticles } from '../app/back_office/articlesSlice';
 import { fetchFournisseurs } from '../app/back_office/fournisseursSlice';
+import { store } from '../app/store';
 import type { RootState, AppDispatch } from '../app/store';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
@@ -40,6 +41,10 @@ export default function ParametreLayout() {
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 3000,
+      // Fonction plutôt qu'objet statique : chaque tentative de connexion/reconnexion
+      // (y compris la reconnexion automatique interne de Socket.io) relit le token
+      // courant dans le store, au lieu de renvoyer celui figé à la création du socket.
+      auth: (cb) => cb({ token: store.getState().auth.token }),
     });
 
     socket.on('connect', () => {

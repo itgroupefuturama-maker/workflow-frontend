@@ -3,6 +3,7 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import io, { Socket } from 'socket.io-client';
 import AppBar from '../components/AppBar'; // ton AppBar actuelle
+import { store } from '../app/store';
 import type { RootState, AppDispatch } from '../app/store';
 import AppLoader from './AppLoader';
 
@@ -27,6 +28,10 @@ export default function FrontOfficeLayout() {
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 3000,
+      // Fonction plutôt qu'objet statique : chaque tentative de connexion/reconnexion
+      // (y compris la reconnexion automatique interne de Socket.io) relit le token
+      // courant dans le store, au lieu de renvoyer celui figé à la création du socket.
+      auth: (cb) => cb({ token: store.getState().auth.token }),
     });
 
     socket.on('connect', () => {
