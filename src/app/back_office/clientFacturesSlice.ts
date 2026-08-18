@@ -61,18 +61,39 @@ export interface PreferenceItem {
   count: number;
 }
 
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface FetchClientFacturesPaginatedParams {
+  page: number;
+  limit: number;
+  search?: string;
+  statut?: string;
+}
+
 export interface ClientFacturesState {
   data: ClientFacture[];
   current: ClientFactureDetail | null;
-  currentDetail: ClientFactureDetail | null;  
+  currentDetail: ClientFactureDetail | null;
   loading: boolean;
-  loadingDetail: boolean;                  
+  loadingDetail: boolean;
   error: string | null;
-  errorDetail: string | null;        
+  errorDetail: string | null;
   preferences: PreferenceItem[];
   loadingPreferences: boolean;
   errorPreferences: string | null;
-  preferencesClientId: string | null; 
+  preferencesClientId: string | null;
+  // Liste paginée (écran Client.Facture.tsx uniquement) — distincte de `data` ci-dessus,
+  // qui reste la liste complète non paginée utilisée comme source des dropdowns partout
+  // ailleurs dans l'app (formulaires de réservation, dossier commun, etc.).
+  listData: ClientFacture[];
+  listMeta: PaginationMeta;
+  listLoading: boolean;
+  listError: string | null;
 }
 
 const initialState: ClientFacturesState = {
@@ -87,6 +108,10 @@ const initialState: ClientFacturesState = {
   loadingPreferences: false,
   errorPreferences: null,
   preferencesClientId: null,
+  listData: [],
+  listMeta: { total: 0, page: 1, limit: 10, totalPages: 1 },
+  listLoading: false,
+  listError: null,
 };
 
 // Fetch tous les clients factures
@@ -107,6 +132,32 @@ export const fetchClientFactures = createAsyncThunk<
       return { success: true, data: response.data.data };
     }
     return rejectWithValue('Échec récupération des clients factures');
+  } catch (error: any) {
+    return rejectWithValue(error.response?.data?.message || 'Erreur réseau');
+  }
+});
+
+// Fetch paginé + recherche/filtre côté serveur (écran Client.Facture.tsx uniquement)
+export const fetchClientFacturesPaginated = createAsyncThunk<
+  { data: ClientFacture[]; meta: PaginationMeta },
+  FetchClientFacturesPaginatedParams,
+  { state: { auth: { token: string } } }
+>('clientFactures/fetchClientFacturesPaginated', async (params, { getState, rejectWithValue }) => {
+  try {
+    const { auth } = getState();
+    if (!auth.token) return rejectWithValue('Token manquant');
+
+    const response = await axiosInstance.get('/client-factures', {
+      headers: { Authorization: `Bearer ${auth.token}` },
+      params,
+    });
+
+    if (!response.data.success) {
+      return rejectWithValue('Échec récupération des clients factures');
+    }
+    // response.data.data = { data: ClientFacture[], meta: PaginationMeta }
+    const payload = response.data.data;
+    return { data: payload.data as ClientFacture[], meta: payload.meta as PaginationMeta };
   } catch (error: any) {
     return rejectWithValue(error.response?.data?.message || 'Erreur réseau');
   }
@@ -420,6 +471,19 @@ const clientFacturesSlice = createSlice({
       .addCase(fetchClientFactures.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+      })
+      .addCase(fetchClientFacturesPaginated.pending, (state) => {
+        state.listLoading = true;
+        state.listError = null;
+      })
+      .addCase(fetchClientFacturesPaginated.fulfilled, (state, action) => {
+        state.listLoading = false;
+        state.listData = action.payload.data;
+        state.listMeta = action.payload.meta;
+      })
+      .addCase(fetchClientFacturesPaginated.rejected, (state, action) => {
+        state.listLoading = false;
+        state.listError = action.payload as string;
       })
       .addCase(createClientFacture.pending, (state) => { state.loading = true; })
       .addCase(createClientFacture.fulfilled, (state) => { state.loading = false; })

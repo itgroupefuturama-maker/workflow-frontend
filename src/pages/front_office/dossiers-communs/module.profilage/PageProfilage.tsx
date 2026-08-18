@@ -11,9 +11,11 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend,
 } from 'recharts';
 import type { AppDispatch, RootState } from '../../../../app/store';
-import { fetchAllProfilage } from '../../../../app/front_office/parametre_baseDonnee/clientProfilageSlice';
+import { fetchAllProfilagePaginated } from '../../../../app/front_office/parametre_baseDonnee/clientProfilageSlice';
 import type { ClientProfilage } from '../../../../app/front_office/parametre_baseDonnee/clientProfilageSlice';
 import { FiArrowLeft } from 'react-icons/fi';
+import { useDebouncedValue } from '../../../../hooks/useDebouncedValue';
+import Pagination from '../../../../components/Pagination';
 
 /* ── Config ──────────────────────────────────────────────────────────────── */
 const MODULE_CONFIG = [
@@ -129,45 +131,61 @@ const ClientRow = ({ c, onClick }: { c: ClientProfilage; onClick: () => void }) 
 const PageProfilage = () => {
   const dispatch  = useDispatch<AppDispatch>();
   const navigate  = useNavigate();
-  const { all, loading, error } = useSelector((s: RootState) => s.clientProfilage);
-  const clients = all ?? [];
+  const {
+    listData: clients = [],
+    listMeta: meta = { total: 0, page: 1, limit: 10, totalPages: 1 },
+    listLoading: loading,
+    listError: error,
+  } = useSelector(
+    (s: RootState) => s.clientProfilage
+  );
 
   const [search,   setSearch]   = useState('');
+  const debouncedSearch = useDebouncedValue(search, 400);
   const [typeFilter, setTypeFilter] = useState('');
   const [chartView,  setChartView]  = useState<'bar' | 'pie'>('bar');
+  const [page, setPage] = useState(1);
+  // Chaque page déclenche un calcul de profil par client côté serveur (coûteux) —
+  // on limite volontairement les tailles de page proposées.
+  const [limit, setLimit] = useState(10);
 
-  useEffect(() => { dispatch(fetchAllProfilage()); }, [dispatch]);
+  // Revenir à la page 1 quand la recherche change
+  useEffect(() => { setPage(1); }, [debouncedSearch]);
 
-  /* ── Données filtrées ── */
-  const filtered = clients.filter(c => {
-    const q = search.toLowerCase();
-    const matchQ = !q || c.nomComplet.toLowerCase().includes(q) || c.code.toLowerCase().includes(q) || c.libelle.toLowerCase().includes(q);
-    const matchT = !typeFilter || c.typeClient === typeFilter;
-    return matchQ && matchT;
-  });
+  useEffect(() => {
+    dispatch(fetchAllProfilagePaginated({ page, limit, search: debouncedSearch || undefined }));
+  }, [dispatch, page, limit, debouncedSearch]);
 
-  /* ── KPIs globaux ── */
+  /* ── Filtre "type" — appliqué localement sur la page courante uniquement ──
+     (le backend /profilage/all ne propose pas de filtre par typeClient) */
+  const filtered = clients.filter(c => !typeFilter || c.typeClient === typeFilter);
+
+  /* ── KPIs ──
+     `totalClients` vient de `meta.total` (compte réel, peu coûteux) ; les autres
+     agrégats (dossiers, module le plus actif, top client, graphiques) ne peuvent
+     porter que sur la page actuellement chargée — calculer le profil de TOUS les
+     clients pour un total global serait justement ce que la pagination évite. */
   const totalDossiers  = clients.reduce((s, c) => s + c.modules.total, 0);
-  const totalClients   = clients.length;
+  const totalClients   = meta.total;
   const topClient      = [...clients].sort((a, b) => b.modules.total - a.modules.total)[0];
   const modulesTotaux  = MODULE_CONFIG.map(m => ({
     ...m,
     total: clients.reduce((s, c) => s + c.modules[m.key], 0),
   }));
 
-  /* ── Données graphique comparatif ── */
+  /* ── Données graphique comparatif (page courante) ── */
   const barData = filtered.map(c => ({
     name: c.libelle,
     ...Object.fromEntries(MODULE_CONFIG.map(m => [m.key, c.modules[m.key]])),
     total: c.modules.total,
   }));
 
-  /* ── Données camembert global ── */
+  /* ── Données camembert (page courante) ── */
   const pieData = modulesTotaux
     .filter(m => m.total > 0)
     .map(m => ({ name: m.label, value: m.total, fill: m.color }));
 
-  /* ── Types disponibles ── */
+  /* ── Types disponibles (page courante) ── */
   const types = [...new Set(clients.map(c => c.typeClient))];
 
   if (loading) return (
@@ -214,7 +232,7 @@ const PageProfilage = () => {
             color="text-indigo-600" bg="bg-indigo-50"
           />
           <KpiCard
-            label="Dossiers au total"
+            label="Dossiers (page courante)"
             value={totalDossiers}
             icon={<TrendingUp size={18} />}
             color="text-emerald-600" bg="bg-emerald-50"
@@ -222,7 +240,7 @@ const PageProfilage = () => {
           {modulesTotaux.sort((a, b) => b.total - a.total).slice(0, 1).map(m => (
             <KpiCard
               key={m.key}
-              label="Module le plus actif"
+              label="Module le plus actif (page)"
               value={m.label}
               sub={`${m.total} dossier${m.total > 1 ? 's' : ''}`}
               icon={m.icon}
@@ -231,7 +249,7 @@ const PageProfilage = () => {
           ))}
           {topClient && (
             <KpiCard
-              label="Client le plus actif"
+              label="Client le plus actif (page)"
               value={topClient.libelle}
               sub={`${topClient.modules.total} dossier${topClient.modules.total > 1 ? 's' : ''}`}
               icon={<Award size={18} />}
@@ -376,7 +394,7 @@ const PageProfilage = () => {
             </select>
 
             <span className="ml-auto text-xs text-gray-400 font-medium">
-              {filtered.length} / {clients.length} client{clients.length > 1 ? 's' : ''}
+              {filtered.length} affiché{filtered.length > 1 ? 's' : ''} sur {meta.total} client{meta.total > 1 ? 's' : ''}
             </span>
           </div>
 
@@ -409,6 +427,14 @@ const PageProfilage = () => {
               </tbody>
             </table>
           </div>
+
+          <Pagination
+            meta={meta}
+            onPageChange={setPage}
+            onLimitChange={(l) => { setLimit(l); setPage(1); }}
+            limitOptions={[10, 20]}
+            itemLabel="client"
+          />
         </div>
 
       </div>

@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchAllClientBeneficiaireInfos } from '../../../../app/portail_client/clientBeneficiaireInfosSlice';
+import { fetchAllClientBeneficiaireInfosPaginated } from '../../../../app/portail_client/clientBeneficiaireInfosSlice';
 import type { AppDispatch, RootState } from '../../../../app/store';
 import { useNavigate } from 'react-router-dom';
 import { API_URL } from '../../../../service/env';
+import { useDebouncedValue } from '../../../../hooks/useDebouncedValue';
+import Pagination from '../../../../components/Pagination';
 
 // ── Utilitaires ────────────────────────────────────────────────────────────
 
@@ -152,15 +154,38 @@ const ActiveChip: React.FC<{ label: string; onRemove: () => void }> = ({ label, 
 const PagePassport: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
-  const { list, loadingList, error } = useSelector((s: RootState) => s.clientBeneficiaireInfos);
+  const {
+    listData: list = [],
+    listMeta: meta = { total: 0, page: 1, limit: 10, totalPages: 1 },
+    listLoading: loadingList,
+    listError: error,
+  } = useSelector(
+    (s: RootState) => s.clientBeneficiaireInfos
+  );
 
   const [filterDoc,      setFilterDoc]      = useState<FilterDoc>('TOUS');
   const [filterType,     setFilterType]     = useState<FilterType>('TOUS');
   const [validityFilter, setValidityFilter] = useState<Set<ValidityBucket>>(new Set());
   const [sortKey,        setSortKey]        = useState<SortKey>(null);
   const [search,         setSearch]         = useState('');
+  const debouncedSearch = useDebouncedValue(search, 400);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
 
-  useEffect(() => { dispatch(fetchAllClientBeneficiaireInfos()); }, [dispatch]);
+  // Revenir à la page 1 quand la recherche ou les filtres serveur changent
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, filterDoc, filterType]);
+
+  useEffect(() => {
+    dispatch(fetchAllClientBeneficiaireInfosPaginated({
+      page,
+      limit,
+      search: debouncedSearch || undefined,
+      typeDoc: filterDoc !== 'TOUS' ? filterDoc : undefined,
+      clientType: filterType !== 'TOUS' ? filterType : undefined,
+    }));
+  }, [dispatch, page, limit, debouncedSearch, filterDoc, filterType]);
 
   const toggleValidity = (bucket: ValidityBucket) => {
     setValidityFilter((prev) => {
@@ -176,26 +201,15 @@ const PagePassport: React.FC = () => {
     delivrance_asc: 'Délivrance ↑', delivrance_desc: 'Délivrance ↓',
   };
 
+  // filterDoc, filterType et search sont désormais envoyés au serveur (voir useEffect ci-dessus).
+  // Il ne reste en local que le filtre par tranche de validité (pas de paramètre serveur
+  // équivalent — le backend n'offre qu'un binaire valide/expire) et le tri, appliqués
+  // uniquement sur la page actuellement chargée.
   const filtered = useMemo(() => {
     let data = list.filter((info) => {
-      if (filterDoc === 'PASSEPORT'     && info.typeDoc !== 'PASSEPORT')                              return false;
-      if (filterDoc === 'CIN'           && info.typeDoc !== 'CIN')                                    return false;
-      if (filterDoc === 'LAISSE_PASSER' && (info.typeDoc === 'PASSEPORT' || info.typeDoc === 'CIN'))  return false;
-      if (filterType !== 'TOUS'         && info.clientType !== filterType)                            return false;
       if (validityFilter.size > 0) {
         if (info.typeDoc !== 'PASSEPORT' || !info.dateValiditeDoc) return false;
         if (!validityFilter.has(getValidityBucket(info.dateValiditeDoc)))  return false;
-      }
-      if (search) {
-        const q = search.toLowerCase();
-        return (
-          info.nom.toLowerCase().includes(q) ||
-          info.prenom.toLowerCase().includes(q) ||
-          info.referenceDoc.toLowerCase().includes(q) ||
-          info.nationalite.toLowerCase().includes(q) ||
-          info.clientbeneficiaire?.libelle.toLowerCase().includes(q) ||
-          info.clientbeneficiaire?.code.toLowerCase().includes(q)
-        );
       }
       return true;
     });
@@ -214,7 +228,7 @@ const PagePassport: React.FC = () => {
       });
     }
     return data;
-  }, [list, filterDoc, filterType, validityFilter, sortKey, search]);
+  }, [list, validityFilter, sortKey]);
 
   // chips des filtres actifs
   const activeChips: { label: string; onRemove: () => void }[] = [];
@@ -247,7 +261,7 @@ const PagePassport: React.FC = () => {
         </button>
         <h1 className="text-xl font-medium text-slate-900 mb-1">Documents clients</h1>
         <p className="text-[13px] text-slate-500 mb-5">
-          {list.length} document{list.length > 1 ? 's' : ''} au total · Passeports, CIN et laissez-passer
+          {meta.total} document{meta.total > 1 ? 's' : ''} au total · Passeports, CIN et laissez-passer
         </p>
       </div>
 
@@ -485,6 +499,15 @@ const PagePassport: React.FC = () => {
               </tbody>
             </table>
           )}
+        </div>
+
+        <div className="shrink-0">
+          <Pagination
+            meta={meta}
+            onPageChange={setPage}
+            onLimitChange={(l) => { setLimit(l); setPage(1); }}
+            itemLabel="document"
+          />
         </div>
       </div>
     </div>

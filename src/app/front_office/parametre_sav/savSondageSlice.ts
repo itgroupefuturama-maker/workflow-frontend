@@ -36,8 +36,25 @@ export interface SavSondage {
   };
 }
 
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface FetchSavSondagesParams {
+  page: number;
+  limit: number;
+  search?: string;
+  statut?: string;
+  clientBeneficiaireId?: string;
+  lienSondageId?: string;
+}
+
 interface SavSondageState {
   items: SavSondage[];
+  meta: PaginationMeta;
   loading: boolean;
   sending: string | null; // id en cours d'envoi
   error: string | null;
@@ -45,18 +62,23 @@ interface SavSondageState {
 
 const initialState: SavSondageState = {
   items: [],
+  meta: { total: 0, page: 1, limit: 10, totalPages: 1 },
   loading: false,
   sending: null,
   error: null,
 };
 
+// Fetch paginé + recherche/filtres côté serveur — seul consommateur : TabSondage.tsx
+// (aucun autre écran n'utilise ce thunk ni `items`).
 export const fetchSavSondages = createAsyncThunk(
   'savSondage/fetchAll',
-  async (_, { rejectWithValue }) => {
+  async (params: FetchSavSondagesParams, { rejectWithValue }) => {
     try {
-      const res = await axiosInstance.get('/sav/sondage');
+      const res = await axiosInstance.get('/sav/sondage', { params });
       if (!res.data.success) throw new Error('Erreur chargement sondages');
-      return res.data.data as SavSondage[];
+      // Mode paginé : response.data.data = { data: SavSondage[], meta: PaginationMeta }
+      const payload = res.data.data;
+      return { data: payload.data as SavSondage[], meta: payload.meta as PaginationMeta };
     } catch (err: any) {
       return rejectWithValue(err?.response?.data?.message || 'Erreur chargement sondages');
     }
@@ -127,8 +149,10 @@ const savSondageSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(fetchSavSondages.pending,   (state) => { state.loading = true; state.error = null; })
-      .addCase(fetchSavSondages.fulfilled, (state, action: PayloadAction<SavSondage[]>) => {
-        state.loading = false; state.items = action.payload;
+      .addCase(fetchSavSondages.fulfilled, (state, action: PayloadAction<{ data: SavSondage[]; meta: PaginationMeta }>) => {
+        state.loading = false;
+        state.items = action.payload.data;
+        state.meta = action.payload.meta;
       })
       .addCase(fetchSavSondages.rejected,  (state, action) => {
         state.loading = false; state.error = action.payload as string;

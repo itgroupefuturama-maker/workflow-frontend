@@ -1,7 +1,7 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
-  fetchClientBeneficiaires,
+  fetchClientBeneficiairesPaginated,
   createClientBeneficiaire,
   updateClientBeneficiaire,
   activateClientBeneficiaire,
@@ -13,6 +13,8 @@ import type { ClientBeneficiaire } from '../../app/back_office/clientBeneficiair
 import { FiPlus, FiX, FiCheckCircle, FiAlertCircle, FiLoader, FiUserCheck, FiTag, FiSearch, FiArrowLeft } from 'react-icons/fi';
 import AuditModal from '../../components/AuditModal';
 import { useNavigate } from 'react-router-dom';
+import { useDebouncedValue } from '../../hooks/useDebouncedValue';
+import Pagination from '../../components/Pagination';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -20,11 +22,12 @@ const ClientBeneficiairePage = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
 
-  const { data: beneficiaires, loading, error: globalError } = useSelector((state: RootState) => state.clientBeneficiaires);
-
-  useEffect(() => {
-    dispatch(fetchClientBeneficiaires());
-  }, [dispatch]);
+  const {
+    listData: beneficiaires = [],
+    listMeta: meta = { total: 0, page: 1, limit: 10, totalPages: 1 },
+    listLoading: loading,
+    listError: globalError,
+  } = useSelector((state: RootState) => state.clientBeneficiaires);
 
   // UI States
   const [activeModal, setActiveModal] = useState<'none' | 'form'>('none');
@@ -38,26 +41,37 @@ const ClientBeneficiairePage = () => {
 
   const [typeClient, setTypeClient] = useState<'SIMPLE' | 'GOLD'| 'SILVER' | 'BRONZE' | 'VIP' >('SIMPLE');
 
-  // Gestion des Clients Factures liés
-  // const [setSearchFacture] = useState('');
-
   // Audit
   const [auditEntityId, setAuditEntityId] = useState<string | null>(null);
   const [auditEntityName, setAuditEntityName] = useState('');
 
-  // États pour la recherche globale
+  // États pour la recherche & les filtres serveur
   const [globalSearch, setGlobalSearch] = useState('');
-  const [searchFilters, setSearchFilters] = useState({
-    codeBen: true,
-    libelleBen: true,
-    codeFact: false,
-    libelleFact: false,
-  });
+  const debouncedSearch = useDebouncedValue(globalSearch, 400);
+  const [statutFilter, setStatutFilter] = useState<'' | 'ACTIF' | 'INACTIF'>('');
+  const [typeClientFilter, setTypeClientFilter] = useState<'' | 'SIMPLE' | 'GOLD' | 'SILVER' | 'BRONZE' | 'VIP'>('');
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
 
-  // Fonction pour basculer les filtres
-  const toggleFilter = (filter: keyof typeof searchFilters) => {
-    setSearchFilters(prev => ({ ...prev, [filter]: !prev[filter] }));
+  // Revenir à la page 1 quand la recherche ou les filtres changent
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, statutFilter, typeClientFilter]);
+
+  const loadList = () => {
+    dispatch(fetchClientBeneficiairesPaginated({
+      page,
+      limit,
+      search: debouncedSearch || undefined,
+      statut: statutFilter || undefined,
+      typeClient: typeClientFilter || undefined,
+    }));
   };
+
+  useEffect(() => {
+    loadList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dispatch, page, limit, debouncedSearch, statutFilter, typeClientFilter]);
 
   const closeModals = () => {
     setActiveModal('none');
@@ -65,13 +79,13 @@ const ClientBeneficiairePage = () => {
     setLibelle('');
     setStatut('ACTIF');
     setTypeClient('SIMPLE');
-    // setSearchFacture('');
     setMessage({ text: '', isError: false });
   };
 
   const handleAction = async (actionFn: any, payload: any) => {
     setIsSubmitting(true);
     await dispatch(actionFn(payload));
+    loadList(); // resynchronise la page paginée après activation/désactivation/suppression
     setIsSubmitting(false);
   };
 
@@ -85,6 +99,7 @@ const ClientBeneficiairePage = () => {
       const result = await dispatch(updateClientBeneficiaire({ id: editingClient.id, libelle, statut, typeClient }));
       if (updateClientBeneficiaire.fulfilled.match(result)) {
         setMessage({ text: 'Client bénéficiaire mis à jour !', isError: false });
+        loadList();
         setTimeout(closeModals, 1500);
       } else {
         setMessage({ text: 'Une erreur est survenue.', isError: true });
@@ -93,6 +108,7 @@ const ClientBeneficiairePage = () => {
       const result = await dispatch(createClientBeneficiaire({ libelle, statut, typeClient, dateApplication }))
       if (createClientBeneficiaire.fulfilled.match(result)) {
         setMessage({ text: 'Client bénéficiaire créé !', isError: false });
+        loadList();
         setTimeout(closeModals, 1500);
       } else {
         setMessage({ text: 'Une erreur est survenue.', isError: true });
@@ -100,28 +116,6 @@ const ClientBeneficiairePage = () => {
     }
     setIsSubmitting(false);
   };
-
-  const filteredBeneficiaires = useMemo(() => {
-    if (!globalSearch) return beneficiaires;
-
-    const search = globalSearch.toLowerCase();
-    
-    return beneficiaires.filter((ben) => {
-      // Vérification Bénéficiaire
-      const matchCodeBen = searchFilters.codeBen && ben.code.toLowerCase().includes(search);
-      const matchLibelleBen = searchFilters.libelleBen && ben.libelle.toLowerCase().includes(search);
-
-      // Vérification Client Facturé (dans la liste des factures liées)
-      const matchCodeFact = searchFilters.codeFact && ben.factures.some(f => 
-        f.clientFacture.code.toLowerCase().includes(search)
-      );
-      const matchLibelleFact = searchFilters.libelleFact && ben.factures.some(f => 
-        f.clientFacture.libelle.toLowerCase().includes(search)
-      );
-
-      return matchCodeBen || matchLibelleBen || matchCodeFact || matchLibelleFact;
-    });
-  }, [beneficiaires, globalSearch, searchFilters]);
 
   return (
     <div className="p-8 max-w-[1600px] mx-auto animate-in fade-in duration-500">
@@ -168,35 +162,37 @@ const ClientBeneficiairePage = () => {
           <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
           <input
             type="text"
-            placeholder="Rechercher par nom, code ou client facturé..."
+            placeholder="Rechercher par nom ou code du bénéficiaire..."
             value={globalSearch}
             onChange={(e) => setGlobalSearch(e.target.value)}
             className="w-full pl-11 pr-4 py-3 bg-transparent text-sm font-medium outline-none placeholder:text-gray-400"
           />
         </div>
-        
+
         <div className="h-8 w-1px bg-gray-100 hidden lg:block mx-2" />
 
-        <div className="flex flex-wrap gap-2 p-2 lg:p-0">
-          {[
-            { id: 'codeBen', label: 'Code Ben.', color: 'indigo' },
-            { id: 'libelleBen', label: 'Nom Ben.', color: 'indigo' },
-            { id: 'codeFact', label: 'Code Fact.', color: 'emerald' },
-            { id: 'libelleFact', label: 'Nom Fact.', color: 'emerald' },
-          ].map((filter) => (
-            <button 
-              key={filter.id} 
-              onClick={() => toggleFilter(filter.id as keyof typeof searchFilters)}
-              className={`px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider border transition-all ${
-                searchFilters[filter.id as keyof typeof searchFilters] 
-                ? `bg-${filter.color}-50 border-${filter.color}-200 text-${filter.color}-700` 
-                : 'bg-white border-gray-200 text-gray-400 hover:border-gray-300'
-              }`}
-            >
-              {filter.label}
-            </button>
-          ))}
-        </div>
+        <select
+          value={statutFilter}
+          onChange={(e) => setStatutFilter(e.target.value as '' | 'ACTIF' | 'INACTIF')}
+          className="px-4 py-3 bg-white border border-gray-100 rounded-xl outline-none font-bold text-xs uppercase tracking-widest text-gray-600 cursor-pointer"
+        >
+          <option value="">Tous statuts</option>
+          <option value="ACTIF">Actif</option>
+          <option value="INACTIF">Inactif</option>
+        </select>
+
+        <select
+          value={typeClientFilter}
+          onChange={(e) => setTypeClientFilter(e.target.value as typeof typeClientFilter)}
+          className="px-4 py-3 bg-white border border-gray-100 rounded-xl outline-none font-bold text-xs uppercase tracking-widest text-gray-600 cursor-pointer"
+        >
+          <option value="">Tous types</option>
+          <option value="SIMPLE">SIMPLE</option>
+          <option value="GOLD">GOLD</option>
+          <option value="SILVER">SILVER</option>
+          <option value="BRONZE">BRONZE</option>
+          <option value="VIP">VIP</option>
+        </select>
       </div>
 
       {/* TABLEAU */}
@@ -215,7 +211,7 @@ const ClientBeneficiairePage = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50 bg-white font-medium">
-            {filteredBeneficiaires.map((client) => (
+            {beneficiaires.map((client) => (
               <tr key={client.id} className="hover:bg-indigo-50/30 transition-colors">
                 <td className="px-6 py-4">
                   <span className="inline-flex items-center gap-2 text-xs font-mono font-black bg-gray-50 text-indigo-600 px-3 py-1 rounded-lg border border-gray-100">
@@ -313,13 +309,19 @@ const ClientBeneficiairePage = () => {
           </div>
         )}
 
-        {filteredBeneficiaires.length === 0 && !loading && (
+        {beneficiaires.length === 0 && !loading && (
           <tr>
             <td colSpan={7} className="p-20 text-center">
               <p className="text-gray-400 font-medium italic">Aucun résultat ne correspond à votre recherche.</p>
             </td>
           </tr>
         )}
+        <Pagination
+          meta={meta}
+          onPageChange={setPage}
+          onLimitChange={(l) => { setLimit(l); setPage(1); }}
+          itemLabel="bénéficiaire"
+        />
       </div>
 
       {/* MODALE FORMULAIRE */}

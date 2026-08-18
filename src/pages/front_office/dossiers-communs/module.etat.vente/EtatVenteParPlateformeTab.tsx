@@ -7,6 +7,12 @@ import {
   type PlateformeStat,
   type PlateformeReservation,
 } from '../../../../app/front_office/parametre_dashboard/dashboardSlice';
+import Pagination from '../../../../components/Pagination';
+
+// Statuts connus des réservations hôtel (le backend ne renvoie plus la liste complète
+// des réservations par plateforme une fois paginé — impossible de la déduire des données
+// affichées, donc on fixe la liste des valeurs possibles).
+const STATUTS_RESERVATION = ['FAIT', 'CLOTURER', 'CREER'];
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -229,7 +235,12 @@ const ReservationRow: React.FC<{ r: PlateformeReservation; idx: number }> = ({ r
 
 // ─── Bloc détail d'une plateforme ───────────────────────────────
 
-const PlateformeBlock: React.FC<{ pf: PlateformeStat; color: string }> = ({ pf, color }) => {
+const PlateformeBlock: React.FC<{
+  pf: PlateformeStat;
+  color: string;
+  onPageChange: (page: number) => void;
+  onLimitChange: (limit: number) => void;
+}> = ({ pf, color, onPageChange, onLimitChange }) => {
   const [expanded, setExpanded] = useState(true);
   const tauxCommissionMoyen = pf.montantResaAriary > 0 ? (pf.commissionTotaleAriary / pf.montantResaAriary) * 100 : 0;
   const ecartConfirmation = pf.montantResaAriary - pf.montantConfirmationAriary;
@@ -321,6 +332,15 @@ const PlateformeBlock: React.FC<{ pf: PlateformeStat; color: string }> = ({ pf, 
               </tfoot>
             </table>
           </div>
+
+          {pf.reservationsMeta && (
+            <Pagination
+              meta={pf.reservationsMeta}
+              onPageChange={onPageChange}
+              onLimitChange={onLimitChange}
+              itemLabel="réservation"
+            />
+          )}
         </div>
       )}
     </div>
@@ -338,71 +358,77 @@ const EtatVenteParPlateformeTab: React.FC = () => {
   const [dateDebut, setDateDebut] = useState('2026-01-01');
   const [dateFin, setDateFin] = useState('2027-06-30');
   const [statut, setStatut] = useState('');
+  // Pagination du tableau `reservations` — un seul contrôle piloté depuis n'importe quel
+  // groupe de plateforme (le backend n'accepte qu'un couple page/limit par requête ; chaque
+  // groupe affiche néanmoins son propre <Pagination> avec son propre `reservationsMeta`,
+  // car chaque plateforme a son propre total/totalPages).
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(20);
+
+  const loadData = (overrides?: { page?: number; limit?: number }) => {
+    dispatch(fetchEtatVenteParPlateforme({
+      du: dateDebut || undefined,
+      au: dateFin || undefined,
+      statut: statut || undefined,
+      page: overrides?.page ?? page,
+      limit: overrides?.limit ?? limit,
+    }));
+  };
 
   useEffect(() => {
-    dispatch(fetchEtatVenteParPlateforme({ du: dateDebut, au: dateFin }));
+    loadData({ page: 1, limit });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSearch = () => {
-    dispatch(fetchEtatVenteParPlateforme({ du: dateDebut, au: dateFin }));
+    setPage(1);
+    loadData({ page: 1 });
   };
 
   const handleReset = () => {
     setDateDebut('');
     setDateFin('');
     setStatut('');
-    dispatch(fetchEtatVenteParPlateforme({}));
+    setPage(1);
+    dispatch(fetchEtatVenteParPlateforme({ page: 1, limit }));
   };
 
-  // Liste des statuts disponibles (dynamique depuis les données)
-  const statutsDisponibles = useMemo(() => {
-    const set = new Set<string>();
-    etatVenteParPlateformeResultat?.plateformes.forEach((pf) =>
-      pf.reservations.forEach((r) => set.add(r.statut))
-    );
-    return Array.from(set);
-  }, [etatVenteParPlateformeResultat]);
+  const handleGroupPageChange = (newPage: number) => {
+    setPage(newPage);
+    loadData({ page: newPage });
+  };
 
-  // Filtrage client (par statut) — appliqué sur les données chargées
-  const plateformesFiltrees: PlateformeStat[] = useMemo(() => {
-    const source = etatVenteParPlateformeResultat?.plateformes || [];
-    if (!statut) return source;
-    return source
-      .map((pf) => {
-        const reservations = pf.reservations.filter((r) => r.statut === statut);
-        const montantResaAriary = reservations.reduce((s, r) => s + r.puResaMontantAriary, 0);
-        const montantConfirmationAriary = reservations.reduce((s, r) => s + r.puConfMontantNuitClientAriary, 0);
-        const commissionTotaleAriary = reservations.reduce((s, r) => s + r.confirmationCommissionAriary, 0);
-        return {
-          ...pf,
-          reservations,
-          nombreReservations: reservations.length,
-          montantResaAriary,
-          montantConfirmationAriary,
-          commissionTotaleAriary,
-        };
-      })
-      .filter((pf) => pf.reservations.length > 0);
-  }, [etatVenteParPlateformeResultat, statut]);
+  const handleGroupLimitChange = (newLimit: number) => {
+    setLimit(newLimit);
+    setPage(1);
+    loadData({ page: 1, limit: newLimit });
+  };
+
+  // Groupes tels que renvoyés par le backend — les agrégats (nombreReservations, montants)
+  // sont calculés côté serveur sur toute la période, jamais recalculés ici à partir du
+  // tableau `reservations` (qui n'est qu'une page).
+  const plateformes: PlateformeStat[] = useMemo(
+    () => etatVenteParPlateformeResultat?.plateformes || [],
+    [etatVenteParPlateformeResultat]
+  );
 
   const totalGlobal = useMemo(
     () => ({
-      reservations: plateformesFiltrees.reduce((s, p) => s + p.nombreReservations, 0),
-      montantResa: plateformesFiltrees.reduce((s, p) => s + p.montantResaAriary, 0),
-      montantConfirmation: plateformesFiltrees.reduce((s, p) => s + p.montantConfirmationAriary, 0),
-      commission: plateformesFiltrees.reduce((s, p) => s + p.commissionTotaleAriary, 0),
+      reservations: plateformes.reduce((s, p) => s + p.nombreReservations, 0),
+      montantResa: plateformes.reduce((s, p) => s + p.montantResaAriary, 0),
+      montantConfirmation: plateformes.reduce((s, p) => s + p.montantConfirmationAriary, 0),
+      commission: plateformes.reduce((s, p) => s + p.commissionTotaleAriary, 0),
     }),
-    [plateformesFiltrees]
+    [plateformes]
   );
 
-  const donutData = plateformesFiltrees.map((p, i) => ({
+  const donutData = plateformes.map((p, i) => ({
     label: p.plateforme.nom,
     value: p.nombreReservations,
     color: PLATFORM_COLORS[i % PLATFORM_COLORS.length],
   }));
 
-  const comparisonData = plateformesFiltrees.map((p, i) => ({
+  const comparisonData = plateformes.map((p, i) => ({
     label: p.plateforme.nom,
     resa: p.montantResaAriary,
     confirmation: p.montantConfirmationAriary,
@@ -441,7 +467,7 @@ const EtatVenteParPlateformeTab: React.FC = () => {
               className="px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-300 focus:border-indigo-400 transition bg-white"
             >
               <option value="">Tous les statuts</option>
-              {statutsDisponibles.map((s) => (
+              {STATUTS_RESERVATION.map((s) => (
                 <option key={s} value={s}>{s}</option>
               ))}
             </select>
@@ -495,13 +521,19 @@ const EtatVenteParPlateformeTab: React.FC = () => {
 
           {/* ── Détail par plateforme ── */}
           <div className="space-y-4">
-            {plateformesFiltrees.length === 0 ? (
+            {plateformes.length === 0 ? (
               <div className="py-16 text-center text-sm text-gray-400 bg-white rounded-2xl border border-gray-100">
                 Aucune donnée pour ce filtre
               </div>
             ) : (
-              plateformesFiltrees.map((pf, i) => (
-                <PlateformeBlock key={pf.plateforme.id} pf={pf} color={PLATFORM_COLORS[i % PLATFORM_COLORS.length]} />
+              plateformes.map((pf, i) => (
+                <PlateformeBlock
+                  key={pf.plateforme.id}
+                  pf={pf}
+                  color={PLATFORM_COLORS[i % PLATFORM_COLORS.length]}
+                  onPageChange={handleGroupPageChange}
+                  onLimitChange={handleGroupLimitChange}
+                />
               ))
             )}
           </div>

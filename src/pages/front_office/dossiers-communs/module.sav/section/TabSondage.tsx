@@ -3,6 +3,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../../../../app/store';
 import { fetchSavSondages, updateSavSondageStatus } from '../../../../../app/front_office/parametre_sav/savSondageSlice';
 import type { SavSondage } from '../../../../../app/front_office/parametre_sav/savSondageSlice';
+import { useDebouncedValue } from '../../../../../hooks/useDebouncedValue';
+import Pagination from '../../../../../components/Pagination';
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
@@ -210,15 +212,35 @@ function ModalEnvoiSondage({
 
 export default function TabSondage() {
   const dispatch = useDispatch<AppDispatch>();
-  const { items, loading } = useSelector((state: RootState) => state.savSondage);
+  const {
+    items = [],
+    meta = { total: 0, page: 1, limit: 10, totalPages: 1 },
+    loading,
+  } = useSelector((state: RootState) => state.savSondage);
   const { liensSondage } = useSelector((state: RootState) => state.savParams);
 
   const [modalItem, setModalItem]   = useState<SavSondage | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
+  const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search, 400);
+  const [statutFilter, setStatutFilter] = useState<'' | 'INACHEVE' | 'ACHEVE' | 'INACTIF'>('');
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+
+  // Revenir à la page 1 quand la recherche ou le filtre changent
   useEffect(() => {
-    dispatch(fetchSavSondages());
-  }, [dispatch]);
+    setPage(1);
+  }, [debouncedSearch, statutFilter]);
+
+  useEffect(() => {
+    dispatch(fetchSavSondages({
+      page,
+      limit,
+      search: debouncedSearch || undefined,
+      statut: statutFilter || undefined,
+    }));
+  }, [dispatch, page, limit, debouncedSearch, statutFilter]);
 
   const handleConfirmEnvoi = async (lienSondageId: string, numeroEnvoie: string) => {
     if (!modalItem) return;
@@ -234,9 +256,12 @@ export default function TabSondage() {
     setModalItem(null);
   };
 
-  const total   = items.length;
+  // `total` reflète le total serveur (toutes pages, selon recherche/filtre en cours).
+  // `acheves`/`taux` ne portent que sur la page actuellement chargée (le backend ne
+  // renvoie pas encore d'agrégats par statut sur cet endpoint).
+  const total   = meta.total;
   const acheves = items.filter((i) => i.status === 'ACHEVE').length;
-  const taux    = total > 0 ? Math.round((acheves / total) * 100) : 0;
+  const taux    = items.length > 0 ? Math.round((acheves / items.length) * 100) : 0;
 
   return (
     <div className="max-w-[1600px] mx-auto bg-slate-50 min-h-screen">
@@ -248,9 +273,34 @@ export default function TabSondage() {
           Gérez et suivez les retours clients en temps réel. Le système récupère la liste automatiquement après 15 jours de la date de vol du client Bénéficiaire.
         </p>
         <div className="flex gap-4 mt-6">
-          <MetricCard label="Total Sondages" value={total} />
-          <MetricCard label="Répondus"       value={acheves} subValue={`(${taux}%)`} />
-          <MetricCard label="En attente"     value={total - acheves} />
+          <MetricCard label="Total Sondages"    value={total} />
+          <MetricCard label="Répondus (page)"   value={acheves} subValue={`(${taux}%)`} />
+          <MetricCard label="En attente (page)" value={items.length - acheves} />
+        </div>
+      </div>
+
+      {/* Barre d'outils */}
+      <div className="flex flex-col md:flex-row gap-3 mb-4 justify-between items-center">
+        <div className="flex gap-2 w-full md:w-auto">
+          <div className="relative flex-1 md:w-72">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full text-sm pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-900/5 focus:border-slate-900 outline-none transition-all"
+              placeholder="Rechercher un sondage (n° envoi, client)..."
+            />
+            <span className="absolute left-3 top-2.5 text-slate-400">🔍</span>
+          </div>
+          <select
+            value={statutFilter}
+            onChange={(e) => setStatutFilter(e.target.value as '' | 'INACHEVE' | 'ACHEVE' | 'INACTIF')}
+            className="text-sm px-4 py-2 bg-white border border-slate-200 rounded-lg font-medium text-slate-600 hover:bg-slate-50 outline-none cursor-pointer"
+          >
+            <option value="">Tous statuts</option>
+            <option value="INACHEVE">Non envoyé</option>
+            <option value="ACHEVE">Envoyé</option>
+            <option value="INACTIF">Inactif</option>
+          </select>
         </div>
       </div>
 
@@ -271,7 +321,14 @@ export default function TabSondage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {items.map((row) => {
+              {loading && (
+                <tr>
+                  <td colSpan={8} className="py-16 text-center">
+                    <span className="inline-block w-5 h-5 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+                  </td>
+                </tr>
+              )}
+              {!loading && items.map((row) => {
                 const isAcheve  = row.status === 'ACHEVE';
                 const isSending = updatingId === row.id;
 
@@ -352,6 +409,7 @@ export default function TabSondage() {
             <p className="text-slate-400 text-sm font-medium">Aucun résultat trouvé.</p>
           </div>
         )}
+        <Pagination meta={meta} onPageChange={setPage} onLimitChange={(l) => { setLimit(l); setPage(1); }} itemLabel="sondage" />
       </div>
 
       {/* Modale */}

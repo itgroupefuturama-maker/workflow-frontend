@@ -36,29 +36,48 @@ export interface CompagnieClient {
   };
 }
 
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface FetchCompagnieClientsParams {
+  page: number;
+  limit: number;
+  search?: string;
+}
+
 interface CompagnieClientsState {
   items: CompagnieClient[];
+  meta: PaginationMeta;
   searchResults: CompagnieClient[];   // ← nouveau
-  loadingSearch: boolean;  
+  loadingSearch: boolean;
   loading: boolean;
   error: string | null;
 }
 
 const initialState: CompagnieClientsState = {
   items: [],
+  meta: { total: 0, page: 1, limit: 10, totalPages: 1 },
   searchResults: [],
   loadingSearch: false,
   loading: false,
   error: null,
 };
 
+// Fetch paginé + recherche côté serveur (page/limit/search) — seul consommateur :
+// PageMilesCompagnie.tsx (aucun autre écran n'utilise ce thunk ni `items`).
 export const fetchCompagnieClients = createAsyncThunk(
   'compagnieClients/fetchAll',
-  async (_, { rejectWithValue }) => {
+  async (params: FetchCompagnieClientsParams, { rejectWithValue }) => {
     try {
-      const res = await axiosInstance.get('/compagnie-clients');
+      const res = await axiosInstance.get('/compagnie-clients', { params });
       if (!res.data.success) throw new Error();
-      return res.data.data as CompagnieClient[];
+      // Mode paginé : response.data.data = { data: CompagnieClient[], meta: PaginationMeta }
+      const payload = res.data.data;
+      return { data: payload.data as CompagnieClient[], meta: payload.meta as PaginationMeta };
     } catch (err: any) {
       return rejectWithValue(err?.response?.data?.message || 'Erreur chargement compagnie clients');
     }
@@ -76,11 +95,11 @@ export interface CreateCompagnieClientPayload {
 
 export const createCompagnieClient = createAsyncThunk(
   'compagnieClients/create',
-  async (payload: CreateCompagnieClientPayload, { dispatch, rejectWithValue }) => {
+  async (payload: CreateCompagnieClientPayload, { rejectWithValue }) => {
     try {
       const res = await axiosInstance.post('/compagnie-clients', payload);
       if (!res.data.success) throw new Error();
-      dispatch(fetchCompagnieClients());
+      // Le rechargement de la liste paginée est géré par l'écran appelant (loadList()).
       return res.data.data as CompagnieClient;
     } catch (err: any) {
       return rejectWithValue(err?.response?.data?.message || 'Erreur création compagnie client');
@@ -96,11 +115,11 @@ export interface AddMilesPayload {
 
 export const addMilesCompagnie = createAsyncThunk(
   'compagnieClients/addMiles',
-  async (payload: AddMilesPayload, { dispatch, rejectWithValue }) => {
+  async (payload: AddMilesPayload, { rejectWithValue }) => {
     try {
       const res = await axiosInstance.post('/compagnie-clients/miles', payload);
       if (!res.data.success) throw new Error();
-      dispatch(fetchCompagnieClients());
+      // Le rechargement de la liste paginée est géré par l'écran appelant (loadList()).
       return res.data.data;
     } catch (err: any) {
       return rejectWithValue(err?.response?.data?.message || 'Erreur ajout miles');
@@ -110,11 +129,11 @@ export const addMilesCompagnie = createAsyncThunk(
 
 export const updateMilesCompagnie = createAsyncThunk(
   'compagnieClients/updateMiles',
-  async ({ id, miles }: { id: string; miles: number }, { dispatch, rejectWithValue }) => {
+  async ({ id, miles }: { id: string; miles: number }, { rejectWithValue }) => {
     try {
       const res = await axiosInstance.put(`/compagnie-clients/miles/${id}`, { miles });
       if (!res.data.success) throw new Error();
-      dispatch(fetchCompagnieClients());
+      // Le rechargement de la liste paginée est géré par l'écran appelant (loadList()).
       return res.data.data;
     } catch (err: any) {
       return rejectWithValue(err?.response?.data?.message || 'Erreur mise à jour miles');
@@ -145,9 +164,10 @@ const compagnieClientsSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchCompagnieClients.fulfilled, (state, action: PayloadAction<CompagnieClient[]>) => {
+      .addCase(fetchCompagnieClients.fulfilled, (state, action: PayloadAction<{ data: CompagnieClient[]; meta: PaginationMeta }>) => {
         state.loading = false;
-        state.items = action.payload;
+        state.items = action.payload.data;
+        state.meta = action.payload.meta;
       })
       .addCase(fetchCompagnieClients.rejected, (state, action) => {
         state.loading = false;

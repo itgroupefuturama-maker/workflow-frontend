@@ -35,16 +35,42 @@ export interface ClientBeneficiaire {
   factures: factures[];
 }
 
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface FetchClientBeneficiairesPaginatedParams {
+  page: number;
+  limit: number;
+  search?: string;
+  statut?: string;
+  typeClient?: string;
+}
+
 export interface ClientBeneficiairesState {
   data: ClientBeneficiaire[];
   loading: boolean;
   error: string | null;
+  // Liste paginée (écran Client.Beneficiaire.tsx uniquement) — distincte de `data` ci-dessus,
+  // qui reste la liste complète non paginée utilisée comme source des dropdowns partout
+  // ailleurs dans l'app (formulaires de réservation, dossier commun, module miles, etc.).
+  listData: ClientBeneficiaire[];
+  listMeta: PaginationMeta;
+  listLoading: boolean;
+  listError: string | null;
 }
 
 const initialState: ClientBeneficiairesState = {
   data: [],
   loading: false,
   error: null,
+  listData: [],
+  listMeta: { total: 0, page: 1, limit: 10, totalPages: 1 },
+  listLoading: false,
+  listError: null,
 };
 
 // Fetch tous les clients bénéficiaires
@@ -65,6 +91,32 @@ export const fetchClientBeneficiaires = createAsyncThunk<
       return { success: true, data: response.data.data };
     }
     return rejectWithValue('Échec récupération des clients bénéficiaires');
+  } catch (error: any) {
+    return rejectWithValue(error.response?.data?.message || 'Erreur réseau');
+  }
+});
+
+// Fetch paginé + recherche/filtre côté serveur (écran Client.Beneficiaire.tsx uniquement)
+export const fetchClientBeneficiairesPaginated = createAsyncThunk<
+  { data: ClientBeneficiaire[]; meta: PaginationMeta },
+  FetchClientBeneficiairesPaginatedParams,
+  { state: { auth: { token: string } } }
+>('clientBeneficiaires/fetchClientBeneficiairesPaginated', async (params, { getState, rejectWithValue }) => {
+  try {
+    const { auth } = getState();
+    if (!auth.token) return rejectWithValue('Token manquant');
+
+    const response = await axiosInstance.get('/client-beneficiaires', {
+      headers: { Authorization: `Bearer ${auth.token}` },
+      params,
+    });
+
+    if (!response.data.success) {
+      return rejectWithValue('Échec récupération des clients bénéficiaires');
+    }
+    // response.data.data = { data: ClientBeneficiaire[], meta: PaginationMeta }
+    const payload = response.data.data;
+    return { data: payload.data as ClientBeneficiaire[], meta: payload.meta as PaginationMeta };
   } catch (error: any) {
     return rejectWithValue(error.response?.data?.message || 'Erreur réseau');
   }
@@ -215,6 +267,19 @@ const clientBeneficiairesSlice = createSlice({
       .addCase(fetchClientBeneficiaires.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+      })
+      .addCase(fetchClientBeneficiairesPaginated.pending, (state) => {
+        state.listLoading = true;
+        state.listError = null;
+      })
+      .addCase(fetchClientBeneficiairesPaginated.fulfilled, (state, action) => {
+        state.listLoading = false;
+        state.listData = action.payload.data;
+        state.listMeta = action.payload.meta;
+      })
+      .addCase(fetchClientBeneficiairesPaginated.rejected, (state, action) => {
+        state.listLoading = false;
+        state.listError = action.payload as string;
       })
       .addCase(createClientBeneficiaire.pending, (state) => { state.loading = true; })
       .addCase(createClientBeneficiaire.fulfilled, (state) => { state.loading = false; })

@@ -2,7 +2,7 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import axiosInstance from '../../service/Axios';
 
-interface Todo {
+export interface Todo {
   id: string;
   prestationId: string;
   rappel: {
@@ -10,7 +10,7 @@ interface Todo {
     objet: string;
     moment: string;
     status: 'FAIT' | 'INACTIF' | 'SUPPRIMER';
-    type: 'NORMAL' | 'URGENT';
+    type: 'NORMAL' | 'URGENT' | 'FAIBLE';
   };
   prestation: {
     id: string;
@@ -28,16 +28,43 @@ interface Todo {
   status: 'ACTIF' | 'INACTIF';
 }
 
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface FetchTodosPaginatedParams {
+  page: number;
+  limit: number;
+  search?: string;
+  statut?: string;
+  type?: 'URGENT' | 'NORMAL' | 'FAIBLE';
+  periode?: 'passe' | 'avenir';
+}
+
 interface TodosState {
   items: Todo[];
   loading: boolean;
   error: string | null;
+  // Liste paginée (ToDoList.tsx uniquement) — distincte de `items` ci-dessus, qui reste
+  // alimentée par `fetchTodos`/`fetchTodosByPrestation` et utilisée ailleurs dans l'app
+  // (RappelsTable.tsx, SuiviTabContent.tsx du module ticketing).
+  listData: Todo[];
+  listMeta: PaginationMeta;
+  listLoading: boolean;
+  listError: string | null;
 }
 
 const initialState: TodosState = {
   items: [],
   loading: false,
   error: null,
+  listData: [],
+  listMeta: { total: 0, page: 1, limit: 10, totalPages: 1 },
+  listLoading: false,
+  listError: null,
 };
 
 export const fetchTodos = createAsyncThunk(
@@ -47,6 +74,22 @@ export const fetchTodos = createAsyncThunk(
       const res = await axiosInstance.get('/todolists');
       if (!res.data.success) throw new Error('Erreur');
       return res.data.data;
+    } catch (err: any) {
+      return rejectWithValue(err?.response?.data?.message || 'Erreur chargement todos');
+    }
+  }
+);
+
+// Fetch paginé + recherche/filtres côté serveur (écran ToDoList.tsx uniquement)
+export const fetchTodosPaginated = createAsyncThunk(
+  'todos/fetchAllPaginated',
+  async (params: FetchTodosPaginatedParams, { rejectWithValue }) => {
+    try {
+      const res = await axiosInstance.get('/todolists', { params });
+      if (!res.data.success) throw new Error('Erreur');
+      // res.data.data = { data: Todo[], meta: PaginationMeta }
+      const payload = res.data.data;
+      return { data: payload.data as Todo[], meta: payload.meta as PaginationMeta };
     } catch (err: any) {
       return rejectWithValue(err?.response?.data?.message || 'Erreur chargement todos');
     }
@@ -176,6 +219,20 @@ const todosSlice = createSlice({
       })
       .addCase(createTodo.fulfilled, (state, action) => {
         state.items.push(action.payload);
+      })
+      // ── PAGINATION (ToDoList.tsx) ─────────────────────
+      .addCase(fetchTodosPaginated.pending, (state) => {
+        state.listLoading = true;
+        state.listError = null;
+      })
+      .addCase(fetchTodosPaginated.fulfilled, (state, action) => {
+        state.listLoading = false;
+        state.listData = action.payload.data;
+        state.listMeta = action.payload.meta;
+      })
+      .addCase(fetchTodosPaginated.rejected, (state, action) => {
+        state.listLoading = false;
+        state.listError = action.payload as string;
       })
       // ── UPDATE ───────────────────────────────────────
     .addCase(updateTodo.pending, (state) => {

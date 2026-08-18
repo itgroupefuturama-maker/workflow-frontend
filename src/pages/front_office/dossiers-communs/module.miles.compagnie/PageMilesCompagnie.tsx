@@ -20,6 +20,8 @@ import ModalCreateCompagnie from './components/ModalCreateCompagnie';
 import ModalAddMiles from './components/ModalAddMiles';
 import ModalUpdateMiles from './components/ModalUpdateMiles';
 import ModalSearchBenef from './components/ModalSearchBenef';
+import { useDebouncedValue } from '../../../../hooks/useDebouncedValue';
+import Pagination from '../../../../components/Pagination';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -80,7 +82,11 @@ const PageMilesCompagnie = () => {
 
   const { data: fournisseurs, loading: loadingFourn } = useSelector((s: RootState) => s.fournisseurs);
   const { data: beneficiaires, loading: loadingBenef } = useSelector((s: RootState) => s.clientBeneficiaires);
-  const { items: compagnieClients, loading: loadingCC } = useSelector((s: RootState) => s.compagnieClients);
+  const {
+    items: compagnieClients = [],
+    meta = { total: 0, page: 1, limit: 10, totalPages: 1 },
+    loading: loadingCC,
+  } = useSelector((s: RootState) => s.compagnieClients);
 
   const [showHistorique, setShowHistorique] = useState<CompagnieClient | null>(null);
 
@@ -96,6 +102,9 @@ const PageMilesCompagnie = () => {
   const [showSearch, setShowSearch]           = useState(false);
   const [ccFilters, setCCFilters]             = useState<CCFilters>(emptyCCFilters);
   const [search, setSearch]                   = useState('');
+  const debouncedSearch = useDebouncedValue(search, 400);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
 
   const setFilter = (key: keyof CCFilters, value: string) =>
     setCCFilters((prev) => ({ ...prev, [key]: value }));
@@ -104,29 +113,28 @@ const PageMilesCompagnie = () => {
 
   const activeCount = Object.values(ccFilters).filter(Boolean).length + (search ? 1 : 0);
 
-  const clientOptions = useMemo(() => {
-    const seen = new Set<string>();
-    return compagnieClients
-      .map((cc) => ({ id: cc.clientBeneficiaire.id, label: cc.clientBeneficiaire.libelle }))
-      .filter((o) => seen.has(o.id) ? false : (seen.add(o.id), true));
-  }, [compagnieClients]);
+  // Options de filtre construites à partir des listes complètes (bénéficiaires/fournisseurs),
+  // pas de la page courante de compagnieClients — sinon elles seraient tronquées par la pagination.
+  const clientOptions = useMemo(
+    () => beneficiaires.map((b) => ({ id: b.id, label: b.libelle })),
+    [beneficiaires]
+  );
 
-  const fournisseurOptions = useMemo(() => {
-    const seen = new Set<string>();
-    return compagnieClients
-      .map((cc) => ({ id: cc.fournisseur.id, label: cc.fournisseur.libelle }))
-      .filter((o) => seen.has(o.id) ? false : (seen.add(o.id), true));
-  }, [compagnieClients]);
+  const fournisseurOptions = useMemo(
+    () => fournisseurs.map((f) => ({ id: f.id, label: f.libelle })),
+    [fournisseurs]
+  );
 
+  // Filtres additionnels (client/fournisseur/miles/expiration) : le backend de
+  // `/compagnie-clients` n'expose pour l'instant que `search` (identifiant/n° carte/
+  // nom client/nom fournisseur), pas ces filtres dédiés. Ils restent donc appliqués
+  // côté client, uniquement sur la page actuellement chargée.
   const filteredCC = useMemo(() => {
     const today = new Date(); today.setHours(0, 0, 0, 0);
-    const q = search.toLowerCase();
     return compagnieClients.filter((cc) => {
       const totalMiles = cc.milesCompagnie.reduce((s, m) => s + m.miles, 0);
       const expDate = cc.milesCompagnie[0] ? new Date(cc.milesCompagnie[0].dateExpiration) : null;
 
-      if (q && ![cc.identifiant, cc.numeroCarte, cc.clientBeneficiaire.libelle, cc.fournisseur.libelle]
-        .some((v) => v?.toLowerCase().includes(q))) return false;
       if (ccFilters.client      && cc.clientBeneficiaire.id !== ccFilters.client) return false;
       if (ccFilters.fournisseur && cc.fournisseur.id !== ccFilters.fournisseur)   return false;
       if (ccFilters.milesMin    && totalMiles < Number(ccFilters.milesMin))        return false;
@@ -137,13 +145,30 @@ const PageMilesCompagnie = () => {
       if (ccFilters.hasExpired === 'active'  && (!expDate || expDate < today))  return false;
       return true;
     });
-  }, [compagnieClients, ccFilters, search]);
+  }, [compagnieClients, ccFilters]);
 
   useEffect(() => {
     dispatch(fetchFournisseurs());
     dispatch(fetchClientBeneficiaires());
-    dispatch(fetchCompagnieClients());
   }, [dispatch]);
+
+  // Revenir à la page 1 quand la recherche change
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
+
+  const loadList = () => {
+    dispatch(fetchCompagnieClients({
+      page,
+      limit,
+      search: debouncedSearch || undefined,
+    }));
+  };
+
+  useEffect(() => {
+    loadList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dispatch, page, limit, debouncedSearch]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -160,7 +185,7 @@ const PageMilesCompagnie = () => {
       clientBeneficiaireId: form.clientBeneficiaireId, fournisseurId: form.fournisseurId,
       miles: form.miles > 0 ? [{ miles: Number(form.miles), dateExpiration: new Date(form.dateExpiration).toISOString() }] : [],
     }));
-    if (createCompagnieClient.fulfilled.match(result)) { setForm(emptyForm); setShowCreate(false); }
+    if (createCompagnieClient.fulfilled.match(result)) { setForm(emptyForm); setShowCreate(false); loadList(); }
     else setFormError(result.payload as string);
   };
 
@@ -176,7 +201,7 @@ const PageMilesCompagnie = () => {
       dateExpiration: new Date(milesForm.dateExpiration).toISOString(),
       compagnieClientId: selectedCC.id,
     }));
-    if (addMilesCompagnie.fulfilled.match(result)) { setShowAddMiles(false); setSelectedCC(null); }
+    if (addMilesCompagnie.fulfilled.match(result)) { setShowAddMiles(false); setSelectedCC(null); loadList(); }
     else setMilesError(result.payload as string);
   };
 
@@ -190,11 +215,11 @@ const PageMilesCompagnie = () => {
     e.preventDefault(); if (!selectedCC || selectedCC.milesCompagnie.length === 0) return;
     const milesId = selectedCC.milesCompagnie[0].id;
     const result = await dispatch(updateMilesCompagnie({ id: milesId, miles: updateMilesValue }));
-    if (updateMilesCompagnie.fulfilled.match(result)) { setShowUpdateMiles(false); setSelectedCC(null); }
+    if (updateMilesCompagnie.fulfilled.match(result)) { setShowUpdateMiles(false); setSelectedCC(null); loadList(); }
     else setMilesError(result.payload as string);
   };
 
-  if (loadingBenef || loadingFourn || loadingCC) {
+  if (loadingBenef || loadingFourn) {
     return (
       <div className="flex items-center justify-center h-screen">
         <FiLoader className="animate-spin text-indigo-600" size={28} />
@@ -347,7 +372,7 @@ const PageMilesCompagnie = () => {
 
             <div className="ml-auto flex items-center gap-3">
               <span className="text-xs text-gray-400 font-medium">
-                {filteredCC.length} / {compagnieClients.length} résultat(s)
+                {filteredCC.length} / {compagnieClients.length} sur cette page — {meta.total} au total
               </span>
               {activeCount > 0 && (
                 <button onClick={clearAllFilters}
@@ -374,7 +399,13 @@ const PageMilesCompagnie = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50 bg-white">
-                {filteredCC.length === 0 ? (
+                {loadingCC ? (
+                  <tr>
+                    <td colSpan={8} className="px-6 py-16 text-center">
+                      <FiLoader className="animate-spin text-indigo-500 mx-auto" size={24} />
+                    </td>
+                  </tr>
+                ) : filteredCC.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="px-6 py-16 text-center text-gray-400 italic text-sm">
                       {compagnieClients.length === 0 ? 'Aucun miles compagnie enregistré.' : 'Aucun résultat pour ces filtres.'}
@@ -470,6 +501,12 @@ const PageMilesCompagnie = () => {
               </tbody>
             </table>
           </div>
+          <Pagination
+            meta={meta}
+            onPageChange={setPage}
+            onLimitChange={(l) => { setLimit(l); setPage(1); }}
+            itemLabel="miles compagnie"
+          />
         </div>
       </div>
 

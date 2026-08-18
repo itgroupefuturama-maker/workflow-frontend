@@ -28,25 +28,51 @@ export interface ClientMiles {
   milesABT: number;
 }
 
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface FetchAllMilesParams {
+  page: number;
+  limit: number;
+  search?: string;
+  statut?: string;
+  typeClient?: string;
+}
+
 interface ClientMilesState {
   items: ClientMiles[];
+  meta: PaginationMeta;
   loading: boolean;
   error: string | null;
 }
 
 const initialState: ClientMilesState = {
   items: [],
+  meta: { total: 0, page: 1, limit: 10, totalPages: 1 },
   loading: false,
   error: null,
 };
 
-export const fetchAllMiles = createAsyncThunk(
+// Fetch paginé + recherche/filtre côté serveur. Seul consommateur de ce slice :
+// TabMilesClient.tsx — pas besoin de dupliquer l'état, on transforme directement
+// le thunk existant en version paginée.
+export const fetchAllMiles = createAsyncThunk<
+  { data: ClientMiles[]; meta: PaginationMeta },
+  FetchAllMilesParams,
+  { rejectValue: string }
+>(
   'clientMiles/fetchAll',
-  async (_, { rejectWithValue }) => {
+  async (params, { rejectWithValue }) => {
     try {
-      const res = await axiosInstance.get('/client-beneficiaires/all-miles');
+      const res = await axiosInstance.get('/client-beneficiaires/all-miles', { params });
       if (!res.data.success) throw new Error();
-      return res.data.data as ClientMiles[];
+      // Mode paginé : res.data.data = { data: ClientMiles[], meta: PaginationMeta }
+      const payload = res.data.data;
+      return { data: payload.data as ClientMiles[], meta: payload.meta as PaginationMeta };
     } catch (err: any) {
       return rejectWithValue(err?.response?.data?.message || 'Erreur chargement miles');
     }
@@ -65,7 +91,8 @@ const clientMilesSlice = createSlice({
       })
       .addCase(fetchAllMiles.fulfilled, (state, action) => {
         state.loading = false;
-        state.items = action.payload;
+        state.items = action.payload.data;
+        state.meta = action.payload.meta;
       })
       .addCase(fetchAllMiles.rejected, (state, action) => {
         state.loading = false;

@@ -1,8 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { RootState, AppDispatch } from '../../../../../app/store';
-import { FiLoader } from 'react-icons/fi';
+import { FiLoader, FiSearch } from 'react-icons/fi';
 import { fetchAllMiles } from '../../../../../app/front_office/parametre_client_beneficiaire/clientMilesSlice';
+import { useDebouncedValue } from '../../../../../hooks/useDebouncedValue';
+import Pagination from '../../../../../components/Pagination';
 
 const typeClientColor: Record<string, string> = {
   SIMPLE:    'bg-gray-100 text-gray-600',
@@ -15,20 +17,34 @@ const typeClientColor: Record<string, string> = {
 
 const TabMilesClient = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { items, loading, error } = useSelector((state: RootState) => state.clientMiles);
+  const {
+    items = [],
+    meta = { total: 0, page: 1, limit: 10, totalPages: 1 },
+    loading,
+    error,
+  } = useSelector((state: RootState) => state.clientMiles);
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebouncedValue(searchTerm, 400);
+  const [statutFilter, setStatutFilter] = useState<'' | 'ACTIF' | 'INACTIF'>('');
+  const [typeClientFilter, setTypeClientFilter] = useState<'' | 'SIMPLE' | 'GOLD' | 'SILVER' | 'BRONZE' | 'VIP'>('');
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+
+  // Revenir à la page 1 quand la recherche ou les filtres changent
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, statutFilter, typeClientFilter]);
 
   useEffect(() => {
-    dispatch(fetchAllMiles());
-  }, [dispatch]);
-
-  if (loading) {
-    return (
-      <div className="p-20 flex flex-col items-center justify-center text-gray-400 gap-3">
-        <FiLoader className="animate-spin text-indigo-600" size={32} />
-        <p className="text-[10px] font-black uppercase tracking-widest">Chargement des miles...</p>
-      </div>
-    );
-  }
+    dispatch(fetchAllMiles({
+      page,
+      limit,
+      search: debouncedSearch || undefined,
+      statut: statutFilter || undefined,
+      typeClient: typeClientFilter || undefined,
+    }));
+  }, [dispatch, page, limit, debouncedSearch, statutFilter, typeClientFilter]);
 
   if (error) {
     return <p className="p-8 text-red-500 font-bold">{error}</p>;
@@ -36,11 +52,46 @@ const TabMilesClient = () => {
 
   return (
     <div className="space-y-4">
-      {/* Résumé global */}
+      {/* BARRE DE RECHERCHE ET FILTRES */}
+      <div className="flex flex-col md:flex-row gap-3">
+        <div className="relative flex-1">
+          <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+          <input
+            type="text"
+            placeholder="Rechercher par nom ou code du bénéficiaire..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-100 rounded-xl shadow-sm outline-none text-sm font-medium"
+          />
+        </div>
+        <select
+          value={statutFilter}
+          onChange={(e) => setStatutFilter(e.target.value as '' | 'ACTIF' | 'INACTIF')}
+          className="px-4 py-2.5 bg-white border border-gray-100 rounded-xl shadow-sm outline-none font-bold text-xs uppercase tracking-widest text-gray-600 cursor-pointer"
+        >
+          <option value="">Tous statuts</option>
+          <option value="ACTIF">Actif</option>
+          <option value="INACTIF">Inactif</option>
+        </select>
+        <select
+          value={typeClientFilter}
+          onChange={(e) => setTypeClientFilter(e.target.value as typeof typeClientFilter)}
+          className="px-4 py-2.5 bg-white border border-gray-100 rounded-xl shadow-sm outline-none font-bold text-xs uppercase tracking-widest text-gray-600 cursor-pointer"
+        >
+          <option value="">Tous types</option>
+          <option value="SIMPLE">SIMPLE</option>
+          <option value="GOLD">GOLD</option>
+          <option value="SILVER">SILVER</option>
+          <option value="BRONZE">BRONZE</option>
+          <option value="VIP">VIP</option>
+        </select>
+      </div>
+
+      {/* Résumé global (page courante — le total de clients reflète l'ensemble filtré) */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <div className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
           <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-1">Total clients</p>
-          <p className="text-2xl font-black text-gray-900">{items.length}</p>
+          <p className="text-2xl font-black text-gray-900">{meta.total}</p>
         </div>
         <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-5">
           <p className="text-[10px] font-black uppercase tracking-widest text-indigo-400 mb-1">Total miles ABT</p>
@@ -76,7 +127,13 @@ const TabMilesClient = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50 bg-white font-medium">
-            {items.map((item) => {
+            {loading ? (
+              <tr>
+                <td colSpan={6} className="py-20 text-center">
+                  <FiLoader className="animate-spin text-indigo-500 mx-auto" size={28} />
+                </td>
+              </tr>
+            ) : items.map((item) => {
 
               return (
                 <tr key={item.beneficiaire.id} className="hover:bg-indigo-50/20 transition-colors">
@@ -138,6 +195,12 @@ const TabMilesClient = () => {
             <p className="text-gray-400 font-medium italic">Aucune donnée de miles disponible.</p>
           </div>
         )}
+        <Pagination
+          meta={meta}
+          onPageChange={setPage}
+          onLimitChange={(l) => { setLimit(l); setPage(1); }}
+          itemLabel="client"
+        />
       </div>
     </div>
   );

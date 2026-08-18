@@ -23,7 +23,7 @@ import EmissionModal from '../../../../../components/modals/EmissionModal';
 import { fetchClientFactureById } from '../../../../../app/back_office/clientFacturesSlice';
 import BeneficiaireInfosModal from '../../../../../components/modals/BeneficiaireInfosModal';
 import TabContainer from '../../../../../layouts/TabContainer';
-import { fetchSuivis } from '../../../../../app/front_office/suiviSlice';
+import { fetchSuivisPaginated } from '../../../../../app/front_office/suiviSlice';
 import EmissionBilletModal from '../../../../../components/modals/EmissionBilletModal';
 import FactureClientModal from '../../../../../components/modals/FactureClientModal';
 import { fetchCommentairesByPrestation,  } from '../../../../../app/front_office/commentaireSlice';
@@ -102,10 +102,13 @@ const Billet = () => {
   }, [services]);
 
   // Charger les suivis (une seule fois ou quand l'entête change)
+  // NB : `state.suivi` n'est lu par aucun composant de cet écran (l'onglet "Suivi" ci-dessous
+  // affiche en réalité <SuiviTabSection> qui se base sur `todos`/commentaires/évolution par
+  // prestation, pas sur ce fetch global). On garde l'appel (comportement historique) mais on
+  // le bascule en pagination pour éviter de rapatrier toute la table `/suivi` à chaque fois.
   useEffect(() => {
     if (enteteId && billet) {
-      // Option 1 : fetch global (si l'API renvoie tout)
-      dispatch(fetchSuivis());
+      dispatch(fetchSuivisPaginated({ page: 1, limit: 20 }));
     }
   }, [dispatch, enteteId, billet]);
 

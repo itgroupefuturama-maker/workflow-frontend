@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
-  fetchClientFactures,
+  fetchClientFacturesPaginated,
   activateClientFacture,
   deactivateClientFacture,
   deleteClientFacture,
@@ -14,6 +14,8 @@ import {
 import AuditModal from '../../components/AuditModal';
 import type { ClientFacture } from '../../app/back_office/clientFacturesSlice';
 import { useNavigate } from 'react-router-dom';
+import { useDebouncedValue } from '../../hooks/useDebouncedValue';
+import Pagination from '../../components/Pagination';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -22,39 +24,59 @@ const useAppDispatch = () => useDispatch<AppDispatch>();
 const ClientFacturePage = () => {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { data: clients } = useSelector((state: RootState) => state.clientFactures);
+  const {
+    listData: clients = [],
+    listMeta: meta = { total: 0, page: 1, limit: 10, totalPages: 1 },
+    listLoading: loading,
+  } = useSelector(
+    (state: RootState) => state.clientFactures
+  );
 
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebouncedValue(searchTerm, 400);
+  const [statutFilter, setStatutFilter] = useState<'' | 'ACTIF' | 'INACTIF'>('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [auditEntityId, setAuditEntityId] = useState<string | null>(null);
   const [auditEntityName, setAuditEntityName] = useState('');
-  
+
   type ActionMode = 'modifier' | 'tracer' | 'activer' | 'supprimer';
   // Nouveau état pour le mode d'action sélectionné
   const [selectedAction, setSelectedAction] = useState<ActionMode>('modifier');
 
+  // Revenir à la page 1 quand la recherche ou le filtre changent
   useEffect(() => {
-    dispatch(fetchClientFactures());
-  }, [dispatch]);
+    setPage(1);
+  }, [debouncedSearch, statutFilter]);
 
-  const filteredClients = clients
-    .filter((client) => {
-      const search = searchTerm.toLowerCase();
-      return (
-        client.libelle.toLowerCase().includes(search) ||
-        client.code.toLowerCase().includes(search)
-      );
-    })
-    .sort((a, b) => {
-      const dateA = new Date(a.dateApplication).getTime();
-      const dateB = new Date(b.dateApplication).getTime();
-      return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
-    });
+  const loadList = () => {
+    dispatch(fetchClientFacturesPaginated({
+      page,
+      limit,
+      search: debouncedSearch || undefined,
+      statut: statutFilter || undefined,
+    }));
+  };
+
+  useEffect(() => {
+    loadList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dispatch, page, limit, debouncedSearch, statutFilter]);
+
+  // Tri local — ne trie que la page actuellement chargée (le backend ne propose pas
+  // encore de paramètre de tri sur cet endpoint).
+  const sortedClients = [...clients].sort((a, b) => {
+    const dateA = new Date(a.dateApplication).getTime();
+    const dateB = new Date(b.dateApplication).getTime();
+    return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
+  });
 
   const handleAction = async (actionFn: any, payload: any) => {
     setIsSubmitting(true);
     await dispatch(actionFn(payload));
+    loadList(); // resynchronise la page paginée après création/modif/activation/suppression
     setIsSubmitting(false);
   };
 
@@ -96,6 +118,15 @@ const ClientFacturePage = () => {
             className="w-full pl-12 pr-4 py-3.5 bg-white border border-gray-100 rounded-2xl shadow-sm focus:ring-4 focus:ring-indigo-500/5 outline-none font-medium transition-all"
           />
         </div>
+        <select
+          value={statutFilter}
+          onChange={(e) => setStatutFilter(e.target.value as '' | 'ACTIF' | 'INACTIF')}
+          className="px-4 py-3.5 bg-white border border-gray-100 rounded-2xl shadow-sm outline-none font-bold text-xs uppercase tracking-widest text-gray-600 cursor-pointer"
+        >
+          <option value="">Tous statuts</option>
+          <option value="ACTIF">Actif</option>
+          <option value="INACTIF">Inactif</option>
+        </select>
         <button
           onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
           className="flex items-center gap-3 px-6 py-3.5 bg-white border border-gray-100 rounded-2xl shadow-sm hover:bg-gray-50 transition-all font-bold text-xs uppercase tracking-widest text-gray-600"
@@ -197,8 +228,14 @@ const ClientFacturePage = () => {
             </thead>
 
             <tbody className="divide-y divide-gray-50 bg-white">
-              {filteredClients.length > 0 ? (
-                filteredClients.map((client) => (
+              {loading ? (
+                <tr>
+                  <td colSpan={15} className="py-20 text-center">
+                    <FiLoader className="animate-spin text-indigo-500 mx-auto" size={28} />
+                  </td>
+                </tr>
+              ) : sortedClients.length > 0 ? (
+                sortedClients.map((client) => (
                   <tr
                     key={client.id}
                     className="hover:bg-indigo-50/20 transition-colors group cursor-pointer"
@@ -323,6 +360,7 @@ const ClientFacturePage = () => {
             </tbody>
           </table>
         </div>
+        <Pagination meta={meta} onPageChange={setPage} onLimitChange={(l) => { setLimit(l); setPage(1); }} itemLabel="client" />
       </div>
 
       <AuditModal

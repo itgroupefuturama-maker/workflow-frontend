@@ -6,10 +6,13 @@ import {
   type Passager,
 } from '../../../../app/front_office/parametre_liste_passager/passagerListeSlice';
 import { fetchPays } from '../../../../app/front_office/parametre_ticketing/paysSlice';
+import axiosInstance from '../../../../service/Axios';
 import { FiArrowLeft, FiDownload, FiEye, FiX, FiSearch } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import { usePassagerPdf } from '../module.pdf/pdf.generation/hooks/usePdfGenerator';
 import type { PassagerPdfFilters } from '../module.pdf/pdf.generation/generators/passager.generator';
+import { useDebouncedValue } from '../../../../hooks/useDebouncedValue';
+import Pagination from '../../../../components/Pagination';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -53,6 +56,22 @@ const emptyFilters: Filters = {
   typeVol: '', status: '', villeDepart: '', villeArrivee: '',
 };
 
+// Filtres additionnels non couverts par le backend (typeVol/villeDepart/villeArrivee/owner) :
+// appliqués côté client. `search`/`status` sont eux envoyés au serveur (voir loadList),
+// ils sont réévalués ici aussi mais restent alors sans effet (déjà garantis par la requête).
+const matchesLocalFilters = (p: Passager, filters: Filters, search: string): boolean => {
+  const [itiDepart = '', itiArrivee = ''] = p.itineraire?.split('→').map((s) => s.trim()) ?? [];
+  const q = search.toLowerCase();
+  const matchSearch = !q || [p.nom, p.pnr, p.owner, p.numeroVol].some((v) => v?.toLowerCase().includes(q));
+  return (
+    matchSearch &&
+    (!filters.typeVol      || p.typeVol === filters.typeVol) &&
+    (!filters.status       || p.status === filters.status) &&
+    (!filters.villeDepart  || itiDepart.toLowerCase().includes(filters.villeDepart.toLowerCase())) &&
+    (!filters.villeArrivee || itiArrivee.toLowerCase().includes(filters.villeArrivee.toLowerCase()))
+  );
+};
+
 // ─── FilterCell : cellule de la barre filtre ──────────────────────────────────
 
 const FilterCell: React.FC<{ label: string; last?: boolean; children: React.ReactNode }> = ({
@@ -79,7 +98,12 @@ const PageListePassage: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
 
-  const { passagers, loading, error } = useSelector((state: RootState) => state.passagerListe);
+  const {
+    passagers = [],
+    meta = { total: 0, page: 1, limit: 10, totalPages: 1 },
+    loading,
+    error,
+  } = useSelector((state: RootState) => state.passagerListe);
   const { items: paysList } = useSelector((state: RootState) => state.pays);
 
   const defaults = getDefaultRange();
@@ -87,6 +111,10 @@ const PageListePassage: React.FC = () => {
   const [endDate, setEndDate]     = useState(defaults.endDate);
   const [filters, setFilters]     = useState<Filters>(emptyFilters);
   const [search, setSearch]       = useState('');
+  const debouncedSearch = useDebouncedValue(search, 400);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [exporting, setExporting] = useState(false);
 
   const allVilles = useMemo(() => {
     const set = new Set<string>();
@@ -94,15 +122,33 @@ const PageListePassage: React.FC = () => {
     return Array.from(set).sort();
   }, [paysList]);
 
+  // Dérivé de la page actuellement chargée uniquement — le backend ne fournit pas
+  // (encore) de liste distincte des types de vol sur toute la période paginée.
   const allTypeVols = useMemo(() => {
     const set = new Set(passagers.map((p) => p.typeVol).filter(Boolean));
     return Array.from(set).sort();
   }, [passagers]);
 
   useEffect(() => { dispatch(fetchPays()); }, [dispatch]);
+
+  // Revenir à la page 1 quand la période, la recherche ou le statut changent
   useEffect(() => {
-    if (startDate && endDate) dispatch(fetchPassagersByDateRange({ startDate, endDate }));
-  }, [dispatch, startDate, endDate]);
+    setPage(1);
+  }, [startDate, endDate, debouncedSearch, filters.status]);
+
+  useEffect(() => {
+    if (startDate && endDate) {
+      dispatch(fetchPassagersByDateRange({
+        startDate,
+        endDate,
+        page,
+        limit,
+        search: debouncedSearch || undefined,
+        statut: filters.status || undefined,
+      }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dispatch, startDate, endDate, page, limit, debouncedSearch, filters.status]);
 
   const applyDateShortcut = (type: 'today' | 'tomorrow' | 'week' | 'month') => {
     if (type === 'today')    { const d = today();    setStartDate(d); setEndDate(d); }
@@ -111,26 +157,51 @@ const PageListePassage: React.FC = () => {
     else                       { const { startDate: s, endDate: e } = getDefaultRange(); setStartDate(s); setEndDate(e); }
   };
 
-  const filtered = useMemo(() => {
-    return passagers.filter((p) => {
-      const [itiDepart = '', itiArrivee = ''] = p.itineraire?.split('→').map((s) => s.trim()) ?? [];
-      const q = search.toLowerCase();
-      const matchSearch = !q || [p.nom, p.pnr, p.owner, p.numeroVol].some((v) => v?.toLowerCase().includes(q));
-      return (
-        matchSearch &&
-        (!filters.typeVol    || p.typeVol === filters.typeVol) &&
-        (!filters.status     || p.status === filters.status) &&
-        (!filters.villeDepart   || itiDepart.toLowerCase().includes(filters.villeDepart.toLowerCase())) &&
-        (!filters.villeArrivee  || itiArrivee.toLowerCase().includes(filters.villeArrivee.toLowerCase()))
-      );
-    });
-  }, [passagers, filters, search]);
+  // Filtres additionnels (typeVol/villeDepart/villeArrivee), non supportés par le
+  // backend, appliqués sur la page actuellement chargée uniquement.
+  const filtered = useMemo(
+    () => passagers.filter((p) => matchesLocalFilters(p, filters, search)),
+    [passagers, filters, search]
+  );
 
   const setFilter = (key: keyof Filters, value: string) => setFilters((prev) => ({ ...prev, [key]: value }));
   const clearAllFilters = () => { setFilters(emptyFilters); setSearch(''); };
   const activeFilterCount = Object.values(filters).filter(Boolean).length + (search ? 1 : 0);
 
   const { generate: generatePdf, preview: previewPdf, loading: pdfLoading } = usePassagerPdf();
+
+  // L'export/aperçu PDF doit couvrir toute la période, pas seulement la page affichée
+  // à l'écran : on interroge l'API en mode legacy (sans page/limit → tableau brut,
+  // rétrocompatible) puis on applique les mêmes filtres que la vue à l'écran.
+  const fetchFullRangeForExport = async (): Promise<Passager[]> => {
+    const res = await axiosInstance.get('/billet/search-by-date-range', {
+      params: { startDate, endDate },
+    });
+    if (!res.data.success) return [];
+    return res.data.data as Passager[];
+  };
+
+  const handlePreviewPdf = async () => {
+    setExporting(true);
+    try {
+      const all = await fetchFullRangeForExport();
+      const toExport = all.filter((p) => matchesLocalFilters(p, filters, search));
+      previewPdf(toExport, buildPdfFilters());
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const handleExportPdf = async () => {
+    setExporting(true);
+    try {
+      const all = await fetchFullRangeForExport();
+      const toExport = all.filter((p) => matchesLocalFilters(p, filters, search));
+      generatePdf(toExport, buildPdfFilters(), undefined, `passagers-${startDate}-${endDate}.pdf`);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const buildPdfFilters = (): PassagerPdfFilters => ({
     startDate, endDate,
@@ -245,26 +316,26 @@ const PageListePassage: React.FC = () => {
               )}
             </div>
 
-            {/* Aperçu PDF */}
-            {filtered.length > 0 && (
+            {/* Aperçu PDF — porte sur toute la période (pas juste la page affichée) */}
+            {meta.total > 0 && (
               <button
-                onClick={() => previewPdf(filtered, buildPdfFilters())}
-                disabled={pdfLoading}
+                onClick={handlePreviewPdf}
+                disabled={pdfLoading || exporting}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-600 text-sm font-bold rounded-xl hover:bg-indigo-100 transition-all disabled:opacity-50"
               >
-                <FiEye size={14} /> Aperçu
+                <FiEye size={14} /> {exporting ? 'Chargement…' : 'Aperçu'}
               </button>
             )}
 
-            {/* Export PDF */}
-            {filtered.length > 0 && (
+            {/* Export PDF — porte sur toute la période (pas juste la page affichée) */}
+            {meta.total > 0 && (
               <button
-                onClick={() => generatePdf(filtered, buildPdfFilters(), undefined, `passagers-${startDate}-${endDate}.pdf`)}
-                disabled={pdfLoading}
+                onClick={handleExportPdf}
+                disabled={pdfLoading || exporting}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 text-white text-sm font-bold rounded-xl hover:bg-gray-700 transition-all disabled:opacity-50"
               >
                 <FiDownload size={14} />
-                {pdfLoading ? 'Génération…' : `Exporter (${filtered.length})`}
+                {pdfLoading || exporting ? 'Génération…' : 'Exporter'}
               </button>
             )}
           </div>
@@ -295,7 +366,7 @@ const PageListePassage: React.FC = () => {
           <div className="ml-auto flex items-center gap-3">
             {!loading && (
               <span className="text-xs text-gray-400 font-medium">
-                {filtered.length} / {passagers.length} passager(s)
+                {filtered.length} / {passagers.length} sur cette page — {meta.total} au total
               </span>
             )}
             {activeFilterCount > 0 && (
@@ -366,6 +437,14 @@ const PageListePassage: React.FC = () => {
               </tbody>
             </table>
           </div>
+        )}
+        {!loading && !error && (
+          <Pagination
+            meta={meta}
+            onPageChange={setPage}
+            onLimitChange={(l) => { setLimit(l); setPage(1); }}
+            itemLabel="passager"
+          />
         )}
       </div>
     </div>

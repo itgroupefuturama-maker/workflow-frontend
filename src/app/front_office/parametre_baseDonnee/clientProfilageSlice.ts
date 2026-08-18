@@ -27,14 +27,41 @@ export interface ClientProfilage {
   }[];
 }
 
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface FetchAllProfilagePaginatedParams {
+  page: number;
+  limit: number;
+  search?: string;
+}
+
 interface State {
   data:    ClientProfilage | null;
   all:     ClientProfilage[];
   loading: boolean;
   error:   string | null;
+  // Liste paginée (PageProfilage.tsx uniquement) — distincte de `all` ci-dessus.
+  listData:    ClientProfilage[];
+  listMeta:    PaginationMeta;
+  listLoading: boolean;
+  listError:   string | null;
 }
 
-const initialState: State = { data: null, all: [], loading: false, error: null };
+const initialState: State = {
+  data: null,
+  all: [],
+  loading: false,
+  error: null,
+  listData: [],
+  listMeta: { total: 0, page: 1, limit: 10, totalPages: 1 },
+  listLoading: false,
+  listError: null,
+};
 
 export const fetchClientProfilage = createAsyncThunk(
   "clientProfilage/fetch",
@@ -60,6 +87,24 @@ export const fetchAllProfilage = createAsyncThunk(
   }
 );
 
+// Fetch paginé + recherche côté serveur (écran PageProfilage.tsx uniquement).
+// Chaque page déclenche un calcul de profil par client côté serveur (coûteux) —
+// l'écran doit privilégier une `limit` raisonnable (10-20).
+export const fetchAllProfilagePaginated = createAsyncThunk(
+  "clientProfilage/fetchAllPaginated",
+  async (params: FetchAllProfilagePaginatedParams, { rejectWithValue }) => {
+    try {
+      const res = await axios.get('/profilage/all', { params });
+      if (!res.data.success) return rejectWithValue('Échec récupération du profilage');
+      // res.data.data = { data: ClientProfilage[], meta: PaginationMeta }
+      const payload = res.data.data;
+      return { data: payload.data as ClientProfilage[], meta: payload.meta as PaginationMeta };
+    } catch (err: any) {
+      return rejectWithValue(err.response?.data?.message ?? "Erreur serveur");
+    }
+  }
+);
+
 const slice = createSlice({
   name: "clientProfilage",
   initialState,
@@ -72,7 +117,15 @@ const slice = createSlice({
 
       .addCase(fetchAllProfilage.pending,   (s) => { s.loading = true;  s.error = null; })
       .addCase(fetchAllProfilage.fulfilled, (s, a: PayloadAction<ClientProfilage[]>) => { s.loading = false; s.all = a.payload; })
-      .addCase(fetchAllProfilage.rejected,  (s, a) => { s.loading = false; s.error = a.payload as string; });
+      .addCase(fetchAllProfilage.rejected,  (s, a) => { s.loading = false; s.error = a.payload as string; })
+
+      .addCase(fetchAllProfilagePaginated.pending,   (s) => { s.listLoading = true;  s.listError = null; })
+      .addCase(fetchAllProfilagePaginated.fulfilled, (s, a) => {
+        s.listLoading = false;
+        s.listData = a.payload.data;
+        s.listMeta = a.payload.meta;
+      })
+      .addCase(fetchAllProfilagePaginated.rejected,  (s, a) => { s.listLoading = false; s.listError = a.payload as string; });
   },
 });
 

@@ -33,12 +33,36 @@ export interface ClientBeneficiaireInfo {
   dossierCommunClient?: any[];
 }
 
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface FetchAllClientBeneficiaireInfosPaginatedParams {
+  page: number;
+  limit: number;
+  search?: string;
+  statut?: string;
+  typeDoc?: string;
+  clientType?: string;
+  validite?: 'valide' | 'expire';
+}
+
 export interface ClientBeneficiaireInfosState {
   list: ClientBeneficiaireInfo[];    // Toutes les infos du bénéficiaire
   current?: ClientBeneficiaireInfo | null;  // Pour édition future
   loading: boolean;
   loadingList: boolean;
   error: string | null;
+  // Liste paginée (écran PagePassport.tsx uniquement) — distincte de `list` ci-dessus,
+  // qui reste alimentée par `fetchClientBeneficiaireInfos` (infos d'un seul bénéficiaire)
+  // et lue par de nombreux autres écrans/modales (réservation, dossier commun, hôtel...).
+  listData: ClientBeneficiaireInfo[];
+  listMeta: PaginationMeta;
+  listLoading: boolean;
+  listError: string | null;
 }
 
 const initialState: ClientBeneficiaireInfosState = {
@@ -47,6 +71,10 @@ const initialState: ClientBeneficiaireInfosState = {
   loading: false,
   loadingList: false,
   error: null,
+  listData: [],
+  listMeta: { total: 0, page: 1, limit: 10, totalPages: 1 },
+  listLoading: false,
+  listError: null,
 };
 
 // Thunk : Récupérer toutes les infos d'un bénéficiaire
@@ -207,6 +235,26 @@ export const fetchAllClientBeneficiaireInfos = createAsyncThunk<
   }
 });
 
+// Thunk : Récupérer TOUTES les infos, paginé + recherche/filtres côté serveur
+// (écran PagePassport.tsx uniquement)
+export const fetchAllClientBeneficiaireInfosPaginated = createAsyncThunk<
+  { data: ClientBeneficiaireInfo[]; meta: PaginationMeta },
+  FetchAllClientBeneficiaireInfosPaginatedParams,
+  { rejectValue: string }
+>('clientBeneficiaireInfos/fetchAllPaginated', async (params, { rejectWithValue }) => {
+  try {
+    const response = await axiosInstance.get('/clientbeneficiaire-infos', { params });
+    if (!response.data.success) {
+      return rejectWithValue(response.data.message || 'Échec récupération');
+    }
+    // Mode paginé : response.data.data = { data: ClientBeneficiaireInfo[], meta: PaginationMeta }
+    const payload = response.data.data;
+    return { data: payload.data as ClientBeneficiaireInfo[], meta: payload.meta as PaginationMeta };
+  } catch (error: any) {
+    return rejectWithValue(error.response?.data?.message || 'Erreur réseau');
+  }
+});
+
 const clientBeneficiaireInfosSlice = createSlice({
   name: 'clientBeneficiaireInfos',
   initialState,
@@ -274,6 +322,19 @@ const clientBeneficiaireInfosSlice = createSlice({
       .addCase(fetchAllClientBeneficiaireInfos.rejected, (state, action) => {
         state.loadingList = false;
         state.error = action.payload || 'Erreur';
+      })
+      .addCase(fetchAllClientBeneficiaireInfosPaginated.pending, (state) => {
+        state.listLoading = true;
+        state.listError = null;
+      })
+      .addCase(fetchAllClientBeneficiaireInfosPaginated.fulfilled, (state, action) => {
+        state.listLoading = false;
+        state.listData = action.payload.data;
+        state.listMeta = action.payload.meta;
+      })
+      .addCase(fetchAllClientBeneficiaireInfosPaginated.rejected, (state, action) => {
+        state.listLoading = false;
+        state.listError = action.payload || 'Erreur';
       });
   },
 });

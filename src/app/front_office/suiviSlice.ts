@@ -28,6 +28,26 @@ interface SuiviState {
   error: string | null;
   // Optionnel : si tu veux un suivi "actif" ou par ID
   current: Suivi | null;
+  // Liste paginée (Billet.tsx uniquement) — distincte de `list` ci-dessus.
+  listData: Suivi[];
+  listMeta: PaginationMeta;
+  listLoading: boolean;
+  listError: string | null;
+}
+
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface FetchSuivisPaginatedParams {
+  page: number;
+  limit: number;
+  search?: string;
+  statut?: string;
+  entity?: string;
 }
 
 const initialState: SuiviState = {
@@ -35,6 +55,10 @@ const initialState: SuiviState = {
   loading: false,
   error: null,
   current: null,
+  listData: [],
+  listMeta: { total: 0, page: 1, limit: 10, totalPages: 1 },
+  listLoading: false,
+  listError: null,
 };
 
 // ─── Async Thunks ─────────────────────────────────────────
@@ -47,6 +71,29 @@ export const fetchSuivis = createAsyncThunk(
         throw new Error('Réponse invalide');
       }
       return response.data.data as Suivi[];
+    } catch (err: any) {
+      return rejectWithValue(err.response?.data?.message || 'Erreur lors du chargement des suivis');
+    }
+  }
+);
+
+// Fetch paginé + recherche/filtre côté serveur (écran Billet.tsx uniquement).
+// NB : `fetchSuivis` ci-dessus n'est en réalité jamais lu dans l'UI (aucun composant
+// ne sélectionne `state.suivi.list`) — voir le useEffect dans Billet.tsx. On bascule
+// tout de même ce fetch global sur la pagination pour éviter de rapatrier toute la
+// table à chaque changement d'entête, mais il n'y a pas de tableau à brancher sur
+// `listMeta`/<Pagination> côté écran.
+export const fetchSuivisPaginated = createAsyncThunk(
+  'suivi/fetchSuivisPaginated',
+  async (params: FetchSuivisPaginatedParams, { rejectWithValue }) => {
+    try {
+      const response = await axios.get('/suivi', { params });
+      if (!response.data?.success) {
+        return rejectWithValue('Échec récupération des suivis');
+      }
+      // response.data.data = { data: Suivi[], meta: PaginationMeta }
+      const payload = response.data.data;
+      return { data: payload.data as Suivi[], meta: payload.meta as PaginationMeta };
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.message || 'Erreur lors du chargement des suivis');
     }
@@ -102,6 +149,21 @@ const suiviSlice = createSlice({
       .addCase(fetchSuivisByDevis.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+      })
+
+      // fetchSuivisPaginated
+      .addCase(fetchSuivisPaginated.pending, (state) => {
+        state.listLoading = true;
+        state.listError = null;
+      })
+      .addCase(fetchSuivisPaginated.fulfilled, (state, action) => {
+        state.listLoading = false;
+        state.listData = action.payload.data;
+        state.listMeta = action.payload.meta;
+      })
+      .addCase(fetchSuivisPaginated.rejected, (state, action) => {
+        state.listLoading = false;
+        state.listError = action.payload as string;
       });
   },
 });

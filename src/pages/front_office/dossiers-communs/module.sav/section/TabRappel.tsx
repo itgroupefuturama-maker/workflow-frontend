@@ -7,6 +7,8 @@ import {
   reenvoyerRappel,
 } from '../../../../../app/front_office/parametre_sav/savRappelSlice';
 import type { SavRappel } from '../../../../../app/front_office/parametre_sav/savRappelSlice';
+import { useDebouncedValue } from '../../../../../hooks/useDebouncedValue';
+import Pagination from '../../../../../components/Pagination';
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
@@ -370,7 +372,13 @@ function ModalReenvoi({
 
 export default function TabRappel() {
   const dispatch = useDispatch<AppDispatch>();
-  const { items, loading, sending, resending } = useSelector((state: RootState) => state.savRappel);
+  const {
+    items = [],
+    meta = { total: 0, page: 1, limit: 10, totalPages: 1 },
+    loading,
+    sending,
+    resending,
+  } = useSelector((state: RootState) => state.savRappel);
 
   // On récupère le premier template rerappel depuis le store savParams
   const templateRerappel = useSelector(
@@ -380,9 +388,25 @@ export default function TabRappel() {
   const [modalEnvoi, setModalEnvoi] = useState<SavRappel | null>(null);
   const [modalReenvoi, setModalReenvoi] = useState<SavRappel | null>(null);
 
+  const [search, setSearch] = useState('');
+  const debouncedSearch = useDebouncedValue(search, 400);
+  const [statutFilter, setStatutFilter] = useState<'' | 'INACHEVE' | 'ACHEVE' | 'INACTIF'>('');
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+
+  // Revenir à la page 1 quand la recherche ou le filtre changent
   useEffect(() => {
-    dispatch(fetchSavRappels());
-  }, [dispatch]);
+    setPage(1);
+  }, [debouncedSearch, statutFilter]);
+
+  useEffect(() => {
+    dispatch(fetchSavRappels({
+      page,
+      limit,
+      search: debouncedSearch || undefined,
+      statut: statutFilter || undefined,
+    }));
+  }, [dispatch, page, limit, debouncedSearch, statutFilter]);
 
   // ── Handlers ────────────────────────────────────────────────────────────────
   const handleConfirmEnvoi = async (texte: string, numeroEnvoie: string) => {
@@ -410,9 +434,11 @@ export default function TabRappel() {
   };
 
   // ── Stats ────────────────────────────────────────────────────────────────────
-
+  // `total` reflète le total serveur (toutes pages, selon recherche/filtre en cours).
+  // Le détail par statut, lui, ne porte que sur la page actuellement chargée (le
+  // backend ne renvoie pas encore d'agrégats par statut sur cet endpoint).
   const stats = {
-    total:   items.length,
+    total:   meta.total,
     acheves: items.filter(i => i.status === 'ACHEVE').length,
     attente: items.filter(i => i.status === 'INACHEVE').length,
     inactif: items.filter(i => i.status === 'INACTIF').length,
@@ -425,10 +451,10 @@ export default function TabRappel() {
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">SAV Rappel</h1>
         <p className="text-slate-500 text-sm mt-1">Suivi des rappels et relances clients. Le systeme récupère la liste automatiquement 3 jours avant la date de vol du client Bénéficiaire</p>
         <div className="flex gap-4 mt-6">
-          <StatCard label="Total"      value={stats.total}   colorClass="text-slate-900" />
-          <StatCard label="Achevés"    value={stats.acheves} colorClass="text-emerald-600" />
-          <StatCard label="En attente" value={stats.attente} colorClass="text-amber-600" />
-          <StatCard label="Inactifs"   value={stats.inactif} colorClass="text-slate-400" />
+          <StatCard label="Total"                value={stats.total}   colorClass="text-slate-900" />
+          <StatCard label="Achevés (page)"       value={stats.acheves} colorClass="text-emerald-600" />
+          <StatCard label="En attente (page)"    value={stats.attente} colorClass="text-amber-600" />
+          <StatCard label="Inactifs (page)"      value={stats.inactif} colorClass="text-slate-400" />
         </div>
       </div>
 
@@ -437,14 +463,23 @@ export default function TabRappel() {
         <div className="flex gap-2 w-full md:w-auto">
           <div className="relative flex-1 md:w-72">
             <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
               className="w-full text-sm pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-900/5 focus:border-slate-900 outline-none transition-all"
-              placeholder="Rechercher une référence ou un client..."
+              placeholder="Rechercher un rappel..."
             />
             <span className="absolute left-3 top-2.5 text-slate-400">🔍</span>
           </div>
-          <button className="text-sm px-4 py-2 bg-white border border-slate-200 rounded-lg font-medium text-slate-600 hover:bg-slate-50 flex items-center gap-2">
-            Filtres ▾
-          </button>
+          <select
+            value={statutFilter}
+            onChange={(e) => setStatutFilter(e.target.value as '' | 'INACHEVE' | 'ACHEVE' | 'INACTIF')}
+            className="text-sm px-4 py-2 bg-white border border-slate-200 rounded-lg font-medium text-slate-600 hover:bg-slate-50 outline-none cursor-pointer"
+          >
+            <option value="">Tous statuts</option>
+            <option value="INACHEVE">Non envoyé</option>
+            <option value="ACHEVE">Envoyé</option>
+            <option value="INACTIF">Inactif</option>
+          </select>
         </div>
       </div>
 
@@ -466,7 +501,14 @@ export default function TabRappel() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {items.map(row => {
+              {loading && (
+                <tr>
+                  <td colSpan={9} className="py-16 text-center">
+                    <span className="inline-block w-5 h-5 border-2 border-slate-300 border-t-slate-600 rounded-full animate-spin" />
+                  </td>
+                </tr>
+              )}
+              {!loading && items.map(row => {
                 const isAcheve    = row.status === 'ACHEVE';
                 const isSending   = sending   === row.id;
                 const isResending = resending === row.id;
@@ -617,6 +659,7 @@ export default function TabRappel() {
             <p className="text-slate-400 text-sm font-medium">Aucun rappel à traiter pour le moment.</p>
           </div>
         )}
+        <Pagination meta={meta} onPageChange={setPage} onLimitChange={(l) => { setLimit(l); setPage(1); }} itemLabel="rappel" />
       </div>
 
       {/* Modales */}

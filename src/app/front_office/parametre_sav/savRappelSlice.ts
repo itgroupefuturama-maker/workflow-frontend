@@ -56,10 +56,29 @@ export interface ReenvoiPayload {
   numeroEnvoie: number; // ← number
 }
 
+// ─── Pagination ───────────────────────────────────────────────────────────────
+
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface FetchSavRappelsParams {
+  page: number;
+  limit: number;
+  search?: string;
+  statut?: string;
+  clientBeneficiaireId?: string;
+  billetLigneId?: string;
+}
+
 // ─── State ────────────────────────────────────────────────────────────────────
 
 interface SavRappelState {
   items: SavRappel[];
+  meta: PaginationMeta;
   loading: boolean;
   sending: string | null;   // id de la ligne en cours d'envoi
   resending: string | null; // id de la ligne en cours de renvoi
@@ -68,6 +87,7 @@ interface SavRappelState {
 
 const initialState: SavRappelState = {
   items: [],
+  meta: { total: 0, page: 1, limit: 10, totalPages: 1 },
   loading: false,
   sending: null,
   resending: null,
@@ -76,13 +96,17 @@ const initialState: SavRappelState = {
 
 // ─── Thunks ───────────────────────────────────────────────────────────────────
 
+// Fetch paginé + recherche/filtres côté serveur — seul consommateur : TabRappel.tsx
+// (aucun autre écran n'utilise ce thunk ni `items`).
 export const fetchSavRappels = createAsyncThunk(
   'savRappel/fetchAll',
-  async (_, { rejectWithValue }) => {
+  async (params: FetchSavRappelsParams, { rejectWithValue }) => {
     try {
-      const res = await axiosInstance.get('/sav/rappel-ticketing');
+      const res = await axiosInstance.get('/sav/rappel-ticketing', { params });
       if (!res.data.success) throw new Error();
-      return res.data.data as SavRappel[];
+      // Mode paginé : response.data.data = { data: SavRappel[], meta: PaginationMeta }
+      const payload = res.data.data;
+      return { data: payload.data as SavRappel[], meta: payload.meta as PaginationMeta };
     } catch (err: any) {
       return rejectWithValue(err?.response?.data?.message || 'Erreur chargement rappels');
     }
@@ -128,9 +152,10 @@ const savRappelSlice = createSlice({
         state.loading = true;
         state.error = null;
       })
-      .addCase(fetchSavRappels.fulfilled, (state, action: PayloadAction<SavRappel[]>) => {
+      .addCase(fetchSavRappels.fulfilled, (state, action: PayloadAction<{ data: SavRappel[]; meta: PaginationMeta }>) => {
         state.loading = false;
-        state.items = action.payload;
+        state.items = action.payload.data;
+        state.meta = action.payload.meta;
       })
       .addCase(fetchSavRappels.rejected, (state, action) => {
         state.loading = false;

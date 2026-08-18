@@ -159,6 +159,13 @@ export interface PlateformeReservation {
   createdAt: string;
 }
 
+export interface ReservationsPaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 export interface PlateformeStat {
   plateforme: PlateformeInfo;
   nombreReservations: number;
@@ -166,6 +173,10 @@ export interface PlateformeStat {
   montantConfirmationAriary: number;
   commissionTotaleAriary: number;
   reservations: PlateformeReservation[];
+  // Ajouté dès que `page`/`limit` sont envoyés — pagination du tableau `reservations`
+  // de CE groupe uniquement. Les totaux ci-dessus (nombreReservations, montants) restent
+  // calculés sur toute la période, pas sur la page affichée.
+  reservationsMeta?: ReservationsPaginationMeta;
 }
 
 export interface EtatVenteParPlateformeResultat {
@@ -178,6 +189,8 @@ export interface EtatVenteParPlateformeParams {
   du?: string;
   au?: string;
   statut?: string;
+  page?: number;
+  limit?: number;
 }
 
 // ─── State ────────────────────────────────────────────────────
@@ -328,6 +341,8 @@ export const fetchEtatVenteParPlateforme = createAsyncThunk(
       if (params.du) query.set('du', params.du);
       if (params.au) query.set('au', params.au);
       if (params.statut) query.set('statut', params.statut);
+      if (params.page) query.set('page', String(params.page));
+      if (params.limit) query.set('limit', String(params.limit));
 
       const res = await axiosInstance.get(`/hotel/stats/plateforme/par-date?${query.toString()}`);
       if (!res.data.success) throw new Error();
