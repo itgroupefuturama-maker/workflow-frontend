@@ -37,9 +37,18 @@ Légende statut : `[ ]` à faire · `[~]` en cours · `[x]` terminé
 
 - [~] **Sécurité des tokens d'auth** — `token`, `refresh_token`, `user` stockés en `localStorage` (`authSlice.ts`, `Axios.tsx`, `LoginPage.tsx`), accessibles en JS donc vulnérables en cas de XSS. Pas de cookie HttpOnly.
   - Décision : migration vers cookie httpOnly, avec changement côté backend en plus du frontend.
-  - Prompt de brief backend rédigé → voir `BACKEND_PROMPT_AUTH_COOKIES.md` (à copier-coller sur le repo backend, autre machine).
-  - **Bloqué en attente du retour backend** : noms des cookies, nom du header/cookie CSRF, endpoint `/auth/logout`, attributs SameSite/Secure retenus.
-  - Une fois le retour reçu : mettre à jour `src/service/Axios.tsx`, `src/app/authSlice.ts`, `src/pages/LoginPage.tsx`, connexion Socket.io (`FrontOfficeLayout.tsx`).
+  - Prompt de brief backend rédigé → voir `BACKEND_PROMPT_AUTH_COOKIES.md`. **Backend implémenté en mode transitoire** (cookie + Bearer en parallèle) → voir `FRONTEND_PROMPT_AUTH_COOKIES.md` (réponse du backend, reçue le 2026-08-18).
+  - **Partie 1 (point bloquant CSRF) traitée côté frontend le 2026-08-18** dans `src/service/Axios.tsx` :
+    - `withCredentials: true` sur l'instance Axios (envoie/reçoit les cookies).
+    - Intercepteur de requête : pose `X-CSRF-Token` (lu depuis le cookie non-httpOnly `csrf_token`) sur tout `POST`/`PUT`/`PATCH`/`DELETE`.
+    - Le refresh (`POST /auth/refresh`) ne lit/stocke plus le `refresh_token` depuis le `localStorage` — repose sur le cookie httpOnly (rotation à chaque appel gérée côté serveur).
+    - `src/components/AppBar.tsx` (`handleLogout`) : appelle désormais `POST /auth/logout` (révocation serveur du refresh token) avant de purger le state Redux/localStorage local.
+    - `LoginPage.tsx`/`authSlice.ts` non touchés pour l'instant — le login continue de fonctionner à l'identique (mode dual), rien d'obligatoire dans l'immédiat côté backend.
+    - Socket.io (`FrontOfficeLayout.tsx`/`ListeParametreLayout.tsx`) : aucun changement requis, le handshake `auth: (cb) => cb({ token })` reste la méthode prioritaire côté backend.
+    - `npx tsc -b --noEmit` : 0 erreur après ces changements.
+  - **À tester manuellement une fois le backend déployé et accessible** (pas vérifiable par simple lecture de code) : login pose bien les 3 cookies, un appel mutant (création/modif) passe avec le header CSRF, refresh silencieux fonctionne bien via cookie seul, logout révoque bien côté serveur (tester qu'un vieux refresh token ne fonctionne plus après), comportement si `csrf_token` absent (ex. navigation privée bloquant les cookies tiers).
+  - **Partie 2 (stratégie de transition — retrait du `localStorage`) : pas encore faite**, à faire une fois la partie 1 testée et confirmée en usage réel : retirer `access_token`/`refresh_token` du `localStorage` et l'intercepteur `Authorization: Bearer`, puis prévenir le backend pour qu'il retire les tokens du body de réponse.
+  - **Questions encore ouvertes pour le backend** (à transmettre) : confirmation du/des domaine(s) exact(s) du frontend en prod (pour `FRONTEND_ORIGIN` CORS), confirmation si front/back sont sur des domaines différents (détermine `SameSite=None` vs `Lax`).
 - [x] **ErrorBoundary non branché** — corrigé le 2026-08-06 : `ErrorBoundary` importé et englobe `<App />` dans `src/main.tsx`.
 - [x] **URL de fallback en dur dans `env.ts`** — corrigé dans le working tree (`http://andry:5050` supprimé, ne dépend plus que de `VITE_API_URL`). *(déjà fait, à commit)*
 - [x] **`.env.example` non versionné** — vérifié le 2026-08-18 : le fichier est en fait déjà tracké dans le repo (`git ls-files` le confirme). Rien à faire, l'item était obsolète.

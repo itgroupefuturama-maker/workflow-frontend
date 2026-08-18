@@ -5,6 +5,7 @@ import { login, logout } from '../app/authSlice'; // Importe les actions Redux
 
 const axiosInstance = axios.create({
   baseURL: API_URL,
+  withCredentials: true, // envoie/reçoit les cookies httpOnly d'auth (access_token, refresh_token, csrf_token)
   headers: {
     'Content-Type': 'application/json',
     'Accept': '*/*',
@@ -26,12 +27,26 @@ const processQueue = (error: any = null) => {
   failedQueue = [];
 };
 
-// Intercepteur de REQUÊTE : Ajoute le token Authorization si disponible
+function getCookie(name: string): string | undefined {
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : undefined;
+}
+
+const MUTATING_METHODS = ['post', 'put', 'patch', 'delete'];
+
+// Intercepteur de REQUÊTE : Ajoute le token Authorization (mode dual, en cours de transition
+// vers les cookies httpOnly) et le header CSRF requis dès qu'un cookie d'auth est présent.
 axiosInstance.interceptors.request.use(
   (config) => {
     const token = store.getState().auth.token; // Récupère le token depuis Redux
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    if (config.method && MUTATING_METHODS.includes(config.method)) {
+      const csrfToken = getCookie('csrf_token');
+      if (csrfToken) {
+        config.headers['X-CSRF-Token'] = csrfToken;
+      }
     }
     return config;
   },
@@ -63,14 +78,11 @@ axiosInstance.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const refreshToken = localStorage.getItem('refresh_token');
-        if (!refreshToken) {
-          throw new Error('No refresh token available');
-        }
-
-        // Appel au refresh endpoint (utilise le refresh_token comme Bearer)
+        // Le refresh token vit désormais dans un cookie httpOnly (restreint au path /auth),
+        // envoyé automatiquement grâce à `withCredentials`. Le refresh token est tourné à
+        // chaque appel côté serveur — on ne le lit/stocke plus depuis le localStorage.
         const refreshResponse = await axios.post(`${API_URL}/auth/refresh`, {}, {
-          headers: { Authorization: `Bearer ${refreshToken}` },
+          withCredentials: true,
         });
 
         if (refreshResponse.data.success) {
@@ -84,7 +96,9 @@ axiosInstance.interceptors.response.use(
             })
           );
           localStorage.setItem('token', access_token);
-          localStorage.setItem('refresh_token', newRefreshToken || refreshToken); // Si nouveau refresh_token fourni, sinon garde l'ancien
+          if (newRefreshToken) {
+            localStorage.setItem('refresh_token', newRefreshToken);
+          }
           localStorage.setItem('token_expiresIn', expiresIn.toString());
 
           // Met à jour le header de la requête originale

@@ -123,6 +123,14 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
   };
 
   const handleLogout = async () => {
+    // 0. Révoque le refresh token côté serveur avant de nettoyer l'état local,
+    // sinon il reste valide côté backend après un logout purement local.
+    try {
+      await axiosInstance.post('/auth/logout');
+    } catch (e) {
+      console.error(e);
+    }
+
     // 1. Vider redux-persist (supprime persist:root)
     await persistor.purge();
 
