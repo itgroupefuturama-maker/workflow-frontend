@@ -77,6 +77,21 @@ interface CreateDossierCommunPayload {
   }>;
 }
 
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface FetchDossiersCommunsPaginatedParams {
+  page: number;
+  limit: number;
+  search?: string;
+  statut?: string;
+  module?: string;
+}
+
 interface DossierCommunState {
   data: DossierCommun[];
   currentClientFactureId: DossierCommun | null;
@@ -85,6 +100,13 @@ interface DossierCommunState {
   creating: boolean;
   createSuccess: boolean;
   createError: string | null;
+  // Liste paginée (écran ListeDossierByModule.tsx uniquement) — distincte de `data` ci-dessus,
+  // qui reste la liste complète non paginée lue par DossierCommunManage.tsx et
+  // PageResultatStatDossierCommun.tsx.
+  listData: DossierCommun[];
+  listMeta: PaginationMeta;
+  listLoading: boolean;
+  listError: string | null;
 }
 
 const initialState: DossierCommunState = {
@@ -95,6 +117,10 @@ const initialState: DossierCommunState = {
   creating: false,
   createSuccess: false,
   createError: null,
+  listData: [],
+  listMeta: { total: 0, page: 1, limit: 10, totalPages: 1 },
+  listLoading: false,
+  listError: null,
 };
 
 export const setCurrentClientFactureId = createAction<DossierCommun | null>(
@@ -111,6 +137,24 @@ export const fetchDossiersCommuns = createAsyncThunk(
         return response.data.data as DossierCommun[];
       }
       return rejectWithValue(response.data.message);
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || 'Erreur réseau');
+    }
+  }
+);
+
+// Fetch paginé + recherche/filtres côté serveur (écran ListeDossierByModule.tsx uniquement)
+export const fetchDossiersCommunsPaginated = createAsyncThunk(
+  'dossierCommun/fetchDossiersCommunsPaginated',
+  async (params: FetchDossiersCommunsPaginatedParams, { rejectWithValue }) => {
+    try {
+      const response = await axiosInstance.get('/dossier-commun', { params });
+      if (!response.data.success) {
+        return rejectWithValue(response.data.message);
+      }
+      // response.data.data = { data: DossierCommun[], meta: PaginationMeta }
+      const payload = response.data.data;
+      return { data: payload.data as DossierCommun[], meta: payload.meta as PaginationMeta };
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.message || 'Erreur réseau');
     }
@@ -160,6 +204,19 @@ const dossierCommunSlice = createSlice({
       .addCase(fetchDossiersCommuns.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+      })
+      .addCase(fetchDossiersCommunsPaginated.pending, (state) => {
+        state.listLoading = true;
+        state.listError = null;
+      })
+      .addCase(fetchDossiersCommunsPaginated.fulfilled, (state, action) => {
+        state.listLoading = false;
+        state.listData = action.payload.data;
+        state.listMeta = action.payload.meta;
+      })
+      .addCase(fetchDossiersCommunsPaginated.rejected, (state, action) => {
+        state.listLoading = false;
+        state.listError = action.payload as string;
       })
       // Create
       .addCase(createDossierCommun.pending, (state) => {

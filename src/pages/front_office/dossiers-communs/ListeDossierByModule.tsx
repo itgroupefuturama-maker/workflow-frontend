@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchDossiersCommuns, setCurrentClientFactureId, type DossierCommun } from '../../../app/front_office/dossierCommunSlice';
+import { fetchDossiersCommunsPaginated, setCurrentClientFactureId, type DossierCommun } from '../../../app/front_office/dossierCommunSlice';
 import type { RootState, AppDispatch } from '../../../app/store';
 import {FiFolder, FiSearch, FiRefreshCw, FiArrowLeft, FiCalendar, FiUser} from 'react-icons/fi';
+import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
+import Pagination from '../../../components/Pagination';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -12,16 +14,38 @@ function ListeDossierByModule() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
 
-  const { data: dossiers, loading: loadingDossiers } = useSelector(
-    (state: RootState) => state.dossierCommun
-  );
+  const {
+    listData: filteredDossiers = [],
+    listMeta: meta = { total: 0, page: 1, limit: 10, totalPages: 1 },
+    listLoading: loadingDossiers,
+  } = useSelector((state: RootState) => state.dossierCommun);
 
   const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebouncedValue(searchTerm, 400);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+
+  // Revenir à la page 1 quand la recherche change
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
+
+  const loadList = () => {
+    dispatch(fetchDossiersCommunsPaginated({
+      page,
+      limit,
+      search: debouncedSearch || undefined,
+      module,
+    }));
+  };
+
+  useEffect(() => {
+    loadList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dispatch, page, limit, debouncedSearch, module]);
 
   const handleRefresh = () => {
-    dispatch(fetchDossiersCommuns());
-    // Tu peux ajouter d'autres refresh ciblés si besoin
-    // dispatch(fetchClientFactures()); etc.
+    loadList();
   };
 
   const handleOpenDossier = async (dossier: DossierCommun) => {
@@ -30,39 +54,6 @@ function ListeDossierByModule() {
       state: { targetTab: 'prospection' }
     });
   };
-
-  const filteredDossiers = dossiers.filter((dossier) => {
-    const colabs = dossier.dossierCommunColab || [];
-
-    // On cherche s'il y a au moins UNE prestation ticketing valide
-    const hasValidTicketing = colabs.some((colab) => {
-      if (
-        !colab ||
-        colab.status !== "CREER" ||
-        colab.module?.nom?.toLowerCase() !== module
-      ) {
-        return false;
-      }
-
-      // Point clé : on exige que prestation ne soit pas vide
-      const prestations = colab.prestation || [];
-      return prestations.length > 0;
-    });
-
-    if (!hasValidTicketing) return false;
-
-    // ───────────────────────────────────────────────
-    // Filtre texte (recherche)
-    const term = searchTerm.toLowerCase().trim();
-    if (term === "") return true;
-
-    return [
-      dossier.numero,
-      dossier.contactPrincipal,
-      dossier.clientfacture?.libelle,
-      dossier.description,
-    ].some((val) => String(val || "").toLowerCase().includes(term));
-  });
 
 
   return (
@@ -264,6 +255,13 @@ function ListeDossierByModule() {
                 <p className="text-sm text-gray-400 font-medium">Aucun dossier trouvé pour "{searchTerm}".</p>
               </div>
             )}
+
+            <Pagination
+              meta={meta}
+              onPageChange={setPage}
+              onLimitChange={(l) => { setLimit(l); setPage(1); }}
+              itemLabel="dossier"
+            />
           </div>
         </div>
 

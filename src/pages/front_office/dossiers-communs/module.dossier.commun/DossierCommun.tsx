@@ -1,9 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchDossiersCommuns, setCurrentClientFactureId } from '../../../../app/front_office/dossierCommunSlice';
+import { fetchDossiersCommunsPaginated, setCurrentClientFactureId } from '../../../../app/front_office/dossierCommunSlice';
 import type { RootState, AppDispatch } from '../../../../app/store';
 import { FiPlus, FiFolder, FiSearch, FiRefreshCw, FiGrid, FiFilter, FiChevronDown, FiX, FiArrowUp, FiArrowDown, FiArrowLeft } from 'react-icons/fi';
+import { useDebouncedValue } from '../../../../hooks/useDebouncedValue';
+import Pagination from '../../../../components/Pagination';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -42,7 +44,19 @@ function DossierCommun() {
   const navigate = useNavigate();
 
   const { data: modules }                       = useSelector((state: RootState) => state.modules);
-  const { data: dossiers, loading: loadingDossiers } = useSelector((state: RootState) => state.dossierCommun);
+  // Liste complète non paginée — sert uniquement aux compteurs par module de la sidebar et
+  // aux options des filtres "Client facturé"/"Créé par" (le backend ne fournit pas d'agrégat
+  // par module ni de recherche sur ces champs). Inchangée par rapport à avant ce chantier.
+  const { data: dossiers } = useSelector((state: RootState) => state.dossierCommun);
+  // Liste paginée — alimente le tableau affiché.
+  const {
+    listData: pagedDossiers = [],
+    listMeta: meta = { total: 0, page: 1, limit: 10, totalPages: 1 },
+    listLoading: loadingDossiers,
+  } = useSelector((state: RootState) => state.dossierCommun);
+
+  const [page,  setPage]  = useState(1);
+  const [limit, setLimit] = useState(10);
 
   const [searchTerm,     setSearchTerm]     = useState('');
   const [selectedModule, setSelectedModule] = useState<string | null>(null);
@@ -57,6 +71,30 @@ function DossierCommun() {
 
   useClickOutside(filterRef, () => setOpenFilter(false));
   useClickOutside(sortRef,   () => setOpenSort(false));
+
+  const debouncedSearch = useDebouncedValue(searchTerm, 400);
+  // Le backend n'accepte qu'une seule valeur de statut (pas un multi-select) : si les deux
+  // statuts sont cochés (ou aucun), ça revient à ne pas filtrer côté serveur.
+  const serverStatut = filters.statuts.length === 1 ? filters.statuts[0] : undefined;
+
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch, selectedModule, serverStatut]);
+
+  const loadList = () => {
+    dispatch(fetchDossiersCommunsPaginated({
+      page,
+      limit,
+      search: debouncedSearch || undefined,
+      statut: serverStatut,
+      module: selectedModule || undefined,
+    }));
+  };
+
+  useEffect(() => {
+    loadList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dispatch, page, limit, debouncedSearch, selectedModule, serverStatut]);
 
   // ── Valeurs uniques pour les selects ──────────────────────────────────────
   const uniqueClients = [...new Set(dossiers.map((d) => d.clientfacture?.libelle).filter(Boolean))] as string[];
@@ -92,26 +130,12 @@ function DossierCommun() {
   };
 
   // ── Pipeline : filtre → tri ───────────────────────────────────────────────
-  const processedDossiers = dossiers
+  // Recherche/module/statut sont maintenant filtrés côté serveur (voir loadList ci-dessus).
+  // clientFacture/créé par/date de création restent filtrés ici, faute de support serveur —
+  // ils ne s'appliquent donc qu'à la page actuellement chargée (`pagedDossiers`), pas à
+  // l'ensemble des dossiers.
+  const processedDossiers = pagedDossiers
     .filter((dossier) => {
-      const term = searchTerm.toLowerCase();
-
-      const matchesSearch =
-        dossier.numero?.toString().toLowerCase().includes(term) ||
-        dossier.contactPrincipal?.toLowerCase().includes(term) ||
-        dossier.clientfacture?.libelle?.toLowerCase().includes(term) ||
-        dossier.description?.toLowerCase().includes(term);
-
-      const matchesModule = selectedModule === null
-        ? true
-        : dossier.dossierCommunColab
-            ?.filter((c) => c.status === 'CREER')
-            .some((c) => c.module?.nom === selectedModule);
-
-      const matchesStatut = filters.statuts.length === 0
-        ? true
-        : filters.statuts.includes(dossier.status);
-
       const matchesClient = filters.clientFacture
         ? dossier.clientfacture?.libelle === filters.clientFacture
         : true;
@@ -128,7 +152,7 @@ function DossierCommun() {
         ? dossierDate <= new Date(filters.dateTo + 'T23:59:59').getTime()
         : true;
 
-      return matchesSearch && matchesModule && matchesStatut && matchesClient && matchesUser && matchesDateFrom && matchesDateTo;
+      return matchesClient && matchesUser && matchesDateFrom && matchesDateTo;
     })
     .sort((a, b) => {
       if (!sortField) return 0;
@@ -166,7 +190,7 @@ function DossierCommun() {
           </span>
         </button>
 
-        {modules.map((mod) => {
+        {modules.filter((mod) => mod.status === 'ACTIF').map((mod) => {
           const isActive = selectedModule === mod.nom;
           const count    = countByModule(mod.nom);
           return (
@@ -410,7 +434,7 @@ function DossierCommun() {
 
             {/* Actualiser */}
             <button
-              onClick={() => dispatch(fetchDossiersCommuns())}
+              onClick={loadList}
               disabled={loadingDossiers}
               title="Actualiser"
               className="p-2.5 text-slate-500 bg-white border border-slate-200 rounded-xl hover:text-indigo-600 hover:border-indigo-100 hover:bg-indigo-50/50 transition-all disabled:opacity-50 shadow-sm"
@@ -538,6 +562,13 @@ function DossierCommun() {
               </div>
             )}
           </div>
+
+          <Pagination
+            meta={meta}
+            onPageChange={setPage}
+            onLimitChange={(l) => { setLimit(l); setPage(1); }}
+            itemLabel="dossier"
+          />
         </div>
       </div>
     </div>
