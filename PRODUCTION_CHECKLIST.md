@@ -88,6 +88,11 @@ Légende statut : `[ ]` à faire · `[~]` en cours · `[x]` terminé
 - [ ] **654 occurrences de `any`** en TypeScript — dette de typage qui masque des bugs potentiels, notamment dans `ProtectedRoute.tsx`, `Axios.tsx`.
 - [ ] **Pas de librairie de validation de formulaires** (pas de zod/yup/react-hook-form) — validation manuelle dispersée, risque d'incohérence.
 - [ ] **Pas de reporting d'erreurs centralisé** (type Sentry) — en prod, une erreur côté client ne remonte à personne.
+- [~] **Pas de pagination sur plusieurs listes à fort volume** *(audité le 2026-08-18)* — 13 endpoints identifiés qui chargent la liste complète (dossiers communs, suivis, todos, profilage client, miles client, clients bénéficiaires, factures clients, billets/passagers par plage de dates, comptes miles compagnie, rappels/sondages SAV, infos passeport passagers, réservations hôtel par plateforme), avec recherche/filtres faits côté client sur la totalité chargée. Audit fait via 3 agents en parallèle (back office + 2 moitiés front office), sur les ~75 slices Redux du projet. Un pattern de pagination existe déjà et fonctionne (`GET /controle/paginated`, réponse `{ data: { data: [...], meta: { total, page, limit, totalPages } } }`) — à généraliser aux 13 endpoints identifiés.
+  - Brief prêt à transmettre au backend → `BACKEND_PROMPT_PAGINATION.md`.
+  - Cas à surveiller sans urgence (à trancher avec le backend) : `fournisseurs`, `users`, `visa-params`, `visa-docs`.
+  - **Bloqué en attente du retour backend**, endpoint par endpoint (pas besoin d'attendre que tout soit traité — voir stratégie de transition dans le brief).
+  - Une fois le retour reçu par endpoint : mettre à jour le slice + composant correspondant côté frontend (pagination + recherche/filtres côté serveur au lieu du filtrage JS en mémoire).
 
 ---
 
