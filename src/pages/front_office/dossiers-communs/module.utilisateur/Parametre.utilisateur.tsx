@@ -5,6 +5,7 @@ import { fetchCurrentUser, fetchGoogleCalendarAuthUrl } from '../../../../app/fr
 import { FiUser, FiGrid, FiShield, FiCalendar, FiArrowLeft, FiSearch } from 'react-icons/fi';
 import { Spinner } from '../module.parametre/components/Spinner';
 import { useNavigate } from 'react-router-dom';
+import { toast } from '../../../../components/Toast/toast';
 
 
 // ── Helpers UI ───────────────────────────────────────────────
@@ -56,7 +57,7 @@ const ParametreUtilisateur: React.FC = () => {
       const url = await dispatch(fetchGoogleCalendarAuthUrl(user.id)).unwrap();
       window.open(url, '_blank', 'noopener,noreferrer');
     } catch (err) {
-      alert('Impossible de récupérer le lien Google Calendar');
+      toast.error('Impossible de récupérer le lien Google Calendar');
     } finally {
       setLoadingAuth(false);
     }

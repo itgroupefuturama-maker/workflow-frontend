@@ -343,10 +343,6 @@ export const fetchBilletById = createAsyncThunk(
   async (id: string, { rejectWithValue }) => {
     try {
       const response = await axios.get(`/billet/entete/${id}/devis`);
-      
-      // LOG DE DÉBOGAGE CRITIQUE : 
-      // Regarde bien dans la console si c'est "response.data" ou "response" qui contient ton JSON
-      console.log("DEBUG RESPONSE AXIOS:", response);
 
       // Extraction ultra-sécurisée
       // On cherche l'ID soit dans response.data.data.id, soit dans response.data.id
@@ -423,7 +419,6 @@ export const updateApprouverBilletEnteteStatut = createAsyncThunk(
   ) => {
     try {
       const response = await axios.put(`/billet/${enteteId}/a-approuver`);
-      console.log(enteteId);
       if (!response.data?.success) {
         throw new Error('Échec du changement de statut');
       }

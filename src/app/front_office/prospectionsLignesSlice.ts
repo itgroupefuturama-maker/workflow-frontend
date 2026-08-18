@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import axios from '../../service/Axios';
+import { toast } from '../../components/Toast/toast';
 export interface ServiceSpecifique {
   id: string;
   code: string;                    // ex: "SP-1", "SP-2"
@@ -190,6 +191,7 @@ export const fetchProspectionLignes = createAsyncThunk(
       return lignes as ProspectionLigne[];
     } catch (err: any) {
       console.error('Erreur fetch lignes:', err);
+      toast.error('Erreur lors du chargement des lignes de prospection');
       return rejectWithValue(
         err.response?.data?.message ||
         err.message ||

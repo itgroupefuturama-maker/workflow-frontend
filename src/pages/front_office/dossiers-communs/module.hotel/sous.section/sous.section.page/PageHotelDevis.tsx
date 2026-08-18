@@ -187,9 +187,7 @@ export default function PageHotelDevis() {
     [dossierActif]
   );
 
-  console.log(`le id tonga eto ${enteteId}`);
-
-  const { data, actionLoading, actionError, transformed, 
+  const { data, actionLoading, actionError, transformed,
     // pdfClientUrl, pdfDirectionUrl 
   } = useSelector(
     (state: RootState) => state.hotelDevis

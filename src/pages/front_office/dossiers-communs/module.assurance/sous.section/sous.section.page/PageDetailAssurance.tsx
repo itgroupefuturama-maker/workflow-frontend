@@ -24,9 +24,6 @@ const PageDetailAssurance = () => {
   const navigate    = useNavigate();
   const location    = useLocation();
 
-  console.log(ligneId);
-  
-
   const numeroDos = location.state?.numeroDos ?? '—';
 
   const tabs = [

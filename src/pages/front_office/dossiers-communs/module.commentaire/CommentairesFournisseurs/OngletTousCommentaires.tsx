@@ -4,6 +4,7 @@ import { FiSearch, FiX, FiEdit2, FiToggleLeft, FiToggleRight } from 'react-icons
 import { Spinner, inputClass, Field } from '../../module.parametre/components/Spinner';
 import CommentairesList from '../../module.parametre/components/CommentairesList';
 import type { CommentaireFournisseur } from '../../module.parametre/components/CommentaireCard';
+import { toast } from '../../../../../components/Toast/toast';
 
 const OngletTousCommentaires: React.FC = () => {
   const [tousCommentaires, setTousCommentaires] = useState<CommentaireFournisseur[]>([]);
@@ -29,6 +30,7 @@ const OngletTousCommentaires: React.FC = () => {
       if (res.data.success) setTousCommentaires(res.data.data || []);
     } catch (err) {
       console.error(err);
+      toast.error('Impossible de charger les commentaires fournisseurs');
     } finally {
       setLoading(false);
     }
@@ -75,7 +77,7 @@ const OngletTousCommentaires: React.FC = () => {
       if (res.data.success) { await fetchTous(); resetEdit(); }
     } catch (err) {
       console.error(err);
-      alert('Erreur lors de la sauvegarde');
+      toast.error('Erreur lors de la sauvegarde');
     } finally {
       setSaving(false);
     }

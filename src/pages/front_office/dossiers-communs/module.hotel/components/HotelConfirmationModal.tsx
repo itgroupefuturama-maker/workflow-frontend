@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { FiX, FiCheck } from 'react-icons/fi';
+import { toast } from '../../../../../components/Toast/toast';
 
 interface HotelConfirmationModalProps {
   isOpen: boolean;
@@ -69,7 +70,7 @@ const HotelConfirmationModal: React.FC<HotelConfirmationModalProps> = ({
 
   const handleShowConfirmation = () => {
     if (!isFormValid) {
-      alert('Veuillez compléter tous les champs obligatoires.');
+      toast.warning('Veuillez compléter tous les champs obligatoires.');
       return;
     }
     setShowConfirmation(true);

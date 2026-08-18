@@ -134,42 +134,31 @@ export default function DossierCommunForm() {
 
   // Charger les suggestions de collaborateurs quand le client facturé change
   useEffect(() => {
-    console.log("useEffect suggestions déclenché - clientId :", selectedClientFactureId);
-
     setSuggestedCollaborators({});
 
     if (!selectedClientFactureId) {
-      console.log("→ Pas de client sélectionné → suggestions vidées");
       return;
     }
 
     const fetchSuggestions = async () => {
-      console.log("→ Début fetch pour client :", selectedClientFactureId);
       const modules = getModulesWithUsers();
-      console.log("Modules trouvés :", modules.map(m => m.id));
 
       const suggestions: Record<string, string> = {};
 
       for (const { id: moduleId } of modules) {
-        console.log(`→ Appel API pour module ${moduleId}`);
         try {
           const response = await axiosInstance.get(
             `/prestations/${moduleId}/clientFact/${selectedClientFactureId}`
           );
-          console.log(`Réponse module ${moduleId} :`, response.data);
 
           if (response.data.success && response.data.data?.collaboratorId) {
             suggestions[moduleId] = response.data.data.collaboratorId;
-            console.log(`→ Suggestion trouvée pour ${moduleId} : ${suggestions[moduleId]}`);
-          } else {
-            console.log(`→ Pas de collaboratorId valide pour ${moduleId}`);
           }
         } catch (err: any) {
           console.error(`Erreur API module ${moduleId} :`, err?.response?.data || err.message);
         }
       }
 
-      console.log("Suggestions finales :", suggestions);
       setSuggestedCollaborators(suggestions);
     };
 

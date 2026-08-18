@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { FiX, FiAlertTriangle } from 'react-icons/fi';
 import type { Ligne } from '../../app/front_office/devisSlice';
+import { toast } from '../Toast/toast';
 
 interface AnnulationModalProps {
   isOpen: boolean;
@@ -39,7 +40,10 @@ export default function AnnulationDevisModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!raison.trim()) return alert('La raison d\'annulation est obligatoire');
+    if (!raison.trim()) {
+      toast.warning('La raison d\'annulation est obligatoire');
+      return;
+    }
 
     // const lignesData = lignes.map(l => ({
     //   id: l.id,

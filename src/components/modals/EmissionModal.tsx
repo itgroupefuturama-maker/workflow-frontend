@@ -1,6 +1,7 @@
 // src/components/modals/EmissionModal.tsx
 import React, { useState, useEffect } from 'react';
 import { FiX, FiUpload, FiCheck, FiTrash2, FiCheckCircle } from 'react-icons/fi';
+import { toast } from '../Toast/toast';
 
 interface PassagerEmission {
   billetId: string;           // ID du billet (de la table billet)
@@ -68,13 +69,13 @@ const EmissionModal: React.FC<EmissionModalProps> = ({
 
     // Validation
     if (passagers.length === 0) {
-      alert('Aucun passager à émettre');
+      toast.warning('Aucun passager à émettre');
       return;
     }
 
     const hasMissing = passagers.some(p => !p.numeroBillet.trim() || !p.pjBillet);
     if (hasMissing) {
-      alert('Chaque passager doit avoir un numéro de billet ET un fichier PDF');
+      toast.warning('Chaque passager doit avoir un numéro de billet ET un fichier PDF');
       return;
     }
 

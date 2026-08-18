@@ -79,9 +79,6 @@ export const createTransactionType = createAsyncThunk<
       },
     });
 
-    console.log("Payload sent:", payload);
-    console.log("Response:", response.data);
-    
     if (response.data.success) {
       // Re-fetch pour avoir la liste à jour
       dispatch(fetchTransactionTypes());

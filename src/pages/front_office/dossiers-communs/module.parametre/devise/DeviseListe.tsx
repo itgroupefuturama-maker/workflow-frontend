@@ -4,6 +4,7 @@ import { FiEdit2, FiTrash2, FiX, FiCheck } from 'react-icons/fi';
 import type { AppDispatch, RootState } from '../../../../../app/store';
 import { createDevise, deleteDevise, fetchDevises, updateDevise, type Devise } from '../../../../../app/front_office/parametre-global/deviseSlice';
 import ModalFormParametre from '../../module.hotel/components/ModalFormParametre';
+import { toast } from '../../../../../components/Toast/toast';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -29,6 +30,7 @@ const DeviseListe = () => {
       } else {
         // rejectWithValue renvoie le message d'erreur directement dans result.payload (string)
         console.error('Erreur lors de la création de la devise :', result.payload);
+        toast.error((result.payload as string) || 'Erreur lors de la création de la devise');
       }
     });
   };

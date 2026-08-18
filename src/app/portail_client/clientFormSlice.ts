@@ -308,11 +308,9 @@ export const createClientAssuranceForm = createAsyncThunk(
   ) => {
     try {
       const body = { ...payload, userId };
-      console.log('🔍 payload envoyé:', JSON.stringify(body, null, 2));
-      console.log('🔍 URL:', `${API_URL_PORTAIL}/client-assurance-form`);
-      
-      const response = await axios.post(
-        `${API_URL_PORTAIL}/client-assurance-form`, 
+
+      await axios.post(
+        `${API_URL_PORTAIL}/client-assurance-form`,
         body,
         {
           headers: {
@@ -321,12 +319,8 @@ export const createClientAssuranceForm = createAsyncThunk(
         }
       );
 
-      console.log(response);
-      
       dispatch(fetchClientInfo(beneficiaireId));
     } catch (err: any) {
-      console.log('❌ erreur complète:', err.response?.data);
-      console.log('❌ status:', err.response?.status);
       return rejectWithValue(
         err.response?.data?.message || "Erreur lors de la création du formulaire d'assurance."
       );

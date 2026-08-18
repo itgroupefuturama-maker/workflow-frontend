@@ -34,27 +34,6 @@ export default function FrontOfficeLayout() {
       auth: (cb) => cb({ token: store.getState().auth.token }),
     });
 
-    socket.on('connect', () => {
-      console.log('Socket connecté:', socket.id);
-    });
-
-    // Écoute l'événement 'notification' (comme dans ton AppBar)
-    socket.on('notification', (data: any) => {
-      console.log('Notification reçue via socket:', data);
-
-      if (
-        data.entityType === 'NOTIFICATION' &&
-        data.action === 'CREATE' &&
-        data.receiverId === user.id
-      ) {
-        console.log("refresh");
-      }
-    });
-
-    socket.on('disconnect', () => {
-      console.log('Socket déconnecté');
-    });
-
     return () => {
       socket.disconnect();
     };

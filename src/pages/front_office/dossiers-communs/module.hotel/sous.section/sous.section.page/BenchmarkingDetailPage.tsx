@@ -13,6 +13,7 @@ import ConfirmBenchmarkModal from '../../../../../../components/modals/Hotel/Con
 import PanneauPreferencesClient from '../../components/PanneauPreferencesClient';
 import { ChevronDown } from 'lucide-react';
 import { setShowPreferences, togglePreferences } from '../../../../../../app/uiSlice';
+import { toast } from '../../../../../../components/Toast/toast';
 
 const BenchmarkingDetailPage = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -291,7 +292,7 @@ const BenchmarkingDetailPage = () => {
   // Handler pour envoyer le devis
   const handleSendDevis = () => {
     if (!detail || !benchmarkLine || !bookingPlateforme || !clientPlateforme) {
-      alert('Données manquantes pour envoyer le devis');
+      toast.warning('Données manquantes pour envoyer le devis');
       return;
     }
 
@@ -348,7 +349,7 @@ const BenchmarkingDetailPage = () => {
       dispatch(fetchBenchmarkingDetail(selectedId!));
       setShowConfirmDevisModal(false);
     } catch (err: any) {
-      alert(err.message || 'Erreur lors de l\'envoi du devis');
+      toast.error(err.message || 'Erreur lors de l\'envoi du devis');
     } finally {
       setSendingDevis(false);
     }
@@ -363,7 +364,7 @@ const BenchmarkingDetailPage = () => {
           dispatch(fetchBenchmarkingDetail(selectedId));
         }
       } else {
-        alert(result.payload || 'Erreur lors de la création de la ligne');
+        toast.error((result.payload as string) || 'Erreur lors de la création de la ligne');
       }
     });
   };
@@ -390,7 +391,7 @@ const BenchmarkingDetailPage = () => {
       setShowBenchmarkModal(false);
       dispatch(fetchBenchmarkingDetail(detail.id));
     } catch (err: any) {
-      alert(err.message || "Erreur lors de la définition du benchmark");
+      toast.error(err.message || "Erreur lors de la définition du benchmark");
     } finally {
       setSettingBenchmark(false);
     }

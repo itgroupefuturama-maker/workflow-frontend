@@ -30,9 +30,6 @@ const PageViewVisa = () => {
     ?.find((colab) => colab.module?.nom?.toLowerCase() === 'visa')
     ?.prestation?.[0]?.id ?? '';
 
-    console.log(prestationId);
-    
-
   // ── Fetch ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (prestationId) {

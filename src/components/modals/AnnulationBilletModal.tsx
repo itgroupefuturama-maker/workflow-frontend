@@ -4,6 +4,7 @@ import type { BilletLigne } from '../../app/front_office/billetSlice';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../app/store';
 import { fetchRaisonsAnnulation } from '../../app/front_office/parametre_ticketing/raisonAnnulationSlice';
+import { toast } from '../Toast/toast';
 
 type AnnulType = 'SIMPLE' | 'COM' | 'PEN' | 'COM_PEN';
 
@@ -100,23 +101,22 @@ export default function AnnulationBilletModal({
       payload.puResaMontantPenaliteCompagnieDevise = Number(penaliteMontant);
     }
 
-    console.log('[DEBUG] Payload:', payload);
     return payload;
   };
 
   const handleSubmit = () => {
     if (!selectedLigneId) {
-      alert('Veuillez sélectionner une ligne à annuler');
+      toast.warning('Veuillez sélectionner une ligne à annuler');
       return;
     }
 
     if (tauxChange === '' || isNaN(Number(tauxChange))) {
-      alert('Le taux de change est obligatoire et doit être un nombre valide');
+      toast.warning('Le taux de change est obligatoire et doit être un nombre valide');
       return;
     }
 
     if (typeAnnul !== 'PEN' && !raison.trim()) {
-      alert('La raison est obligatoire sauf pour le type PÉNALITÉ');
+      toast.warning('La raison est obligatoire sauf pour le type PÉNALITÉ');
       return;
     }
 
@@ -125,7 +125,7 @@ export default function AnnulationBilletModal({
       onSubmit(payload);
       setShowPreview(false);
     } catch (err: any) {
-      alert(err.message || 'Erreur validation');
+      toast.error(err.message || 'Erreur validation');
     }
   };
 

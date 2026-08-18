@@ -369,8 +369,6 @@ export const fetchClientFactureById = createAsyncThunk<
         headers: { Authorization: `Bearer ${auth.token}` },
       });
 
-      console.log("Réponse brute fetchById :", response.data); // ← log très important
-
       if (response.data.success && response.data.data) {
         return response.data.data as ClientFactureDetail;
       }

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FiX, FiCheck } from 'react-icons/fi';
 import type { HotelProspectionEntete } from '../../../app/front_office/parametre_hotel/hotelProspectionEnteteSlice';
+import { toast } from '../../Toast/toast';
 
 interface Props {
   isOpen: boolean;
@@ -72,7 +73,7 @@ const ModalBenchmarkingToHotel: React.FC<Props> = ({
 
   const handleShowConfirmation = () => {
     if (!isFormValid) {
-      alert('Veuillez sélectionner au moins une ligne client.');
+      toast.warning('Veuillez sélectionner au moins une ligne client.');
       return;
     }
     setShowConfirmation(true);

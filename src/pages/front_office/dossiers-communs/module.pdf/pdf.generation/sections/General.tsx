@@ -3,6 +3,7 @@ import { FiUpload, FiX, FiCheck } from 'react-icons/fi';
 import { PDF_DESIGNS } from '../config/pdf-designs';
 import type { PdfDesignId } from '../types/pdf-design.types';
 import { usePdfConfig } from '../hooks/usePdfGenerator';
+import { toast } from '../../../../../../components/Toast/toast';
 
 const General: React.FC = () => {
   const config = usePdfConfig();
@@ -25,7 +26,7 @@ const General: React.FC = () => {
 
     // Vérifier que c'est bien une image
     if (!file.type.startsWith('image/')) {
-      alert('Veuillez importer une image PNG ou JPG');
+      toast.warning('Veuillez importer une image PNG ou JPG');
       return;
     }
 
@@ -34,14 +35,13 @@ const General: React.FC = () => {
       const b64 = reader.result as string;
       // Vérifier que le base64 est complet
       if (!b64 || !b64.startsWith('data:image')) {
-        alert('Erreur lors de la lecture du fichier');
+        toast.error('Erreur lors de la lecture du fichier');
         return;
       }
       setter(b64);
       configSetter(b64);
-      console.log('Image chargée :', file.name, '— taille base64 :', b64.length);
     };
-    reader.onerror = () => alert('Erreur lecture fichier');
+    reader.onerror = () => toast.error('Erreur lecture fichier');
     reader.readAsDataURL(file);
   };
 

@@ -6,6 +6,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { persistor, type AppDispatch, type RootState } from '../app/store';
 import logo from '../assets/logo.jpg';
 import axiosInstance from '../service/Axios';
+import { toast } from './Toast/toast';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -80,6 +81,7 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
       if (res.data.success) setNotifications(res.data.data);
     } catch (e) {
       console.error(e);
+      toast.error('Erreur lors du chargement des notifications');
     } finally {
       setLoadingNotifs(false);
     }
@@ -93,14 +95,20 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
     try {
       await axiosInstance.patch(`/notifications/${id}/read`);
       setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true } : n));
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      toast.error('Impossible de marquer la notification comme lue');
+    }
   };
 
   const deleteNotification = async (id: string) => {
     try {
       await axiosInstance.delete(`/notifications/${id}`);
       setNotifications((prev) => prev.filter((n) => n.id !== id));
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      toast.error('Impossible de supprimer la notification');
+    }
   };
 
   const markAllAsRead = async () => {
@@ -108,7 +116,10 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
     try {
       await axiosInstance.patch(`/notifications/user/${user.id}/read-all`);
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
-    } catch (e) { console.error(e); }
+    } catch (e) {
+      console.error(e);
+      toast.error('Impossible de marquer toutes les notifications comme lues');
+    }
   };
 
   const handleLogout = async () => {

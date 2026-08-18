@@ -17,6 +17,7 @@ import {
   markAsDone,
   updateTodo,
 } from '../../../../../../app/front_office/todosSlice';
+import { toast } from '../../../../../../components/Toast/toast';
 
 interface SuiviTabContentProps {
   suivis: any;
@@ -37,8 +38,6 @@ const SuiviTabContent: React.FC<SuiviTabContentProps> = ({
 
   // On récupère le dossier actif de Redux au lieu de l'URL
   const dossierActif = useSelector((state: RootState) => state.dossierCommun.currentClientFactureId);
-
-  // console.log("dossierActif", dossierActif);
 
   const prestationId = dossierActif?.dossierCommunColab
     ?.find(colab => colab.module?.nom?.toLowerCase() === "ticketing")
@@ -69,7 +68,7 @@ const SuiviTabContent: React.FC<SuiviTabContentProps> = ({
       await dispatch(createCommentaire({ commentaire: newComment.trim(), prestationId })).unwrap();
       setNewComment('');
     } catch {
-      alert('Erreur création commentaire');
+      toast.error('Erreur création commentaire');
     }
   };
 
@@ -89,7 +88,7 @@ const SuiviTabContent: React.FC<SuiviTabContentProps> = ({
       await dispatch(updateCommentaire({ id: editingCommentId, commentaire: editingCommentText.trim() })).unwrap();
       cancelEditing();
     } catch {
-      alert('Erreur modification commentaire');
+      toast.error('Erreur modification commentaire');
     }
   };
 
@@ -98,14 +97,14 @@ const SuiviTabContent: React.FC<SuiviTabContentProps> = ({
     try {
       await dispatch(deleteCommentaire(id)).unwrap();
     } catch {
-      alert('Erreur suppression commentaire');
+      toast.error('Erreur suppression commentaire');
     }
   };
 
   // ── Fonctions Rappels ────────────────────────────────────────
   const handleCreateRappel = async () => {
     if (!newObjet.trim() || !newMoment.trim() || !prestationId) {
-      alert('Remplir objet et moment');
+      toast.warning('Remplir objet et moment');
       return;
     }
 
@@ -119,7 +118,7 @@ const SuiviTabContent: React.FC<SuiviTabContentProps> = ({
       setNewObjet('');
       setNewMoment('');
     } catch {
-      alert('Erreur création rappel');
+      toast.error('Erreur création rappel');
     }
   };
 
@@ -147,7 +146,7 @@ const SuiviTabContent: React.FC<SuiviTabContentProps> = ({
       await dispatch(updateTodo({ rappelId: editingTodoId, objet: editingObjet.trim(), moment: momentToSend })).unwrap();
       cancelEditRappel();
     } catch {
-      alert('Erreur modification rappel');
+      toast.error('Erreur modification rappel');
     }
   };
 
@@ -156,7 +155,7 @@ const SuiviTabContent: React.FC<SuiviTabContentProps> = ({
     try {
       await dispatch(markAsDone(rappelId)).unwrap();
     } catch {
-      alert('Erreur marquage fait');
+      toast.error('Erreur marquage fait');
     }
   };
 
@@ -165,7 +164,7 @@ const SuiviTabContent: React.FC<SuiviTabContentProps> = ({
     try {
       await dispatch(deactivateTodo(rappelId)).unwrap();
     } catch {
-      alert('Erreur désactivation');
+      toast.error('Erreur désactivation');
     }
   };
 
@@ -174,7 +173,7 @@ const SuiviTabContent: React.FC<SuiviTabContentProps> = ({
     try {
       await dispatch(deleteTodo(rappelId)).unwrap();
     } catch {
-      alert('Erreur suppression rappel');
+      toast.error('Erreur suppression rappel');
     }
   };
 

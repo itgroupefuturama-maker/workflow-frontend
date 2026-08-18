@@ -80,8 +80,6 @@ const AddBeneficiaireModal = ({ beneficiaireId, userId, onClose }: Props) => {
   const dispatch = useDispatch<AppDispatch>();
   const { loading, error } = useSelector((state: RootState) => state.clientForm);
 
-  console.log("userIdssssss", userId);
-
   const [form, setForm] = useState<ClientFormPayload>(EMPTY_FORM);
   const [step, setStep] = useState(0);
   const [success, setSuccess] = useState(false);

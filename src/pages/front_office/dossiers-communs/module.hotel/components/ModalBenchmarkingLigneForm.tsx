@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FiX, FiInfo, FiSave, FiPlus, FiTrash2 } from 'react-icons/fi';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../../../../../app/store';
+import { toast } from '../../../../../components/Toast/toast';
 
 type DeviseLigne = {
   deviseId: string;
@@ -127,12 +128,12 @@ const ModalBenchmarkingLigneForm: React.FC<Props> = ({
     e.preventDefault();
 
     if (!form.hotel || !form.plateformeId || !form.typeChambreId) {
-      alert('Veuillez remplir les champs obligatoires (hôtel, plateforme, type de chambre)');
+      toast.warning('Veuillez remplir les champs obligatoires (hôtel, plateforme, type de chambre)');
       return;
     }
 
     if (devisesLignes.length === 0) {
-      alert('Veuillez ajouter au moins une devise');
+      toast.warning('Veuillez ajouter au moins une devise');
       return;
     }
 
@@ -140,7 +141,7 @@ const ModalBenchmarkingLigneForm: React.FC<Props> = ({
       (d) => !d.deviseId || !d.nuiteDevise || !d.tauxChange
     );
     if (invalidDevise) {
-      alert('Veuillez compléter toutes les lignes devise (devise, nuit/devise et taux requis)');
+      toast.warning('Veuillez compléter toutes les lignes devise (devise, nuit/devise et taux requis)');
       return;
     }
 

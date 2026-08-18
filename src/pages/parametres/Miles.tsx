@@ -16,6 +16,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../app/store';
 import { useNavigate } from 'react-router-dom';
 import AuditModal from '../../components/AuditModal';
+import { toast } from '../../components/Toast/toast';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -49,11 +50,10 @@ const MilesPage = () => {
 
   const handleCreate = () => {
     if (!newModuleId || newTaux <= 0) {
-      alert('Veuillez sélectionner un module et saisir un taux valide');
+      toast.warning('Veuillez sélectionner un module et saisir un taux valide');
       return;
     }
-    console.log(`Le donnée envoyer ${JSON.stringify({ moduleId: newModuleId, taux: newTaux })}`);
-    
+
     dispatch(createMiles({ moduleId: newModuleId, taux: newTaux }));
     setNewModuleId('');
     setNewTaux(0);

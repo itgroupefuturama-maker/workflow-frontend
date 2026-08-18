@@ -65,13 +65,7 @@ const Numerotation = () => {
       moduleId: formData.moduleId,
     };
 
-    // 🔥 LOG POUR VOIR EXACTEMENT CE QUI EST ENVOYÉ
-    console.log('📤 Payload envoyé à /dossiers :', payload);
-
     const result = await dispatch(createDossier(payload));
-
-    // 🔥 LOG DU RÉSULTAT REDUX
-    console.log('🔄 Resultat createDossier :', result);
 
     if (createDossier.fulfilled.match(result)) {
       setSuccess('Configuration de dossier créée avec succès !');

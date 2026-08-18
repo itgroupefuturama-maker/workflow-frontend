@@ -203,7 +203,6 @@ export const updateApprouverDevisStatut = createAsyncThunk(
   ) => {
     try {
       const response = await axios.put(`/devis/${enteteId}/envoyer`);
-      console.log(enteteId);
       if (!response.data?.success) {
         throw new Error('Échec du changement de statut');
       }

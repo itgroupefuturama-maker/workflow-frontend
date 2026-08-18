@@ -7,6 +7,7 @@ import type { ProspectionEntete } from '../../../../app/front_office/prospection
 import { fetchFournisseurs } from '../../../../app/back_office/fournisseursSlice';
 import ProspectionModals from '../../../../components/modals/ProspectionModals';
 import Sidebar from '../../../../layouts/Sidebar';
+import { toast } from '../../../../components/Toast/toast';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -90,7 +91,7 @@ const HomePageTicketing = () => {
       closeModal();
     } catch (err: any) {
       console.error(err);
-      alert("Erreur lors de la sauvegarde : " + (err?.message || "Erreur inconnue"));
+      toast.error("Erreur lors de la sauvegarde : " + (err?.message || "Erreur inconnue"));
     } finally {
       setIsSaving(false);
     }
@@ -98,8 +99,7 @@ const HomePageTicketing = () => {
 
   const openCreateModal = () => {
     setShowCreateModal(true);
-    console.log("click 1");
-    
+
     // reset formulaire
     setNewEntete({
       fournisseurId: '',
@@ -114,13 +114,9 @@ const HomePageTicketing = () => {
   };
 
   const handleCreateEntete = async () => {
-    console.log("click 2");
-    console.log("prestationId", prestationId);
-    console.log("newEntete", newEntete);
-    
     if (!prestationId) return;
     if (!newEntete.fournisseurId) {
-      alert("Veuillez sélectionner un fournisseur");
+      toast.error("Veuillez sélectionner un fournisseur");
       return;
     }
 
@@ -139,7 +135,7 @@ const HomePageTicketing = () => {
       // La liste est déjà mise à jour via le slice (push optimiste)
     } catch (err: any) {
       console.error(err);
-      alert("Erreur lors de la création : " + (err?.message || "Vérifiez la console"));
+      toast.error("Erreur lors de la création : " + (err?.message || "Vérifiez la console"));
     } finally {
       setIsCreating(false);
     }

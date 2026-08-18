@@ -47,14 +47,8 @@ export default function ParametreLayout() {
       auth: (cb) => cb({ token: store.getState().auth.token }),
     });
 
-    socket.on('connect', () => {
-      console.log('Socket connecté:', socket.id);
-    });
-
     // Écoute l'événement 'notification' (comme dans ton AppBar)
     socket.on('notification', (data: any) => {
-      console.log('Notification reçue via socket:', data);
-
       if (
         data.entityType === 'NOTIFICATION' &&
         data.action === 'CREATE' &&
@@ -70,10 +64,6 @@ export default function ParametreLayout() {
         }
         // Tu peux ajouter des conditions pour d'autres entités (ex: 'CLIENT_FACTURE' → fetchClientFactures())
       }
-    });
-
-    socket.on('disconnect', () => {
-      console.log('Socket déconnecté');
     });
 
     return () => {

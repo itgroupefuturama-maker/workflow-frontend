@@ -30,8 +30,6 @@ const AssuranceProspectionListe = () => {
     ?.find((colab) => colab.module?.nom?.toLowerCase() === 'assurance')
     ?.prestation?.[0]?.id ?? '';
 
-  console.log(`le prestation id est :`, prestationId);
-
   const [expanded,             setExpanded]             = useState<Record<string, boolean>>({});
   const [openCreate,           setOpenCreate]           = useState(false);
   const [sortOrder,            setSortOrder]            = useState<'desc' | 'asc'>('desc');

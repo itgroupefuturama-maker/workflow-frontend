@@ -111,8 +111,6 @@ const InlineClientForm = ({ initialData, prefillPersons = [], userIdClient }: Pr
 
   const handleSubmit = async () => {
     // 1. Créer le formulaire principal
-    // console.log('id tonga eto ********************', userIdClient);
-    
     const result = await dispatch(createClientForm({ userId: userIdClient!, payload: form, beneficiaireId: userId! }));
     if (!createClientForm.fulfilled.match(result)) return;
 

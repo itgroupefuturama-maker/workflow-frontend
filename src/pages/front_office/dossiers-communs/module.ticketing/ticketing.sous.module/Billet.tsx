@@ -36,6 +36,7 @@ import { TicketingHeader } from './components.billet/TicketingHeader';
 import { billetDetailItems } from './components.billet/utils/ticketingHeaderItems';
 import Spinner from '../../../../../layouts/Spinner';
 import SuiviTabSection from '../../module.suivi/SuiviTabSection';
+import { toast } from '../../../../../components/Toast/toast';
 
 const Billet = () => {
   const navigate = useNavigate();
@@ -52,7 +53,6 @@ const Billet = () => {
   // const prestationId = searchParams.get('prestationId');
 
   const [activeTab, setActiveTab] = useState('billet');
-  console.log(`prestationId: ${enteteId}`);
 
   const [showFactureModal, setShowFactureModal] = useState(false);
   const [, setFactureReference] = useState('');
@@ -129,11 +129,8 @@ const Billet = () => {
 
   // Dans Billet.tsx, avant le return
   const handleReprogrammer = (ligne: BilletLigne) => {
-    console.log('handleReprogrammer appelé avec :', ligne); // ← AJOUTE ÇA
-
     if (!ligne || !ligne.id) {
-      console.warn('Ligne invalide reçue pour reprogrammation');
-      alert('Impossible de reprogrammer : ligne invalide');
+      toast.error('Impossible de reprogrammer : ligne invalide');
       return;
     }
 
@@ -149,9 +146,6 @@ const Billet = () => {
   const [infosModalOpen, setInfosModalOpen] = useState(false);
   const [selectedBenefName] = useState<string>('');
   const [selectedBenefId] = useState<string | null>(null);
-
-  console.log(`l entete ici ${enteteId}`);
-  
 
   useEffect(() => {
     if (enteteId) dispatch(fetchBilletById(enteteId));
@@ -174,8 +168,6 @@ const Billet = () => {
   const handleSubmitReservation = async (data: any) => {
     if (!selectedLigne) return;
 
-    console.log("Payload envoyé → multi-passagers :", data);
-
     try {
       await dispatch(
         addReservationToLigne({
@@ -188,7 +180,7 @@ const Billet = () => {
       setModalOpen(false);
       setSelectedLigne(null);
     } catch (err: any) {
-      alert('Erreur réservation : ' + (err.message || '—'));
+      toast.error('Erreur réservation : ' + (err.message || '—'));
     }
   };
 
@@ -198,13 +190,11 @@ const Billet = () => {
       await dispatch(reporterLigne(ligne.id)).unwrap();
       dispatch(fetchBilletById(enteteId));
     } catch (err: any) {
-      alert('Erreur lors du report : ' + (err.message || 'Erreur inconnue'));
+      toast.error('Erreur lors du report : ' + (err.message || 'Erreur inconnue'));
     }
   };
 
   const handleOpenEmission = (ligne: BilletLigne) => {
-    console.log("Ligne cliquée → ID:", ligne?.id, "Statut:", ligne?.statut);
-    console.log("Ligne passée au modal →", ligne);
     setSelectedLigneForEmission(ligne);
     setEmissionModalOpen(true);
   };
@@ -224,7 +214,7 @@ const Billet = () => {
       setEmissionModalOpen(false);
       setSelectedLigneForEmission(null);
     } catch (err: any) {
-      alert('Erreur lors de l\'émission : ' + (err.message || '—'));
+      toast.error('Erreur lors de l\'émission : ' + (err.message || '—'));
     }
   };
 
@@ -248,7 +238,7 @@ const Billet = () => {
       await dispatch(updateApprouverBilletEnteteStatut({ enteteId: billetId })).unwrap();
       dispatch(fetchBilletById(enteteId));
     } catch (err: any) {
-      alert('Erreur lors du changement de statut');
+      toast.error('Erreur lors du changement de statut');
     }
   };
 
@@ -260,7 +250,7 @@ const Billet = () => {
 
       if (enteteId) dispatch(fetchBilletById(enteteId));
     } catch (err: any) {
-      alert("Erreur : " + (err.message || "Échec règlement facture"));
+      toast.error("Erreur : " + (err.message || "Échec règlement facture"));
     }
   };
 
@@ -525,7 +515,6 @@ const Billet = () => {
 
             {showReprogModal && (
             <>
-              {console.log('Modal Reprogrammation rendu avec ligne :', selectedLigneForReprog)}
               { selectedLigneForReprog && (
                 <ReprogrammationModal
                   isOpen={showReprogModal}
@@ -546,7 +535,7 @@ const Billet = () => {
 
                     dispatch(fetchBilletById(enteteId!));
                   } catch (err: any) {
-                    alert(err?.message || 'Erreur lors de la reprogrammation');
+                    toast.error(err?.message || 'Erreur lors de la reprogrammation');
                   } finally {
                     setShowReprogModal(false);
                     setSelectedLigneForReprog(null);
@@ -616,7 +605,7 @@ const Billet = () => {
                     ).unwrap();
                     dispatch(fetchBilletById(enteteId!));
                   } catch (err: any) {
-                    alert(err?.message || "Erreur lors de l'annulation");
+                    toast.error(err?.message || "Erreur lors de l'annulation");
                   } finally {
                     setAnnulLoading(false);
                     setShowAnnulModal(false);

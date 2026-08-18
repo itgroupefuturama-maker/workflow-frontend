@@ -13,6 +13,7 @@ import type { RootState, AppDispatch } from '../../../app/store';
 import { FiArrowLeft, FiTrash2, FiSearch, FiPlus, FiLoader, FiChevronUp, FiChevronDown, FiUserPlus, FiCheck} from 'react-icons/fi';
 import { Spinner } from '../../front_office/dossiers-communs/module.parametre/components/Spinner';
 import { fetchGoogleCalendarAuthUrl } from '../../../app/front_office/parametre_utilisateur/userSlice';
+import { toast } from '../../../components/Toast/toast';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -133,7 +134,7 @@ const ClientBeneficiaireFormPage = () => {
       const url = await dispatch(fetchGoogleCalendarAuthUrl(id)).unwrap();
       window.open(url, '_blank', 'noopener,noreferrer');
     } catch (err) {
-      alert('Impossible de récupérer le lien Google Calendar');
+      toast.error('Impossible de récupérer le lien Google Calendar');
     } finally {
       setLoadingAuth(false);
     }

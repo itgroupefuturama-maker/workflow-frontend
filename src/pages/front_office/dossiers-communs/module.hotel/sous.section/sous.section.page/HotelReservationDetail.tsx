@@ -21,6 +21,7 @@ import SuiviTabSection from '../../../module.suivi/SuiviTabSection';
 import PanneauPreferencesClient from '../../components/PanneauPreferencesClient';
 import { setShowPreferences, togglePreferences } from '../../../../../../app/uiSlice';
 import { ChevronDown } from 'lucide-react';
+import { toast } from '../../../../../../components/Toast/toast';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 const fmt = (v: number) => v?.toLocaleString('fr-FR') ?? '0';
@@ -517,7 +518,7 @@ const HotelReservationDetail = () => {
       await dispatch(createHotelReservation({ ligneId: selectedLigne!.HotelEnteteId, payload })).unwrap();
       setIsModalOpen(false);
       reload();
-    } catch { alert('Erreur lors de la création de la réservation'); }
+    } catch { toast.error('Erreur lors de la création de la réservation'); }
   };
 
   const handleApprouver = async () => {
@@ -526,7 +527,7 @@ const HotelReservationDetail = () => {
       await dispatch(approuverHotelReservation({ id: entete!.id, ...approuverForm })).unwrap();
       setShowApprouverModal(false);
       reload();
-    } catch { alert("Erreur lors de l'approbation"); }
+    } catch { toast.error("Erreur lors de l'approbation"); }
     finally { setApprouverLoading(false); }
   };
 
@@ -536,7 +537,7 @@ const HotelReservationDetail = () => {
       await dispatch(confirmerHotelLigne({ ligneId: entete!.id, payload })).unwrap();
       setIsConfirmationModalOpen(false);
       reload();
-    } catch { alert('Erreur lors de la confirmation'); }
+    } catch { toast.error('Erreur lors de la confirmation'); }
     finally { setConfirmationLoading(false); }
   };
 
@@ -546,7 +547,7 @@ const HotelReservationDetail = () => {
       await dispatch(emissionBilletHotel({ id: entete!.id, payload: emissionBilletForm })).unwrap();
       setShowEmissionBilletModal(false);
       reload();
-    } catch { alert("Erreur lors de l'émission du billet"); }
+    } catch { toast.error("Erreur lors de l'émission du billet"); }
     finally { setEmissionBilletLoading(false); }
   };
 
@@ -556,7 +557,7 @@ const HotelReservationDetail = () => {
       await dispatch(emissionFactureHotel({ id: entete!.id, payload: emissionFactureForm })).unwrap();
       setShowEmissionFactureModal(false);
       reload();
-    } catch { alert("Erreur lors de l'émission de la facture"); }
+    } catch { toast.error("Erreur lors de l'émission de la facture"); }
     finally { setEmissionFactureLoading(false); }
   };
 
@@ -566,7 +567,7 @@ const HotelReservationDetail = () => {
       await dispatch(reglerFactureHotel(entete!.id)).unwrap();
       setShowReglerModal(false);
       reload();
-    } catch { alert('Erreur lors du règlement'); }
+    } catch { toast.error('Erreur lors du règlement'); }
     finally { setReglerLoading(false); }
   };
 
@@ -576,7 +577,7 @@ const HotelReservationDetail = () => {
       await dispatch(annulerHotelEntete({ id: entete!.id, payload: annulationForm })).unwrap();
       setShowAnnulationModal(false);
       navigate(-1);
-    } catch { alert("Erreur lors de l'annulation"); }
+    } catch { toast.error("Erreur lors de l'annulation"); }
     finally { setAnnulationLoading(false); }
   };
 

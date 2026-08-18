@@ -15,6 +15,7 @@ import { exportEmiratesExcel } from '../../../../utils/exportEmiratesExcel';
 import { exportEthiopianExcel } from '../../../../utils/exportEthiopianExcel';
 import { exportAirMauritiusExcel } from '../../../../utils/exportAirMauritiusExcel';
 import { exportTurkishExcel } from '../../../../utils/exportTurkishExcel';
+import { toast } from '../../../../components/Toast/toast';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -132,7 +133,7 @@ const PageEtatVente: React.FC = () => {
       await fn();
     } catch (err) {
       console.error('Erreur export Excel :', err);
-      alert('Une erreur est survenue lors de la génération du fichier Excel. Vérifie la console pour plus de détails.');
+      toast.error('Une erreur est survenue lors de la génération du fichier Excel. Vérifie la console pour plus de détails.');
     } finally {
       setIsExporting(false);
     }

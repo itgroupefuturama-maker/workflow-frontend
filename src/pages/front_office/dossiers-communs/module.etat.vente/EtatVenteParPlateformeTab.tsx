@@ -340,7 +340,6 @@ const EtatVenteParPlateformeTab: React.FC = () => {
   const [statut, setStatut] = useState('');
 
   useEffect(() => {
-    console.log('tonga eto');
     dispatch(fetchEtatVenteParPlateforme({ du: dateDebut, au: dateFin }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

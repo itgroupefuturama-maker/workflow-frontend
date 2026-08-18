@@ -24,6 +24,7 @@ import type { PdfAudience, PdfDesignId } from '../../module.pdf/pdf.generation/t
 import { ModalHotelPdfSelector } from '../components/ModalHotelPdfSelector';
 import { selectServicesByType } from '../../../../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
 import ConfirmDialog from '../../../../../components/ConfirmDialog';
+import { toast } from '../../../../../components/Toast/toast';
 
 const PageViewHotel = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -80,10 +81,6 @@ const PageViewHotel = () => {
     [dossierActif]
   );
 
-  useEffect(() => {
-    if (prestationId) console.log('prestationssss =', prestationId);
-  }, [prestationId]);
-  
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc'); // desc = plus récent en haut
 
   // Entêtes triées — calculé avant le rendu
@@ -183,7 +180,7 @@ const PageViewHotel = () => {
         // Re-fetch pour voir le nouveau benchmarking
         dispatch(fetchHotelProspectionEntetes(prestationId));
       } else {
-        alert(result.payload || 'Erreur création benchmarking');
+        toast.error((result.payload as string) || 'Erreur création benchmarking');
       }
     });
   };
@@ -214,7 +211,7 @@ const PageViewHotel = () => {
       // setActiveTab('hotel');
       dispatch(fetchHotelProspectionEntetes(prestationId));
     } catch {
-      alert('Erreur lors de la création de la réservation hôtel');
+      toast.error('Erreur lors de la création de la réservation hôtel');
     } finally {
       setToHotelLoading(false);
     }

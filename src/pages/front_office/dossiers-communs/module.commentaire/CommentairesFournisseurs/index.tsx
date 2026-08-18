@@ -5,6 +5,7 @@ import TabButton from '../../module.parametre/components/TabButton';
 import OngletParFournisseur from './OngletParFournisseur';
 import OngletTousCommentaires from './OngletTousCommentaires';
 import type { Fournisseur } from '../../module.parametre/components/CommentaireCard';
+import { toast } from '../../../../../components/Toast/toast';
 
 const CommentairesFournisseurs: React.FC = () => {
   const [activeTab, setActiveTab]               = useState<'par_fournisseur' | 'tous'>('tous');
@@ -18,6 +19,7 @@ const CommentairesFournisseurs: React.FC = () => {
         setFournisseurs(res.data.data || res.data);
       } catch (err) {
         console.error(err);
+        toast.error('Impossible de charger la liste des fournisseurs');
       } finally {
         setLoadingFournisseurs(false);
       }

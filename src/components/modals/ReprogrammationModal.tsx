@@ -7,6 +7,7 @@ import { fetchClientBeneficiaireInfos } from '../../app/portail_client/clientBen
 import type { BilletLigne, ServiceSpecifique } from '../../app/front_office/billetSlice';
 import { fetchRaisonsAnnulation } from '../../app/front_office/parametre_ticketing/raisonAnnulationSlice';
 import type { ServicePreference } from '../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
+import { toast } from '../Toast/toast';
 
 type ModifType = 'SIMPLE' | 'COM' | 'PEN' | 'COM_PEN';
 
@@ -173,7 +174,7 @@ export default function ReprogrammationModal({
   // ─── Gestion ajout/suppression passagers ──────────────────
   const addPassager = () => {
     if (!currentBeneficiaireId || !currentInfoId) {
-      alert('Veuillez sélectionner un bénéficiaire ET son document');
+      toast.warning('Veuillez sélectionner un bénéficiaire ET son document');
       return;
     }
 
@@ -182,7 +183,7 @@ export default function ReprogrammationModal({
     if (!beneficiaire || !info) return;
 
     if (selectedPassagers.some((p) => p.infoId === currentInfoId)) {
-      alert('Ce document est déjà sélectionné');
+      toast.warning('Ce document est déjà sélectionné');
       return;
     }
 
@@ -279,7 +280,7 @@ export default function ReprogrammationModal({
       onSubmit(payload);
       setShowPreview(false);
     } catch (err: any) {
-      alert(err.message || 'Erreur de validation');
+      toast.error(err.message || 'Erreur de validation');
     }
   };
 

@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import axios from '../../../service/Axios'; // ton instance axios configurée
+import { toast } from '../../../components/Toast/toast';
 
 export interface AttestationSuivi {
   id: string;
@@ -393,12 +394,6 @@ export const fetchDevisForPassenger = createAsyncThunk<
   'attestationEntete/fetchDevisForPassenger',
   async ({ clientBeneficiaireInfoId, attestationEnteteId }, { rejectWithValue }) => {
     try {
-      // ─── AJOUT DE LOGS ICI ────────────────────────────────────────
-      console.log('fetchDevisForPassenger → Début appel API');
-      console.log('clientBeneficiaireInfoId =', clientBeneficiaireInfoId);
-      console.log('attestationEnteteId     =', attestationEnteteId);
-      console.log('URL générée              =', `/attestation/list/${clientBeneficiaireInfoId}/${attestationEnteteId}`);
-
       if (!clientBeneficiaireInfoId || !attestationEnteteId) {
         console.error('ID manquant !', { clientBeneficiaireInfoId, attestationEnteteId });
         throw new Error('ID du bénéficiaire ou de l’entête manquant');
@@ -408,10 +403,7 @@ export const fetchDevisForPassenger = createAsyncThunk<
         `/attestation/list/${clientBeneficiaireInfoId}/${attestationEnteteId}`
       );
 
-      console.log('Réponse brute API :', response.status, response.data);
-
       if (!response.data?.success) {
-        console.warn('API a répondu success: false', response.data);
         throw new Error(response.data?.message || 'Réponse non successful');
       }
 
@@ -431,6 +423,8 @@ export const fetchDevisForPassenger = createAsyncThunk<
       } else {
         console.error('Erreur de configuration axios :', err.message);
       }
+
+      toast.error('Erreur lors du chargement du devis du passager');
 
       return rejectWithValue(
         err.response?.data?.message ||

@@ -13,6 +13,7 @@ import { API_URL } from '../../../../../service/env';
 import { TicketingHeader } from './components.billet/TicketingHeader';
 import { devisListeItems } from './components.billet/utils/ticketingHeaderItems';
 import { PdfDownloadButton } from '../../module.pdf/pdf.generation/components/PdfDownloadButton';
+import { toast } from '../../../../../components/Toast/toast';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -247,7 +248,7 @@ export default function Devis () {
       await dispatch(updateApprouverDevisStatut({ enteteId: billetId })).unwrap();
       dispatch(fetchDevisByEntete(enteteId));
     } catch (err: any) {
-      alert('Erreur lors du changement de statut');
+      toast.error('Erreur lors du changement de statut');
     }
   };
 
@@ -271,7 +272,7 @@ export default function Devis () {
       setPreuveClient(null);
       setPreuveClientPreview(null);
     } catch (err: any) {
-      alert('Erreur lors du changement de statut');
+      toast.error('Erreur lors du changement de statut');
     } finally {
       setValidateLoading(false);
     }
@@ -301,7 +302,7 @@ export default function Devis () {
       }
     } catch (err: any) {
       console.error('Erreur approuver direction :', err);
-      alert('Erreur : ' + (err.message || 'Impossible de générer le PDF commission'));
+      toast.error('Erreur : ' + (err.message || 'Impossible de générer le PDF commission'));
     } finally {
       setDirectionLoading((prev) => ({ ...prev, [devisId]: false }));
     }
@@ -378,12 +379,12 @@ export default function Devis () {
                               if (response.data?.success && response.data?.data?.id) {
                                 navigate(`/dossiers-communs/ticketing/pages/billet/${devis.id}?prospectionEnteteId=${devis.data?.entete?.id}`);
                               } else {
-                                alert('Erreur lors de la création du billet');
+                                toast.error('Erreur lors de la création du billet');
                               }
                             } catch (err: any) {
                               console.error('Erreur création billet:', err);
                               const msg = err.response?.data?.message || 'Erreur serveur';
-                              alert(`Échec création billet : ${msg}`);
+                              toast.error(`Échec création billet : ${msg}`);
                             }
                           };
 
@@ -573,7 +574,7 @@ export default function Devis () {
                     setShowAnnulationModal(false);
                     setSelectedDevisForCancel(null);
                   } catch (err: any) {
-                    alert(err || 'Erreur lors de l\'annulation');
+                    toast.error(err || 'Erreur lors de l\'annulation');
                   } finally {
                     setAnnulationLoading(false);
                   }

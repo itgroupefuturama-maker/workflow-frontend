@@ -95,30 +95,22 @@ export default function DossierCommunManage() {
         }
       });
 
-      console.log("--- DEBUG ENVOI ---");
-      console.log("À Ajouter (POST):", toAdd);
-      console.log("À Mettre à jour (PATCH):", toUpdate);
-
       const requests = [];
 
       // POST : Ajouts
       for (const colab of toAdd) {
         const payload = { userId: colab.userId, moduleId: colab.moduleId };
-        console.log(`Envoi POST vers /dossier-commun/${dossier.id}/colabs`, payload);
         requests.push(axiosInstance.post(`/dossier-commun/${dossier.id}/colabs`, payload));
       }
 
       // PATCH : Mises à jour
       for (const update of toUpdate) {
         const payload = { userId: update.newUserId, moduleId: update.moduleId };
-        console.log(`Envoi PATCH vers /dossier-commun/${dossier.id}/update/colabs`, payload);
         requests.push(axiosInstance.patch(`/dossier-commun/${dossier.id}/update/colabs`, payload));
       }
 
       if (requests.length > 0) {
-        const responses = await Promise.all(requests);
-        console.log("--- RÉPONSES SERVEUR ---");
-        responses.forEach((res, i) => console.log(`Réponse ${i} :`, res.data));
+        await Promise.all(requests);
       }
 
       setNotification({
@@ -127,18 +119,7 @@ export default function DossierCommunManage() {
       });
 
     } catch (err: any) {
-      console.error("--- ERREUR DÉTAILLÉE ---");
-      if (err.response) {
-        // Le serveur a répondu avec un code d'erreur (500, 400, etc.)
-        console.log("Data erreur reçue du serveur:", err.response.data);
-        console.log("Status erreur:", err.response.status);
-        console.log("Headers erreur:", err.response.headers);
-      } else if (err.request) {
-        // La requête a été envoyée mais aucune réponse n'a été reçue
-        console.log("Aucune réponse reçue (problème réseau ou CORS)");
-      } else {
-        console.log("Erreur de configuration requête:", err.message);
-      }
+      console.error("--- ERREUR DÉTAILLÉE ---", err);
 
       setNotification({
         type: "error",

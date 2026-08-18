@@ -122,7 +122,6 @@ const PageDetailVisa = () => {
   }, [dispatch, clientFactureId]);
 
   useEffect(() => {
-    console.log(`visa id ${visaEnteteId}`);
     if (visaEnteteId) dispatch(fetchVisaEnteteDetail(visaEnteteId));
     return () => { dispatch(clearVisaEnteteDetail()); };
   }, [visaEnteteId, dispatch]);

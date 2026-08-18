@@ -6,6 +6,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchClientBeneficiaireInfos } from '../../../app/portail_client/clientBeneficiaireInfosSlice';
 import { fetchPreferencesBeneficiaire } from '../../../app/back_office/clientFacturesSlice';
 import PreferencesInlinePanel from './PreferencesInlinePanel';
+import { toast } from '../../Toast/toast';
 
 interface HotelReservationModalProps {
   isOpen: boolean;
@@ -156,7 +157,7 @@ const HotelReservationModal: React.FC<HotelReservationModalProps> = ({
 
   const addPassager = () => {
     if (!currentBeneficiaireId || !currentInfoId) {
-      alert('Veuillez sélectionner un bénéficiaire ET son document');
+      toast.warning('Veuillez sélectionner un bénéficiaire ET son document');
       return;
     }
     const beneficiaire = beneficiaires.find(b => b.clientBeneficiaireId === currentBeneficiaireId);
@@ -187,7 +188,7 @@ const HotelReservationModal: React.FC<HotelReservationModalProps> = ({
   };
 
   const handleShowConfirmation = () => {
-    if (!isFormValid) { alert('Veuillez compléter tous les champs obligatoires.'); return; }
+    if (!isFormValid) { toast.warning('Veuillez compléter tous les champs obligatoires.'); return; }
     setShowConfirmation(true);
   };
 

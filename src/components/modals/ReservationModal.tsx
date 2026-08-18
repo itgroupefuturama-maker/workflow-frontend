@@ -7,6 +7,7 @@ import type { ServicePreference } from '../../app/front_office/parametre_ticketi
 import ReactDOM from 'react-dom';
 import PreferencesInlinePanel from './Hotel/PreferencesInlinePanel';
 import { fetchPreferencesBeneficiaire } from '../../app/back_office/clientFacturesSlice';
+import { toast } from '../Toast/toast';
 
 interface ReservationModalProps {
   isOpen: boolean;
@@ -202,11 +203,11 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
 
   const addPassager = () => {
     if (!currentBeneficiaireId || !currentInfoId) {
-      alert('Veuillez sélectionner un bénéficiaire ET son document');
+      toast.warning('Veuillez sélectionner un bénéficiaire ET son document');
       return;
     }
     if (selectedPassagers.length >= nombrePassagers) {
-      alert(`Nombre maximum de passagers atteint (${nombrePassagers})`);
+      toast.warning(`Nombre maximum de passagers atteint (${nombrePassagers})`);
       return;
     }
 
@@ -244,7 +245,7 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
 
   const handleShowConfirmation = () => {
     if (!isFormValid) {
-      alert('Veuillez compléter tous les champs obligatoires.');
+      toast.warning('Veuillez compléter tous les champs obligatoires.');
       return;
     }
     setShowConfirmation(true);

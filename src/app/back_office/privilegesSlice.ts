@@ -51,7 +51,6 @@ export const fetchPrivileges = createAsyncThunk<
       });
 
       if (response.data.success) {
-        console.log('Privilèges récupérés:', response.data.data); // Afficher les privilèges dans le console.log
         return { success: true, data: response.data.data };
       } else {
         return rejectWithValue('Échec de la récupération des privilèges');
@@ -256,7 +255,6 @@ const privilegesSlice = createSlice({
         state.loading = false;
         if (action.payload.success) {
           state.data = action.payload.data;
-          console.log('Privilèges stockés dans le store:', state.data); // Afficher les privilèges dans le console.log
         }
       })
       .addCase(fetchPrivileges.rejected, (state, action) => {

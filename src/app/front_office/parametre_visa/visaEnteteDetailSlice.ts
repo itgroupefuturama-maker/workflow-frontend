@@ -73,11 +73,7 @@ export const sendVisa = createAsyncThunk(
   ) => {
     try {
       const { id, ...body } = payload;
-      // console.log(payload);
-      
       const res = await axios.post(`/visa/${id}/send`, body);
-      console.log(`tonga eto ${res}`);
-      
       return unwrapApiResponse(res.data, 'Erreur envoi visa');
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.message || 'Erreur envoi visa');
@@ -106,9 +102,6 @@ export const decisionVisa = createAsyncThunk(
     try {
       const { id, ...body } = payload;
       const res = await axios.post(`/visa/${id}/decision`, body);
-      console.log(`id envoyer ${id}`);
-      
-      console.log('Réponse serveur:', res.data); // ← voir le JSON exact
       return unwrapApiResponse(res.data, 'Erreur décision visa');
     } catch (err: any) {
       // unwrapApiResponse throw une Error normale, pas une erreur Axios

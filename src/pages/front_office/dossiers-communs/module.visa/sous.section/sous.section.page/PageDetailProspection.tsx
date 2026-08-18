@@ -53,9 +53,6 @@ const PageDetailProspection = () => {
     const navigate     = useNavigate();
     const location = useLocation();
 
-    console.log(enteteId);
-    
-
     const { detail, loading, error } = useSelector((s: RootState) => s.visaDevis);
 
     const [actionLoading, setActionLoading] = useState<string | null>(null);

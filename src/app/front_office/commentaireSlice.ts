@@ -76,8 +76,7 @@ export const fetchCommentairesByPrestation = createAsyncThunk(
   async (prestationId: string, { rejectWithValue }) => {
     try {
       const response = await axios.get(`/commentaire/prestation/${prestationId}`);
-      console.log(`la reponse : ${response}`);
-      
+
       if (!response.data?.success) {
         throw new Error('Réponse invalide');
       }

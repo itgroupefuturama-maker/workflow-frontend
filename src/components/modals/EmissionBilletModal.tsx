@@ -1,5 +1,6 @@
 // src/components/modals/EmissionBilletModal.tsx
 import {useState } from 'react';
+import { toast } from '../Toast/toast';
 
 interface EmissionBilletModalProps {
   isOpen: boolean;
@@ -20,7 +21,7 @@ export default function EmissionBilletModal({
 
   const handleSubmit = async () => {
     if (!reference.trim()) {
-      alert('La référence est obligatoire');
+      toast.warning('La référence est obligatoire');
       return;
     }
     try {
@@ -28,7 +29,7 @@ export default function EmissionBilletModal({
       setReference('');
       onClose();
     } catch (err: any) {
-      alert('Erreur : ' + (err.message || 'Échec émission'));
+      toast.error('Erreur : ' + (err.message || 'Échec émission'));
     }
   };
 

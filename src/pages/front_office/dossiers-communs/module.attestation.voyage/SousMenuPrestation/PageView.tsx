@@ -35,8 +35,6 @@ const PageViewAttestation = () => {
   const dossierActif = useSelector((state: RootState) => state.dossierCommun.currentClientFactureId);
   const clientFactureId = dossierActif?.clientfacture?.id;
 
-  console.log("dossierActif", dossierActif);
-
   const { lastComment, confirmed } = useSelector(
       (state: RootState) => state.fournisseurCommentaire
     );
@@ -51,9 +49,6 @@ const PageViewAttestation = () => {
   const prestationId = dossierActif?.dossierCommunColab
     ?.find(colab => colab.module?.nom?.toLowerCase() === "attestation")
     ?.prestation?.[0]?.id || '';
-
-    console.log("prestationId", prestationId);
-    
 
   // ─── États pour le commentaire fournisseur ────────────────────────────────
   const [selectedFournisseurId, setSelectedFournisseurId] = useState<string>('');

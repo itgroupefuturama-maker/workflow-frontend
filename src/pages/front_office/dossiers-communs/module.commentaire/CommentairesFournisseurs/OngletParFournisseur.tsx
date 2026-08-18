@@ -4,6 +4,7 @@ import { FiEdit2, FiPlus, FiToggleLeft, FiToggleRight, FiX } from 'react-icons/f
 import { Spinner, inputClass, Field } from '../../module.parametre/components/Spinner';
 import CommentairesList from '../../module.parametre/components/CommentairesList';
 import type { CommentaireFournisseur, Fournisseur } from '../../module.parametre/components/CommentaireCard';
+import { toast } from '../../../../../components/Toast/toast';
 
 interface Props {
   fournisseurs: Fournisseur[];
@@ -48,6 +49,7 @@ const OngletParFournisseur: React.FC<Props> = ({ fournisseurs, loadingFournisseu
       if (res.data.success) setCommentaires(res.data.data || []);
     } catch (err) {
       console.error(err);
+      toast.error('Impossible de charger les commentaires de ce fournisseur');
     } finally {
       setLoading(false);
     }
@@ -114,7 +116,7 @@ const OngletParFournisseur: React.FC<Props> = ({ fournisseurs, loadingFournisseu
       }
     } catch (err) {
       console.error(err);
-      alert('Erreur lors de la sauvegarde');
+      toast.error('Erreur lors de la sauvegarde');
     } finally {
       setSaving(false);
     }
