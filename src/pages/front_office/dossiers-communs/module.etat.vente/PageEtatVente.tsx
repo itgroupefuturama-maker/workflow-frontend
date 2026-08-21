@@ -296,7 +296,7 @@ const PageEtatVente: React.FC = () => {
     : undefined;
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden px-8 pt-8 pb-8 space-y-6 bg-slate-50 h-full">
+    <div className="flex-1 flex flex-col overflow-hidden px-8 pt-8 pb-8 space-y-4 bg-slate-50 h-full">
 
       {/* ── En-tête : retour, titre et onglets intégrés ── */}
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-6 pt-5">
@@ -339,174 +339,153 @@ const PageEtatVente: React.FC = () => {
         </nav>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-6">
+      <div className="flex-1 min-h-0 overflow-y-auto pr-1 space-y-4">
         {activeTab === 'global' && (
           <>
-            {/* ── Barre de filtres ── */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-5 py-4">
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            {/* ── Barre de filtres : compacte, une seule ligne ── */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-4 py-2.5">
+              <div className="flex flex-wrap items-end gap-x-3 gap-y-2">
 
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
+                <div className="flex flex-col gap-0.5 w-[84px]">
+                  <label className="text-[10px] font-medium text-gray-400">
                     Année
                   </label>
                   <input
                     type="number"
                     value={year}
                     onChange={(e) => setYear(e.target.value)}
-                    placeholder="Ex : 2026"
-                    className="px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition"
+                    placeholder="2026"
+                    className="px-2 py-1 text-xs text-gray-700 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-200 focus:border-indigo-300 transition placeholder:text-gray-300"
                   />
                 </div>
 
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
+                <div className="flex flex-col gap-0.5 w-[128px]">
+                  <label className="text-[10px] font-medium text-gray-400">
                     Mois
                   </label>
                   <select
                     value={month}
                     onChange={(e) => setMonth(e.target.value)}
-                    className="px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition bg-white"
+                    className="px-2 py-1 text-xs text-gray-700 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-200 focus:border-indigo-300 transition bg-white"
                   >
-                    <option value="">Tous les mois</option>
+                    <option value="">Tous</option>
                     {MOIS.map((m) => (
                       <option key={m.value} value={m.value}>{m.label}</option>
                     ))}
                   </select>
                 </div>
 
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
+                <div className="flex flex-col gap-0.5 w-[120px]">
+                  <label className="text-[10px] font-medium text-gray-400">
                     Quinzaine
                   </label>
                   <select
                     value={quinzaine}
                     onChange={(e) => setQuinzaine(e.target.value)}
-                    className="px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition bg-white"
+                    className="px-2 py-1 text-xs text-gray-700 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-200 focus:border-indigo-300 transition bg-white"
                   >
-                    <option value="">Toute la période</option>
-                    <option value="1">Du 1 au 15</option>
-                    <option value="2">Du 16 à la fin</option>
+                    <option value="">Toute</option>
+                    <option value="1">1 au 15</option>
+                    <option value="2">16 à la fin</option>
                   </select>
                 </div>
 
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
+                <div className="flex flex-col gap-0.5 w-[132px]">
+                  <label className="text-[10px] font-medium text-gray-400">
                     Module
                   </label>
                   <select
                     value={moduleId}
                     onChange={(e) => setModuleId(e.target.value)}
-                    className="px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition bg-white"
+                    className="px-2 py-1 text-xs text-gray-700 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-200 focus:border-indigo-300 transition bg-white"
                   >
-                    <option value="">Tous les modules</option>
-                    {modules.map((m) => (
+                    <option value="">Tous</option>
+                    {modules.filter(m => m.status === 'ACTIF').map((m) => (
                       <option key={m.id} value={m.id}>{m.nom}</option>
                     ))}
                   </select>
                 </div>
 
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
+                <div className="flex flex-col gap-0.5 w-[150px]">
+                  <label className="text-[10px] font-medium text-gray-400">
                     Fournisseur
                   </label>
                   <select
                     value={fournisseurId}
                     onChange={(e) => setFournisseurId(e.target.value)}
-                    className="px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition bg-white"
+                    className="px-2 py-1 text-xs text-gray-700 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-200 focus:border-indigo-300 transition bg-white"
                   >
-                    <option value="">Tous les fournisseurs</option>
+                    <option value="">Tous</option>
                     {fournisseurs.map((f) => (
                       <option key={f.id} value={f.id}>{f.libelle}</option>
                     ))}
                   </select>
                 </div>
 
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
+                <div className="flex flex-col gap-0.5 flex-1 min-w-[140px]">
+                  <label className="text-[10px] font-medium text-gray-400">
                     Client facturé
                   </label>
                   <input
                     type="text"
                     value={clientFacture}
                     onChange={(e) => setClientFacture(e.target.value)}
-                    placeholder="Ex : Client Air France"
-                    className="px-2.5 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 transition"
+                    placeholder="Nom du client"
+                    className="px-2 py-1 text-xs text-gray-700 border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-indigo-200 focus:border-indigo-300 transition placeholder:text-gray-300"
                   />
                 </div>
-              </div>
 
-              {/* ── Actions : recherche / reset / export unique ── */}
-              <div className="flex items-center justify-between gap-3 mt-4 pt-4 border-t border-gray-100">
-                <div className="flex items-center gap-2">
+                {/* ── Actions : recherche / reset / export, alignées à droite ── */}
+                <div className="flex items-center gap-1.5 ml-auto">
                   <button
                     onClick={handleSearch}
                     disabled={loadingEtatVente}
-                    className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition disabled:opacity-50"
+                    title="Rechercher"
+                    className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-md transition disabled:opacity-50"
                   >
                     {loadingEtatVente
-                      ? <FiRefreshCw size={13} className="animate-spin" />
-                      : <FiSearch size={13} />
+                      ? <FiRefreshCw size={12} className="animate-spin" />
+                      : <FiSearch size={12} />
                     }
                     Rechercher
                   </button>
                   <button
                     onClick={handleReset}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm text-gray-500 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition"
+                    title="Réinitialiser les filtres"
+                    className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-gray-500 hover:text-gray-700 border border-gray-200 hover:bg-gray-50 rounded-md transition"
                   >
-                    <FiX size={13} />
-                    Réinitialiser
+                    <FiX size={12} />
                   </button>
-                </div>
 
-                {/* Un seul bouton d'export, déterminé par le fournisseur choisi ci-dessus */}
-                {activeExport ? (
-                  <button
-                    onClick={activeExport.action}
-                    disabled={isExporting}
-                    className="flex items-center gap-1.5 px-4 py-1.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg transition disabled:opacity-50"
-                  >
-                    {isExporting
-                      ? <FiRefreshCw size={13} className="animate-spin" />
-                      : <FiDownload size={13} />
-                    }
-                    Extraire {activeExport.label}
-                  </button>
-                ) : fournisseurId ? (
-                  <span className="flex items-center gap-1.5 text-xs text-gray-400">
-                    <FiInfo size={13} />
-                    Aucun modèle d'export dédié pour ce fournisseur
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1.5 text-xs text-gray-400">
-                    <FiInfo size={13} />
-                    Choisissez un fournisseur pour activer l'export Excel
-                  </span>
-                )}
+                  {moduleSelectionne?.nom?.toLowerCase() === 'ticketing' && activeExport && (
+                    <button
+                      onClick={activeExport.action}
+                      disabled={isExporting}
+                      title={`Extraire ${activeExport.label}`}
+                      className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-gray-600 bg-white border border-gray-200 hover:border-emerald-300 hover:text-emerald-700 hover:bg-emerald-50 rounded-md transition disabled:opacity-50"
+                    >
+                      {isExporting
+                        ? <FiRefreshCw size={12} className="animate-spin" />
+                        : <FiDownload size={12} />
+                      }
+                      {activeExport.label}
+                    </button>
+                  )}
+                </div>
               </div>
+
+              {/* Indication discrète quand un fournisseur sans modèle est choisi */}
+              {moduleSelectionne?.nom?.toLowerCase() === 'ticketing' && fournisseurId && !activeExport && (
+                <p className="flex items-center gap-1 mt-1.5 text-[11px] text-gray-400">
+                  <FiInfo size={11} />
+                  Aucun modèle d'export dédié pour ce fournisseur
+                </p>
+              )}
             </div>
 
             {/* ── États ── */}
             {!loadingEtatVente && errorEtatVente && (
               <p className="text-sm text-red-500">{errorEtatVente}</p>
-            )}
-
-            {/* ── Indicateurs synthétiques ── */}
-            {!loadingEtatVente && etatVenteResultat && lignes.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-5 py-4">
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Total prix client</p>
-                  <p className="mt-1 text-xl font-bold text-gray-900 font-mono">{formatMoney(totalGeneral.fcCAriary)}</p>
-                </div>
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-5 py-4">
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Total commission</p>
-                  <p className="mt-1 text-xl font-bold text-gray-900 font-mono">{formatMoney(totalGeneral.commission)}</p>
-                </div>
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-5 py-4">
-                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">Total taxe</p>
-                  <p className="mt-1 text-xl font-bold text-gray-900 font-mono">{formatMoney(totalGeneral.montantTaxeAriary)}</p>
-                </div>
-              </div>
             )}
 
             {/* ── Tableau ── */}
@@ -765,6 +744,24 @@ const PageEtatVente: React.FC = () => {
                       )}
                     </tbody>
                   </table>
+                </div>
+              </div>
+            )}
+
+            {/* ── Résumé des totaux : compact, sous le tableau ── */}
+            {!loadingEtatVente && etatVenteResultat && lignes.length > 0 && (
+              <div className="flex items-stretch divide-x divide-gray-100 bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-2.5 w-fit ml-auto">
+                <div className="flex items-center gap-2 pr-5">
+                  <span className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">Prix client</span>
+                  <span className="text-sm font-semibold text-gray-800 font-mono">{formatMoney(totalGeneral.fcCAriary)}</span>
+                </div>
+                <div className="flex items-center gap-2 px-5">
+                  <span className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">Commission</span>
+                  <span className="text-sm font-semibold text-gray-800 font-mono">{formatMoney(totalGeneral.commission)}</span>
+                </div>
+                <div className="flex items-center gap-2 pl-5">
+                  <span className="text-[10px] font-medium text-gray-400 uppercase tracking-wide">Taxe</span>
+                  <span className="text-sm font-semibold text-gray-800 font-mono">{formatMoney(totalGeneral.montantTaxeAriary)}</span>
                 </div>
               </div>
             )}
