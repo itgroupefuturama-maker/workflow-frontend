@@ -137,6 +137,7 @@ Légende statut : `[ ]` à faire · `[~]` en cours · `[x]` terminé
 - [ ] **Mémoïsation React déséquilibrée** — 45 `useMemo`, 0 `useCallback`, 0 `React.memo` dans tout le projet. À revoir sur les composants qui re-rendent souvent (tableaux, listes).
 - [x] **`vite.config.ts`** — bloc `server.proxy` commenté (dead code) nettoyé le 2026-08-06. `build.sourcemap: false` (implicite) toujours à confirmer explicitement si besoin.
 - [x] **`texte.tsx`** à la racine — fichier scratch inutilisé, supprimé le 2026-08-06.
+- [x] **Indicateur "hors ligne" ajouté le 2026-08-21** — le socket Socket.io n'avait aucun listener `connect`/`disconnect`/`connect_error`, aucun moyen de savoir côté UI si la connexion au serveur était perdue. Ajouté `ui.socketConnected` (`uiSlice.ts`) + badge rouge dans `AppBar.tsx`, visible uniquement en cas de coupure, disparaît automatiquement à la reconnexion. Ne dépend d'aucune modification backend. `npx tsc -b --noEmit`/`npm run build` : 0 erreur. Committé (`9cd06180`).
 
 ---
 
