@@ -269,15 +269,15 @@ const LigneCard = ({ ligne, enteteStatut, onReserver, onConfirmer }: LigneCardPr
               {ligne.puConfPrixNuitHotelAriary > 0 ? (
                 <div className="bg-white border border-green-200 rounded-lg px-3 py-2.5 space-y-1.5">
                   <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[10px]">
-                    <span className="text-neutral-500">Prix nuit hôtel Ar</span>
+                    <span className="text-neutral-500">Prix nuit hôtel</span>
                     <span className="font-semibold text-neutral-800 font-mono">{fmt(ligne.puConfPrixNuitHotelAriary)} Ar</span>
-                    <span className="text-neutral-500">Montant nuit hôtel Ar</span>
+                    <span className="text-neutral-500">Montant nuit hôtel</span>
                     <span className="font-semibold text-neutral-800 font-mono">{fmt(ligne.puConfMontantNuitHotelAriary)} Ar</span>
-                    <span className="text-neutral-500">Prix nuit client Ar</span>
+                    <span className="text-neutral-500">Prix nuit client</span>
                     <span className="font-semibold text-neutral-800 font-mono">{fmt(ligne.puConfPrixNuitClientArary)} Ar</span>
-                    <span className="text-neutral-500">Montant nuit client Ar</span>
+                    <span className="text-neutral-500">Montant nuit client</span>
                     <span className="font-semibold text-neutral-800 font-mono">{fmt(ligne.puConfMontantNuitClientAriary)} Ar</span>
-                    <span className="text-neutral-500">Commission conf. Ar</span>
+                    <span className="text-neutral-500">Commission conf.</span>
                     <span className="font-semibold text-emerald-700 font-mono">{fmt(ligne.confirmationCommissionAriary)} Ar</span>
                   </div>
                 </div>
@@ -323,7 +323,7 @@ const LigneCard = ({ ligne, enteteStatut, onReserver, onConfirmer }: LigneCardPr
                     </div>
                     <div className="flex justify-between">
                       <span className="text-neutral-500">Commission bench.</span>
-                      <span className="font-medium text-emerald-700">{fmt(enteteB.montantCommission)} Ar</span>
+                      <span className="font-medium text-emerald-700">{fmt(enteteB.montantCommission)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-neutral-500">Taux commission</span>
@@ -331,11 +331,11 @@ const LigneCard = ({ ligne, enteteStatut, onReserver, onConfirmer }: LigneCardPr
                     </div>
                     <div className="flex justify-between">
                       <span className="text-neutral-500">Forfait / chambre</span>
-                      <span className="font-medium text-neutral-800">{fmt(enteteB.forfaitaireUnitaire)} Ar</span>
+                      <span className="font-medium text-neutral-800">{fmt(enteteB.forfaitaireUnitaire)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-neutral-500">Forfait global</span>
-                      <span className="font-medium text-neutral-800">{fmt(enteteB.forfaitaireGlobal)} Ar</span>
+                      <span className="font-medium text-neutral-800">{fmt(enteteB.forfaitaireGlobal)}</span>
                     </div>
                     {bench?.dateLimiteAnnulation && (
                       <div className="flex justify-between">

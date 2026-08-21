@@ -266,6 +266,9 @@ const hotelDevisSlice = createSlice({
       state.data = null;
       state.pdfClientUrl = null;
       state.pdfDirectionUrl = null;
+      state.actionError = null;
+      state.actionLoading = null;
+      state.transformed = false;
     }
   },
   extraReducers: (builder) => {
@@ -273,6 +276,7 @@ const hotelDevisSlice = createSlice({
       .addCase(fetchHotelWithDevis.pending, (state) => {
         state.loading = true;
         state.error = null;
+        state.actionError = null;
       })
       .addCase(fetchHotelWithDevis.fulfilled, (state, action) => {
         state.loading = false;

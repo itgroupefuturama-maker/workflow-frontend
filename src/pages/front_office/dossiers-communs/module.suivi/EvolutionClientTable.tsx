@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { History } from 'lucide-react';
 import type { AppDispatch, RootState } from '../../../../app/store';
-import { fetchControles } from '../../../../app/front_office/parametre_controle/controleSlice';
+import { fetchControlesByDossier } from '../../../../app/front_office/parametre_controle/controleSlice';
 import { API_URL } from '../../../../service/env';
 import { FiFileText } from 'react-icons/fi';
+import Pagination from '../../../../components/Pagination';
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -85,28 +86,32 @@ const EvolutionClientTable: React.FC<{ prestationId: string; moduleName?: string
 }) => {
   const dispatch = useDispatch<AppDispatch>();
 
-  const { list, loading, error } = useSelector((state: RootState) => state.controle);
+  const {
+    dossierList: filtered = [],
+    dossierMeta: meta = { total: 0, page: 1, limit: 10, totalPages: 1 },
+    dossierLoading: loading,
+    dossierError: error,
+  } = useSelector((state: RootState) => state.controle);
   const dossierActif = useSelector((state: RootState) => state.dossierCommun.currentClientFactureId);
 
-  // Fetch au montage (page large pour avoir toutes les lignes du dossier)
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+
+  // Revenir à la page 1 si on change de dossier/module
   useEffect(() => {
-    dispatch(fetchControles({ page: 1, limit: 500 }));
-  }, [dispatch, prestationId]);
+    setPage(1);
+  }, [dossierActif?.numero, moduleName]);
 
-  // ── Filtrage automatique ──────────────────────────────────
-  // 1. par numéro de dossier commun → dossierActif.numero
-  // 2. par module → moduleName (comparaison insensible à la casse)
-  const filtered = list.filter((item) => {
-    const matchDossier = dossierActif?.numero
-      ? item.numDosCommun?.includes(dossierActif.numero.toString())
-      : true;
-
-    const matchModule = moduleName
-      ? item.module?.nom?.toLowerCase() === moduleName.toLowerCase()
-      : true;
-
-    return matchDossier && matchModule;
-  });
+  // Filtrage par dossier + module fait côté serveur maintenant (voir BACKEND_PROMPT_CONTROLE_PAR_DOSSIER.md).
+  useEffect(() => {
+    if (!dossierActif?.numero) return;
+    dispatch(fetchControlesByDossier({
+      page,
+      limit,
+      numDosCommun: dossierActif.numero.toString(),
+      module: moduleName || undefined,
+    }));
+  }, [dispatch, dossierActif?.numero, moduleName, page, limit, prestationId]);
 
   // ── Rendu ─────────────────────────────────────────────────
 
@@ -129,7 +134,7 @@ const EvolutionClientTable: React.FC<{ prestationId: string; moduleName?: string
               )}
             </h3>
             <p className="text-xs text-slate-400 mt-0.5">
-              {loading ? 'Chargement…' : `${filtered.length} ligne${filtered.length > 1 ? 's' : ''}`}
+              {loading ? 'Chargement…' : `${meta.total} ligne${meta.total > 1 ? 's' : ''}`}
             </p>
           </div>
         </div>
@@ -256,6 +261,15 @@ const EvolutionClientTable: React.FC<{ prestationId: string; moduleName?: string
             </tbody>
           </table>
         </div>
+      )}
+
+      {!loading && !error && (
+        <Pagination
+          meta={meta}
+          onPageChange={setPage}
+          onLimitChange={(l) => { setLimit(l); setPage(1); }}
+          itemLabel="ligne"
+        />
       )}
     </div>
   );

@@ -147,11 +147,24 @@ export interface FetchControlesParams {
   limit: number;
 }
 
+export interface FetchControlesByDossierParams {
+  page: number;
+  limit: number;
+  numDosCommun?: string;
+  module?: string;
+}
+
 interface ControleState {
   list: Controle[];
   meta: PaginationMeta;
   loading: boolean;
   error: string | null;
+  // Liste scopée par dossier (EvolutionClientTable.tsx uniquement) — distincte de `list`
+  // ci-dessus, qui reste la vue générale non filtrée utilisée par PageControle.tsx.
+  dossierList: Controle[];
+  dossierMeta: PaginationMeta;
+  dossierLoading: boolean;
+  dossierError: string | null;
 }
 
 const initialState: ControleState = {
@@ -159,6 +172,10 @@ const initialState: ControleState = {
   meta: { total: 0, page: 1, limit: 10, totalPages: 1 },
   loading: false,
   error: null,
+  dossierList: [],
+  dossierMeta: { total: 0, page: 1, limit: 10, totalPages: 1 },
+  dossierLoading: false,
+  dossierError: null,
 };
 
 export const fetchControles = createAsyncThunk(
@@ -172,6 +189,30 @@ export const fetchControles = createAsyncThunk(
         return rejectWithValue(response.data?.message || 'Réponse invalide');
       }
       // response.data = { success, data: { data: [...], meta: {...} } }
+      const payload = response.data.data;
+      return {
+        data: payload.data as Controle[],
+        meta: payload.meta as PaginationMeta,
+      };
+    } catch (err: any) {
+      return rejectWithValue(
+        err.response?.data?.message || err.message || 'Erreur lors du chargement'
+      );
+    }
+  }
+);
+
+// Fetch scopé par dossier + module (EvolutionClientTable.tsx uniquement)
+export const fetchControlesByDossier = createAsyncThunk(
+  'controle/fetchByDossier',
+  async ({ page, limit, numDosCommun, module }: FetchControlesByDossierParams, { rejectWithValue }) => {
+    try {
+      const response = await axios.get('/controle/paginated', {
+        params: { page, limit, numDosCommun, module },
+      });
+      if (!response.data?.success) {
+        return rejectWithValue(response.data?.message || 'Réponse invalide');
+      }
       const payload = response.data.data;
       return {
         data: payload.data as Controle[],
@@ -209,6 +250,19 @@ const controleSlice = createSlice({
       .addCase(fetchControles.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
+      })
+      .addCase(fetchControlesByDossier.pending, (state) => {
+        state.dossierLoading = true;
+        state.dossierError = null;
+      })
+      .addCase(fetchControlesByDossier.fulfilled, (state, action) => {
+        state.dossierLoading = false;
+        state.dossierList = action.payload.data;
+        state.dossierMeta = action.payload.meta;
+      })
+      .addCase(fetchControlesByDossier.rejected, (state, action) => {
+        state.dossierLoading = false;
+        state.dossierError = action.payload as string;
       });
   },
 });

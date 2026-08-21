@@ -216,7 +216,7 @@ const HotelConfirmationModal: React.FC<HotelConfirmationModalProps> = ({
               <div className="w-7 h-7 bg-gray-900 text-white rounded flex items-center justify-center text-sm font-semibold">
                 3
               </div>
-              <h3 className="text-sm font-semibold text-gray-900">Prix Client (Ariary)</h3>
+              <h3 className="text-sm font-semibold text-gray-900">Prix Client (Devise)</h3>
             </div>
             <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -235,7 +235,7 @@ const HotelConfirmationModal: React.FC<HotelConfirmationModalProps> = ({
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                  Montant Total Client (Ar)
+                  Montant Total Client
                 </label>
                 <input
                   type="number"
