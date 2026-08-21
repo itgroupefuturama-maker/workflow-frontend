@@ -13,6 +13,8 @@ import { normalizeDevisToEntete, type HotelPdfSelection} from '../../../module.p
 import type { PdfAudience, PdfDesignId } from '../../../module.pdf/pdf.generation/types/pdf-design.types';
 import { ModalHotelPdfSelector } from '../../components/ModalHotelPdfSelector';
 import { useHotelPdf } from '../../../module.pdf/pdf.generation/hooks/usePdfGenerator';
+import ApprouverDevisModal, { type DeviseOption } from '../../../../../../components/modals/Hotel/ApprouverDevisModal';
+import { API_URL } from '../../../../../../service/env';
 // ─── Badge statut devis ───────────────────────────────────────────────────────
 const StatutBadge = ({ statut }: { statut: string }) => {
   const map: Record<string, string> = {
@@ -187,8 +189,8 @@ export default function PageHotelDevis() {
     [dossierActif]
   );
 
-  const { data, actionLoading, actionError, transformed,
-    // pdfClientUrl, pdfDirectionUrl 
+  const { data, actionLoading, actionError,
+    // pdfClientUrl, pdfDirectionUrl
   } = useSelector(
     (state: RootState) => state.hotelDevis
   );
@@ -224,6 +226,18 @@ export default function PageHotelDevis() {
   const tauxCommission = 10;
   const montantTotalCommission = Math.round(montantTotalClient * tauxCommission / 100);
 
+  // Devises distinctes référencées par les lignes client du devis — à choisir explicitement
+  // à l'approbation si plus d'une (voir BACKEND_PROMPT_APPROBATION_DEVIS_HOTEL.md).
+  const deviseOptions: DeviseOption[] = useMemo(() => {
+    const map = new Map<string, DeviseOption>();
+    benchmarkings.forEach((b) => {
+      b.ligneClient?.deviseHotel?.forEach((dv) => {
+        if (dv.devise?.id) map.set(dv.devise.id, { id: dv.devise.id, devise: dv.devise.devise });
+      });
+    });
+    return Array.from(map.values());
+  }, [benchmarkings]);
+
   useEffect(() => {
     if (enteteId) dispatch(fetchHotelWithDevis(enteteId));
   }, [enteteId, dispatch]);
@@ -232,13 +246,21 @@ export default function PageHotelDevis() {
     if (!data?.devis?.id) return;
     await dispatch(envoyerDevis(data.devis.id)).unwrap();
   };
-  const handleApprouver = async () => {
+
+  const [showApproveModal, setShowApproveModal] = useState(false);
+
+  const handleConfirmApprouver = async (preuveApprobation: File, deviseId?: string) => {
     if (!data?.devis?.id) return;
-    await dispatch(approuverDevis(data.devis.id)).unwrap();
+    await dispatch(approuverDevis({ devisId: data.devis.id, preuveApprobation, deviseId })).unwrap();
+    setShowApproveModal(false);
   };
+
   const handleTransformer = async () => {
     if (!prospection?.id || !devis?.id) return;
     await dispatch(transformerEnHotel({ hotelProspectionEnteteId: prospection.id, devisModuleId: devis.id })).unwrap();
+    // Le devis d'origine est mis à jour côté serveur (hotelEnteteId/transformeEnHotelAt) —
+    // on recharge pour refléter ce nouvel état persistant plutôt que de se fier à un flag local.
+    if (enteteId) dispatch(fetchHotelWithDevis(enteteId));
   };
 
   // Génération automatique au chargement
@@ -421,7 +443,7 @@ export default function PageHotelDevis() {
 
                     {/* Approuver — disabled si pas en attente */}
                     <button
-                      onClick={handleApprouver}
+                      onClick={() => setShowApproveModal(true)}
                       disabled={actionLoading !== null || devis.statut !== 'DEVIS_A_APPROUVER'}
                       className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white text-sm font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
                     >
@@ -432,21 +454,30 @@ export default function PageHotelDevis() {
                       {actionLoading === 'approbation' ? 'Approbation...' : 'Approuver'}
                     </button>
 
-                    {/* Transformer — disabled si pas approuvé ou déjà transformé */}
+                    {/* Transformer — disabled si pas approuvé ou déjà transformé (statut persistant serveur) */}
                     <button
                       onClick={handleTransformer}
-                      // disabled={actionLoading !== null || devis.statut !== 'DEVIS_APPROUVE' || transformed}
-                      disabled={devis.statut !== 'DEVIS_APPROUVE'}
+                      disabled={actionLoading !== null || devis.statut !== 'DEVIS_APPROUVE' || !!devis.transformeEnHotelAt}
                       className="flex items-center gap-2 px-4 py-2 bg-indigo-500 text-white text-sm font-medium rounded-lg hover:bg-indigo-600 transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
                     >
                       {actionLoading === 'transformation'
                         ? <span className="animate-spin h-3.5 w-3.5 border-2 border-gray-400 border-t-gray-600 rounded-full" />
-                        : transformed
-                          ? <svg className="w-3.5 h-3.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        : devis.transformeEnHotelAt
+                          ? <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                           : <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" /></svg>
                       }
-                      {actionLoading === 'transformation' ? 'Transformation...' : transformed ? 'Transformer' : 'Transformer en hôtel'}
+                      {actionLoading === 'transformation' ? 'Transformation...' : devis.transformeEnHotelAt ? 'Déjà transformé' : 'Transformer en hôtel'}
                     </button>
+
+                    {/* Voir la réservation créée — visible une fois le devis transformé */}
+                    {devis.hotelEnteteId && (
+                      <button
+                        onClick={() => navigate(`/dossiers-communs/hotel/detailsHotel/${devis.hotelEnteteId}`)}
+                        className="flex items-center gap-2 px-4 py-2 bg-white border border-indigo-200 text-indigo-600 text-sm font-medium rounded-lg hover:bg-indigo-50 transition-colors"
+                      >
+                        Voir la réservation
+                      </button>
+                    )}
 
                     <button
                       onClick={() => dispatch(togglePreferences())}
@@ -537,6 +568,31 @@ export default function PageHotelDevis() {
                                 {new Date(devis.updatedAt).toLocaleDateString('fr-FR', { dateStyle: 'medium' })}
                               </p>
                             </div>
+                            {devis.deviseRetenue && (
+                              <>
+                                <div className="w-px h-8 bg-white/10" />
+                                <div>
+                                  <p className="text-gray-500 text-xs uppercase tracking-wide mb-0.5">Devise retenue</p>
+                                  <p className="text-slate-600 text-sm font-medium">{devis.deviseRetenue.devise}</p>
+                                </div>
+                              </>
+                            )}
+                            {devis.urlPreuveApprobation && (
+                              <>
+                                <div className="w-px h-8 bg-white/10" />
+                                <div>
+                                  <p className="text-gray-500 text-xs uppercase tracking-wide mb-0.5">Preuve client</p>
+                                  <a
+                                    href={`${API_URL}/${devis.urlPreuveApprobation}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-indigo-600 text-sm font-medium hover:underline"
+                                  >
+                                    Voir la capture
+                                  </a>
+                                </div>
+                              </>
+                            )}
                           </>
                         )}
                       </div>
@@ -604,6 +660,13 @@ export default function PageHotelDevis() {
             loading={hotelPdfLoading}
           />
         )}
+        <ApprouverDevisModal
+          isOpen={showApproveModal}
+          onClose={() => setShowApproveModal(false)}
+          onConfirm={handleConfirmApprouver}
+          isLoading={actionLoading === 'approbation'}
+          deviseOptions={deviseOptions}
+        />
       </TabContainer>
     </div>
   );

@@ -117,6 +117,14 @@ export interface DevisData {
   benchmarkingEntetes: BenchmarkingEntete[];
 }
 
+export interface Devise {
+  id: string;
+  devise: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface HotelDevisData {
   devis: {
     id: string;
@@ -130,6 +138,11 @@ export interface HotelDevisData {
     createdAt: string;
     updatedAt: string;
     data: DevisData;
+    urlPreuveApprobation: string | null;
+    deviseRetenueId: string | null;
+    deviseRetenue: Devise | null;
+    hotelEnteteId: string | null;
+    transformeEnHotelAt: string | null;
   } | null;
 }
 
@@ -187,9 +200,20 @@ export const envoyerDevis = createAsyncThunk(
 
 export const approuverDevis = createAsyncThunk(
   'hotelDevis/approuver',
-  async (devisId: string, { rejectWithValue }) => {
+  async (
+    payload: { devisId: string; preuveApprobation: File; deviseId?: string },
+    { rejectWithValue }
+  ) => {
     try {
-      const response = await axios.put(`/hotel/benchmarking/${devisId}/approuver-devis`);
+      const formData = new FormData();
+      formData.append('preuveApprobation', payload.preuveApprobation);
+      if (payload.deviseId) formData.append('deviseId', payload.deviseId);
+
+      const response = await axios.put(
+        `/hotel/benchmarking/${payload.devisId}/approuver-devis`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
       if (!response.data?.success) return rejectWithValue(response.data?.message || 'Réponse invalide');
       return response.data.data;
     } catch (err: any) {
@@ -310,6 +334,9 @@ const hotelDevisSlice = createSlice({
         if (state.data?.devis) {
           state.data.devis.statut = action.payload?.statut ?? 'DEVIS_APPROUVE';
           state.data.devis.updatedAt = action.payload?.updatedAt ?? new Date().toISOString();
+          state.data.devis.urlPreuveApprobation = action.payload?.urlPreuveApprobation ?? null;
+          state.data.devis.deviseRetenueId = action.payload?.deviseRetenueId ?? null;
+          state.data.devis.deviseRetenue = action.payload?.deviseRetenue ?? null;
         }
       })
       .addCase(approuverDevis.rejected, (state, action) => {
