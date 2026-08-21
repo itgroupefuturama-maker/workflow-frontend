@@ -66,9 +66,12 @@ const HotelReservationModal: React.FC<HotelReservationModalProps> = ({
   // dans plusieurs devises simultanément (BenchmarkingLigne.deviseHotel[]). On pré-remplit
   // les tarifs à partir de la devise sélectionnée, mais ce choix n'est pas encore persisté
   // sur la réservation elle-même côté backend (voir BACKEND_PROMPT_DEVISE_RESERVATION_HOTEL.md).
+  // NB : `deviseHotel[].id` est l'id de la LIGNE DE TARIFICATION (DeviseHotel), pas celui de la
+  // devise elle-même — l'id de la devise à comparer/envoyer au backend est `deviseHotel[].devise.id`
+  // (= `deviseHotel[].deviseId`), c'est ce que `deviseRetenue.id` (une vraie `Devise`) référence.
   const deviseOptions = ligne?.BenchmarkingLigne?.deviseHotel ?? [];
   const [selectedDeviseId, setSelectedDeviseId] = useState('');
-  const selectedDevise = deviseOptions.find((d: any) => d.id === selectedDeviseId) ?? null;
+  const selectedDevise = deviseOptions.find((d: any) => d.devise?.id === selectedDeviseId) ?? null;
   const deviseLabel = selectedDevise?.devise?.devise ?? 'Devise';
 
   // Pré-remplit la devise à l'ouverture du modal, par ordre de priorité :
@@ -80,11 +83,11 @@ const HotelReservationModal: React.FC<HotelReservationModalProps> = ({
   useEffect(() => {
     if (!isOpen || deviseOptions.length === 0) return;
     const retenueMatch = deviseRetenue
-      ? deviseOptions.find((d: any) => d.id === deviseRetenue.id)
+      ? deviseOptions.find((d: any) => d.devise?.id === deviseRetenue.id)
       : null;
     const defaultDevise = retenueMatch ?? (deviseOptions.length === 1 ? deviseOptions[0] : null);
     if (defaultDevise) {
-      setSelectedDeviseId(defaultDevise.id);
+      setSelectedDeviseId(defaultDevise.devise.id);
       setFormData(prev => ({
         ...prev,
         puResaNuiteHotelDevise: Number(defaultDevise.nuiteDevise) || 0,
@@ -96,7 +99,7 @@ const HotelReservationModal: React.FC<HotelReservationModalProps> = ({
 
   const handleSelectDevise = (deviseId: string) => {
     setSelectedDeviseId(deviseId);
-    const d = deviseOptions.find((o: any) => o.id === deviseId);
+    const d = deviseOptions.find((o: any) => o.devise?.id === deviseId);
     if (d) {
       setFormData(prev => ({
         ...prev,
@@ -597,9 +600,9 @@ const HotelReservationModal: React.FC<HotelReservationModalProps> = ({
                               <button
                                 key={d.id}
                                 type="button"
-                                onClick={() => handleSelectDevise(d.id)}
+                                onClick={() => handleSelectDevise(d.devise.id)}
                                 className={`py-2 text-xs font-bold rounded-lg border-2 transition-all ${
-                                  selectedDeviseId === d.id
+                                  selectedDeviseId === d.devise?.id
                                     ? 'border-gray-900 bg-gray-50 text-gray-900'
                                     : 'border-gray-100 text-gray-500 hover:border-gray-200'
                                 }`}
