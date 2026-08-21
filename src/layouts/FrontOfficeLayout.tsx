@@ -5,6 +5,7 @@ import io, { Socket } from 'socket.io-client';
 import AppBar from '../components/AppBar'; // ton AppBar actuelle
 import { store } from '../app/store';
 import type { RootState, AppDispatch } from '../app/store';
+import { setSocketConnected } from '../app/uiSlice';
 import AppLoader from './AppLoader';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
@@ -33,6 +34,12 @@ export default function FrontOfficeLayout() {
       // courant dans le store, au lieu de renvoyer celui figé à la création du socket.
       auth: (cb) => cb({ token: store.getState().auth.token }),
     });
+
+    // Indicateur "hors ligne" (AppBar) — reflète l'état réel de la connexion socket,
+    // y compris les coupures/reprises réseau après la connexion initiale.
+    socket.on('connect', () => dispatch(setSocketConnected(true)));
+    socket.on('disconnect', () => dispatch(setSocketConnected(false)));
+    socket.on('connect_error', () => dispatch(setSocketConnected(false)));
 
     return () => {
       socket.disconnect();

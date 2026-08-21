@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { FiHelpCircle, FiBell, FiUser, FiChevronDown, FiLogOut, FiX, FiTrash2, FiHome, FiCheck, FiSettings } from "react-icons/fi";
+import { FiHelpCircle, FiBell, FiUser, FiChevronDown, FiLogOut, FiX, FiTrash2, FiHome, FiCheck, FiSettings, FiWifiOff } from "react-icons/fi";
 import { useState, useRef, useEffect } from "react";
 import { logout } from '../app/authSlice';
 import { useDispatch, useSelector } from 'react-redux';
@@ -152,6 +152,7 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
   const modulesAccessibles = user?.profiles?.filter((p) => p.status === 'ACTIF')?.flatMap((p) => p.profile.modules.map((m) => m.module.nom)) || [];
 
   const collapsed = useSelector((state: RootState) => state.ui.sidebarCollapsed);
+  const socketConnected = useSelector((state: RootState) => state.ui.socketConnected);
 
   return (
     <>
@@ -194,6 +195,21 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
               <FiUsers size={17} />
               <span className="text-sm font-semibold">Bénéficiaire</span>
             </button> */}
+
+            {/* ── Indicateur hors ligne — visible uniquement si le socket est déconnecté ── */}
+            {!socketConnected && (
+              <div
+                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-red-500/15 border border-red-400/30 text-red-200 rounded-lg text-xs font-semibold"
+                title="Connexion au serveur perdue — tentative de reconnexion en cours"
+              >
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500" />
+                </span>
+                <FiWifiOff size={13} />
+                <span className="hidden sm:inline">Hors ligne</span>
+              </div>
+            )}
 
             {/* Aide */}
             <button className="p-2 text-slate-100 hover:text-slate-100 hover:bg-slate-500 rounded-lg transition-all">

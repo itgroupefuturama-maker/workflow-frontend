@@ -23,6 +23,7 @@ import { fetchArticles } from '../app/back_office/articlesSlice';
 import { fetchFournisseurs } from '../app/back_office/fournisseursSlice';
 import { store } from '../app/store';
 import type { RootState, AppDispatch } from '../app/store';
+import { setSocketConnected } from '../app/uiSlice';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -46,6 +47,12 @@ export default function ParametreLayout() {
       // courant dans le store, au lieu de renvoyer celui figé à la création du socket.
       auth: (cb) => cb({ token: store.getState().auth.token }),
     });
+
+    // Indicateur "hors ligne" (AppBar) — reflète l'état réel de la connexion socket,
+    // y compris les coupures/reprises réseau après la connexion initiale.
+    socket.on('connect', () => dispatch(setSocketConnected(true)));
+    socket.on('disconnect', () => dispatch(setSocketConnected(false)));
+    socket.on('connect_error', () => dispatch(setSocketConnected(false)));
 
     // Écoute l'événement 'notification' (comme dans ton AppBar)
     socket.on('notification', (data: any) => {
