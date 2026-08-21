@@ -130,6 +130,15 @@ export interface HotelLigne {
   BenchmarkingLigne: BenchmarkingLigne;
 }
 
+export interface DevisModule {
+  id: string;
+  reference: string;
+  statut: string;
+  urlPreuveApprobation: string | null;
+  deviseRetenueId: string | null;
+  deviseRetenue: { id: string; devise: string; status: string; createdAt: string; updatedAt: string } | null;
+}
+
 export interface HotelReservationEntete {
   id: string;
   statut: string;
@@ -142,6 +151,8 @@ export interface HotelReservationEntete {
     fournisseur: { code: string; libelle: string };
     prestation: { numeroDos: string };
   };
+  devisModuleId?: string | null;
+  devisModule?: DevisModule | null;
   hotelLigne: HotelLigne[];
 }
 

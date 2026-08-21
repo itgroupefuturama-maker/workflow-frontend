@@ -830,6 +830,7 @@ const HotelReservationDetail = () => {
                 onClose={() => setIsModalOpen(false)}
                 onSubmit={handleSubmitReservation}
                 ligne={selectedLigne}
+                deviseRetenue={entete?.devisModule?.deviseRetenue ?? null}
               />
 
               {/* Modal Approbation */}

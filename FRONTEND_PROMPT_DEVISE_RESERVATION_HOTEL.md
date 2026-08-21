@@ -15,9 +15,33 @@
 
 `HotelLigne` garde cette info : `deviseId` (string | null) + `devise` (objet `Devise` complet — `{ id, devise, status, createdAt, updatedAt }`), exposés sur tous les endpoints qui renvoient une `HotelLigne` (`GET /hotel/entete/:id`, `GET /hotel/entete` liste, `GET /hotel/entete/prestation/:id`).
 
+### Complément : `devisModule` maintenant exposé sur `GET /hotel/entete/:id`
+
+Point bloquant repéré en creusant l'initialisation de `HotelReservationModal.tsx` : `HotelEntete.devisModuleId` est un champ texte brut, sans relation Prisma déclarée vers `DevisModule` (table partagée par plusieurs modules via un lien générique `entity`/`entityId`). Résultat : `GET /hotel/entete/:id` renvoyait bien `devisModuleId`, mais jamais l'objet `DevisModule` — donc aucun moyen d'accéder à `deviseRetenueId`/`deviseRetenue` (la devise fixée à l'approbation) pour pré-remplir le sélecteur avant que l'agent ne saisisse la réservation.
+
+Corrigé : `GET /hotel/entete/:id` renvoie maintenant une clé `devisModule` en plus de `devisModuleId` :
+
+```json
+{
+  "id": "...",
+  "devisModuleId": "...",
+  "devisModule": {
+    "id": "...",
+    "reference": "...",
+    "statut": "...",
+    "urlPreuveApprobation": "...",
+    "deviseRetenueId": "...",
+    "deviseRetenue": { "id": "...", "devise": "USD", "status": "ACTIF", "createdAt": "...", "updatedAt": "..." }
+  },
+  "hotelLigne": [...]
+}
+```
+
+(`devisModule` est `null` si `devisModuleId` est absent — cas normal si l'entête a été créée sans passer par le flux devis.)
+
 ## Ce qu'il faut faire côté frontend
 
-1. Sur `HotelReservationModal.tsx` : envoyer le `deviseId` déjà sélectionné dans le sélecteur existant (mentionné dans le prompt backend comme déjà présent côté UI) dans le payload `PATCH .../reservation`.
+1. Sur `HotelReservationModal.tsx` : à l'ouverture, initialiser le sélecteur de devise avec `hotelEntete.devisModule?.deviseRetenue?.devise` s'il existe (au lieu de partir d'un champ vide), puis envoyer le `deviseId` sélectionné dans le payload `PATCH .../reservation`.
 2. Sur `HotelReservationDetail.tsx`, bloc "Tarif réservation réelle" : afficher `ligne.devise.devise` (le code, ex. `USD`) à côté de `ligne.puResaNuiteHotelDevise`/`ligne.puResaMontantDevise`, exactement comme le bloc "Tarif référence (Benchmarking)" au-dessus le fait déjà avec `d.devise.devise`.
 3. Si la ligne n'a qu'une devise possible, pas besoin d'afficher le sélecteur avant soumission (le backend la déduit automatiquement) — mais l'envoyer quand même si déjà connue côté client ne pose pas de souci.
 

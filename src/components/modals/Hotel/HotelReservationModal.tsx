@@ -13,6 +13,9 @@ interface HotelReservationModalProps {
   onClose: () => void;
   onSubmit: (data: any) => void;
   ligne: any;
+  // Devise fixée à l'approbation du devis (DevisModule.deviseRetenue) — utilisée en priorité
+  // pour pré-remplir le sélecteur si elle existe, plutôt que de partir d'un champ vide.
+  deviseRetenue?: { id: string; devise: string } | null;
 }
 
 const ROWS = 4;
@@ -31,6 +34,7 @@ const HotelReservationModal: React.FC<HotelReservationModalProps> = ({
   onClose,
   onSubmit,
   ligne,
+  deviseRetenue,
 }) => {
   const dispatch = useDispatch<AppDispatch>();
   const [prefBeneficiaire, setPrefBeneficiaire] = useState<any>(null);
@@ -67,11 +71,18 @@ const HotelReservationModal: React.FC<HotelReservationModalProps> = ({
   const selectedDevise = deviseOptions.find((d: any) => d.id === selectedDeviseId) ?? null;
   const deviseLabel = selectedDevise?.devise?.devise ?? 'Devise';
 
-  // Pré-sélectionne automatiquement s'il n'y a qu'une seule devise de référence,
-  // et pré-remplit les tarifs avec ses valeurs de référence à l'ouverture du modal.
+  // Pré-remplit la devise à l'ouverture du modal, par ordre de priorité :
+  // 1. La devise déjà retenue à l'approbation du devis (devisModule.deviseRetenue), si elle
+  //    fait partie des devises de référence de cette ligne — évite de la redemander à l'agent.
+  // 2. Sinon, la seule devise de référence disponible s'il n'y en a qu'une.
+  // 3. Sinon, rien — l'agent choisit explicitement (plusieurs devises possibles, pas de devise
+  //    retenue applicable à cette ligne).
   useEffect(() => {
     if (!isOpen || deviseOptions.length === 0) return;
-    const defaultDevise = deviseOptions.length === 1 ? deviseOptions[0] : null;
+    const retenueMatch = deviseRetenue
+      ? deviseOptions.find((d: any) => d.id === deviseRetenue.id)
+      : null;
+    const defaultDevise = retenueMatch ?? (deviseOptions.length === 1 ? deviseOptions[0] : null);
     if (defaultDevise) {
       setSelectedDeviseId(defaultDevise.id);
       setFormData(prev => ({
@@ -81,7 +92,7 @@ const HotelReservationModal: React.FC<HotelReservationModalProps> = ({
       }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, ligne?.id]);
+  }, [isOpen, ligne?.id, deviseRetenue?.id]);
 
   const handleSelectDevise = (deviseId: string) => {
     setSelectedDeviseId(deviseId);
