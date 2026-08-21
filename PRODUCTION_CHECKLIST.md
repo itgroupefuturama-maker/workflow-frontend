@@ -103,8 +103,10 @@ Légende statut : `[ ]` à faire · `[~]` en cours · `[x]` terminé
   - `npx tsc -b --noEmit` et `npm run build` : 0 erreur.
   - **En attente de test utilisateur** avant de committer.
   - Testé et validé par l'utilisateur au fur et à mesure (y compris `DossierCommun.tsx`, testé et confirmé OK le 2026-08-18) ; committé par lots successifs.
-- [ ] **Approbation d'un devis hôtel incomplète (`PageHotelDevis.tsx`) — trouvé le 2026-08-21** : le bouton "Approuver" (`PUT /hotel/benchmarking/:devisId/approuver-devis`) ne fait que changer le statut, sans body. Il manque : (1) la possibilité de joindre une preuve de validation client (capture d'écran de la discussion), (2) le choix de la devise à retenir pour le devis quand ses lignes (`ligneClient.deviseHotel[]`) référencent plusieurs devises simultanément — nécessaire pour les étapes en aval (transformation en réservation/facturation).
-  - Brief prêt à transmettre au backend → `BACKEND_PROMPT_APPROBATION_DEVIS_HOTEL.md` (endpoint en `multipart/form-data` avec `preuveApprobation` (fichier) + `deviseId`).
+- [ ] **Approbation + transformation d'un devis hôtel incomplètes (`PageHotelDevis.tsx`) — trouvé le 2026-08-21**, 2 problèmes :
+  1. Le bouton "Approuver" (`PUT /hotel/benchmarking/:devisId/approuver-devis`) ne fait que changer le statut, sans body. Il manque : joindre une preuve de validation client (capture d'écran de la discussion), et choisir la devise à retenir pour le devis quand ses lignes (`ligneClient.deviseHotel[]`) référencent plusieurs devises simultanément — nécessaire pour les étapes en aval (transformation en réservation/facturation).
+  2. Le bouton "Transformer en hôtel" (`POST /hotel/entete`) ne met à jour **aucun statut** sur le devis d'origine après coup — le frontend ne peut pas savoir de façon fiable (persistée) si un devis a déjà été transformé. Actuellement mémorisé uniquement en mémoire (Redux, perdu au rechargement) → le bouton reste cliquable indéfiniment, risque de créer plusieurs réservations pour le même devis.
+  - Brief prêt à transmettre au backend → `BACKEND_PROMPT_APPROBATION_DEVIS_HOTEL.md` (partie 1 : endpoint approbation en `multipart/form-data` avec `preuveApprobation` (fichier) + `deviseId` ; partie 2 : statut/champ à ajouter pour détecter la transformation, idéalement avec référence vers l'entête hôtel créée).
   - **Bloqué en attente du retour backend.**
 
 ---
