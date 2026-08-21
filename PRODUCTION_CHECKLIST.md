@@ -122,9 +122,11 @@ Légende statut : `[ ]` à faire · `[~]` en cours · `[x]` terminé
   - **⚠️ Pas testable pour l'instant** : même situation que l'approbation du devis, la migration Prisma correspondante n'est pas encore appliquée en base réelle. À tester dès confirmation.
   - `npx tsc -b --noEmit`/`npm run build` : 0 erreur.
   - Committé (`ad5805af`, `444fb55b`, `3c264b30`).
-- [ ] **Transformation devis → billet sans statut (`Devis.tsx`, module ticketing) — trouvé le 2026-08-21** : même problème que côté hôtel (déjà corrigé) mais jamais traité ici. `POST /billet/entete` (bouton "Transformer / Billet", actif dès `devis.statut === 'DEVIS_APPROUVE'`) crée un entête de billet mais ne met à jour aucun statut sur le `Devis` d'origine — le bouton reste cliquable indéfiniment (risque de billets en double pour le même devis), et aucun moyen de savoir après coup qu'un devis a déjà été transformé.
-  - Brief prêt à transmettre au backend → `BACKEND_PROMPT_TRANSFORMATION_DEVIS_BILLET.md` (recommande la même convention que côté hôtel : `billetEnteteId`/`transformeEnBilletAt` sur `Devis`, exposés sur `GET /devis/entete/:enteteId`).
-  - **Bloqué en attente du retour backend.**
+- [~] **Transformation devis → billet sans statut (`Devis.tsx`, module ticketing) — trouvé le 2026-08-21, corrigé le 2026-08-21** : même problème que côté hôtel (déjà corrigé) mais jamais traité ici. `POST /billet/entete` (bouton "Transformer / Billet", actif dès `devis.statut === 'DEVIS_APPROUVE'`) créait un entête de billet mais ne mettait à jour aucun statut sur le `Devis` d'origine — le bouton restait cliquable indéfiniment (risque de billets en double pour le même devis), et aucun moyen de savoir après coup qu'un devis avait déjà été transformé.
+  - Backend a implémenté `billetEnteteId`/`transformeEnBilletAt` sur `Devis`, exposés sur `GET /devis/entete/:prospectionEnteteId` (`BACKEND_PROMPT_TRANSFORMATION_DEVIS_BILLET.md` → réponse dans `FRONTEND_PROMPT_TRANSFORMATION_DEVIS_BILLET.md`). Point important signalé par le backend : contrairement au flux hôtel, la relation `Devis` → `BilletEntete` est **1-N côté base** (jamais bloquée) — décision UX demandée à l'utilisateur, qui a choisi de **bloquer après la 1ère transformation** côté UI (comme le flux hôtel), quitte à revoir au cas par cas si un vrai besoin de plusieurs billets par devis se présente.
+  - **Frontend implémenté** : `devisSlice.ts` (`billetEnteteId`/`transformeEnBilletAt` sur `Devis`), `Devis.tsx` — `getPrimaryAction` bascule sur "Voir les billets" dès que `transformeEnBilletAt` est renseigné (au lieu de "Transformer / Billet"), item de menu secondaire "Voir les billets" activé par `transformeEnBilletAt` au lieu de `statut === 'DEVIS_APPROUVE'` (plus précis).
+  - **⚠️ Pas testable pour l'instant** : migration Prisma pas encore appliquée en base réelle (même situation que les prompts hôtel). À tester dès confirmation.
+  - `npx tsc -b --noEmit`/`npm run build` : 0 erreur.
 
 ---
 

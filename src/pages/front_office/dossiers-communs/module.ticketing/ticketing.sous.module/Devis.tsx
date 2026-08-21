@@ -50,11 +50,13 @@ type PrimaryAction = {
 
 function getPrimaryAction(
   statut: string,
+  transformeEnBilletAt: string | null | undefined,
   handlers: {
     onEnvoyerDirection: () => void;
     onEnvoyerClient: () => void;
     onApprouverClient: () => void;
     onTransformer: () => void;
+    onVoirBillets: () => void;
   },
   _directionLoading: boolean
 ): PrimaryAction {
@@ -76,6 +78,16 @@ function getPrimaryAction(
         variant: 'primary',
       };
     case 'DEVIS_APPROUVE':
+      // Un devis déjà transformé reste bloqué en UI (même si la relation backend est 1-N) —
+      // évite de créer plusieurs billets par erreur pour le même devis.
+      if (transformeEnBilletAt) {
+        return {
+          label: 'Voir les billets',
+          icon: <FiEye size={14} />,
+          onClick: handlers.onVoirBillets,
+          variant: 'primary',
+        };
+      }
       return {
         label: 'Transformer / Billet',
         icon: <FiRefreshCw size={14} />,
@@ -439,11 +451,13 @@ export default function Devis () {
                                     <PrimaryActionButton
                                       action={getPrimaryAction(
                                         devis.statut,
+                                        devis.transformeEnBilletAt,
                                         {
                                           onEnvoyerDirection: () => handleApprouverDirection(devis.id, devis.reference),
                                           onEnvoyerClient: () => handleAsAapprouved(devis.id),
                                           onApprouverClient: () => handleAsValidate(devis.id),
                                           onTransformer: handleCreateBillet,
+                                          onVoirBillets: () => navigate(`/dossiers-communs/ticketing/pages/billet/${devis.id}?prospectionEnteteId=${devis.data?.entete?.id}`),
                                         },
                                         !!directionLoading[devis.id]
                                       )}
@@ -464,7 +478,7 @@ export default function Devis () {
                                         {
                                           label: 'Voir les billets',
                                           icon: <FiEye size={14} />,
-                                          disabled: devis.statut !== 'DEVIS_APPROUVE',
+                                          disabled: !devis.transformeEnBilletAt,
                                           onClick: () => navigate(`/dossiers-communs/ticketing/pages/billet/${devis.id}?prospectionEnteteId=${devis.data?.entete?.id}`),
                                         },
                                         {

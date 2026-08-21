@@ -32,6 +32,8 @@ export interface Devis {
   totalGeneral: number;
   url: string | null;
   urlPdfCom: string | null;
+  billetEnteteId?: string | null;
+  transformeEnBilletAt?: string | null;
   data: {
     entete: Entete;
     lignes: Ligne[];
