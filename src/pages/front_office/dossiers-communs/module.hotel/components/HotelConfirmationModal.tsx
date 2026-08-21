@@ -30,16 +30,20 @@ const HotelConfirmationModal: React.FC<HotelConfirmationModalProps> = ({
 
   const [showConfirmation, setShowConfirmation] = useState(false);
 
-  // Pré-remplir avec les données de la ligne — le prix client (section 3) part du forfait de
-  // référence établi au benchmarking (BenchmarkingEntete.forfaitaireUnitaire), à défaut de
-  // données propres à la confirmation ; reste modifiable par l'agent avant envoi.
+  // Pré-remplir avec les données de la ligne — le prix client (section 3) = prix nuit hôtel (Ar) +
+  // forfaitaire unitaire (commission par nuit établie au benchmarking, exprimée en devise, donc
+  // convertie en Ariary via le taux de change) ; forfaitaireUnitaire étant un montant de commission
+  // et non un prix (cf. BenchmarkingDetailPage.tsx) ; reste modifiable par l'agent avant envoi.
   useEffect(() => {
     if (ligne) {
+      const tauxChange = ligne.resaTauxChange || 0;
+      const puConfPrixNuitHotelAriary = ligne.puResaNuiteHotelAriary || 0;
+      const forfaitaireUnitaireDevise = ligne.BenchmarkingLigne?.benchmarkingEntete?.forfaitaireUnitaire || 0;
       setFormData({
-        tauxConfirmation: ligne.resaTauxChange || 0,
-        puConfPrixNuitHotelAriary: ligne.puResaNuiteHotelAriary || 0,
+        tauxConfirmation: tauxChange,
+        puConfPrixNuitHotelAriary,
         puConfMontantNuitHotelAriary: ligne.puResaMontantAriary || 0,
-        puConfPrixNuitClientArary: ligne.BenchmarkingLigne?.benchmarkingEntete?.forfaitaireUnitaire || 0,
+        puConfPrixNuitClientArary: puConfPrixNuitHotelAriary + forfaitaireUnitaireDevise * tauxChange,
         puConfMontantNuitClientAriary: 0,
         confirmationCommissionAriary: ligne.commissionUnitaire || 0,
       });
@@ -195,7 +199,8 @@ const HotelConfirmationModal: React.FC<HotelConfirmationModalProps> = ({
                   value={formData.puConfPrixNuitHotelAriary}
                   onChange={handleChange}
                   step="0.01"
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                  readOnly
+                  className="w-full border bg-gray-100 border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
                   placeholder="720000"
                 />
               </div>
