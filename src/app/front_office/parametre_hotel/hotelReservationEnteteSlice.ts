@@ -19,6 +19,7 @@ export interface CreateHotelReservationPayload {
     clientBeneficiaireId: string;
     servicePreferenceIds: string[];
   }>;
+  deviseId?: string;
   objet?: string;
   moment?: string;
   googleAccountId?: string;
@@ -123,6 +124,8 @@ export interface HotelLigne {
   puConfPrixNuitClientArary: number;
   puConfMontantNuitClientAriary: number;
   confirmationCommissionAriary: number;
+  deviseId: string | null;
+  devise: { id: string; devise: string; status: string; createdAt: string; updatedAt: string } | null;
   passagers: HotelPassager[];
   BenchmarkingLigne: BenchmarkingLigne;
 }

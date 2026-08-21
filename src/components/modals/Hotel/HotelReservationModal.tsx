@@ -247,6 +247,7 @@ const HotelReservationModal: React.FC<HotelReservationModalProps> = ({
       servicePreferenceIds: prefParPassager[p.infoId] || [],
     })),
     // ← inclus seulement si renseignés (champs optionnels)
+    ...(selectedDeviseId              && { deviseId: selectedDeviseId }),
     ...(formData.objet.trim()         && { objet: formData.objet.trim() }),
     ...(formData.moment               && { moment: formData.moment }),
     ...(formData.googleAccountId.trim() && { googleAccountId: formData.googleAccountId.trim() }),

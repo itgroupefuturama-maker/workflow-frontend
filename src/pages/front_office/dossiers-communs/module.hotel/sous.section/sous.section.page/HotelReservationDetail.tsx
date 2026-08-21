@@ -238,17 +238,30 @@ const LigneCard = ({ ligne, enteteStatut, onReserver, onConfirmer }: LigneCardPr
               {/* Réservation réelle */}
               {ligne.numeroResa && (
                 <div>
-                  <p className="text-[10px] text-neutral-400 mb-1.5">Tarif réservation réelle</p>
+                  <p className="text-[10px] text-neutral-400 mb-1.5 flex items-center gap-1.5">
+                    Tarif réservation réelle
+                    {ligne.devise && (
+                      <span className="text-[9px] font-bold font-mono text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">
+                        {ligne.devise.devise}
+                      </span>
+                    )}
+                  </p>
                   <div className="bg-white border border-blue-200 rounded-lg px-3 py-2.5 space-y-1.5">
                     <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 text-[10px]">
                       <span className="text-neutral-500">Taux de change</span>
-                      <span className="font-semibold text-neutral-800 font-mono">{fmt(ligne.resaTauxChange)} Ar</span>
-                      <span className="text-neutral-500">Nuit hôtel devise</span>
-                      <span className="font-semibold text-neutral-800 font-mono">{ligne.puResaNuiteHotelDevise}</span>
+                      <span className="font-semibold text-neutral-800 font-mono">
+                        {ligne.devise ? `1 ${ligne.devise.devise} = ` : ''}{fmt(ligne.resaTauxChange)} Ar
+                      </span>
+                      <span className="text-neutral-500">Nuit hôtel {ligne.devise?.devise ?? 'devise'}</span>
+                      <span className="font-semibold text-neutral-800 font-mono">
+                        {ligne.puResaNuiteHotelDevise} {ligne.devise?.devise ?? ''}
+                      </span>
                       <span className="text-neutral-500">Nuit hôtel Ar</span>
                       <span className="font-semibold text-neutral-800 font-mono">{fmt(ligne.puResaNuiteHotelAriary)} Ar</span>
-                      <span className="text-neutral-500">Montant devise</span>
-                      <span className="font-semibold text-neutral-800 font-mono">{ligne.puResaMontantDevise}</span>
+                      <span className="text-neutral-500">Montant {ligne.devise?.devise ?? 'devise'}</span>
+                      <span className="font-semibold text-neutral-800 font-mono">
+                        {ligne.puResaMontantDevise} {ligne.devise?.devise ?? ''}
+                      </span>
                       <span className="text-neutral-500">Montant Ar</span>
                       <span className="font-semibold text-blue-700 font-mono">{fmt(ligne.puResaMontantAriary)} Ar</span>
                       <span className="text-neutral-500">% Commission</span>
