@@ -110,6 +110,8 @@ const HotelReservationModal: React.FC<HotelReservationModalProps> = ({
   const [currentBeneficiaireId, setCurrentBeneficiaireId] = useState('');
   const [currentInfoId, setCurrentInfoId] = useState('');
   const [showConfirmation, setShowConfirmation] = useState(false);
+  // Section optionnelle, souvent vide — repliée par défaut.
+  const [showNoteSection, setShowNoteSection] = useState(false);
 
   // ─── Dropdown portal (copié depuis ReservationModal) ──────────────────────
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -272,8 +274,8 @@ const HotelReservationModal: React.FC<HotelReservationModalProps> = ({
       <div className="fixed inset-0 bg-black/5 z-50" />
         {/* ── Conteneur centré qui groupe les 2 modals ── */}
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className={`flex items-stretch gap-3 w-full transition-all duration-300 ${
-            prefBeneficiaire ? 'max-w-1200px' : 'max-w-6xl'
+          <div className={`flex items-stretch gap-3 transition-all duration-300 ${
+            prefBeneficiaire ? 'max-w-[1200px]' : 'w-full max-w-6xl'
           }`}>
             <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[80vh] overflow-hidden flex flex-col">
 
@@ -605,6 +607,11 @@ const HotelReservationModal: React.FC<HotelReservationModalProps> = ({
                           Devise de référence (Benchmarking) : <span className="font-semibold text-gray-800">{deviseLabel}</span>
                         </p>
                       )}
+                      {deviseOptions.length === 0 && (
+                        <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+                          Aucune devise de référence trouvée pour cette ligne de benchmarking — saisir les tarifs manuellement ci-dessous.
+                        </p>
+                      )}
 
                       <div>
                         <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Prix en {deviseLabel}</h4>
@@ -809,32 +816,42 @@ const HotelReservationModal: React.FC<HotelReservationModalProps> = ({
 
                   {/* ── Section 5 : Note / Rappel (optionnel) ── */}
                   <section className="border border-gray-200 rounded-lg overflow-hidden">
-                    <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
-                      <div className="flex items-center gap-3">
-                        <div className="w-7 h-7 bg-gray-900 text-white rounded flex items-center justify-center text-sm font-semibold">
-                          {servicesActifs.length > 0 ? '5' : '4'}
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <h3 className="text-sm font-semibold text-gray-900">Note & Rappel</h3>
-                            <span className="text-[10px] bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full font-medium">
-                              Optionnel
-                            </span>
-                          </div>
-                          <p className="text-xs text-gray-500 mt-0.5">
-                            Ajoutez une note ou un rappel associé à cette réservation
-                          </p>
-                        </div>
-
-                        {/* Indicateur visuel si note renseignée */}
-                        {(formData.objet || formData.moment || formData.googleAccountId) && (
-                          <span className="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium shrink-0">
-                            Note ajoutée
-                          </span>
-                        )}
+                    <button
+                      type="button"
+                      onClick={() => setShowNoteSection(v => !v)}
+                      className="w-full bg-gray-50 px-4 py-3 border-b border-gray-200 flex items-center gap-3 text-left hover:bg-gray-100 transition-colors"
+                    >
+                      <div className="w-7 h-7 bg-gray-900 text-white rounded flex items-center justify-center text-sm font-semibold">
+                        {servicesActifs.length > 0 ? '5' : '4'}
                       </div>
-                    </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <h3 className="text-sm font-semibold text-gray-900">Note & Rappel</h3>
+                          <span className="text-[10px] bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full font-medium">
+                            Optionnel
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Ajoutez une note ou un rappel associé à cette réservation
+                        </p>
+                      </div>
 
+                      {/* Indicateur visuel si note renseignée */}
+                      {(formData.objet || formData.moment || formData.googleAccountId) && (
+                        <span className="text-[10px] bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium shrink-0">
+                          Note ajoutée
+                        </span>
+                      )}
+
+                      <svg
+                        className={`w-4 h-4 text-gray-400 shrink-0 transition-transform ${showNoteSection ? 'rotate-180' : ''}`}
+                        fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+
+                    {showNoteSection && (
                     <div className="p-5 space-y-4">
                       {/* Objet */}
                       <div>
@@ -929,6 +946,7 @@ const HotelReservationModal: React.FC<HotelReservationModalProps> = ({
                         </p>
                       )}
                     </div>
+                    )}
                   </section>
 
                   {/* ── Récapitulatif ── */}
@@ -1088,17 +1106,17 @@ const HotelReservationModal: React.FC<HotelReservationModalProps> = ({
               )}
               
             </div>
-          </div>
 
-          {/* ── Modal préférences — SÉPARÉ via portal, ancré à droite ── */}
-          {prefBeneficiaire && (
-            <div className=" shrink-0 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
-              <PreferencesInlinePanel
-                beneficiaire={prefBeneficiaire}
-                onClose={() => setPrefBeneficiaire(null)}
-              />
-            </div>
-          )}
+            {/* ── Panneau préférences — dans la même rangée que le modal, pour rester centré avec lui ── */}
+            {prefBeneficiaire && (
+              <div className="shrink-0 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
+                <PreferencesInlinePanel
+                  beneficiaire={prefBeneficiaire}
+                  onClose={() => setPrefBeneficiaire(null)}
+                />
+              </div>
+            )}
+          </div>
         </div>
     </>
   );
