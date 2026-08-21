@@ -30,14 +30,16 @@ const HotelConfirmationModal: React.FC<HotelConfirmationModalProps> = ({
 
   const [showConfirmation, setShowConfirmation] = useState(false);
 
-  // Pré-remplir avec les données de la ligne
+  // Pré-remplir avec les données de la ligne — le prix client (section 3) part du forfait de
+  // référence établi au benchmarking (BenchmarkingEntete.forfaitaireUnitaire), à défaut de
+  // données propres à la confirmation ; reste modifiable par l'agent avant envoi.
   useEffect(() => {
     if (ligne) {
       setFormData({
         tauxConfirmation: ligne.resaTauxChange || 0,
         puConfPrixNuitHotelAriary: ligne.puResaNuiteHotelAriary || 0,
         puConfMontantNuitHotelAriary: ligne.puResaMontantAriary || 0,
-        puConfPrixNuitClientArary: 0,
+        puConfPrixNuitClientArary: ligne.BenchmarkingLigne?.benchmarkingEntete?.forfaitaireUnitaire || 0,
         puConfMontantNuitClientAriary: 0,
         confirmationCommissionAriary: ligne.commissionUnitaire || 0,
       });
@@ -130,12 +132,16 @@ const HotelConfirmationModal: React.FC<HotelConfirmationModalProps> = ({
                 <p className="font-semibold text-blue-900">{ligne?.numeroResa || '—'}</p>
               </div>
               <div>
-                <p className="text-xs text-blue-600">Prix Nuit/Devise</p>
-                <p className="font-semibold text-blue-900">{ligne?.puResaNuiteHotelDevise || 0}</p>
+                <p className="text-xs text-blue-600">Prix Nuit ({ligne?.devise?.devise ?? 'devise'})</p>
+                <p className="font-semibold text-blue-900">
+                  {ligne?.puResaNuiteHotelDevise || 0} {ligne?.devise?.devise ?? ''}
+                </p>
               </div>
               <div>
-                <p className="text-xs text-blue-600">Montant Devise</p>
-                <p className="font-semibold text-blue-900">{ligne?.puResaMontantDevise || 0}</p>
+                <p className="text-xs text-blue-600">Montant ({ligne?.devise?.devise ?? 'devise'})</p>
+                <p className="font-semibold text-blue-900">
+                  {ligne?.puResaMontantDevise || 0} {ligne?.devise?.devise ?? ''}
+                </p>
               </div>
               <div>
                 <p className="text-xs text-blue-600">Commission Résa</p>
@@ -216,7 +222,7 @@ const HotelConfirmationModal: React.FC<HotelConfirmationModalProps> = ({
               <div className="w-7 h-7 bg-gray-900 text-white rounded flex items-center justify-center text-sm font-semibold">
                 3
               </div>
-              <h3 className="text-sm font-semibold text-gray-900">Prix Client (Devise)</h3>
+              <h3 className="text-sm font-semibold text-gray-900">Prix Client (Ariary)</h3>
             </div>
             <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -232,10 +238,13 @@ const HotelConfirmationModal: React.FC<HotelConfirmationModalProps> = ({
                   className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
                   placeholder="450"
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  Pré-rempli depuis le forfait de référence (benchmarking) — modifiable.
+                </p>
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                  Montant Total Client
+                  Montant Total Client (Ar)
                 </label>
                 <input
                   type="number"
