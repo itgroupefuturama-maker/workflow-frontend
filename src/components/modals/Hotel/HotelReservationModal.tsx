@@ -47,7 +47,7 @@ const HotelReservationModal: React.FC<HotelReservationModalProps> = ({
   const [formData, setFormData] = useState({
     numeroResa: '',
     puResaNuiteHotelDevise: 0,
-    resaTauxChange: 4800,
+    resaTauxChange: 0,
     puResaNuiteHotelAriary: 0,
     puResaMontantDevise: 0,
     puResaMontantAriary: 0,
@@ -57,6 +57,43 @@ const HotelReservationModal: React.FC<HotelReservationModalProps> = ({
     moment: '',
     googleAccountId: '',
   });
+
+  // ─── Devise de référence (benchmarking) — un même hôtel/chambre peut avoir été chiffré
+  // dans plusieurs devises simultanément (BenchmarkingLigne.deviseHotel[]). On pré-remplit
+  // les tarifs à partir de la devise sélectionnée, mais ce choix n'est pas encore persisté
+  // sur la réservation elle-même côté backend (voir BACKEND_PROMPT_DEVISE_RESERVATION_HOTEL.md).
+  const deviseOptions = ligne?.BenchmarkingLigne?.deviseHotel ?? [];
+  const [selectedDeviseId, setSelectedDeviseId] = useState('');
+  const selectedDevise = deviseOptions.find((d: any) => d.id === selectedDeviseId) ?? null;
+  const deviseLabel = selectedDevise?.devise?.devise ?? 'Devise';
+
+  // Pré-sélectionne automatiquement s'il n'y a qu'une seule devise de référence,
+  // et pré-remplit les tarifs avec ses valeurs de référence à l'ouverture du modal.
+  useEffect(() => {
+    if (!isOpen || deviseOptions.length === 0) return;
+    const defaultDevise = deviseOptions.length === 1 ? deviseOptions[0] : null;
+    if (defaultDevise) {
+      setSelectedDeviseId(defaultDevise.id);
+      setFormData(prev => ({
+        ...prev,
+        puResaNuiteHotelDevise: Number(defaultDevise.nuiteDevise) || 0,
+        resaTauxChange: Number(defaultDevise.tauxChange) || 0,
+      }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, ligne?.id]);
+
+  const handleSelectDevise = (deviseId: string) => {
+    setSelectedDeviseId(deviseId);
+    const d = deviseOptions.find((o: any) => o.id === deviseId);
+    if (d) {
+      setFormData(prev => ({
+        ...prev,
+        puResaNuiteHotelDevise: Number(d.nuiteDevise) || 0,
+        resaTauxChange: Number(d.tauxChange) || 0,
+      }));
+    }
+  };
 
   // ─── Passagers avec servicePreferenceIds (même structure que ReservationModal) ──
   const [selectedPassagers, setSelectedPassagers] = useState<
@@ -140,7 +177,8 @@ const HotelReservationModal: React.FC<HotelReservationModalProps> = ({
     formData.numeroResa.trim() !== '' &&
     selectedPassagers.length > 0 &&
     formData.puResaNuiteHotelDevise > 0 &&
-    formData.resaTauxChange > 0;
+    formData.resaTauxChange > 0 &&
+    (deviseOptions.length <= 1 || !!selectedDeviseId);
 
   const selectedInfoDetails = infosList.find(info => info.id === currentInfoId);
 
@@ -234,7 +272,7 @@ const HotelReservationModal: React.FC<HotelReservationModalProps> = ({
         {/* ── Conteneur centré qui groupe les 2 modals ── */}
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className={`flex items-stretch gap-3 w-full transition-all duration-300 ${
-            prefBeneficiaire ? 'max-w-[1200px]' : 'max-w-6xl'
+            prefBeneficiaire ? 'max-w-1200px' : 'max-w-6xl'
           }`}>
             <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[80vh] overflow-hidden flex flex-col">
 
@@ -508,34 +546,18 @@ const HotelReservationModal: React.FC<HotelReservationModalProps> = ({
                       </div>
                     </div>
                     <div className="p-5">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                            N° Réservation <span className="text-red-600">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            name="numeroResa"
-                            value={formData.numeroResa}
-                            onChange={handleChange}
-                            placeholder="RESA-2024-001"
-                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                            Taux de change (Ar) <span className="text-red-600">*</span>
-                          </label>
-                          <input
-                            type="number"
-                            name="resaTauxChange"
-                            value={formData.resaTauxChange}
-                            onChange={handleChange}
-                            step="0.01"
-                            placeholder="4800"
-                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
-                          />
-                        </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                          N° Réservation <span className="text-red-600">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          name="numeroResa"
+                          value={formData.numeroResa}
+                          onChange={handleChange}
+                          placeholder="RESA-2024-001"
+                          className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                        />
                       </div>
                     </div>
                   </section>
@@ -549,12 +571,46 @@ const HotelReservationModal: React.FC<HotelReservationModalProps> = ({
                       </div>
                     </div>
                     <div className="p-5 space-y-5">
+                      {/* Devise de référence — visible seulement si le benchmarking a été chiffré
+                          dans plusieurs devises simultanément */}
+                      {deviseOptions.length > 1 && (
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                            Devise de référence (Benchmarking) <span className="text-red-600">*</span>
+                          </label>
+                          <div className="grid grid-cols-3 gap-2">
+                            {deviseOptions.map((d: any) => (
+                              <button
+                                key={d.id}
+                                type="button"
+                                onClick={() => handleSelectDevise(d.id)}
+                                className={`py-2 text-xs font-bold rounded-lg border-2 transition-all ${
+                                  selectedDeviseId === d.id
+                                    ? 'border-gray-900 bg-gray-50 text-gray-900'
+                                    : 'border-gray-100 text-gray-500 hover:border-gray-200'
+                                }`}
+                              >
+                                {d.devise?.devise}
+                              </button>
+                            ))}
+                          </div>
+                          <p className="text-[11px] text-gray-400 mt-1.5">
+                            Détermine les tarifs de référence pré-remplis ci-dessous.
+                          </p>
+                        </div>
+                      )}
+                      {deviseOptions.length === 1 && (
+                        <p className="text-xs text-gray-500">
+                          Devise de référence (Benchmarking) : <span className="font-semibold text-gray-800">{deviseLabel}</span>
+                        </p>
+                      )}
+
                       <div>
-                        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Prix en devise</h4>
+                        <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Prix en {deviseLabel}</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           <div>
                             <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                              Prix Nuitée Hôtel (Devise) <span className="text-red-600">*</span>
+                              Prix Nuitée Hôtel ({deviseLabel}) <span className="text-red-600">*</span>
                             </label>
                             <input
                               type="number"
@@ -568,7 +624,7 @@ const HotelReservationModal: React.FC<HotelReservationModalProps> = ({
                           </div>
                           <div>
                             <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                              Montant Total (Devise)
+                              Montant Total ({deviseLabel})
                               <span className="ml-2 text-gray-400 font-normal normal-case">
                                 = Nuitée × {selectedPassagers.length} passager{selectedPassagers.length > 1 ? 's' : ''}
                               </span>
@@ -588,6 +644,19 @@ const HotelReservationModal: React.FC<HotelReservationModalProps> = ({
                           Prix en Ariary <span className="font-normal normal-case text-gray-400">(calculés automatiquement)</span>
                         </h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                              Taux de change <span className="text-gray-400 font-normal normal-case">(1 {deviseLabel} = ? Ar)</span> <span className="text-red-600">*</span>
+                            </label>
+                            <input
+                              type="number"
+                              name="resaTauxChange"
+                              value={formData.resaTauxChange}
+                              onChange={handleChange}
+                              step="0.01"
+                              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
+                            />
+                          </div>
                           <div>
                             <label className="block text-xs font-medium text-gray-700 mb-1.5">Prix Nuitée Hôtel (Ariary)</label>
                             <input type="number" value={formData.puResaNuiteHotelAriary} readOnly className="w-full bg-gray-100 border border-gray-200 rounded px-3 py-2 text-sm font-semibold text-gray-900 cursor-not-allowed" />

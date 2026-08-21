@@ -111,6 +111,11 @@ Légende statut : `[ ]` à faire · `[~]` en cours · `[x]` terminé
   - **⚠️ Pas testable pour l'instant** : le backend a prévenu que la migration Prisma existe mais n'est pas encore appliquée en base réelle (`npx prisma migrate deploy` à faire par quelqu'un ayant accès) — les deux endpoints renverront une erreur tant que ce n'est pas fait. À tester dès confirmation que la migration est en place.
   - **Rien n'est encore committé.**
   - **Bloqué en attente du retour backend.**
+- [~] **Devise non persistée sur une réservation hôtel (`HotelReservationModal.tsx`/`HotelReservationDetail.tsx`) — trouvé le 2026-08-21** : une ligne de benchmarking peut être chiffrée dans plusieurs devises simultanément (`deviseHotel[]`), bien affiché au niveau référence. Mais le formulaire de réservation (`HotelReservationModal.tsx`) initialisait `resaTauxChange` à 4800 en dur, `puResaNuiteHotelDevise` à 0, avec des libellés génériques "(Devise)" — sans jamais lire la devise de référence du benchmarking. Pire : `HotelLigne` n'a aucun champ `deviseId` — une fois la réservation créée, impossible de savoir dans quelle devise les montants ont été saisis (`HotelReservationDetail.tsx`, bloc "Tarif réservation réelle", affiche les montants sans aucun code devise, contrairement au bloc "référence Benchmarking" juste au-dessus).
+  - **Frontend fait** (ne nécessitait pas le backend) : `HotelReservationModal.tsx` pré-remplit désormais les tarifs depuis `BenchmarkingLigne.deviseHotel[]` (auto-sélectionné s'il n'y en a qu'une, sinon l'agent choisit avant de saisir), libellés avec le vrai code devise au lieu de "(Devise)" générique.
+  - Brief prêt à transmettre au backend → `BACKEND_PROMPT_DEVISE_RESERVATION_HOTEL.md` (ajouter `deviseId` sur `HotelLigne` + `PATCH /hotel/ligne/:ligneId/reservation`, question ouverte sur la propagation automatique depuis `devis.deviseRetenueId`).
+  - **Bloqué en attente du retour backend** pour la persistance ; le pré-remplissage/affichage frontend fonctionne déjà indépendamment.
+  - `npx tsc -b --noEmit`/`npm run build` : 0 erreur.
 
 ---
 
