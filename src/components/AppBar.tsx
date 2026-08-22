@@ -148,8 +148,11 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
     navigate('/login');
   };
 
-  const profilsActifs = user?.profiles?.filter((p) => p.status === 'ACTIF')?.map((p) => p.profile.profil) || [];
-  const modulesAccessibles = user?.profiles?.filter((p) => p.status === 'ACTIF')?.flatMap((p) => p.profile.modules.map((m) => m.module.nom)) || [];
+  // Groupé par profil (pas fusionné entre profils) : un utilisateur avec plusieurs profils
+  // actifs peut avoir des privilèges différents sur un même module selon le profil — il n'y a
+  // pas de lien module↔privilège en base (voir BACKEND_PROMPT_PRIVILEGES_AUTH.md), donc le
+  // seul regroupement fiable est "par profil".
+  const profilsActifs = user?.profiles?.filter((p) => p.status === 'ACTIF') || [];
 
   const collapsed = useSelector((state: RootState) => state.ui.sidebarCollapsed);
   const socketConnected = useSelector((state: RootState) => state.ui.socketConnected);
@@ -440,28 +443,41 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
               
 
               {profilsActifs.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Profils actifs</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {profilsActifs.map((profil, i) => (
-                      <span key={i} className="px-2.5 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-semibold">
-                        {profil}
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Profils actifs</p>
+                  {profilsActifs.map((p) => (
+                    <div key={p.profileId} className="bg-gray-50 border border-gray-100 rounded-xl p-3">
+                      <span className="inline-block px-2.5 py-1 bg-gray-800 text-white rounded-lg text-xs font-bold mb-2">
+                        {p.profile.profil}
                       </span>
-                    ))}
-                  </div>
-                </div>
-              )}
 
-              {modulesAccessibles.length > 0 && (
-                <div>
-                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Modules accessibles</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {[...new Set(modulesAccessibles)].map((module, i) => (
-                      <span key={i} className="px-2.5 py-1 bg-gray-100 text-gray-700 rounded-lg text-xs font-medium">
-                        {module}
-                      </span>
-                    ))}
-                  </div>
+                      {p.profile.modules?.length > 0 && (
+                        <div className="mb-2">
+                          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Modules</p>
+                          <div className="flex flex-wrap gap-1">
+                            {p.profile.modules.map((m) => (
+                              <span key={m.moduleId} className="px-2 py-0.5 bg-white border border-gray-200 text-gray-700 rounded text-[11px] font-medium">
+                                {m.module.nom}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {p.profile.privileges?.length > 0 && (
+                        <div>
+                          <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-1">Privilèges</p>
+                          <div className="flex flex-wrap gap-1">
+                            {p.profile.privileges.map((pr) => (
+                              <span key={pr.privilegeId} className="px-2 py-0.5 bg-indigo-50 border border-indigo-100 text-indigo-700 rounded text-[11px] font-medium">
+                                {pr.privilege.privilege}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>

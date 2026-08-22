@@ -127,10 +127,9 @@ Légende statut : `[ ]` à faire · `[~]` en cours · `[x]` terminé
   - **Frontend implémenté** : `devisSlice.ts` (`billetEnteteId`/`transformeEnBilletAt` sur `Devis`), `Devis.tsx` — `getPrimaryAction` bascule sur "Voir les billets" dès que `transformeEnBilletAt` est renseigné (au lieu de "Transformer / Billet"), item de menu secondaire "Voir les billets" activé par `transformeEnBilletAt` au lieu de `statut === 'DEVIS_APPROUVE'` (plus précis).
   - **⚠️ Pas testable pour l'instant** : migration Prisma pas encore appliquée en base réelle (même situation que les prompts hôtel). À tester dès confirmation.
   - `npx tsc -b --noEmit`/`npm run build` : 0 erreur.
-- [ ] **Privilèges absents de la réponse d'authentification — trouvé le 2026-08-22** : l'AppBar affiche déjà "Profils actifs"/"Modules accessibles" de l'utilisateur connecté depuis `user.profiles[].profile.modules` (`POST /auth/login`/`GET /users/me`). Le type frontend anticipe aussi `profile.privileges[]` (même forme que `GET /profiles`, déjà utilisé par `Autorisation.tsx`), mais ce tableau est absent en pratique de la réponse d'authentification.
-  - **Complication identifiée** : un utilisateur avec plusieurs profils peut avoir des privilèges différents sur un même module selon le profil — besoin de savoir si un vrai lien module↔privilège existe en base (pas juste deux listes indépendantes par profil comme suggéré par `Autorisation.tsx` aujourd'hui) pour éviter toute ambiguïté à l'affichage.
-  - Brief prêt à transmettre au backend → `BACKEND_PROMPT_PRIVILEGES_AUTH.md` (pose la question du lien module↔privilège, propose une forme de réponse selon la réponse).
-  - **Bloqué en attente du retour backend.**
+- [x] **Privilèges absents de la réponse d'authentification — trouvé et corrigé le 2026-08-22** : `POST /auth/login` ne renvoyait pas `profile.privileges[]` (contrairement à `GET /users/me`, qui l'avait déjà). Backend a confirmé le **Cas B** en vérifiant `prisma/schema.prisma` : aucune relation en base entre `Privilege` et `Module` (`Privilege.fonctionnalite` est un simple `String?` libre, pas une FK) — `profile.modules[]`/`profile.privileges[]` sont bien deux listes indépendantes par profil, le regroupement le plus fin possible reste "par profil". Corrigé dans `auth.service.ts::validateUser`, forme désormais identique sur les 3 endpoints (`GET /profiles`, `GET /users/me`, `POST /auth/login`).
+  - **Frontend implémenté** : `AppBar.tsx` — le menu profil groupait avant les modules à plat en les dédupliquant entre TOUS les profils actifs (perdant l'info "quel profil donne quel module"). Remplacé par un bloc par profil actif (badge profil + ses modules + ses privilèges, sans mélange entre profils).
+  - `npx tsc -b --noEmit`/`npm run build` : 0 erreur.
 
 ---
 
