@@ -1,4 +1,5 @@
 import { Navigate, Route } from "react-router-dom";
+import ModuleRoute from "../pages/ModuleRoute";
 import HomePage from "../pages/front_office/HomePage";
 import DossierCommunForm from "../pages/front_office/dossiers-communs/module.dossier.commun/DossierCommunForm";
 import DossierCommunDetail from "../pages/front_office/dossiers-communs/module.dossier.commun/DossierCommunDetail";
@@ -104,17 +105,21 @@ export function frontOfficeRoutes() {
 
       <Route path="/dossiers-communs/pageControle" element={<PageControle />} />
 
-      <Route path="dossiers-communs/ticketing" element={<HomePageTicketing />}>
-        {/* Les routes enfants s'affichent à l'endroit où tu mettrais <Outlet /> dans PrestationDetail */}
-        <Route index element={<Navigate to="accueil" replace />} />
-        <Route path="accueil" element={<AccueilView module="ticketing"/>} />
-        <Route path="parametres/:module" element={<ParametreView />} />
-        <Route path="pages">
-          <Route index element={<PageView />} />
-          <Route path="prospection/:enteteId" element={<Prospection />} />
-          <Route path="devis/:enteteId" element={<Devis />} />
-          {/* Maintenant Billet est un enfant de PrestationDetail -> Pages */}
-          <Route path="billet/:enteteId" element={<Billet />} />
+      {/* Module pilote pour le contrôle d'accès par privilège (voir src/hooks/useAuthorization.ts) —
+          bloque l'accès si l'utilisateur n'a aucun profil actif donnant CONSULTATION+ sur "ticketing" */}
+      <Route path="dossiers-communs/ticketing" element={<ModuleRoute module="ticketing" />}>
+        <Route element={<HomePageTicketing />}>
+          {/* Les routes enfants s'affichent à l'endroit où tu mettrais <Outlet /> dans PrestationDetail */}
+          <Route index element={<Navigate to="accueil" replace />} />
+          <Route path="accueil" element={<AccueilView module="ticketing"/>} />
+          <Route path="parametres/:module" element={<ParametreView />} />
+          <Route path="pages">
+            <Route index element={<PageView />} />
+            <Route path="prospection/:enteteId" element={<Prospection />} />
+            <Route path="devis/:enteteId" element={<Devis />} />
+            {/* Maintenant Billet est un enfant de PrestationDetail -> Pages */}
+            <Route path="billet/:enteteId" element={<Billet />} />
+          </Route>
         </Route>
       </Route>
 

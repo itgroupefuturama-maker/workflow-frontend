@@ -14,8 +14,10 @@ import { TicketingHeader } from './components.billet/TicketingHeader';
 import { devisListeItems } from './components.billet/utils/ticketingHeaderItems';
 import { PdfDownloadButton } from '../../module.pdf/pdf.generation/components/PdfDownloadButton';
 import { toast } from '../../../../../components/Toast/toast';
+import { useAuthorization, type PrivilegeLevel } from '../../../../../hooks/useAuthorization';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
+const MODULE = 'ticketing';
 
 /* ------------------------------------------------------------------ */
 /*  Badge de statut                                                    */
@@ -46,6 +48,9 @@ type PrimaryAction = {
   onClick: () => void;
   variant: 'primary' | 'success' | 'neutral';
   loading?: boolean;
+  // Niveau de privilège requis sur le module pour que cette action soit utilisable — filtré à
+  // l'affichage via useAuthorization() (voir PrimaryActionButton plus bas).
+  requiredLevel: PrivilegeLevel;
 } | null;
 
 function getPrimaryAction(
@@ -69,13 +74,17 @@ function getPrimaryAction(
         icon: <FiCheckCircle size={14} />,
         onClick: handlers.onEnvoyerClient,
         variant: 'success',
+        requiredLevel: 'GESTION',
       };
     case 'DEVIS_A_APPROUVER':
+      // Étape d'approbation à proprement parler — nécessite le privilège Approbation, pas
+      // seulement Gestion (un profil Gestion peut créer/envoyer un devis mais pas l'approuver).
       return {
         label: 'Approuver / Client',
         icon: <FiCheck size={14} />,
         onClick: handlers.onApprouverClient,
         variant: 'primary',
+        requiredLevel: 'APPROBATION',
       };
     case 'DEVIS_APPROUVE':
       // Un devis déjà transformé reste bloqué en UI (même si la relation backend est 1-N) —
@@ -86,6 +95,7 @@ function getPrimaryAction(
           icon: <FiEye size={14} />,
           onClick: handlers.onVoirBillets,
           variant: 'primary',
+          requiredLevel: 'CONSULTATION',
         };
       }
       return {
@@ -93,6 +103,7 @@ function getPrimaryAction(
         icon: <FiRefreshCw size={14} />,
         onClick: handlers.onTransformer,
         variant: 'success',
+        requiredLevel: 'GESTION',
       };
     default:
       return null; // ANNULER -> pas d'action principale
@@ -211,6 +222,9 @@ export default function Devis () {
 
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  const { canManage, canApprove } = useAuthorization();
+  const canManageTicketing = canManage(MODULE);
+  const canApproveTicketing = canApprove(MODULE);
 
   const { enteteId } = useParams<{ enteteId: string }>();
 
@@ -449,18 +463,26 @@ export default function Devis () {
                                 <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                                   <div className="flex items-center justify-end gap-1.5">
                                     <PrimaryActionButton
-                                      action={getPrimaryAction(
-                                        devis.statut,
-                                        devis.transformeEnBilletAt,
-                                        {
-                                          onEnvoyerDirection: () => handleApprouverDirection(devis.id, devis.reference),
-                                          onEnvoyerClient: () => handleAsAapprouved(devis.id),
-                                          onApprouverClient: () => handleAsValidate(devis.id),
-                                          onTransformer: handleCreateBillet,
-                                          onVoirBillets: () => navigate(`/dossiers-communs/ticketing/pages/billet/${devis.id}?prospectionEnteteId=${devis.data?.entete?.id}`),
-                                        },
-                                        !!directionLoading[devis.id]
-                                      )}
+                                      action={(() => {
+                                        const primary = getPrimaryAction(
+                                          devis.statut,
+                                          devis.transformeEnBilletAt,
+                                          {
+                                            onEnvoyerDirection: () => handleApprouverDirection(devis.id, devis.reference),
+                                            onEnvoyerClient: () => handleAsAapprouved(devis.id),
+                                            onApprouverClient: () => handleAsValidate(devis.id),
+                                            onTransformer: handleCreateBillet,
+                                            onVoirBillets: () => navigate(`/dossiers-communs/ticketing/pages/billet/${devis.id}?prospectionEnteteId=${devis.data?.entete?.id}`),
+                                          },
+                                          !!directionLoading[devis.id]
+                                        );
+                                        // Filtre par privilège : un profil Consultation seule ne voit aucune action
+                                        // mutante, un profil Gestion voit tout sauf l'approbation elle-même.
+                                        if (!primary) return null;
+                                        if (primary.requiredLevel === 'APPROBATION' && !canApproveTicketing) return null;
+                                        if (primary.requiredLevel === 'GESTION' && !canManageTicketing) return null;
+                                        return primary;
+                                      })()}
                                     />
                                     <PdfDownloadButton
                                     data={devis}                           // ← devis est déjà un DevisListItem
@@ -472,7 +494,7 @@ export default function Devis () {
                                         {
                                           label: 'Envoyer à la direction',
                                           icon: <FiCheck size={14} />,
-                                          disabled: devis.statut !== 'CREER',
+                                          disabled: devis.statut !== 'CREER' || !canManageTicketing,
                                           onClick: () => handleApprouverDirection(devis.id, devis.reference),
                                         },
                                         {
@@ -485,7 +507,7 @@ export default function Devis () {
                                           label: 'Annuler le devis',
                                           icon: <FiX size={14} />,
                                           danger: true,
-                                          disabled: devis.statut === 'ANNULER' || devis.statut === 'DEVIS_APPROUVE',
+                                          disabled: devis.statut === 'ANNULER' || devis.statut === 'DEVIS_APPROUVE' || !canManageTicketing,
                                           onClick: () => {
                                             setSelectedDevisForCancel(devis);
                                             setShowAnnulationModal(true);
