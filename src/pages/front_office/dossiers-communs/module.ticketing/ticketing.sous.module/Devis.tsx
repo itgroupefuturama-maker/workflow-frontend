@@ -14,8 +14,11 @@ import { TicketingHeader } from './components.billet/TicketingHeader';
 import { devisListeItems } from './components.billet/utils/ticketingHeaderItems';
 import { PdfDownloadButton } from '../../module.pdf/pdf.generation/components/PdfDownloadButton';
 import { toast } from '../../../../../components/Toast/toast';
+import { useAuthorization } from '../../../../../hooks/useAuthorization';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
+
+const MODULE = 'ticketing';
 
 /* ------------------------------------------------------------------ */
 /*  Badge de statut                                                    */
@@ -58,12 +61,14 @@ function getPrimaryAction(
     onTransformer: () => void;
     onVoirBillets: () => void;
   },
-  _directionLoading: boolean
+  _directionLoading: boolean,
+  canManage: boolean
 ): PrimaryAction {
   switch (statut) {
     case 'CREER':
       // Deux actions possibles au même statut : on affiche la plus fréquente
       // en principal, l'autre part dans le menu "..."
+      if (!canManage) return null;
       return {
         label: 'Envoyer au client',
         icon: <FiCheckCircle size={14} />,
@@ -71,6 +76,7 @@ function getPrimaryAction(
         variant: 'success',
       };
     case 'DEVIS_A_APPROUVER':
+      if (!canManage) return null;
       return {
         label: 'Approuver / Client',
         icon: <FiCheck size={14} />,
@@ -81,6 +87,7 @@ function getPrimaryAction(
       // Un devis déjà transformé reste bloqué en UI (même si la relation backend est 1-N) —
       // évite de créer plusieurs billets par erreur pour le même devis.
       if (transformeEnBilletAt) {
+        // Lecture seule : disponible même sans privilège Gestion.
         return {
           label: 'Voir les billets',
           icon: <FiEye size={14} />,
@@ -88,6 +95,7 @@ function getPrimaryAction(
           variant: 'primary',
         };
       }
+      if (!canManage) return null;
       return {
         label: 'Transformer / Billet',
         icon: <FiRefreshCw size={14} />,
@@ -211,6 +219,8 @@ export default function Devis () {
 
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+  const { canManage } = useAuthorization();
+  const canManageTicketing = canManage(MODULE);
 
   const { enteteId } = useParams<{ enteteId: string }>();
 
@@ -459,7 +469,8 @@ export default function Devis () {
                                           onTransformer: handleCreateBillet,
                                           onVoirBillets: () => navigate(`/dossiers-communs/ticketing/pages/billet/${devis.id}?prospectionEnteteId=${devis.data?.entete?.id}`),
                                         },
-                                        !!directionLoading[devis.id]
+                                        !!directionLoading[devis.id],
+                                        canManageTicketing
                                       )}
                                     />
                                     <PdfDownloadButton
@@ -472,7 +483,7 @@ export default function Devis () {
                                         {
                                           label: 'Envoyer à la direction',
                                           icon: <FiCheck size={14} />,
-                                          disabled: devis.statut !== 'CREER',
+                                          disabled: devis.statut !== 'CREER' || !canManageTicketing,
                                           onClick: () => handleApprouverDirection(devis.id, devis.reference),
                                         },
                                         {
@@ -485,7 +496,7 @@ export default function Devis () {
                                           label: 'Annuler le devis',
                                           icon: <FiX size={14} />,
                                           danger: true,
-                                          disabled: devis.statut === 'ANNULER' || devis.statut === 'DEVIS_APPROUVE',
+                                          disabled: devis.statut === 'ANNULER' || devis.statut === 'DEVIS_APPROUVE' || !canManageTicketing,
                                           onClick: () => {
                                             setSelectedDevisForCancel(devis);
                                             setShowAnnulationModal(true);

@@ -2,14 +2,11 @@ import { useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../app/store';
 
-export type PrivilegeLevel = 'CONSULTATION' | 'GESTION' | 'APPROBATION';
+export type PrivilegeLevel = 'CONSULTATION' | 'GESTION';
 
-// Hiérarchie : APPROBATION ⊇ GESTION ⊇ CONSULTATION (qui peut approuver peut aussi gérer et
-// consulter, qui peut gérer peut aussi consulter).
 const LEVEL_RANK: Record<PrivilegeLevel, number> = {
   CONSULTATION: 1,
   GESTION: 2,
-  APPROBATION: 3,
 };
 
 // `Privilege.privilege` est du texte libre saisi en back-office (voir parametres/Privilege.tsx),
@@ -18,21 +15,22 @@ const LEVEL_RANK: Record<PrivilegeLevel, number> = {
 function normalizeLevel(raw: string | undefined | null): PrivilegeLevel | null {
   if (!raw) return null;
   const upper = raw.trim().toUpperCase();
-  if (upper.startsWith('CONSULT')) return 'CONSULTATION';
   if (upper.startsWith('GEST')) return 'GESTION';
-  if (upper.startsWith('APPROB')) return 'APPROBATION';
+  if (upper.startsWith('CONSULT')) return 'CONSULTATION';
   return null;
 }
 
 /**
  * Contrôle d'accès par module, dérivé des profils actifs de l'utilisateur connecté.
  *
- * Le modèle de données (voir BACKEND_PROMPT_PRIVILEGES_AUTH.md, Cas B confirmé) n'a pas de lien
- * explicite en base entre un module et un privilège précis : `profile.modules[]` et
- * `profile.privileges[]` sont deux listes indépendantes rattachées au même profil. On applique
- * donc le niveau de privilège le plus élevé du profil à tous les modules de ce même profil — le
- * regroupement le plus fin possible sans lien réel côté backend. Un utilisateur ADMIN (n'importe
- * quel profil actif nommé "ADMIN", même convention que ProtectedRoute.tsx) a accès à tout.
+ * Deux niveaux seulement : `GESTION` (fait toutes les actions d'un module, y compris ce que
+ * l'UI appelle "Approuver" — un simple marqueur de validation externe, pas une étape distincte)
+ * et `CONSULTATION` (lecture seule). Le modèle de données (voir BACKEND_PROMPT_PRIVILEGES_AUTH.md,
+ * Cas B confirmé) n'a pas de lien explicite en base entre un module et un privilège précis :
+ * `profile.modules[]` et `profile.privileges[]` sont deux listes indépendantes rattachées au même
+ * profil. On applique donc le niveau de privilège le plus élevé du profil à tous les modules de ce
+ * même profil. Un utilisateur ADMIN (n'importe quel profil actif nommé "ADMIN", même convention
+ * que ProtectedRoute.tsx) a accès complet partout.
  */
 export function useAuthorization() {
   const user = useSelector((state: RootState) => state.auth.user);
@@ -67,7 +65,7 @@ export function useAuthorization() {
     }
 
     const getLevel = (moduleCode: string): PrivilegeLevel | null => {
-      if (isAdmin) return 'APPROBATION';
+      if (isAdmin) return 'GESTION';
       return accessMap.get(moduleCode.toLowerCase()) ?? null;
     };
 
@@ -83,7 +81,6 @@ export function useAuthorization() {
       hasAccess,
       canConsult: (moduleCode: string) => hasAccess(moduleCode, 'CONSULTATION'),
       canManage: (moduleCode: string) => hasAccess(moduleCode, 'GESTION'),
-      canApprove: (moduleCode: string) => hasAccess(moduleCode, 'APPROBATION'),
     };
   }, [user]);
 }
