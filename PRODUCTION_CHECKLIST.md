@@ -127,6 +127,9 @@ Légende statut : `[ ]` à faire · `[~]` en cours · `[x]` terminé
   - **Frontend implémenté** : `devisSlice.ts` (`billetEnteteId`/`transformeEnBilletAt` sur `Devis`), `Devis.tsx` — `getPrimaryAction` bascule sur "Voir les billets" dès que `transformeEnBilletAt` est renseigné (au lieu de "Transformer / Billet"), item de menu secondaire "Voir les billets" activé par `transformeEnBilletAt` au lieu de `statut === 'DEVIS_APPROUVE'` (plus précis).
   - **⚠️ Pas testable pour l'instant** : migration Prisma pas encore appliquée en base réelle (même situation que les prompts hôtel). À tester dès confirmation.
   - `npx tsc -b --noEmit`/`npm run build` : 0 erreur.
+- [ ] **Privilèges absents de la réponse d'authentification — trouvé le 2026-08-22** : l'AppBar affiche déjà "Profils actifs"/"Modules accessibles" de l'utilisateur connecté depuis `user.profiles[].profile.modules` (`POST /auth/login`/`GET /users/me`). Le type frontend anticipe aussi `profile.privileges[]` (même forme que `GET /profiles`, déjà utilisé par `Autorisation.tsx`), mais ce tableau est absent en pratique de la réponse d'authentification — impossible d'afficher une section "Privilèges" dans l'AppBar sans ça.
+  - Brief prêt à transmettre au backend → `BACKEND_PROMPT_PRIVILEGES_AUTH.md`.
+  - **Bloqué en attente du retour backend.**
 
 ---
 
