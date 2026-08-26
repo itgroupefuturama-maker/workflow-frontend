@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { FiPlus, FiClock, FiActivity, FiTag, FiFileText, FiArrowRight, FiHash } from 'react-icons/fi';
+import { FiPlus, FiClock, FiActivity, FiArrowRight, FiHash } from 'react-icons/fi';
 import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import TabContainer from '../../../../../../layouts/TabContainer';
 import type { RootState } from '../../../../../../app/store';
@@ -11,6 +11,7 @@ import { billetListeItems, prospectionListeItems } from '../components.billet/ut
 import SuiviTabSection from '../../../module.suivi/SuiviTabSection';
 import BeneficiaireListPage from '../../../module.client.beneficiaire/BeneficiaireListPageForClientFacture';
 import { useAuthorization } from '../../../../../../hooks/useAuthorization';
+import SkeletonTableRows from '../../../../../../components/ui/SkeletonTableRows';
 
 const MODULE = 'ticketing';
 
@@ -158,11 +159,23 @@ export default function PageView() {
                 {activeTabSousSection === 'lignes' && (
                   <div className="bg-white space-y-4 overflow-hidden">
                     {loadingEntetes ? (
-                      <div className="flex flex-col items-center justify-center py-14 bg-white rounded-2xl border border-slate-200">
-                        <div className="w-10 h-10 bg-linear-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center mb-3 animate-pulse">
-                          <FiTag className="text-white" size={18} />
+                      <div className="bg-white rounded-xl shadow-sm border border-slate-300 overflow-hidden">
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full divide-y divide-slate-100">
+                            <thead>
+                              <tr className="bg-slate-200">
+                                {['N° En-tête', 'Type Vol', 'Fournisseur', 'Crédit', 'Comm. proposée', 'Comm. appliquée', 'Créé le', 'Actions'].map(h => (
+                                  <th key={h} className="px-5 py-3.5 text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">
+                                    {h}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                              <SkeletonTableRows columns={8} />
+                            </tbody>
+                          </table>
                         </div>
-                        <p className="text-sm text-slate-400 animate-pulse">Chargement des en-têtes...</p>
                       </div>
                     ) : errorEntetes ? (
                       <div className="text-center py-8 text-red-600 bg-red-50 rounded-xl border border-red-100 text-sm">
@@ -335,11 +348,23 @@ export default function PageView() {
                 {activeTabSousSection === 'lignes' && (
                   <div className="bg-white space-y-4 overflow-hidden">
                     {loadingBillets ? (
-                      <div className="flex flex-col items-center justify-center py-14 bg-white rounded-2xl border border-slate-100">
-                        <div className="w-10 h-10 bg-linear-to-br from-yellow-400 to-orange-500 rounded-full flex items-center justify-center mb-3 animate-pulse">
-                          <FiFileText className="text-white" size={18} />
+                      <div className="bg-white rounded-br-xl rounded-xl shadow-sm border border-slate-300 overflow-hidden">
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full divide-y divide-slate-100">
+                            <thead>
+                              <tr className="bg-slate-200">
+                                {['N° Billet', 'N° Devis', 'N° En-tête', 'Statut', 'Comm. appl.', 'Nb lignes', 'Créé le', 'Actions'].map(h => (
+                                  <th key={h} className="px-5 py-3.5 text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">
+                                    {h}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-50">
+                              <SkeletonTableRows columns={8} />
+                            </tbody>
+                          </table>
                         </div>
-                        <p className="text-sm text-slate-400 animate-pulse">Chargement des billets...</p>
                       </div>
                     ) : errorBillets ? (
                       <div className="text-center py-8 text-red-600 bg-red-50 rounded-xl border border-red-100 text-sm">

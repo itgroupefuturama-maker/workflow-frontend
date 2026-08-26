@@ -19,6 +19,7 @@ import { Badge, Spinner } from '../../components/atoms';
 import { fmtDate } from '../../utils/formatters';
 import { FileText, User, Phone, Briefcase, Users, Info, ShieldCheck } from 'lucide-react';
 import { useAuthorization } from '../../../../../../hooks/useAuthorization';
+import PageSkeleton from '../../../../../../components/ui/PageSkeleton';
 
 const MODULE = 'assurance';
 
@@ -151,11 +152,7 @@ const PageDetailPassager = () => {
     }
   };
 
-  if (loading) return (
-    <div className="flex items-center justify-center py-16 gap-3 text-gray-400">
-      <Spinner /> <span className="text-sm">Chargement…</span>
-    </div>
-  );
+  if (loading) return <PageSkeleton />;
 
   const forms = isAssurance
     ? (detail?.clientAssuranceForms ?? [])

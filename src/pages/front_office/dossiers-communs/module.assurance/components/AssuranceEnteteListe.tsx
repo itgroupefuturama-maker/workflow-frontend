@@ -10,7 +10,8 @@ import AddPassagerAssuranceModal from './AddPassagerAssuranceModal';
 import { genererPortailAssurance } from '../../../../../app/front_office/parametre_assurance/assuranceEnteteDetailSlice';
 import SuiviTabSection from '../../module.suivi/SuiviTabSection';
 import InfoMessage from '../../../../../components/InfoMessage/InfoMessage';
-import { Spinner, Td, Th } from './atoms';
+import { Td, Th } from './atoms';
+import Skeleton from '../../../../../components/ui/Skeleton';
 import StatusBadge from '../../module.visa/components/StatusBadge';
 import { fmtDate } from '../utils/formatters';
 import { useAuthorization } from '../../../../../hooks/useAuthorization';
@@ -68,15 +69,9 @@ const AssuranceEnteteListe = () => {
     lignes: AssuranceLigne[];
   } | null>(null);
 
-  if (loading) return (
-    <div className="flex items-center justify-center py-16 gap-3 text-gray-400">
-      <Spinner /> <span className="text-sm">Chargement…</span>
-    </div>
-  );
-
   if (error) return <InfoMessage title={error} icon="info" />;
 
-  if (entetes.length === 0) return (
+  if (!loading && entetes.length === 0) return (
     <InfoMessage title="Aucune assurance trouvée." icon="empty" />
   );
 
@@ -152,7 +147,17 @@ const AssuranceEnteteListe = () => {
         <div className="flex-1 min-h-0 overflow-y-auto py-4">
           {activeTabSousSection === 'lignes' && (
             <div className="space-y-4 overflow-hidden">
-              {[...entetes]
+              {loading && (
+                <>
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="bg-white border border-gray-200 shadow-sm overflow-hidden px-5 py-4 space-y-3">
+                      <Skeleton className="h-4 w-1/3" />
+                      <Skeleton className="h-3.5 w-2/3" />
+                    </div>
+                  ))}
+                </>
+              )}
+              {!loading && [...entetes]
                 .sort((a, b) => {
                   const dateA = new Date(a.createdAt).getTime();
                   const dateB = new Date(b.createdAt).getTime();

@@ -16,6 +16,7 @@ import type { AttestationPdfMode, AttestationPdfSelection } from '../../module.p
 import type { PdfDesignId } from '../../module.pdf/pdf.generation/types/pdf-design.types';
 import { ModalAttestationPdfSelector } from './components.attestation/ModalAttestationPdfSelector';
 import { useAuthorization } from '../../../../../hooks/useAuthorization';
+import SkeletonTableRows from '../../../../../components/ui/SkeletonTableRows';
 
 const MODULE = 'attestation';
 
@@ -352,8 +353,25 @@ const PageViewAttestation = () => {
                 {activeTabSousSection === 'lignes' && (
                   <div className="">
                     {loading ? (
-                      <div className="bg-white rounded-lg p-10 text-center shadow">
-                        <div className="animate-pulse text-gray-500">Chargement des entêtes...</div>
+                      <div className="bg-white rounded-xl shadow overflow-hidden border border-slate-300">
+                        <div className="overflow-x-auto">
+                          <table className="min-w-full divide-y divide-slate-300">
+                            <thead className="bg-gray-50">
+                              <tr>
+                                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">N° En-tête</th>
+                                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">N° Dossier</th>
+                                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fournisseur</th>
+                                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Commission</th>
+                                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prix unitaire</th>
+                                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Créé le</th>
+                                <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                              </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                              <SkeletonTableRows columns={7} />
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
                     ) : error ? (
                       <div className="flex flex-col items-center justify-center py-16 text-slate-400 bg-white rounded-2xl border-2 border-dashed border-slate-200">

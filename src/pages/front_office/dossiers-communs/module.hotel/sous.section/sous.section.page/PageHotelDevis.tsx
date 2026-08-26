@@ -16,6 +16,7 @@ import { useHotelPdf } from '../../../module.pdf/pdf.generation/hooks/usePdfGene
 import ApprouverDevisModal, { type DeviseOption } from '../../../../../../components/modals/Hotel/ApprouverDevisModal';
 import { API_URL } from '../../../../../../service/env';
 import { useAuthorization } from '../../../../../../hooks/useAuthorization';
+import PageSkeleton from '../../../../../../components/ui/PageSkeleton';
 
 const MODULE = 'hotel';
 // ─── Badge statut devis ───────────────────────────────────────────────────────
@@ -354,7 +355,7 @@ export default function PageHotelDevis() {
     });
   };
 
-  if (!data) return null;
+  if (!data) return <PageSkeleton />;
 
   return (
     <div className="h-full flex flex-col min-h-0">

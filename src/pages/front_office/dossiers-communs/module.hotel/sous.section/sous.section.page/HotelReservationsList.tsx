@@ -8,6 +8,7 @@ import DossierActifCard from '../../../../../../components/CarteDossierActif/Dos
 import { setShowPreferences, togglePreferences } from '../../../../../../app/uiSlice';
 import SuiviTabSection from '../../../module.suivi/SuiviTabSection';
 import PanneauPreferencesClient from '../../components/PanneauPreferencesClient';
+import Skeleton from '../../../../../../components/ui/Skeleton';
 
 interface Props {
   prestationId: string;
@@ -137,11 +138,13 @@ const HotelReservationsList = ({ prestationId, dossierNumero }: Props) => {
             <div className="flex-1 min-h-0 overflow-y-auto">
               {/* ── États ── */}
               {reservationsLoading ? (
-                <div className="flex items-center justify-center py-16">
-                  <div className="text-center">
-                    <div className="w-8 h-8 border-2 border-neutral-200 border-t-neutral-900 rounded-full animate-spin mx-auto mb-3" />
-                    <p className="text-sm text-neutral-500">Chargement des réservations...</p>
-                  </div>
+                <div className="space-y-4">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="bg-white border border-neutral-300 overflow-hidden shadow-sm px-5 py-4 space-y-3">
+                      <Skeleton className="h-4 w-1/3" />
+                      <Skeleton className="h-3.5 w-2/3" />
+                    </div>
+                  ))}
                 </div>
               ) : reservationsError ? (
                 <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-lg text-red-700 text-sm">

@@ -20,6 +20,7 @@ import SuiviTabSection from '../../module.suivi/SuiviTabSection';
 import { ChevronDown } from 'lucide-react';
 import { selectServicesByType } from '../../../../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
 import { toast } from '../../../../../components/Toast/toast';
+import Skeleton from '../../../../../components/ui/Skeleton';
 
 export default function ProspectionDetail() {
   const { enteteId } = useParams<{ enteteId: string }>();
@@ -1144,11 +1145,6 @@ export default function ProspectionDetail() {
                       </button>
                     </div>
 
-                  {loadingLignes ? (
-                    <div className="p-12 text-center text-slate-500 bg-slate-50 animate-pulse">
-                      Chargement des lignes...
-                    </div>
-                  ) : (
                     <div className="overflow-x-auto">
                       <table className="min-w-full divide-y divide-slate-200">
                         <thead className="bg-slate-50">
@@ -1338,7 +1334,17 @@ export default function ProspectionDetail() {
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 bg-white">
-                          {Array.isArray(lignes) && lignes.length > 0 ? (
+                          {loadingLignes ? (
+                            <tr>
+                              <td colSpan={38} className="px-6 py-10">
+                                <div className="space-y-2.5">
+                                  <Skeleton className="h-4 w-full" />
+                                  <Skeleton className="h-4 w-full" />
+                                  <Skeleton className="h-4 w-full" />
+                                </div>
+                              </td>
+                            </tr>
+                          ) : Array.isArray(lignes) && lignes.length > 0 ? (
                             lignes.map((ligne) => (
                               <tr key={ligne.id} className="hover:bg-blue-50/30 transition-colors">
                                 {selectionMode && (
@@ -1494,7 +1500,7 @@ export default function ProspectionDetail() {
                           ) : (
                             <tr>
                               <td colSpan={38} className="px-6 py-10 text-center text-slate-500">
-                                {loadingLignes ? 'Chargement des lignes...' : 'Aucune ligne trouvée'}
+                                Aucune ligne trouvée
                               </td>
                             </tr>
                           )}
@@ -1520,7 +1526,6 @@ export default function ProspectionDetail() {
                         </tbody>
                       </table>
                     </div>
-                  )}
                 </section>
               )}
               {/* ── Onglet Suivi ── */}

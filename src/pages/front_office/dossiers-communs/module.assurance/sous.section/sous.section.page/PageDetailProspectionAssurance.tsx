@@ -10,7 +10,8 @@ import {
 } from '../../../../../../app/front_office/parametre_assurance/assuranceProspectionSlice';
 import TabContainer from '../../../../../../layouts/TabContainer';
 import { AssuranceHeader } from '../../components/AssuranceHeader';
-import { Badge, Spinner } from '../../components/atoms';
+import { Badge } from '../../components/atoms';
+import PageSkeleton from '../../../../../../components/ui/PageSkeleton';
 import { fmtDate, fmtNum } from '../../utils/formatters';
 import { ArrowLeft, CheckCircle, Clock, Download, Eye, FileText, Info, Send, ShieldCheck } from 'lucide-react';
 import { useAssurancePdf } from '../../../module.pdf/pdf.generation/hooks/usePdfGenerator';
@@ -83,13 +84,7 @@ const PageDetailProspectionAssurance = () => {
     }
   };
 
-  if (loadingDevis) return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="flex flex-col items-center gap-3 text-gray-400">
-        <Spinner /><p className="text-sm">Chargement…</p>
-      </div>
-    </div>
-  );
+  if (loadingDevis) return <PageSkeleton />;
 
   if (error) return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">

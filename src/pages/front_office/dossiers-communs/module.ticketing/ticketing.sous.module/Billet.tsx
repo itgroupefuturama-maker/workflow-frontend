@@ -34,7 +34,7 @@ import ServiceTable from './components.billet/ServiceTable';
 import ReprogrammationModal from '../../../../../components/modals/ReprogrammationModal';
 import { TicketingHeader } from './components.billet/TicketingHeader';
 import { billetDetailItems } from './components.billet/utils/ticketingHeaderItems';
-import Spinner from '../../../../../layouts/Spinner';
+import PageSkeleton from '../../../../../components/ui/PageSkeleton';
 import SuiviTabSection from '../../module.suivi/SuiviTabSection';
 import { toast } from '../../../../../components/Toast/toast';
 
@@ -330,11 +330,7 @@ const Billet = () => {
   //   );
   // }
 
-  if (loading || cfLoading || cfError) return (
-    <div className="flex items-center justify-center py-16 gap-3 text-gray-400">
-      <Spinner /> <span className="text-sm">Chargement…</span>
-    </div>
-  );
+  if (loading || cfLoading || cfError) return <PageSkeleton />;
 
   if (error || !billet) {
     return (

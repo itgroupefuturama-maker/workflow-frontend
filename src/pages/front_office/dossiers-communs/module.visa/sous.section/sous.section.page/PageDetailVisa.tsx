@@ -22,6 +22,7 @@ import DecisionVisaModal from '../../components/DecisionVisaModal';
 import type { Visa } from '../../../../../../app/front_office/parametre_visa/visaEnteteSlice';
 import SuiviTabSection from '../../../module.suivi/SuiviTabSection';
 import { useAuthorization } from '../../../../../../hooks/useAuthorization';
+import Skeleton from '../../../../../../components/ui/Skeleton';
 
 const MODULE = 'visa';
 
@@ -186,10 +187,6 @@ const PageDetailVisa = () => {
   );
 
   // if (!detail) return null;
-
-  const Skeleton = ({ className = '' }: { className?: string }) => (
-    <div className={`animate-pulse bg-gray-200 rounded-lg ${className}`} />
-  );
 
   const prestation     = detail?.visaProspectionEntete.prestation;
   const consulat       = detail?.visaProspectionEntete.consulat;  // ← ajouter

@@ -12,7 +12,7 @@ import { AssuranceHeader } from '../../components/AssuranceHeader';
 import DossierActifCard from '../../../../../../components/CarteDossierActif/DossierActifCard';
 import { API_URL } from '../../../../../../service/env';
 import { FiArrowRight, FiFile } from 'react-icons/fi';
-import Spinner from '../../../../../../layouts/Spinner';
+import PageSkeleton from '../../../../../../components/ui/PageSkeleton';
 import { fmtDate, fmtNum } from '../../utils/formatters';
 import StatusBadge from '../../../module.visa/components/StatusBadge';
 import { FactureModal } from '../../components/ModalsFacturation';
@@ -66,11 +66,7 @@ const PageDetailAssurance = () => {
     if (ligneId) dispatch(fetchAssuranceEnteteDetail(ligneId));
   };
 
-  if (loading) return (
-    <div className="flex items-center justify-center py-16 gap-3 text-gray-400">
-      <Spinner /> <span className="text-sm">Chargement…</span>
-    </div>
-  );
+  if (loading) return <PageSkeleton />;
 
   if (!detail) return null;
 

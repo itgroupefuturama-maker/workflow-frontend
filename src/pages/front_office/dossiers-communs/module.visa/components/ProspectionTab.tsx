@@ -11,6 +11,7 @@ import DossierActifCard from '../../../../../components/CarteDossierActif/Dossie
 import { fetchVisaConsultats } from '../../../../../app/front_office/parametre_visa/visaConsultatSlice';
 import SuiviTabSection from '../../module.suivi/SuiviTabSection';
 import { useAuthorization } from '../../../../../hooks/useAuthorization';
+import Skeleton from '../../../../../components/ui/Skeleton';
 
 const MODULE = 'visa';
 
@@ -164,21 +165,20 @@ const ProspectionTab = ({ prestationId }: Props) => {
           </div>
         )}
 
-        {/* Loading */}
-        {loading && (
-          <div className="flex justify-center py-12 text-gray-400">
-            <svg className="animate-spin h-6 w-6 mr-2" viewBox="0 0 24 24" fill="none">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-            </svg>
-            Chargement...
-          </div>
-        )}
-
         <div className="flex-1 min-h-0 overflow-y-auto py-4">
           {/* Cards */}
           {activeTabSousSection === 'lignes' && (
             <div className="space-y-4">
+              {loading && (
+                <>
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <div key={i} className="bg-white rounded-xl border border-slate-300 overflow-hidden shadow-sm px-5 py-4 space-y-3">
+                      <Skeleton className="h-4 w-1/3" />
+                      <Skeleton className="h-3.5 w-2/3" />
+                    </div>
+                  ))}
+                </>
+              )}
               {!loading && [...prospections]
                 .sort((a, b) => sortOrder === 'desc'
                   ? b.id.localeCompare(a.id)

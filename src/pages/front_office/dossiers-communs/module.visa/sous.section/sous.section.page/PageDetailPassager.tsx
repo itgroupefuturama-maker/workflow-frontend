@@ -14,6 +14,7 @@ import TabContainer from '../../../../../../layouts/TabContainer';
 import { VisaHeader } from '../../components/VisaHeader';
 import { Briefcase, FileText, Phone, User, Users } from 'lucide-react';
 import { useAuthorization } from '../../../../../../hooks/useAuthorization';
+import PageSkeleton from '../../../../../../components/ui/PageSkeleton';
 
 const MODULE = 'visa';
 
@@ -167,11 +168,7 @@ const PageDetailPassager = () => {
       return next;
     });
 
-  if (loading) return (
-    <div className="flex items-center justify-center py-16 gap-3 text-gray-400">
-      <Spinner /> <span className="text-sm">Chargement…</span>
-    </div>
-  );
+  if (loading) return <PageSkeleton />;
 
   return (
     <div className="h-full flex flex-col min-h-0">

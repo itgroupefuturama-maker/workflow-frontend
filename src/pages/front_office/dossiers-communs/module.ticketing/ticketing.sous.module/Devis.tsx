@@ -14,6 +14,7 @@ import { TicketingHeader } from './components.billet/TicketingHeader';
 import { devisListeItems } from './components.billet/utils/ticketingHeaderItems';
 import { PdfDownloadButton } from '../../module.pdf/pdf.generation/components/PdfDownloadButton';
 import { toast } from '../../../../../components/Toast/toast';
+import SkeletonTableRows from '../../../../../components/ui/SkeletonTableRows';
 import { useAuthorization } from '../../../../../hooks/useAuthorization';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
@@ -347,26 +348,14 @@ export default function Devis () {
               <TicketingHeader items={devisListeItems(enteteId)} />
             </div>
 
-            {loading && (
-              <div className="flex justify-center items-center py-20">
-                <div className="animate-spin rounded-full h-10 w-10 border-2 border-slate-200 border-t-indigo-600"></div>
-                <span className="ml-3 text-sm text-slate-500 font-medium">Chargement des devis…</span>
-              </div>
-            )}
-
-            {error && !loading && (
+            {error && (
               <div className="mx-4 mt-4 bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg">
                 <strong>Erreur :</strong> {error}
               </div>
             )}
 
-            {!loading && !error && (
+            {!error && (
               <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-4">
-                {devisList.length === 0 ? (
-                  <div className="bg-white rounded-lg border border-slate-200 p-12 text-center mt-4">
-                    <p className="text-slate-500 text-sm">Aucun devis généré pour cet en-tête.</p>
-                  </div>
-                ) : (
                   <div className="bg-white rounded-lg border border-slate-200 overflow-hidden mt-3">
                     <table className="min-w-full text-sm border-collapse">
                       <thead className="bg-slate-50 sticky top-0 z-10">
@@ -385,7 +374,15 @@ export default function Devis () {
                         </tr>
                       </thead>
                       <tbody>
-                        {devisList.map((devis) => {
+                        {loading ? (
+                          <SkeletonTableRows columns={10} />
+                        ) : devisList.length === 0 ? (
+                          <tr>
+                            <td colSpan={10} className="text-center py-12 text-slate-500 text-sm">
+                              Aucun devis généré pour cet en-tête.
+                            </td>
+                          </tr>
+                        ) : devisList.map((devis) => {
                           const entete = devis.data?.entete || {};
                           const prospectionEntete = devis.prospectionEntete || {};
                           const lignes = devis.data?.lignes || [];
@@ -579,7 +576,6 @@ export default function Devis () {
                       </tbody>
                     </table>
                   </div>
-                )}
               </div>
             )}
 

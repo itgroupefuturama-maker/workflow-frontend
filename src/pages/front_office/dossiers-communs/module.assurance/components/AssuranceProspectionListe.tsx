@@ -14,7 +14,8 @@ import ModalCreationProspection from '../modals/ModalCreationProspection';
 import ModalCreationDevis, { type DevisModalData } from '../modals/ModalCreationDevis';
 import ModalAjoutLigne, { type LigneModalData } from '../modals/ModalAjoutLigne';
 import { fmtDate } from '../utils/formatters';
-import { Badge, Spinner, Td, Th } from './atoms';
+import { Badge, Td, Th } from './atoms';
+import SkeletonTableRows from '../../../../../components/ui/SkeletonTableRows';
 import { ArrowRight, ChevronDown, ClipboardCheck, FileText, Plus } from 'lucide-react';
 import { useAuthorization } from '../../../../../hooks/useAuthorization';
 
@@ -48,8 +49,7 @@ const AssuranceProspectionListe = () => {
     setDevisModal({ enteteId: entete.id, numeroDos: entete.prestation.numeroDos, lignes });
   };
 
-  if (loading) return <div className="flex justify-center items-center py-16"><Spinner/></div>;
-  if (error)   return <InfoMessage title={error} icon="info" />;
+  if (error) return <InfoMessage title={error} icon="info" />;
 
   return (
     <div className="flex h-full min-h-0 overflow-hidden">
@@ -111,7 +111,25 @@ const AssuranceProspectionListe = () => {
         <div className="flex-1 min-h-0 overflow-y-auto py-2">
           {activeTabSousSection === 'lignes' && (
             <div className="bg-white space-y-4">
-              {list.length === 0 ? (
+              {loading ? (
+                <div className="bg-white border border-slate-300 rounded-xl shadow-sm overflow-hidden">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50/50 border-b border-slate-300">
+                        <Th className="w-10"></Th>
+                        <Th>Dossier & Fournisseur</Th>
+                        <Th>Contenu</Th>
+                        <Th>Statut</Th>
+                        <Th>Date</Th>
+                        <Th className="text-right pr-6">Actions</Th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-300">
+                      <SkeletonTableRows columns={6} />
+                    </tbody>
+                  </table>
+                </div>
+              ) : list.length === 0 ? (
                 <div className="bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl px-5 py-12 text-center">
                   <div className="inline-flex p-3 bg-white rounded-full shadow-sm mb-3 text-slate-400">
                     <FileText size={24} />

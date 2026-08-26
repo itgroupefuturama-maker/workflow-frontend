@@ -26,6 +26,7 @@ import { selectServicesByType } from '../../../../../app/front_office/parametre_
 import ConfirmDialog from '../../../../../components/ConfirmDialog';
 import { toast } from '../../../../../components/Toast/toast';
 import { useAuthorization } from '../../../../../hooks/useAuthorization';
+import SkeletonTableRows from '../../../../../components/ui/SkeletonTableRows';
 
 const MODULE = 'hotel';
 
@@ -360,11 +361,22 @@ const PageViewHotel = () => {
                 {activeTabSousSection === 'lignes' && (
                   <div className="bg-white space-y-4 overflow-hidden">
                     {entetesLoading ? (
-                      <div className="flex items-center justify-center py-16">
-                        <div className="text-center">
-                          <div className="w-8 h-8 border-2 border-neutral-200 border-t-neutral-900 rounded-full animate-spin mx-auto mb-3"></div>
-                          <p className="text-sm text-neutral-500">Chargement des données...</p>
-                        </div>
+                      <div className="bg-white border border-slate-300 rounded-br-xl rounded-bl-xl rounded-tr-xl overflow-hidden">
+                        <table className="min-w-full ">
+                          <thead>
+                            <tr className="border-b border-neutral-200 bg-neutral-50">
+                              <th className=""></th>
+                              <th className="px-6 py-3.5 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wide">N° En-tête</th>
+                              <th className="px-6 py-3.5 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wide">N° Dossier</th>
+                              <th className="px-6 py-3.5 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wide">Fournisseur</th>
+                              <th className="px-6 py-3.5 text-left text-xs font-semibold text-neutral-700 uppercase tracking-wide">Créé le</th>
+                              <th className="px-6 py-3.5"></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <SkeletonTableRows columns={6} />
+                          </tbody>
+                        </table>
                       </div>
                     ) : entetesError ? (
                       <div className="flex flex-col items-center justify-center py-16 text-slate-400 bg-white rounded-2xl border-2 border-dashed border-slate-200">

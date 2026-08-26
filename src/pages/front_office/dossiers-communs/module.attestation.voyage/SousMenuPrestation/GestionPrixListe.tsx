@@ -4,6 +4,7 @@ import { useSelector } from 'react-redux';
 import type { RootState } from '../../../../../app/store';
 import AttestationParamModal from '../../../../../components/modals/Attestation/AttestationParamModal';
 import { useAuthorization } from '../../../../../hooks/useAuthorization';
+import SkeletonTableRows from '../../../../../components/ui/SkeletonTableRows';
 
 const MODULE = 'attestation';
 
@@ -15,14 +16,6 @@ export default function GestionPrixListe() {
   const canManageAttestation = canManage(MODULE);
 
   const [modalOpen, setModalOpen] = useState(false); // ← AJOUT
-
-  if (loading) {
-    return (
-      <div className="flex justify-center py-16">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-indigo-500" />
-      </div>
-    );
-  }
 
   if (error) {
     return (
@@ -60,7 +53,9 @@ export default function GestionPrixListe() {
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-200">
-          {items.map((item) => (
+          {loading ? (
+            <SkeletonTableRows columns={5} />
+          ) : items.map((item) => (
             <tr key={item.id} className="hover:bg-slate-50 transition-colors">
               <td className="px-6 py-4 text-sm font-semibold text-slate-800">
                 {item.prix.toLocaleString('fr-FR')} Ar
