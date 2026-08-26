@@ -286,7 +286,7 @@ const AssuranceProspectionListe = () => {
             </div>
           )}
 
-          {activeTabSousSection === 'suivi' && <SuiviTabSection prestationId={prestationId} />}
+          {activeTabSousSection === 'suivi' && <SuiviTabSection prestationId={prestationId} moduleName="assurance" />}
         </div>
 
         {/* ── Modals ── */}
