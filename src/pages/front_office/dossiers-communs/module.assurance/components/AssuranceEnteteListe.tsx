@@ -13,6 +13,9 @@ import InfoMessage from '../../../../../components/InfoMessage/InfoMessage';
 import { Spinner, Td, Th } from './atoms';
 import StatusBadge from '../../module.visa/components/StatusBadge';
 import { fmtDate } from '../utils/formatters';
+import { useAuthorization } from '../../../../../hooks/useAuthorization';
+
+const MODULE = 'assurance';
 
 // NOTE: le type `AssuranceProspectionLigne` de `assuranceEnteteSlice.ts` n'a pas été mis à jour
 // lors de l'unification assurance/visa (contrairement à celui de `assuranceProspectionSlice.ts`,
@@ -32,6 +35,8 @@ const AssuranceEnteteListe = () => {
   const toggleLigne  = (id: string) => setExpandedLignes(p => ({ ...p, [id]: !p[id] }));
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
+  const { canManage } = useAuthorization();
+  const canManageAssurance = canManage(MODULE);
   const [genLoading, setGenLoading] = useState<Record<string, boolean>>({});
   const [genDone,    setGenDone]    = useState<Record<string, boolean>>({});
 
@@ -186,7 +191,7 @@ const AssuranceEnteteListe = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       <button
-                      disabled = {entete.statutEntete === 'ASSIGNER'}
+                      disabled = {entete.statutEntete === 'ASSIGNER' || !canManageAssurance}
                         onClick={(e) => {
                           e.stopPropagation();
                           setAddPassagerModal({
@@ -200,7 +205,7 @@ const AssuranceEnteteListe = () => {
                       </button>
 
                       <button
-                        disabled = {genLoading[entete.id] || entete.statutEntete === 'ASSIGNER'}
+                        disabled = {genLoading[entete.id] || entete.statutEntete === 'ASSIGNER' || !canManageAssurance}
                         onClick={(e) => handleGenerer(e, entete.id)}
                         className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold transition shadow-sm"
                       >

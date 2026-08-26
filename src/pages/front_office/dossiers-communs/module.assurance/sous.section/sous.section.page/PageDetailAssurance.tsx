@@ -17,12 +17,17 @@ import { fmtDate, fmtNum } from '../../utils/formatters';
 import StatusBadge from '../../../module.visa/components/StatusBadge';
 import { FactureModal } from '../../components/ModalsFacturation';
 import { FileText, Info, CreditCard, MapPin } from 'lucide-react';
+import { useAuthorization } from '../../../../../../hooks/useAuthorization';
+
+const MODULE = 'assurance';
 
 const PageDetailAssurance = () => {
   const { ligneId } = useParams<{ ligneId: string }>();
   const dispatch    = useDispatch<AppDispatch>();
   const navigate    = useNavigate();
   const location    = useLocation();
+  const { canManage } = useAuthorization();
+  const canManageAssurance = canManage(MODULE);
 
   const numeroDos = location.state?.numeroDos ?? '—';
 
@@ -453,7 +458,7 @@ const PageDetailAssurance = () => {
                         <div className="flex items-center gap-2">
                           <CreditCard size={12} /> Facturation
                         </div>
-                        {isConforme && (
+                        {isConforme && canManageAssurance && (
                           <button
                             onClick={() => setShowFactModal(true)}
                             className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold text-white bg-white/20 hover:bg-white/30 rounded-lg transition"

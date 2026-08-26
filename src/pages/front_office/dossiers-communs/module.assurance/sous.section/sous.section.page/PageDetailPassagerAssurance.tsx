@@ -18,15 +18,18 @@ import { AssuranceHeader } from '../../components/AssuranceHeader';
 import { Badge, Spinner } from '../../components/atoms';
 import { fmtDate } from '../../utils/formatters';
 import { FileText, User, Phone, Briefcase, Users, Info, ShieldCheck } from 'lucide-react';
+import { useAuthorization } from '../../../../../../hooks/useAuthorization';
+
+const MODULE = 'assurance';
 
 /* ── ActionButton ── */
 const ActionButton = ({
-  onClick, loading, done, label, statut, doneLabel, color = 'green',
+  onClick, loading, done, label, statut, doneLabel, color = 'green', allowed = true,
 }: {
   onClick: () => void; loading: boolean; done: boolean;
-  label: string; statut: string; doneLabel: string; color?: 'green' | 'indigo' | 'violet';
+  label: string; statut: string; doneLabel: string; color?: 'green' | 'indigo' | 'violet'; allowed?: boolean;
 }) => {
-  const isDisabled = loading || statut === 'VALIDER' || statut === 'VALIDE';
+  const isDisabled = loading || statut === 'VALIDER' || statut === 'VALIDE' || !allowed;
   const colors = {
     green:  'bg-emerald-600 hover:bg-emerald-700',
     indigo: 'bg-indigo-600 hover:bg-indigo-700',
@@ -57,6 +60,8 @@ const PageDetailPassager = () => {
   const nomPassager = location.state?.nomPassager ?? 'Passager';
 
   const { detail, loading } = useSelector((s: RootState) => s.passagerDetail);
+  const { canManage } = useAuthorization();
+  const canManageAssurance = canManage(MODULE);
 
   const [formLoading,   setFormLoading]   = useState<Record<string, boolean>>({});
   const [formDone,      setFormDone]      = useState<Record<string, boolean>>({});
@@ -172,14 +177,16 @@ const PageDetailPassager = () => {
                 isProspection={false}
                 isPassager={true}
               />
-              <button
-                onClick={handleSync}
-                disabled={syncLoading}
-                className="inline-flex items-center gap-2 px-4 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white text-xs font-semibold transition"
-              >
-                {syncLoading ? <Spinner /> : syncDone ? '✓' : '⚡'}
-                {syncDone ? 'Synchronisé' : 'Synchroniser'}
-              </button>
+              {canManageAssurance && (
+                <button
+                  onClick={handleSync}
+                  disabled={syncLoading}
+                  className="inline-flex items-center gap-2 px-4 py-1.5 rounded-lg bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white text-xs font-semibold transition"
+                >
+                  {syncLoading ? <Spinner /> : syncDone ? '✓' : '⚡'}
+                  {syncDone ? 'Synchronisé' : 'Synchroniser'}
+                </button>
+              )}
             </div>
           </div>
 
@@ -325,6 +332,7 @@ const PageDetailPassager = () => {
                                 statut={doc.status}
                                 done={docDone[doc.id] ?? (doc.status === 'VALIDE' || doc.status === 'VALIDER')}
                                 label="Valider" doneLabel="Validé" color="green"
+                                allowed={canManageAssurance}
                               />
                             </td>
                           </tr>
@@ -364,6 +372,7 @@ const PageDetailPassager = () => {
                                       statut={form.status}
                                       done={formDone[form.id] ?? form.status === 'VALIDER'}
                                       label="Confirmer" doneLabel="Confirmé" color="green"
+                                      allowed={canManageAssurance}
                                     />
                                     <button
                                       onClick={() => toggleForm(form.id)}
@@ -446,6 +455,7 @@ const PageDetailPassager = () => {
                                       statut={form.status}
                                       done={formDone[form.id] ?? form.status === 'VALIDE'}
                                       label="Confirmer" doneLabel="Confirmé" color="green"
+                                      allowed={canManageAssurance}
                                     />
                                     <button
                                       onClick={() => toggleForm(form.id)}

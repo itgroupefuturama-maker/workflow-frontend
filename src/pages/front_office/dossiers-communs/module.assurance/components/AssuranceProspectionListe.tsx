@@ -16,12 +16,16 @@ import ModalAjoutLigne, { type LigneModalData } from '../modals/ModalAjoutLigne'
 import { fmtDate } from '../utils/formatters';
 import { Badge, Spinner, Td, Th } from './atoms';
 import { ArrowRight, ChevronDown, ClipboardCheck, FileText, Plus } from 'lucide-react';
+import { useAuthorization } from '../../../../../hooks/useAuthorization';
 
+const MODULE = 'assurance';
 
 /* ── composant principal ── */
 const AssuranceProspectionListe = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
+  const { canManage } = useAuthorization();
+  const canManageAssurance = canManage(MODULE);
 
   const { list, loading, error } = useSelector((s: RootState) => s.assuranceProspection);
 
@@ -65,13 +69,15 @@ const AssuranceProspectionListe = () => {
                 </svg>
                 {sortOrder === 'desc' ? 'Plus récent' : 'Plus ancien'}
               </button>
-              <button
-                onClick={() => setOpenCreate(true)}
-                disabled={!prestationId}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg transition shadow-sm"
-              >
-                + Nouvelle prospection
-              </button>
+              {canManageAssurance && (
+                <button
+                  onClick={() => setOpenCreate(true)}
+                  disabled={!prestationId}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg transition shadow-sm"
+                >
+                  + Nouvelle prospection
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -166,23 +172,27 @@ const AssuranceProspectionListe = () => {
                                   <div className="flex items-center justify-end gap-2" onClick={e => e.stopPropagation()}>
                                     
                                     {/* 1. Bouton Action Métier : Devis (Plus visible car c'est l'objectif) */}
-                                    <button
-                                      onClick={() => { dispatch(clearCreateError()); handleOpenDevis(entete); }}
-                                      disabled={!hasLines}
-                                      className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 disabled:bg-slate-100 disabled:text-slate-400 text-white text-[11px] font-bold rounded-lg transition-all shadow-sm shadow-amber-100"
-                                    >
-                                      <ClipboardCheck size={13} />
-                                      Devis
-                                    </button>
+                                    {canManageAssurance && (
+                                      <button
+                                        onClick={() => { dispatch(clearCreateError()); handleOpenDevis(entete); }}
+                                        disabled={!hasLines}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 disabled:bg-slate-100 disabled:text-slate-400 text-white text-[11px] font-bold rounded-lg transition-all shadow-sm shadow-amber-100"
+                                      >
+                                        <ClipboardCheck size={13} />
+                                        Devis
+                                      </button>
+                                    )}
 
                                     {/* 2. Bouton Ajout Ligne (Style discret/secondaire) */}
-                                    <button
-                                      onClick={() => { dispatch(clearCreateError()); setLigneModal({ enteteId: entete.id, numeroDos: entete.prestation.numeroDos, fournisseurId: entete.fournisseur.id }); }}
-                                      className="p-1.5 bg-white border border-slate-200 text-slate-600 hover:border-indigo-400 hover:text-indigo-600 rounded-lg transition-colors shadow-xs"
-                                      title="Ajouter une ligne"
-                                    >
-                                      <Plus size={16} strokeWidth={3} />
-                                    </button>
+                                    {canManageAssurance && (
+                                      <button
+                                        onClick={() => { dispatch(clearCreateError()); setLigneModal({ enteteId: entete.id, numeroDos: entete.prestation.numeroDos, fournisseurId: entete.fournisseur.id }); }}
+                                        className="p-1.5 bg-white border border-slate-200 text-slate-600 hover:border-indigo-400 hover:text-indigo-600 rounded-lg transition-colors shadow-xs"
+                                        title="Ajouter une ligne"
+                                      >
+                                        <Plus size={16} strokeWidth={3} />
+                                      </button>
+                                    )}
 
                                     <div className="w-px h-4 bg-slate-200 mx-1" />
 

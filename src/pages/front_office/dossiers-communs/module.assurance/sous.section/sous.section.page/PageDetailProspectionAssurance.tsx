@@ -14,12 +14,17 @@ import { Badge, Spinner } from '../../components/atoms';
 import { fmtDate, fmtNum } from '../../utils/formatters';
 import { ArrowLeft, CheckCircle, Clock, Download, Eye, FileText, Info, Send, ShieldCheck } from 'lucide-react';
 import { useAssurancePdf } from '../../../module.pdf/pdf.generation/hooks/usePdfGenerator';
+import { useAuthorization } from '../../../../../../hooks/useAuthorization';
+
+const MODULE = 'assurance';
 
 const PageDetailProspectionAssurance = () => {
   const { enteteId } = useParams<{ enteteId: string }>();
   const dispatch     = useDispatch<AppDispatch>();
   const navigate     = useNavigate();
   const location     = useLocation();
+  const { canManage } = useAuthorization();
+  const canManageAssurance = canManage(MODULE);
 
   const numeroDos = location.state?.numeroDos ?? '—';
   const { devisDetail, loadingDevis, actionError, actionSuccess, error } =
@@ -177,21 +182,21 @@ const PageDetailProspectionAssurance = () => {
 
               {/* Workflow */}
               <button
-                disabled={!canEnvoyer}
+                disabled={!canEnvoyer || !canManageAssurance}
                 onClick={handleEnvoyer}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-100 hover:bg-indigo-100 disabled:opacity-40 transition"
               >
                 <Send size={13} /> Envoyer
               </button>
               <button
-                disabled={devis.statut !== 'DEVIS_A_APPROUVER'}
+                disabled={devis.statut !== 'DEVIS_A_APPROUVER' || !canManageAssurance}
                 onClick={handleApprouver}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-100 hover:bg-emerald-100 disabled:opacity-40 transition"
               >
                 <CheckCircle size={13} /> Approuver
               </button>
               <button
-                disabled={devis.statut !== 'DEVIS_APPROUVE'}
+                disabled={devis.statut !== 'DEVIS_APPROUVE' || !canManageAssurance}
                 onClick={handleCreateEntete}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-bold rounded-xl bg-slate-800 text-white hover:bg-slate-900 disabled:opacity-30 transition"
               >
