@@ -15,6 +15,9 @@ import { ModalHotelPdfSelector } from '../../components/ModalHotelPdfSelector';
 import { useHotelPdf } from '../../../module.pdf/pdf.generation/hooks/usePdfGenerator';
 import ApprouverDevisModal, { type DeviseOption } from '../../../../../../components/modals/Hotel/ApprouverDevisModal';
 import { API_URL } from '../../../../../../service/env';
+import { useAuthorization } from '../../../../../../hooks/useAuthorization';
+
+const MODULE = 'hotel';
 // ─── Badge statut devis ───────────────────────────────────────────────────────
 const StatutBadge = ({ statut }: { statut: string }) => {
   const map: Record<string, string> = {
@@ -182,12 +185,15 @@ export default function PageHotelDevis() {
   const location = useLocation();
 
   const dossierActif = useSelector((state: RootState) => state.dossierCommun.currentClientFactureId);
-  const prestationId = useMemo(() => 
+  const prestationId = useMemo(() =>
     dossierActif?.dossierCommunColab
       ?.find((colab) => colab.module?.nom?.toLowerCase() === 'hotel')
       ?.prestation?.[0]?.id || '',
     [dossierActif]
   );
+
+  const { canManage } = useAuthorization();
+  const canManageHotel = canManage(MODULE);
 
   const { data, actionLoading, actionError,
     // pdfClientUrl, pdfDirectionUrl
@@ -431,7 +437,7 @@ export default function PageHotelDevis() {
                     {/* Envoyer — disabled si statut avancé */}
                     <button
                       onClick={handleEnvoyer}
-                      disabled={actionLoading !== null || devis.statut !== 'CREER'}
+                      disabled={actionLoading !== null || devis.statut !== 'CREER' || !canManageHotel}
                       className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
                     >
                       {actionLoading === 'envoi'
@@ -444,7 +450,7 @@ export default function PageHotelDevis() {
                     {/* Approuver — disabled si pas en attente */}
                     <button
                       onClick={() => setShowApproveModal(true)}
-                      disabled={actionLoading !== null || devis.statut !== 'DEVIS_A_APPROUVER'}
+                      disabled={actionLoading !== null || devis.statut !== 'DEVIS_A_APPROUVER' || !canManageHotel}
                       className="flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white text-sm font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
                     >
                       {actionLoading === 'approbation'
@@ -457,7 +463,7 @@ export default function PageHotelDevis() {
                     {/* Transformer — disabled si pas approuvé ou déjà transformé (statut persistant serveur) */}
                     <button
                       onClick={handleTransformer}
-                      disabled={actionLoading !== null || devis.statut !== 'DEVIS_APPROUVE' || !!devis.transformeEnHotelAt}
+                      disabled={actionLoading !== null || devis.statut !== 'DEVIS_APPROUVE' || !!devis.transformeEnHotelAt || !canManageHotel}
                       className="flex items-center gap-2 px-4 py-2 bg-indigo-500 text-white text-sm font-medium rounded-lg hover:bg-indigo-600 transition-colors disabled:bg-gray-200 disabled:text-gray-400 disabled:cursor-not-allowed"
                     >
                       {actionLoading === 'transformation'

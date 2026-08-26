@@ -25,11 +25,17 @@ import { ModalHotelPdfSelector } from '../components/ModalHotelPdfSelector';
 import { selectServicesByType } from '../../../../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
 import ConfirmDialog from '../../../../../components/ConfirmDialog';
 import { toast } from '../../../../../components/Toast/toast';
+import { useAuthorization } from '../../../../../hooks/useAuthorization';
+
+const MODULE = 'hotel';
 
 const PageViewHotel = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const { canManage } = useAuthorization();
+  const canManageHotel = canManage(MODULE);
 
   const showPreferences = useSelector((state: RootState) => state.ui.showPreferences);
 
@@ -309,42 +315,44 @@ const PageViewHotel = () => {
                   </nav>
 
                   {/* Sélection fournisseur + création, alignés à droite */}
-                  <div className="flex items-center gap-3">
-                    <div className="w-72">
-                      <select
-                        value={selectedFournisseurId}
-                        onChange={(e) => {
-                          const id = e.target.value;
-                          setSelectedFournisseurId(id);
-                          if (id) {
-                            dispatch(fetchLastCommentaireFournisseur(id));
-                          } else {
-                            dispatch(clearCommentaireFournisseur());
-                          }
-                        }}
-                        className="w-full border border-neutral-300 rounded-md px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent transition-all"
-                        disabled={creating}
+                  {canManageHotel && (
+                    <div className="flex items-center gap-3">
+                      <div className="w-72">
+                        <select
+                          value={selectedFournisseurId}
+                          onChange={(e) => {
+                            const id = e.target.value;
+                            setSelectedFournisseurId(id);
+                            if (id) {
+                              dispatch(fetchLastCommentaireFournisseur(id));
+                            } else {
+                              dispatch(clearCommentaireFournisseur());
+                            }
+                          }}
+                          className="w-full border border-neutral-300 rounded-md px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent transition-all"
+                          disabled={creating}
+                        >
+                          <option value="">Sélectionner un fournisseur</option>
+                          {fournisseurs.map((f: any) => (
+                            <option key={f.id} value={f.id}>
+                              {f.code} - {f.libelle}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <button
+                        onClick={() => setShowCreateConfirm(true)}
+                        disabled={creating || !selectedFournisseurId || isBlocked}
+                        className={`shrink-0 px-6 py-2.5 rounded-md text-sm font-medium transition-all ${
+                          creating || !selectedFournisseurId || isBlocked
+                            ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
+                            : 'bg-neutral-900 text-white hover:bg-neutral-800 active:scale-95'
+                        }`}
                       >
-                        <option value="">Sélectionner un fournisseur</option>
-                        {fournisseurs.map((f: any) => (
-                          <option key={f.id} value={f.id}>
-                            {f.code} - {f.libelle}
-                          </option>
-                        ))}
-                      </select>
+                        {creating ? 'Création en cours...' : 'Créer une en-tête'}
+                      </button>
                     </div>
-                    <button
-                      onClick={() => setShowCreateConfirm(true)}
-                      disabled={creating || !selectedFournisseurId || isBlocked}
-                      className={`shrink-0 px-6 py-2.5 rounded-md text-sm font-medium transition-all ${
-                        creating || !selectedFournisseurId || isBlocked
-                          ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
-                          : 'bg-neutral-900 text-white hover:bg-neutral-800 active:scale-95'
-                      }`}
-                    >
-                      {creating ? 'Création en cours...' : 'Créer une en-tête'}
-                    </button>
-                  </div>
+                  )}
                 </div>
               </div>
 
@@ -477,16 +485,18 @@ const PageViewHotel = () => {
 
                                         
 
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setSelectedEnteteForHotel(entete);
-                                            setShowToHotelModal(true);
-                                          }}
-                                          className="text-xs font-medium bg-orange-500 text-white px-4 py-2 rounded-md hover:bg-orange-600 transition-colors flex items-center gap-1.5 cursor-pointer"
-                                        >
-                                          Transformer / devis
-                                        </button>
+                                        {canManageHotel && (
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setSelectedEnteteForHotel(entete);
+                                              setShowToHotelModal(true);
+                                            }}
+                                            className="text-xs font-medium bg-orange-500 text-white px-4 py-2 rounded-md hover:bg-orange-600 transition-colors flex items-center gap-1.5 cursor-pointer"
+                                          >
+                                            Transformer / devis
+                                          </button>
+                                        )}
 
                                         <button
                                           disabled={entete.isDevis !== true}
@@ -506,16 +516,18 @@ const PageViewHotel = () => {
                                           Voir le devis
                                         </button>
 
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            openBenchmarkingModal(entete.id);
-                                          }}
-                                          className="text-xs flex items-center gap-1.5 font-medium bg-white text-neutral-900 px-4 py-2 rounded-md hover:bg-orange-100 transition-colors cursor-pointer"
-                                        >
-                                          <FiPlus size={12} />
-                                          Ajouter Ligne
-                                        </button>
+                                        {canManageHotel && (
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              openBenchmarkingModal(entete.id);
+                                            }}
+                                            className="text-xs flex items-center gap-1.5 font-medium bg-white text-neutral-900 px-4 py-2 rounded-md hover:bg-orange-100 transition-colors cursor-pointer"
+                                          >
+                                            <FiPlus size={12} />
+                                            Ajouter Ligne
+                                          </button>
+                                        )}
                                       </div>
                                     </td>
                                   </tr>

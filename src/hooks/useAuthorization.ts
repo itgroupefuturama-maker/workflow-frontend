@@ -54,11 +54,14 @@ export function useAuthorization() {
         if (!maxLevel) continue;
 
         for (const m of modules) {
-          const code = m.module?.code?.toLowerCase() || m.module?.nom?.toLowerCase();
-          if (!code) continue;
-          const existing = accessMap.get(code);
+          // Identifié par `nom` (ex: "hotel", "ticketing"), pas par `code` (code court style
+          // "HTL") — c'est la convention utilisée partout ailleurs dans le code pour résoudre un
+          // module (ex: dossierCommunColab.find(c => c.module.nom.toLowerCase() === "hotel")).
+          const nom = m.module?.nom?.toLowerCase();
+          if (!nom) continue;
+          const existing = accessMap.get(nom);
           if (!existing || LEVEL_RANK[maxLevel] > LEVEL_RANK[existing]) {
-            accessMap.set(code, maxLevel);
+            accessMap.set(nom, maxLevel);
           }
         }
       }

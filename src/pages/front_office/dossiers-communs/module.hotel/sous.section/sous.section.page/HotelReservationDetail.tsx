@@ -22,6 +22,9 @@ import PanneauPreferencesClient from '../../components/PanneauPreferencesClient'
 import { setShowPreferences, togglePreferences } from '../../../../../../app/uiSlice';
 import { ChevronDown } from 'lucide-react';
 import { toast } from '../../../../../../components/Toast/toast';
+import { useAuthorization } from '../../../../../../hooks/useAuthorization';
+
+const MODULE = 'hotel';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 const fmt = (v: number) => v?.toLocaleString('fr-FR') ?? '0';
@@ -49,8 +52,11 @@ const LigneCard = ({ ligne, enteteStatut, onReserver, onConfirmer }: LigneCardPr
   const enteteB = bench?.benchmarkingEntete;
   const cfg = statusLigneConfig[ligne.statut] ?? { label: ligne.statut, style: 'bg-gray-100 text-gray-500' };
 
-  const canReserver  = ligne.statut === 'CREER';
-  const canConfirmer = ligne.statut === 'FAIT' && enteteStatut === 'BC_CLIENT_A_APPROUVER';
+  const { canManage } = useAuthorization();
+  const canManageHotel = canManage(MODULE);
+
+  const canReserver  = ligne.statut === 'CREER' && canManageHotel;
+  const canConfirmer = ligne.statut === 'FAIT' && enteteStatut === 'BC_CLIENT_A_APPROUVER' && canManageHotel;
 
   return (
     <div className="border border-neutral-300 overflow-hidden bg-white shadow-sm">
@@ -466,6 +472,9 @@ const HotelReservationDetail = () => {
     ?.find((c: any) => c.module?.nom?.toLowerCase() === 'hotel')
     ?.prestation?.[0]?.id || '';
 
+  const { canManage } = useAuthorization();
+  const canManageHotel = canManage(MODULE);
+
   const [isModalOpen, setIsModalOpen]           = useState(false);
   const [selectedLigne, setSelectedLigne]       = useState<HotelLigne | null>(null);
   const [isConfirmationModalOpen, setIsConfirmationModalOpen] = useState(false);
@@ -744,13 +753,13 @@ const HotelReservationDetail = () => {
                 {/* ── Titre + actions ── */}
                 <div className="flex items-center justify-between flex-wrap gap-3">
                   <div className="flex items-center gap-2 flex-wrap justify-end">
-                    <ActionButton label="BC Approuver" enabled={canApprouverBillet} variant="success"
+                    <ActionButton label="BC Approuver" enabled={canApprouverBillet && canManageHotel} variant="success"
                       onClick={() => { setApprouverForm({ totalHotel, totalCommission }); setShowApprouverModal(true); }}
                       icon={<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>}
                     />
                     <ActionButton
                       label="Émission Réservation"
-                      enabled={canEmissionBillet}
+                      enabled={canEmissionBillet && canManageHotel}
                       variant="primary"
                       onClick={() => {
                         setEmissionBilletForm({ referenceBcClient: '', totalHotel, totalCommission });
@@ -762,15 +771,15 @@ const HotelReservationDetail = () => {
                         </svg>
                       }
                     />
-                    <ActionButton label="Émission Facture" enabled={entete?.statut === 'BILLET_EMIS'} variant="purple"
+                    <ActionButton label="Émission Facture" enabled={entete?.statut === 'BILLET_EMIS' && canManageHotel} variant="purple"
                       onClick={() => { setEmissionFactureForm({ referenceFacClient: '' }); setShowEmissionFactureModal(true); }}
                       icon={<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>}
                     />
-                    <ActionButton label="Régler Facture" enabled={entete?.statut === 'FACTURE_EMISE'} variant="warning"
+                    <ActionButton label="Régler Facture" enabled={entete?.statut === 'FACTURE_EMISE' && canManageHotel} variant="warning"
                       onClick={() => setShowReglerModal(true)}
                       icon={<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>}
                     />
-                    <ActionButton label="Annuler" enabled={entete?.statut !== 'ANNULER'} variant="danger"
+                    <ActionButton label="Annuler" enabled={entete?.statut !== 'ANNULER' && canManageHotel} variant="danger"
                       onClick={() => { setAnnulationForm({ rasionAnnulationId: '', conditionAnnul: '' }); setShowAnnulationModal(true); }}
                       icon={<svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>}
                     />
