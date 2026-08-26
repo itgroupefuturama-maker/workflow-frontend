@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { Suspense, useEffect } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import io, { Socket } from 'socket.io-client';
@@ -7,6 +7,7 @@ import { store } from '../app/store';
 import type { RootState, AppDispatch } from '../app/store';
 import { setSocketConnected, notificationReceived } from '../app/uiSlice';
 import AppLoader from './AppLoader';
+import PageLoader from '../components/PageLoader';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -58,7 +59,9 @@ export default function FrontOfficeLayout() {
       <div className="flex flex-col h-screen bg-slate-300">
         <AppBar isBackOffice={false} />
         <main className="flex-1 overflow-auto">
-          <Outlet />
+          <Suspense fallback={<PageLoader />}>
+            <Outlet />
+          </Suspense>
         </main>
       </div>
     </AppLoader>

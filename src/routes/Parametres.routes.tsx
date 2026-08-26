@@ -1,26 +1,28 @@
+import { lazy } from "react";
 import { Route } from "react-router-dom";
-import Utilisateur from "../pages/parametres/Utilisateur";
-import Profile from "../pages/parametres/Profil";
-import Autorisation from "../pages/parametres/Autorisation";
-import TypeTransaction from "../pages/parametres/Type_transaction";
-import Transaction from "../pages/parametres/Transaction";
-import Privilege from "../pages/parametres/Privilege";
-import Module from "../pages/parametres/Module";
-import Commission from "../pages/parametres/Commission";
-import Numerotation from "../pages/parametres/Numerotation";
-import Modele from "../pages/parametres/Modele";
-import Miles from "../pages/parametres/Miles";
-import Piece from "../pages/parametres/Piece";
-import ClientBeneficiaire from "../pages/parametres/Client.Beneficiaire";
-import ClientFacture from "../pages/parametres/Client.Facture";
-import DevisTransaction from "../pages/parametres/Devis.Transaction";
-import ClientFactureForm from "../pages/parametres/client.facture/ClientFactureForm";
-import Categorie from "../pages/parametres/Categorie";
-import Article from "../pages/parametres/Article";
-import ClientBeneficiaireForm from "../pages/parametres/client.beneficaire/ClientBeneficiaireForm";
-import ClientBeneficiaireInfosForm from "../pages/parametres/client.beneficaire/ClientBeneficiaireInfosForm";
-import Fournisseur from "../pages/parametres/Fournisseur";
-import ProfilFormPage from "../pages/parametres/profil.user/ProfilForm";
+
+const Utilisateur = lazy(() => import("../pages/parametres/Utilisateur"));
+const Profile = lazy(() => import("../pages/parametres/Profil"));
+const Autorisation = lazy(() => import("../pages/parametres/Autorisation"));
+const TypeTransaction = lazy(() => import("../pages/parametres/Type_transaction"));
+const Transaction = lazy(() => import("../pages/parametres/Transaction"));
+const Privilege = lazy(() => import("../pages/parametres/Privilege"));
+const Module = lazy(() => import("../pages/parametres/Module"));
+const Commission = lazy(() => import("../pages/parametres/Commission"));
+const Numerotation = lazy(() => import("../pages/parametres/Numerotation"));
+const Modele = lazy(() => import("../pages/parametres/Modele"));
+const Miles = lazy(() => import("../pages/parametres/Miles"));
+const Piece = lazy(() => import("../pages/parametres/Piece"));
+const ClientBeneficiaire = lazy(() => import("../pages/parametres/Client.Beneficiaire"));
+const ClientFacture = lazy(() => import("../pages/parametres/Client.Facture"));
+const DevisTransaction = lazy(() => import("../pages/parametres/Devis.Transaction"));
+const ClientFactureForm = lazy(() => import("../pages/parametres/client.facture/ClientFactureForm"));
+const Categorie = lazy(() => import("../pages/parametres/Categorie"));
+const Article = lazy(() => import("../pages/parametres/Article"));
+const ClientBeneficiaireForm = lazy(() => import("../pages/parametres/client.beneficaire/ClientBeneficiaireForm"));
+const ClientBeneficiaireInfosForm = lazy(() => import("../pages/parametres/client.beneficaire/ClientBeneficiaireInfosForm"));
+const Fournisseur = lazy(() => import("../pages/parametres/Fournisseur"));
+const ProfilFormPage = lazy(() => import("../pages/parametres/profil.user/ProfilForm"));
 
 export function parametresRoutes() {
   return [

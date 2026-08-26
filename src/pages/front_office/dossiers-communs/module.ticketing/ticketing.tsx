@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Outlet } from 'react-router-dom';
 import type {AppDispatch, RootState } from '../../../../app/store';
@@ -8,6 +8,7 @@ import { fetchFournisseurs } from '../../../../app/back_office/fournisseursSlice
 import ProspectionModals from '../../../../components/modals/ProspectionModals';
 import Sidebar from '../../../../layouts/Sidebar';
 import { toast } from '../../../../components/Toast/toast';
+import PageLoader from '../../../../components/PageLoader';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -157,7 +158,9 @@ const HomePageTicketing = () => {
       <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden py-2 px-2">
 
         {/* Système de routage interne */}
-        <Outlet context={contextValue} />
+        <Suspense fallback={<PageLoader />}>
+          <Outlet context={contextValue} />
+        </Suspense>
 
         <ProspectionModals
           selectedEntete={selectedEntete}
