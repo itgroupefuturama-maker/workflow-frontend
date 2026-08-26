@@ -53,8 +53,10 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
   const userMenuRef  = useRef<HTMLDivElement>(null);
   const notifRef     = useRef<HTMLDivElement>(null);
   const modalRef     = useRef<HTMLDivElement>(null);
+  const lastNotifIdRef = useRef<string | null>(null);
 
   const user = useSelector((state: RootState) => state.auth.user);
+  const notificationTick = useSelector((state: RootState) => state.ui.notificationTick);
 
   // ── Fermeture au clic extérieur ──────────────────────────────────────────────
   useClickOutside(notifRef,    () => setOpenNotifications(false));
@@ -79,6 +81,7 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
     try {
       const res = await axiosInstance.get(`/notifications/user/${user.id}`);
       if (res.data.success) setNotifications(res.data.data);
+      return res.data.data as any[] | undefined;
     } catch (e) {
       console.error(e);
       toast.error('Erreur lors du chargement des notifications');
@@ -88,6 +91,26 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
   };
 
   useEffect(() => { fetchNotifications(); }, [user?.id]);
+
+  // Réception temps réel (socket 'notification', voir FrontOfficeLayout.tsx/ListeParametreLayout.tsx) :
+  // refetch puis toast si un nouvel élément est bien apparu en tête de liste. `lastNotifIdRef` reste
+  // `null` tant qu'aucun fetch initial n'a eu lieu, pour ne pas toaster au premier chargement.
+  useEffect(() => {
+    if (notificationTick === 0) return;
+    fetchNotifications().then((data) => {
+      const top = data?.[0];
+      if (top && lastNotifIdRef.current && top.id !== lastNotifIdRef.current) {
+        toast.info(top.description);
+      }
+      if (top) lastNotifIdRef.current = top.id;
+    });
+  }, [notificationTick]);
+
+  useEffect(() => {
+    if (!lastNotifIdRef.current && notifications[0]) {
+      lastNotifIdRef.current = notifications[0].id;
+    }
+  }, [notifications]);
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
@@ -316,7 +339,10 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
 
                   {/* Footer notifs */}
                   <div className="px-4 py-2.5 border-t border-gray-100">
-                    <button className="w-full text-center text-xs font-medium text-gray-500 hover:text-gray-800 transition-colors py-1">
+                    <button
+                      onClick={() => { setOpenNotifications(false); navigate('/dossiers-communs/notifications'); }}
+                      className="w-full text-center text-xs font-medium text-gray-500 hover:text-gray-800 transition-colors py-1"
+                    >
                       Voir toutes les notifications
                     </button>
                   </div>

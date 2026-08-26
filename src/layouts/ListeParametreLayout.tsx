@@ -23,7 +23,7 @@ import { fetchArticles } from '../app/back_office/articlesSlice';
 import { fetchFournisseurs } from '../app/back_office/fournisseursSlice';
 import { store } from '../app/store';
 import type { RootState, AppDispatch } from '../app/store';
-import { setSocketConnected } from '../app/uiSlice';
+import { setSocketConnected, notificationReceived } from '../app/uiSlice';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -54,16 +54,14 @@ export default function ParametreLayout() {
     socket.on('disconnect', () => dispatch(setSocketConnected(false)));
     socket.on('connect_error', () => dispatch(setSocketConnected(false)));
 
-    // Écoute l'événement 'notification' (comme dans ton AppBar)
+    // Écoute l'événement 'notification' (cloche AppBar, voir FRONTEND_PROMPT_REASSIGNATION_COLAB.md)
     socket.on('notification', (data: any) => {
       if (
         data.entityType === 'NOTIFICATION' &&
         data.action === 'CREATE' &&
         data.receiverId === user.id
       ) {
-        // Rafraîchit les notifications dans l'AppBar
-        // (ton AppBar les recharge déjà via fetchNotifications quand le menu s'ouvre)
-        // Mais tu peux aussi dispatcher un événement pour forcer le refresh immédiat
+        dispatch(notificationReceived());
 
         // Optionnel : refresh des données concernées
         if (data.payload?.relatedEntity === 'DOSSIER_COMMUN') {

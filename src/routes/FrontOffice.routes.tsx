@@ -16,6 +16,7 @@ import Attestation from "../pages/front_office/dossiers-communs/module.attestati
 import PageViewAttestation from "../pages/front_office/dossiers-communs/module.attestation.voyage/SousMenuPrestation/PageView";
 import DetailAttestation from "../pages/front_office/dossiers-communs/module.attestation.voyage/SousMenuPrestation/DetailAttestation";
 import Parametre from "../pages/front_office/dossiers-communs/module.parametre/Parametre";
+import NotificationsPage from "../pages/front_office/dossiers-communs/module.parametre/sections/Notifications";
 import HomePageHotel from "../pages/front_office/dossiers-communs/module.hotel/HomePage.hotel";
 import PageViewHotel from "../pages/front_office/dossiers-communs/module.hotel/sous.section/PageViewHotel";
 import ParametreViewHotel from "../pages/front_office/dossiers-communs/module.hotel/sous.section/ParametreViewHotel";
@@ -129,6 +130,7 @@ export function frontOfficeRoutes() {
       </Route>
 
       <Route path="dossiers-communs/parametre" element={<Parametre />} />
+      <Route path="dossiers-communs/notifications" element={<NotificationsPage />} />
       <Route path="dossiers-communs/hotel" element={<HomePageHotel />}>
         <Route index element={<Navigate to="accueil" replace />} />
         <Route path="accueil" element={<AccueilView module="hotel"/>} />

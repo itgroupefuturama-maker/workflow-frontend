@@ -5,7 +5,7 @@ import io, { Socket } from 'socket.io-client';
 import AppBar from '../components/AppBar'; // ton AppBar actuelle
 import { store } from '../app/store';
 import type { RootState, AppDispatch } from '../app/store';
-import { setSocketConnected } from '../app/uiSlice';
+import { setSocketConnected, notificationReceived } from '../app/uiSlice';
 import AppLoader from './AppLoader';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
@@ -40,6 +40,13 @@ export default function FrontOfficeLayout() {
     socket.on('connect', () => dispatch(setSocketConnected(true)));
     socket.on('disconnect', () => dispatch(setSocketConnected(false)));
     socket.on('connect_error', () => dispatch(setSocketConnected(false)));
+
+    // Notifications temps réel (cloche AppBar) — voir FRONTEND_PROMPT_REASSIGNATION_COLAB.md
+    socket.on('notification', (data: any) => {
+      if (data?.entityType === 'NOTIFICATION' && data?.action === 'CREATE' && data?.receiverId === user.id) {
+        dispatch(notificationReceived());
+      }
+    });
 
     return () => {
       socket.disconnect();
