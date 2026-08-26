@@ -11,6 +11,9 @@ import ViewDevisModal from '../../../../../components/modals/Attestation/ViewDev
 import TabContainer from '../../../../../layouts/TabContainer';
 import SuiviTabSection from '../../module.suivi/SuiviTabSection';
 import { FileText, PlaneTakeoff, Users, Info } from 'lucide-react';
+import { useAuthorization } from '../../../../../hooks/useAuthorization';
+
+const MODULE = 'attestation';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -18,6 +21,8 @@ const DetailAttestation = () => {
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
   const location = useLocation();
+  const { canManage } = useAuthorization();
+  const canManageAttestation = canManage(MODULE);
 
   const {
     items: entetes,
@@ -108,13 +113,15 @@ const DetailAttestation = () => {
                 navigate={navigate}
                 isDetail={true}
               />
-              <button
-                onClick={() => setModalOpen(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-all"
-              >
-                <span className="flex items-center justify-center w-4 h-4 rounded-md bg-white/20 font-bold">+</span>
-                Ajouter une ligne
-              </button>
+              {canManageAttestation && (
+                <button
+                  onClick={() => setModalOpen(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold rounded-xl shadow-sm transition-all"
+                >
+                  <span className="flex items-center justify-center w-4 h-4 rounded-md bg-white/20 font-bold">+</span>
+                  Ajouter une ligne
+                </button>
+              )}
             </div>
           </div>
 

@@ -15,11 +15,16 @@ import { useAttestationPdf } from '../../module.pdf/pdf.generation/hooks/usePdfG
 import type { AttestationPdfMode, AttestationPdfSelection } from '../../module.pdf/pdf.generation/types/attestation.types';
 import type { PdfDesignId } from '../../module.pdf/pdf.generation/types/pdf-design.types';
 import { ModalAttestationPdfSelector } from './components.attestation/ModalAttestationPdfSelector';
+import { useAuthorization } from '../../../../../hooks/useAuthorization';
+
+const MODULE = 'attestation';
 
 const PageViewAttestation = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
   const location = useLocation();
+  const { canManage } = useAuthorization();
+  const canManageAttestation = canManage(MODULE);
 
    const { data: fournisseurs } = useSelector((state: RootState) => state.fournisseurs);
 
@@ -318,9 +323,9 @@ const PageViewAttestation = () => {
                       {/* Créer entête */}
                       <button
                         onClick={handleCreate}
-                        disabled={loading || !selectedFournisseurId || !puAriary || isBlocked}
+                        disabled={loading || !selectedFournisseurId || !puAriary || isBlocked || !canManageAttestation}
                         className={`h-10 inline-flex items-center gap-2 px-4 text-sm font-semibold rounded-xl transition-all ${
-                          loading || !selectedFournisseurId || !puAriary || isBlocked
+                          loading || !selectedFournisseurId || !puAriary || isBlocked || !canManageAttestation
                             ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                             : 'bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 active:bg-indigo-800'
                         }`}

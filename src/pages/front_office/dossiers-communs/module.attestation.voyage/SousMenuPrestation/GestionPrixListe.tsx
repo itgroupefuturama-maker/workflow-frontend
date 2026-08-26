@@ -3,11 +3,16 @@ import { useState } from 'react';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../../../../../app/store';
 import AttestationParamModal from '../../../../../components/modals/Attestation/AttestationParamModal';
+import { useAuthorization } from '../../../../../hooks/useAuthorization';
+
+const MODULE = 'attestation';
 
 export default function GestionPrixListe() {
   const { items, loading, error } = useSelector(
     (state: RootState) => state.attestationParams
   );
+  const { canManage } = useAuthorization();
+  const canManageAttestation = canManage(MODULE);
 
   const [modalOpen, setModalOpen] = useState(false); // ← AJOUT
 
@@ -29,14 +34,16 @@ export default function GestionPrixListe() {
 
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="mb-4">
-        <button
-          onClick={() => setModalOpen(true)}
-          className="px-5 py-2.5 bg-gray-950 text-white text-sm font-medium rounded-xl hover:bg-gray-800 transition-colors"
-        >
-          + Nouveau prix
-        </button>
-      </div>
+        {canManageAttestation && (
+          <div className="mb-4">
+            <button
+              onClick={() => setModalOpen(true)}
+              className="px-5 py-2.5 bg-gray-950 text-white text-sm font-medium rounded-xl hover:bg-gray-800 transition-colors"
+            >
+              + Nouveau prix
+            </button>
+          </div>
+        )}
 
       {/* Tableau */}
       <table className="min-w-full divide-y divide-slate-200">
