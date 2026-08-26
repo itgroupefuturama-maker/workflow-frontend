@@ -10,6 +10,9 @@ import { TicketingHeader } from '../components.billet/TicketingHeader';
 import { billetListeItems, prospectionListeItems } from '../components.billet/utils/ticketingHeaderItems';
 import SuiviTabSection from '../../../module.suivi/SuiviTabSection';
 import BeneficiaireListPage from '../../../module.client.beneficiaire/BeneficiaireListPageForClientFacture';
+import { useAuthorization } from '../../../../../../hooks/useAuthorization';
+
+const MODULE = 'ticketing';
 
 interface PrestationContext {
   prestationId: string;
@@ -24,6 +27,8 @@ export default function PageView() {
   const dispatch = useDispatch();
   const location = useLocation();
   const navigate = useNavigate();
+  const { canManage } = useAuthorization();
+  const canManageTicketing = canManage(MODULE);
 
   const dossierId = useSelector((state: RootState) => state.dossierCommun.currentClientFactureId?.id);
   const clientFactureId = useSelector((state: RootState) => state.dossierCommun.currentClientFactureId?.clientfacture.id);
@@ -136,12 +141,14 @@ export default function PageView() {
                       </svg>
                       {sortEntetes === 'desc' ? 'Plus récent' : 'Plus ancien'}
                     </button>
-                    <button
-                      onClick={openCreateModal}
-                      className="shrink-0 inline-flex items-center gap-2 bg-linear-to-r from-indigo-500 to-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:from-indigo-600 hover:to-indigo-700 transition-all"
-                    >
-                      <FiPlus size={15} /> Ajouter un en-tête
-                    </button>
+                    {canManageTicketing && (
+                      <button
+                        onClick={openCreateModal}
+                        className="shrink-0 inline-flex items-center gap-2 bg-linear-to-r from-indigo-500 to-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:from-indigo-600 hover:to-indigo-700 transition-all"
+                      >
+                        <FiPlus size={15} /> Ajouter un en-tête
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -168,12 +175,14 @@ export default function PageView() {
                         </div>
                         <p className="text-base font-semibold text-slate-500 mb-1">Aucun en-tête de prospection</p>
                         <p className="text-sm text-slate-400 mb-4">Cliquez sur le bouton ci-dessus pour commencer.</p>
-                        <button
-                          onClick={openCreateModal}
-                          className="inline-flex items-center gap-2 bg-linear-to-r from-indigo-500 to-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm"
-                        >
-                          <FiPlus size={15} /> Ajouter un en-tête
-                        </button>
+                        {canManageTicketing && (
+                          <button
+                            onClick={openCreateModal}
+                            className="inline-flex items-center gap-2 bg-linear-to-r from-indigo-500 to-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm"
+                          >
+                            <FiPlus size={15} /> Ajouter un en-tête
+                          </button>
+                        )}
                       </div>
                     ) : (
                       /* ── Tableau entêtes ── */
@@ -232,12 +241,14 @@ export default function PageView() {
                                   </td>
                                   <td className="px-5 py-3.5 whitespace-nowrap">
                                     <div className="flex items-center gap-1">
-                                      <button
-                                        onClick={() => openEditModal(entete)}
-                                        className="px-3 py-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg transition-colors"
-                                      >
-                                        Modifier
-                                      </button>
+                                      {canManageTicketing && (
+                                        <button
+                                          onClick={() => openEditModal(entete)}
+                                          className="px-3 py-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg transition-colors"
+                                        >
+                                          Modifier
+                                        </button>
+                                      )}
                                       <button
                                         
                                         className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded-lg transition-colors"
