@@ -21,6 +21,9 @@ import SendVisaModal from '../../components/SendVisaModal';
 import DecisionVisaModal from '../../components/DecisionVisaModal';
 import type { Visa } from '../../../../../../app/front_office/parametre_visa/visaEnteteSlice';
 import SuiviTabSection from '../../../module.suivi/SuiviTabSection';
+import { useAuthorization } from '../../../../../../hooks/useAuthorization';
+
+const MODULE = 'visa';
 
 const fmtDate = (d: string | null) =>
   d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
@@ -67,6 +70,8 @@ const PageDetailVisa = () => {
   const location         = useLocation();
 
   const { detail, loading, error } = useSelector((s: RootState) => s.visaEnteteDetail);
+  const { canManage } = useAuthorization();
+  const canManageVisa = canManage(MODULE);
 
   const clientFactureId = useSelector(
     (s: RootState) => s.dossierCommun.currentClientFactureId?.clientfacture?.id
@@ -242,43 +247,47 @@ const PageDetailVisa = () => {
                     </>
                   ) : detail ? (
                     <>
-                      <button
-                        onClick={() => setShowAccesPortail(true)}
-                        disabled={detail.visaLigne.length === 0 || detail.statutEntete === 'ASSIGNER'}
-                        className={`px-4 py-2 text-sm font-semibold rounded-lg flex items-center gap-2 transition-all ${
-                          detail.visaLigne.length === 0 || detail.statutEntete === 'ASSIGNER'
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
-                            : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm'
-                        }`}
-                      >
-                        <span className={detail.visaLigne.length === 0 || detail.statutEntete === 'ASSIGNER' ? 'grayscale opacity-50' : ''}>🔐</span>
-                        Accès portail
-                      </button>
+                      {canManageVisa && (
+                        <button
+                          onClick={() => setShowAccesPortail(true)}
+                          disabled={detail.visaLigne.length === 0 || detail.statutEntete === 'ASSIGNER'}
+                          className={`px-4 py-2 text-sm font-semibold rounded-lg flex items-center gap-2 transition-all ${
+                            detail.visaLigne.length === 0 || detail.statutEntete === 'ASSIGNER'
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                              : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm'
+                          }`}
+                        >
+                          <span className={detail.visaLigne.length === 0 || detail.statutEntete === 'ASSIGNER' ? 'grayscale opacity-50' : ''}>🔐</span>
+                          Accès portail
+                        </button>
+                      )}
 
-                      <button
-                        onClick={handleGenerate}
-                        disabled={generateLoading || detail.visaLigne.length === 0 || detail.statutEntete === 'ASSIGNER'}
-                        className={`px-4 py-2 text-sm font-semibold rounded-lg flex items-center gap-2 transition-all ${
-                          generateLoading || detail.visaLigne.length === 0 || detail.statutEntete === 'ASSIGNER'
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
-                            : 'bg-violet-600 hover:bg-violet-700 text-white shadow-sm'
-                        }`}
-                      >
-                        {generateLoading ? (
-                          <>
-                            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-                            </svg>
-                            Génération...
-                          </>
-                        ) : (
-                          <>
-                            <span className={detail.visaLigne.length === 0 || detail.statutEntete === 'ASSIGNER' ? 'grayscale opacity-50' : ''}>⚡</span>
-                            Générer portail
-                          </>
-                        )}
-                      </button>
+                      {canManageVisa && (
+                        <button
+                          onClick={handleGenerate}
+                          disabled={generateLoading || detail.visaLigne.length === 0 || detail.statutEntete === 'ASSIGNER'}
+                          className={`px-4 py-2 text-sm font-semibold rounded-lg flex items-center gap-2 transition-all ${
+                            generateLoading || detail.visaLigne.length === 0 || detail.statutEntete === 'ASSIGNER'
+                              ? 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
+                              : 'bg-violet-600 hover:bg-violet-700 text-white shadow-sm'
+                          }`}
+                        >
+                          {generateLoading ? (
+                            <>
+                              <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+                              </svg>
+                              Génération...
+                            </>
+                          ) : (
+                            <>
+                              <span className={detail.visaLigne.length === 0 || detail.statutEntete === 'ASSIGNER' ? 'grayscale opacity-50' : ''}>⚡</span>
+                              Générer portail
+                            </>
+                          )}
+                        </button>
+                      )}
                     </>
                   ) : null}
                 </div>
@@ -476,32 +485,34 @@ const PageDetailVisa = () => {
                                     <div className="flex items-center justify-center gap-1.5 flex-wrap">
 
                                       {/* Soumettre */}
-                                      <button
-                                        onClick={() => setSubmitModal({
-                                          ligneId:          ligne.id,
-                                          puConsulatDevise: vp.puConsulatDevise,
-                                          puClientAriary:   vp.puClientAriary,
-                                          tauxEchange:      vp.tauxEchange,
-                                          devise:           vp.devise,
-                                        })}
-                                        disabled={!tousPassagersOntVisa || dejaSoumis}
-                                        title={
-                                          !tousPassagersOntVisa
-                                            ? passagers.length === 0
-                                              ? 'Aucun passager assigné'
-                                              : 'Passager(s) sans visa'
-                                            : dejaSoumis
-                                              ? 'Déjà soumis'
-                                              : 'Soumettre la ligne'
-                                        }
-                                        className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg flex items-center gap-1 transition-all ${
-                                          tousPassagersOntVisa && !dejaSoumis
-                                            ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-sm'
-                                            : 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
-                                        }`}
-                                      >
-                                        📤 Soumettre
-                                      </button>
+                                      {canManageVisa && (
+                                        <button
+                                          onClick={() => setSubmitModal({
+                                            ligneId:          ligne.id,
+                                            puConsulatDevise: vp.puConsulatDevise,
+                                            puClientAriary:   vp.puClientAriary,
+                                            tauxEchange:      vp.tauxEchange,
+                                            devise:           vp.devise,
+                                          })}
+                                          disabled={!tousPassagersOntVisa || dejaSoumis}
+                                          title={
+                                            !tousPassagersOntVisa
+                                              ? passagers.length === 0
+                                                ? 'Aucun passager assigné'
+                                                : 'Passager(s) sans visa'
+                                              : dejaSoumis
+                                                ? 'Déjà soumis'
+                                                : 'Soumettre la ligne'
+                                          }
+                                          className={`px-2.5 py-1 text-[11px] font-semibold rounded-lg flex items-center gap-1 transition-all ${
+                                            tousPassagersOntVisa && !dejaSoumis
+                                              ? 'bg-orange-500 hover:bg-orange-600 text-white shadow-sm'
+                                              : 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
+                                          }`}
+                                        >
+                                          📤 Soumettre
+                                        </button>
+                                      )}
 
                                       {/* Détail (expand) */}
                                       <button
@@ -683,7 +694,7 @@ const PageDetailVisa = () => {
                                                         </a>
 
                                                         {/* Envoyer */}
-                                                        {visaPassager && (
+                                                        {visaPassager && canManageVisa && (
                                                           <button
                                                             disabled={visaPassager.statusVisa !== 'A_ENREGISTRER'}
                                                             onClick={() => setSendModal({ visaId: visaPassager.id, visaEnteteId: detail.id })}
@@ -694,7 +705,7 @@ const PageDetailVisa = () => {
                                                         )}
 
                                                         {/* Payer */}
-                                                        {visaPassager && (
+                                                        {visaPassager && canManageVisa && (
                                                           <button
                                                             onClick={() => handlePay(visaPassager.id)}
                                                             disabled={payLoading || visaPassager.statusVisa !== 'ENREGISTRE'}
@@ -705,7 +716,7 @@ const PageDetailVisa = () => {
                                                         )}
 
                                                         {/* Décision */}
-                                                        {visaPassager && (
+                                                        {visaPassager && canManageVisa && (
                                                           <button
                                                             onClick={() => setDecisionModal({ visaId: visaPassager.id, visaEnteteId: detail.id })}
                                                             disabled={visaPassager.statusVisa !== 'EN_COURS'}

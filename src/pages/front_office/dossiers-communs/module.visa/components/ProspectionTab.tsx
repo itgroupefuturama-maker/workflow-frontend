@@ -10,6 +10,9 @@ import { VisaHeader } from './VisaHeader';
 import DossierActifCard from '../../../../../components/CarteDossierActif/DossierActifCard';
 import { fetchVisaConsultats } from '../../../../../app/front_office/parametre_visa/visaConsultatSlice';
 import SuiviTabSection from '../../module.suivi/SuiviTabSection';
+import { useAuthorization } from '../../../../../hooks/useAuthorization';
+
+const MODULE = 'visa';
 
 interface Props {
   prestationId: string;
@@ -18,6 +21,8 @@ interface Props {
 const ProspectionTab = ({ prestationId }: Props) => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
+  const { canManage } = useAuthorization();
+  const canManageVisa = canManage(MODULE);
 
   const visaProspectionEnteteState = useSelector(
     (s: RootState) => s.visaProspectionEntete
@@ -111,23 +116,27 @@ const ProspectionTab = ({ prestationId }: Props) => {
             
             {activeTabSousSection === 'lignes' && (
               <div className="flex items-center gap-3">
-                <select
-                  value={selectedConsulatId}
-                  onChange={(e) => setSelectedConsulatId(e.target.value)}
-                  className="text-sm border border-gray-400 rounded-lg px-3 py-2"
-                >
-                  <option value="">— Choisir un consulat —</option>
-                  {consultats.map((c) => (
-                    <option key={c.id} value={c.id}>{c.nom}</option>
-                  ))}
-                </select>
-                <button
-                  onClick={handleCreate}
-                  disabled={creating || !prestationId || !selectedConsulatId}
-                  className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-60 flex items-center gap-2"
-                >
-                  {creating ? '...' : '+ Nouvelle prospection'}
-                </button>
+                {canManageVisa && (
+                  <>
+                    <select
+                      value={selectedConsulatId}
+                      onChange={(e) => setSelectedConsulatId(e.target.value)}
+                      className="text-sm border border-gray-400 rounded-lg px-3 py-2"
+                    >
+                      <option value="">— Choisir un consulat —</option>
+                      {consultats.map((c) => (
+                        <option key={c.id} value={c.id}>{c.nom}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={handleCreate}
+                      disabled={creating || !prestationId || !selectedConsulatId}
+                      className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-60 flex items-center gap-2"
+                    >
+                      {creating ? '...' : '+ Nouvelle prospection'}
+                    </button>
+                  </>
+                )}
 
                 <div className="w-px h-6 bg-gray-200" />
 
@@ -203,29 +212,33 @@ const ProspectionTab = ({ prestationId }: Props) => {
 
                       <div className="flex items-center gap-2">
                         {/* AJOUTER LIGNE (Action Positive/Construction) */}
-                        <button
-                          onClick={(e) => { e.stopPropagation(); setLigneModalEnteteId(entete.id); }}
-                          className="
-                            px-3 py-1.5 text-xs font-semibold rounded-lg transition-all
-                            bg-slate-700 text-white hover:bg-slate-900 
-                            flex items-center gap-1.5 shadow-sm active:scale-95
-                          "
-                        >
-                          <span>+</span> Ligne
-                        </button>
+                        {canManageVisa && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); setLigneModalEnteteId(entete.id); }}
+                            className="
+                              px-3 py-1.5 text-xs font-semibold rounded-lg transition-all
+                              bg-slate-700 text-white hover:bg-slate-900
+                              flex items-center gap-1.5 shadow-sm active:scale-95
+                            "
+                          >
+                            <span>+</span> Ligne
+                          </button>
+                        )}
 
                         {/* DEVIS (Action de Document/Secondaire) */}
-                        <button
-                          onClick={() => setDevisModalEntete({ id: entete.id, lignes: entete.visaProspectionLigne ?? [] })}
-                          className="
-                            px-3 py-1.5 text-xs font-semibold rounded-lg transition-all
-                            bg-white border border-slate-200 text-slate-600 
-                            hover:bg-slate-50 hover:border-slate-300 hover:text-indigo-600
-                            flex items-center gap-1.5 shadow-sm active:scale-95
-                          "
-                        >
-                          <span className="opacity-70">📄</span> Devis
-                        </button>
+                        {canManageVisa && (
+                          <button
+                            onClick={() => setDevisModalEntete({ id: entete.id, lignes: entete.visaProspectionLigne ?? [] })}
+                            className="
+                              px-3 py-1.5 text-xs font-semibold rounded-lg transition-all
+                              bg-white border border-slate-200 text-slate-600
+                              hover:bg-slate-50 hover:border-slate-300 hover:text-indigo-600
+                              flex items-center gap-1.5 shadow-sm active:scale-95
+                            "
+                          >
+                            <span className="opacity-70">📄</span> Devis
+                          </button>
+                        )}
 
                         {/* VOIR DÉTAIL (Action Principale/Navigation) */}
                         <button

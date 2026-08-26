@@ -13,6 +13,9 @@ import { API_URL_PORTAIL } from '../../../../../../service/env';
 import TabContainer from '../../../../../../layouts/TabContainer';
 import { VisaHeader } from '../../components/VisaHeader';
 import { Briefcase, FileText, Phone, User, Users } from 'lucide-react';
+import { useAuthorization } from '../../../../../../hooks/useAuthorization';
+
+const MODULE = 'visa';
 
 /* ─────────────────────── helpers ─────────────────────── */
 
@@ -43,12 +46,12 @@ const Badge = ({ status }: { status: string }) => {
 };
 
 const ActionButton = ({
-  onClick, loading, done, label, statut, doneLabel, color = 'green',
+  onClick, loading, done, label, statut, doneLabel, color = 'green', allowed = true,
 }: {
   onClick: () => void; loading: boolean; done: boolean;
-  label: string; statut: string; doneLabel: string; color?: 'green' | 'indigo' | 'violet';
+  label: string; statut: string; doneLabel: string; color?: 'green' | 'indigo' | 'violet'; allowed?: boolean;
 }) => {
-  const isDisabled = loading || statut === 'VALIDER' || statut === 'VALIDE';
+  const isDisabled = loading || statut === 'VALIDER' || statut === 'VALIDE' || !allowed;
   const colors = {
     green:  'bg-emerald-600 hover:bg-emerald-700',
     indigo: 'bg-indigo-600 hover:bg-indigo-700',
@@ -79,6 +82,8 @@ const PageDetailPassager = () => {
   const nomPassager = location.state?.nomPassager ?? 'Passager';
   const numeroDos   = location.state?.numeroDos ?? null;
   const { detail, loading } = useSelector((s: RootState) => s.passagerDetail);
+  const { canManage } = useAuthorization();
+  const canManageVisa = canManage(MODULE);
 
   const [formLoading,   setFormLoading]   = useState<Record<string, boolean>>({});
   const [formDone,      setFormDone]      = useState<Record<string, boolean>>({});
@@ -176,14 +181,16 @@ const PageDetailPassager = () => {
           {/* ── Header fixe ── */}
           <div className="shrink-0 px-4 py-3 bg-slate-200 rounded-t-xl flex items-center justify-between gap-3">
             <VisaHeader numerovisa={numeroDos} nomPassager={nomPassager} navigate={navigate} isDetail={true} isPassager={true} />
-            <button
-              onClick={handleSync}
-              disabled={syncLoading}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white text-xs font-semibold transition shrink-0"
-            >
-              {syncLoading ? <Spinner size={3} /> : syncDone ? '✓' : '⚡'}
-              {syncDone ? 'Synchronisé' : 'Synchroniser'}
-            </button>
+            {canManageVisa && (
+              <button
+                onClick={handleSync}
+                disabled={syncLoading}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white text-xs font-semibold transition shrink-0"
+              >
+                {syncLoading ? <Spinner size={3} /> : syncDone ? '✓' : '⚡'}
+                {syncDone ? 'Synchronisé' : 'Synchroniser'}
+              </button>
+            )}
           </div>
 
           {/* ── Feedbacks ── */}
@@ -308,6 +315,7 @@ const PageDetailPassager = () => {
                                 label="Valider"
                                 doneLabel="Validé"
                                 color="green"
+                                allowed={canManageVisa}
                               />
                             </td>
                           </tr>
@@ -346,6 +354,7 @@ const PageDetailPassager = () => {
                                     label="Confirmer"
                                     doneLabel="Confirmé"
                                     color="green"
+                                    allowed={canManageVisa}
                                   />
                                   <button
                                     onClick={() => toggleForm(form.id)}

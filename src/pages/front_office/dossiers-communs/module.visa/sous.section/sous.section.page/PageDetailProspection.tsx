@@ -7,6 +7,9 @@ import TabContainer from '../../../../../../layouts/TabContainer';
 import { VisaHeader } from '../../components/VisaHeader';
 import { useVisaPdf } from '../../../module.pdf/pdf.generation/hooks/usePdfGenerator';
 import { Download, Eye } from 'lucide-react';
+import { useAuthorization } from '../../../../../../hooks/useAuthorization';
+
+const MODULE = 'visa';
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -54,6 +57,8 @@ const PageDetailProspection = () => {
     const location = useLocation();
 
     const { detail, loading, error } = useSelector((s: RootState) => s.visaDevis);
+    const { canManage } = useAuthorization();
+    const canManageVisa = canManage(MODULE);
 
     const [actionLoading, setActionLoading] = useState<string | null>(null);
     const [actionError,   setActionError]   = useState('');
@@ -301,10 +306,10 @@ const PageDetailProspection = () => {
                                         <div className="flex items-center gap-2">
                                             {/* Envoyer le devis */}
                                             <button
-                                                onClick={devis.statut === 'CREER' ? handleEnvoyer : undefined}
-                                                disabled={devis.statut !== 'CREER' || actionLoading === 'envoyer'}
+                                                onClick={devis.statut === 'CREER' && canManageVisa ? handleEnvoyer : undefined}
+                                                disabled={devis.statut !== 'CREER' || actionLoading === 'envoyer' || !canManageVisa}
                                                 className={`px-4 py-2 text-sm rounded-lg font-semibold flex items-center gap-2 transition-all ${
-                                                devis.statut === 'CREER'
+                                                devis.statut === 'CREER' && canManageVisa
                                                     ? 'bg-blue-600 hover:bg-blue-700 text-white'
                                                     : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
                                                 }`}
@@ -322,10 +327,10 @@ const PageDetailProspection = () => {
 
                                             {/* Approuver */}
                                             <button
-                                                onClick={devis.statut === 'DEVIS_A_APPROUVER' ? handleApprouver : undefined}
-                                                disabled={devis.statut !== 'DEVIS_A_APPROUVER' || actionLoading === 'approuver'}
+                                                onClick={devis.statut === 'DEVIS_A_APPROUVER' && canManageVisa ? handleApprouver : undefined}
+                                                disabled={devis.statut !== 'DEVIS_A_APPROUVER' || actionLoading === 'approuver' || !canManageVisa}
                                                 className={`px-4 py-2 text-sm rounded-lg font-semibold flex items-center gap-2 transition-all ${
-                                                devis.statut === 'DEVIS_A_APPROUVER'
+                                                devis.statut === 'DEVIS_A_APPROUVER' && canManageVisa
                                                     ? 'bg-green-600 hover:bg-green-700 text-white'
                                                     : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
                                                 }`}
@@ -343,10 +348,10 @@ const PageDetailProspection = () => {
 
                                             {/* Créer le Visa */}
                                             <button
-                                                onClick={devis.statut === 'DEVIS_APPROUVE' ? handleCreerVisa : undefined}
-                                                disabled={devis.statut !== 'DEVIS_APPROUVE' || actionLoading === 'visa'}
+                                                onClick={devis.statut === 'DEVIS_APPROUVE' && canManageVisa ? handleCreerVisa : undefined}
+                                                disabled={devis.statut !== 'DEVIS_APPROUVE' || actionLoading === 'visa' || !canManageVisa}
                                                 className={`px-4 py-2 text-sm rounded-lg font-semibold flex items-center gap-2 transition-all ${
-                                                devis.statut === 'DEVIS_APPROUVE'
+                                                devis.statut === 'DEVIS_APPROUVE' && canManageVisa
                                                     ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
                                                     : 'bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200'
                                                 }`}
