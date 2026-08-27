@@ -293,6 +293,13 @@ function useAutoSelectFirstSubTheme(
   selectedSubTheme: string | null,
   dispatch: AppDispatch,
 ) {
+  // `selectedSubTheme` est volontairement absent des deps : ce n'est pas un oubli, mais ça repose
+  // sur le fait que `setSelectedTheme` (knowledgeBaseSlice) remet toujours `selectedSubTheme` à
+  // `null` en même temps, et que `handleSelectSubTheme` ne le fixe qu'à un sous-thème du thème
+  // courant. Le seul cas à revalider (changement de thème) est donc déjà couvert par
+  // `selectedTheme`. Si ce couplage change dans le reducer, cet effet peut se retrouver avec une
+  // valeur de `selectedSubTheme` obsolète sans le savoir — à revérifier si `knowledgeBaseSlice`
+  // est modifié.
   useEffect(() => {
     if (!selectedTheme) return;
     const themeObj = themes.find((t) => t.nom === selectedTheme);
@@ -325,6 +332,10 @@ const PageBaseConnaissance = () => {
 
   useEffect(() => { dispatch(fetchThemes()); }, [dispatch]);
 
+  // `selectedTheme` absent des deps volontairement : `selectedTheme` démarre à `null` et n'est
+  // jamais remis à `null`/`''` ailleurs dans `knowledgeBaseSlice` une fois fixé, donc
+  // `!selectedTheme` ne peut être vrai qu'avant la toute première sélection — un cas déjà couvert
+  // par `themes` qui se peuple. Comme ci-dessus, à revérifier si le reducer change.
   useEffect(() => {
     if (themes.length > 0 && !selectedTheme) dispatch(setSelectedTheme(themes[0].nom));
   }, [themes]); // eslint-disable-line react-hooks/exhaustive-deps
