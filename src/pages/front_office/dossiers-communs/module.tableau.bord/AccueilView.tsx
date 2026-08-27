@@ -20,6 +20,7 @@ import {
 } from 'react-icons/fi';
 import TabContainer from '../../../../layouts/TabContainer';
 import { fetchModules } from '../../../../app/back_office/modulesSlice';
+import Button from '../../../../components/ui/Button';
 
 // ── Constantes ────────────────────────────────────────────────
 
@@ -596,24 +597,17 @@ const AccueilView = ({ module }: { module?: Module }) => {
 
             {/* Boutons */}
             <div className="flex items-center gap-3 mt-4 justify-end">
-              <button
-                onClick={handleResetEtat}
-                className="flex items-center gap-1.5 px-4 py-2 text-sm text-gray-500 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition"
-              >
-                <FiX size={14} />
+              <Button variant="secondary" onClick={handleResetEtat} icon={<FiX size={14} />}>
                 Réinitialiser
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="primary"
                 onClick={handleSearchEtat}
                 disabled={loadingEtatVente || !moduleIdResolu}
-                className="flex items-center gap-1.5 px-5 py-2 text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg transition disabled:opacity-50"
+                icon={loadingEtatVente ? <FiRefreshCw size={14} className="animate-spin" /> : <FiSearch size={14} />}
               >
-                {loadingEtatVente
-                  ? <FiRefreshCw size={14} className="animate-spin" />
-                  : <FiSearch size={14} />
-                }
                 Rechercher
-              </button>
+              </Button>
             </div>
           </div>
 
