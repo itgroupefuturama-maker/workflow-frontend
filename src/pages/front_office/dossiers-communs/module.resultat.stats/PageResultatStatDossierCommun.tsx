@@ -1,27 +1,52 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type { AppDispatch, RootState } from '../../../../app/store';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { FiArrowLeft, FiFolder, FiRefreshCw } from 'react-icons/fi';
-import { fetchDossiersCommuns } from '../../../../app/front_office/dossierCommunSlice';
+import { FiArrowLeft, FiFolder, FiRefreshCw, FiSearch } from 'react-icons/fi';
+import { fetchDossiersCommunsPaginated } from '../../../../app/front_office/dossierCommunSlice';
+import { useDebouncedValue } from '../../../../hooks/useDebouncedValue';
+import Pagination from '../../../../components/Pagination';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
 const PageResultatStatDossierCommun = () => {
-  const dispatch      = useAppDispatch();
-  const navigate      = useNavigate();
-  const { data: dossiers, loading: loadingDossiers } =
-    useSelector((state: RootState) => state.dossierCommun);
+  const dispatch = useAppDispatch();
+  const navigate  = useNavigate();
+
+  const {
+    listData: dossiers = [],
+    listMeta: meta = { total: 0, page: 1, limit: 10, totalPages: 1 },
+    listLoading: loadingDossiers,
+  } = useSelector((state: RootState) => state.dossierCommun);
+
+  const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearch = useDebouncedValue(searchTerm, 400);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+
+  // Revenir à la page 1 quand la recherche change
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearch]);
+
+  const loadList = () => {
+    dispatch(fetchDossiersCommunsPaginated({
+      page,
+      limit,
+      search: debouncedSearch || undefined,
+    }));
+  };
 
   useEffect(() => {
-    dispatch(fetchDossiersCommuns());
-  }, [dispatch]);
+    loadList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dispatch, page, limit, debouncedSearch]);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden px-8 pt-8 pb-8 bg-slate-100 h-full">
 
       {/* ── Header ── */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate('/')}
@@ -34,14 +59,30 @@ const PageResultatStatDossierCommun = () => {
           <h1 className="text-xl font-bold text-gray-900">Résultat Statistiques par Dossier Commun</h1>
         </div>
 
-        <button
-          onClick={() => dispatch(fetchDossiersCommuns())}
-          disabled={loadingDossiers}
-          title="Actualiser"
-          className="p-2.5 text-slate-500 bg-white border border-slate-200 rounded-xl hover:text-indigo-600 hover:border-indigo-100 hover:bg-indigo-50/50 transition-all disabled:opacity-50 shadow-sm"
-        >
-          <FiRefreshCw className={loadingDossiers ? 'animate-spin' : ''} size={15} />
-        </button>
+        <div className="flex items-center gap-3">
+          <div className="relative group min-w-[280px]">
+            <FiSearch
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors"
+              size={16}
+            />
+            <input
+              type="text"
+              placeholder="Rechercher un dossier..."
+              className="w-full pl-10 pr-4 py-2 text-sm bg-white border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-indigo-500/5 focus:border-indigo-500 transition-all shadow-sm"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <button
+            onClick={loadList}
+            disabled={loadingDossiers}
+            title="Actualiser"
+            className="p-2.5 text-slate-500 bg-white border border-slate-200 rounded-xl hover:text-indigo-600 hover:border-indigo-100 hover:bg-indigo-50/50 transition-all disabled:opacity-50 shadow-sm"
+          >
+            <FiRefreshCw className={loadingDossiers ? 'animate-spin' : ''} size={15} />
+          </button>
+        </div>
       </div>
 
       {/* ── Tableau ── */}
@@ -137,10 +178,19 @@ const PageResultatStatDossierCommun = () => {
           {!loadingDossiers && dossiers.length === 0 && (
             <div className="py-24 flex flex-col items-center justify-center">
               <FiFolder size={40} className="text-gray-200 mb-3" />
-              <p className="text-sm font-semibold text-gray-400">Aucun dossier trouvé</p>
+              <p className="text-sm font-semibold text-gray-400">
+                {searchTerm ? `Aucun dossier trouvé pour "${searchTerm}".` : 'Aucun dossier trouvé'}
+              </p>
             </div>
           )}
         </div>
+
+        <Pagination
+          meta={meta}
+          onPageChange={setPage}
+          onLimitChange={(l) => { setLimit(l); setPage(1); }}
+          itemLabel="dossier"
+        />
       </div>
     </div>
   );
