@@ -45,11 +45,11 @@ function LoginPage() {
         motDePasse: password.trim(),
       });
 
-      const { access_token, refresh_token } = loginResponse.data.data;
+      const { access_token } = loginResponse.data.data;
 
-      localStorage.setItem('token', access_token);
-      localStorage.setItem('refresh_token', refresh_token);
-
+      // access_token/refresh_token vivent désormais dans des cookies httpOnly posés par le
+      // serveur — plus besoin de les stocker nous-mêmes. access_token reste gardé en mémoire
+      // (Redux, non persisté) uniquement pour le handshake Socket.io.
       const userResponse = await axiosInstance.get('/users/me', {
         headers: { Authorization: `Bearer ${access_token}` }
       });

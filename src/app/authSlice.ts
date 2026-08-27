@@ -78,10 +78,14 @@ interface AuthState {
   user: User | null;
 }
 
+// `isAuthenticated`/`user` sont persistés via redux-persist (state normal). `token` en est
+// explicitement exclu (voir le transform dans app/store.ts) : il ne doit jamais être écrit sur
+// disque — seulement gardé en mémoire le temps de la session, requis pour l'auth du handshake
+// Socket.io. L'authentification HTTP repose sur le cookie httpOnly, pas sur ce token.
 const initialState: AuthState = {
-  isAuthenticated: !!localStorage.getItem('token'),
-  token: localStorage.getItem('token'),
-  user: JSON.parse(localStorage.getItem('user') || 'null'),
+  isAuthenticated: false,
+  token: null,
+  user: null,
 };
 
 const authSlice = createSlice({
@@ -92,17 +96,11 @@ const authSlice = createSlice({
       state.isAuthenticated = true;
       state.token = action.payload.token;
       state.user = action.payload.user;
-      localStorage.setItem('token', action.payload.token);
-      localStorage.setItem('user', JSON.stringify(action.payload.user));
     },
     logout: (state) => {
       state.isAuthenticated = false;
       state.token = null;
       state.user = null;
-      localStorage.removeItem('token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('token_expiresIn');
-      localStorage.removeItem('user');
     },
   },
 });

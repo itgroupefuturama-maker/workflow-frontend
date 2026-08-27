@@ -1,10 +1,10 @@
 import axios from 'axios';
-import { API_URL } from './env'; // Ton fallback pour .env
+import { API_PROXY_URL } from './env'; // Ton fallback pour .env
 import { store } from '../app/store'; // Importe ton Redux store (assure-toi que c'est exporté depuis app/store.ts)
 import { login, logout } from '../app/authSlice'; // Importe les actions Redux
 
 const axiosInstance = axios.create({
-  baseURL: API_URL,
+  baseURL: API_PROXY_URL,
   withCredentials: true, // envoie/reçoit les cookies httpOnly d'auth (access_token, refresh_token, csrf_token)
   headers: {
     'Content-Type': 'application/json',
@@ -30,6 +30,37 @@ const processQueue = (error: any = null) => {
 function getCookie(name: string): string | undefined {
   const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
   return match ? decodeURIComponent(match[1]) : undefined;
+}
+
+// Demande un nouvel access_token via le cookie httpOnly refresh_token (rotation gérée côté
+// serveur). Ne touche jamais au localStorage — le token vit uniquement en mémoire (Redux),
+// nécessaire pour l'auth du handshake Socket.io. Réutilisée par l'intercepteur 401 ci-dessous et
+// par ProtectedRoute.tsx (bootstrap au chargement, quand la page a été rechargée et que le token
+// n'est plus en mémoire).
+export async function refreshAccessToken(): Promise<string> {
+  // Appel axios "brut" (pas axiosInstance) : ne passe pas par l'intercepteur de requête qui pose
+  // X-CSRF-Token, donc on le fait ici à la main — POST /auth/refresh est une requête mutante,
+  // rejetée en 403 sans ce header dès qu'un cookie d'auth est présent.
+  const csrfToken = getCookie('csrf_token');
+  const refreshResponse = await axios.post(`${API_PROXY_URL}/auth/refresh`, {}, {
+    withCredentials: true,
+    headers: csrfToken ? { 'X-CSRF-Token': csrfToken } : undefined,
+  });
+
+  if (!refreshResponse.data.success) {
+    throw new Error('Refresh failed');
+  }
+
+  const { access_token } = refreshResponse.data.data;
+
+  store.dispatch(
+    login({
+      token: access_token,
+      user: store.getState().auth.user || { id: 'unknown', email: '', nom: '', prenom: '', pseudo: '', departement: '', dateCreation: '', dateActivation: '', dateDesactivation: '', status: '', profiles: [], autorisation: []},
+    })
+  );
+
+  return access_token;
 }
 
 const MUTATING_METHODS = ['post', 'put', 'patch', 'delete'];
@@ -78,40 +109,16 @@ axiosInstance.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        // Le refresh token vit désormais dans un cookie httpOnly (restreint au path /auth),
-        // envoyé automatiquement grâce à `withCredentials`. Le refresh token est tourné à
-        // chaque appel côté serveur — on ne le lit/stocke plus depuis le localStorage.
-        const refreshResponse = await axios.post(`${API_URL}/auth/refresh`, {}, {
-          withCredentials: true,
-        });
+        const access_token = await refreshAccessToken();
 
-        if (refreshResponse.data.success) {
-          const { access_token, refresh_token: newRefreshToken, expiresIn } = refreshResponse.data.data;
+        // Met à jour le header de la requête originale
+        originalRequest.headers.Authorization = `Bearer ${access_token}`;
 
-          // Met à jour Redux et localStorage avec le nouveau token
-          store.dispatch(
-            login({
-              token: access_token,
-              user: store.getState().auth.user || { id: 'unknown', email: '', nom: '', prenom: '', pseudo: '', departement: '', dateCreation: '', dateActivation: '', dateDesactivation: '', status: '', profiles: [], autorisation: []}, // Garde l'user existant
-            })
-          );
-          localStorage.setItem('token', access_token);
-          if (newRefreshToken) {
-            localStorage.setItem('refresh_token', newRefreshToken);
-          }
-          localStorage.setItem('token_expiresIn', expiresIn.toString());
+        // Traite la file d'attente
+        processQueue();
 
-          // Met à jour le header de la requête originale
-          originalRequest.headers.Authorization = `Bearer ${access_token}`;
-
-          // Traite la file d'attente
-          processQueue();
-
-          // Retry la requête originale
-          return axiosInstance(originalRequest);
-        } else {
-          throw new Error('Refresh failed');
-        }
+        // Retry la requête originale
+        return axiosInstance(originalRequest);
       } catch (refreshError) {
         console.error("ALERTE : Le refresh a échoué, tentative de déconnexion !", refreshError);
         processQueue(refreshError);

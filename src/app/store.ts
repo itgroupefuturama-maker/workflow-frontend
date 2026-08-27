@@ -9,7 +9,8 @@ import demandeClientAttributReducer from './front_office/parametre_specification
 
 import privilegesReducer from './back_office/privilegesSlice';
 import { combineReducers } from 'redux';
-import { persistStore, persistReducer } from 'redux-persist';
+import { persistStore, persistReducer, createTransform } from 'redux-persist';
+import type { PersistConfig } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
 import profilesReducer from './back_office/profilesSlice';
 import autorisationsReducer from './back_office/autorisationsSlice';
@@ -227,9 +228,29 @@ const rootReducer = (state: any, action: any) => {
   return appReducer(state, action);
 };
 
-const persistConfig = {
+// Le `token` d'auth ne doit jamais être écrit sur disque (localStorage), même via redux-persist —
+// sinon on ne fait que déplacer le problème XSS (voir PRODUCTION_CHECKLIST.md, "Sécurité des
+// tokens d'auth"). `user`/`isAuthenticated` restent persistés normalement pour éviter un flash
+// "déconnecté" au rechargement ; `token` est explicitement omis à l'écriture et remis à `null` à
+// la lecture (rehydratation) — il est ensuite regénéré en mémoire via /auth/refresh (cookie
+// httpOnly), voir ProtectedRoute.tsx.
+const authTransform = createTransform<any, any>(
+  (inboundState, key) => {
+    if (key !== 'auth') return inboundState;
+    const { token, ...rest } = inboundState;
+    return rest;
+  },
+  (outboundState, key) => {
+    if (key !== 'auth') return outboundState;
+    return { ...outboundState, token: null };
+  },
+  { whitelist: ['auth'] }
+);
+
+const persistConfig: PersistConfig<ReturnType<typeof appReducer>> = {
   key: 'root',
   storage,
+  transforms: [authTransform],
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);
