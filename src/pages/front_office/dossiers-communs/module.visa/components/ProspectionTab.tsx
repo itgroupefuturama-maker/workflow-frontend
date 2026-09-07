@@ -12,6 +12,9 @@ import { fetchVisaConsultats } from '../../../../../app/front_office/parametre_v
 import SuiviTabSection from '../../module.suivi/SuiviTabSection';
 import { useAuthorization } from '../../../../../hooks/useAuthorization';
 import Skeleton from '../../../../../components/ui/Skeleton';
+import Button from '../../../../../components/ui/Button';
+import CreateEnteteModal from '../../../../../components/modals/CreateEnteteModal';
+import { FiPlus } from 'react-icons/fi';
 
 const MODULE = 'visa';
 
@@ -42,6 +45,7 @@ const ProspectionTab = ({ prestationId }: Props) => {
 
   const { data: consultats } = useSelector((s: RootState) => s.visaConsultat);
   const [selectedConsulatId, setSelectedConsulatId] = useState<string>('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
   const [activeTabSousSection, setActiveTabSousSection] = useState('lignes');
@@ -55,12 +59,14 @@ const ProspectionTab = ({ prestationId }: Props) => {
 
   const handleCreate = async () => {
     if (!prestationId || !selectedConsulatId) return;
-    
+
     const result = await dispatch(
       createProspectionEntete({ prestationId, consulatId: selectedConsulatId })
     );
     if (createProspectionEntete.fulfilled.match(result)) {
       dispatch(fetchProspectionEntetes(prestationId));
+      setSelectedConsulatId('');
+      setShowCreateModal(false);
     }
   };
 
@@ -118,25 +124,9 @@ const ProspectionTab = ({ prestationId }: Props) => {
             {activeTabSousSection === 'lignes' && (
               <div className="flex items-center gap-3">
                 {canManageVisa && (
-                  <>
-                    <select
-                      value={selectedConsulatId}
-                      onChange={(e) => setSelectedConsulatId(e.target.value)}
-                      className="text-sm border border-gray-400 rounded-lg px-3 py-2"
-                    >
-                      <option value="">— Choisir un consulat —</option>
-                      {consultats.map((c) => (
-                        <option key={c.id} value={c.id}>{c.nom}</option>
-                      ))}
-                    </select>
-                    <button
-                      onClick={handleCreate}
-                      disabled={creating || !prestationId || !selectedConsulatId}
-                      className="px-4 py-2 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 disabled:opacity-60 flex items-center gap-2"
-                    >
-                      {creating ? '...' : '+ Nouvelle prospection'}
-                    </button>
-                  </>
+                  <Button variant="primary" icon={<FiPlus size={15} />} onClick={() => setShowCreateModal(true)}>
+                    Ajouter un en-tête
+                  </Button>
                 )}
 
                 <div className="w-px h-6 bg-gray-200" />
@@ -348,6 +338,30 @@ const ProspectionTab = ({ prestationId }: Props) => {
         </div>
 
         {/* Modals */}
+        <CreateEnteteModal
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          onSubmit={handleCreate}
+          loading={creating}
+          submitDisabled={!prestationId || !selectedConsulatId}
+        >
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 uppercase tracking-widest mb-2">
+              Consulat <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={selectedConsulatId}
+              onChange={(e) => setSelectedConsulatId(e.target.value)}
+              className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+              disabled={creating}
+            >
+              <option value="">— Choisir un consulat —</option>
+              {consultats.map((c) => (
+                <option key={c.id} value={c.id}>{c.nom}</option>
+              ))}
+            </select>
+          </div>
+        </CreateEnteteModal>
         {ligneModalEnteteId && (
           <CreateProspectionLigneModal
             enteteId={ligneModalEnteteId}

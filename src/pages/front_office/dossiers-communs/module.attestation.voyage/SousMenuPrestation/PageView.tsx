@@ -7,7 +7,7 @@ import { AttestationHeader } from './components.attestation/AttestationHeader';
 import TabContainer from '../../../../../layouts/TabContainer';
 import { clearCommentaireFournisseur, fetchLastCommentaireFournisseur } from '../../../../../app/front_office/fournisseurCommentaire/fournisseurCommentaireSlice';
 import FournisseurAlerteBadge from '../../../../../components/fournisseurAlerteBadget/FournisseurAlerteBadge';
-import { FiArrowRight, FiClock } from 'react-icons/fi';
+import { FiArrowRight, FiClock, FiPlus } from 'react-icons/fi';
 import DossierActifCard from '../../../../../components/CarteDossierActif/DossierActifCard';
 import SuiviTabSection from '../../module.suivi/SuiviTabSection';
 import BeneficiaireListPage from '../../module.client.beneficiaire/BeneficiaireListPageForClientFacture';
@@ -17,6 +17,8 @@ import type { PdfDesignId } from '../../module.pdf/pdf.generation/types/pdf-desi
 import { ModalAttestationPdfSelector } from './components.attestation/ModalAttestationPdfSelector';
 import { useAuthorization } from '../../../../../hooks/useAuthorization';
 import SkeletonTableRows from '../../../../../components/ui/SkeletonTableRows';
+import Button from '../../../../../components/ui/Button';
+import CreateEnteteModal from '../../../../../components/modals/CreateEnteteModal';
 
 const MODULE = 'attestation';
 
@@ -58,6 +60,7 @@ const PageViewAttestation = () => {
 
   // ─── États pour le commentaire fournisseur ────────────────────────────────
   const [selectedFournisseurId, setSelectedFournisseurId] = useState<string>('');
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const prixActif = attestationParams.find(item => item.status === 'ACTIF')?.prix;
   const [puAriary, setPuAriary] = useState<number | ''>('');
@@ -153,6 +156,7 @@ const PageViewAttestation = () => {
 
       setSelectedFournisseurId('');
       setPuAriary(prixActif ?? '');
+      setShowCreateModal(false);
     } catch (err: any) {
       setFormError(err.message || "Échec de la création");
     }
@@ -270,79 +274,9 @@ const PageViewAttestation = () => {
                   {/* Dans le canCreate*/}
                   {canCreate && activeTabSousSection === 'lignes' && (
                     <div className="flex gap-3 items-center p-2">
-
-                      {/* Sélecteur fournisseur */}
-                      <div className="relative">
-                        <select
-                          value={selectedFournisseurId}
-                          onChange={(e) => {
-                            const id = e.target.value;
-                            setSelectedFournisseurId(id);
-                            if (id) dispatch(fetchLastCommentaireFournisseur(id));
-                            else dispatch(clearCommentaireFournisseur());
-                          }}
-                          className="h-10 appearance-none border border-gray-300 rounded-xl pl-3 pr-9 text-sm
-                            text-slate-700 bg-white
-                            hover:border-gray-400
-                            focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400
-                            transition-colors cursor-pointer"
-                        >
-                          <option value="">— Choisir un fournisseur —</option>
-                          {fournisseurs.map((f) => (
-                            <option key={f.id} value={f.id}>{f.code} - {f.libelle}</option>
-                          ))}
-                        </select>
-                        <svg
-                          className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
-                          fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                        >
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </div>
-
-                      {/* Prix unitaire */}
-                      <div className="relative">
-                        <input
-                          type="number"
-                          min={0}
-                          readOnly
-                          placeholder="Prix unitaire"
-                          value={puAriary}
-                          onChange={(e) => setPuAriary(e.target.value === '' ? '' : Number(e.target.value))}
-                          className={`h-10 w-44 border rounded-xl pl-3 pr-9 text-sm font-semibold
-                            focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-colors ${
-                            puAriary !== prixActif && puAriary !== ''
-                              ? 'border-indigo-400 bg-indigo-50 text-indigo-700'
-                              : 'border-gray-300 bg-white text-slate-700 hover:border-gray-400'
-                          }`}
-                        />
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400 pointer-events-none">
-                          Ar
-                        </span>
-                      </div>
-
-                      {/* Créer entête */}
-                      <button
-                        onClick={handleCreate}
-                        disabled={loading || !selectedFournisseurId || !puAriary || isBlocked || !canManageAttestation}
-                        className={`h-10 inline-flex items-center gap-2 px-4 text-sm font-semibold rounded-xl transition-all ${
-                          loading || !selectedFournisseurId || !puAriary || isBlocked || !canManageAttestation
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                            : 'bg-indigo-600 text-white shadow-sm hover:bg-indigo-700 active:bg-indigo-800'
-                        }`}
-                      >
-                        {loading ? (
-                          <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                        ) : (
-                          <span className={`flex items-center justify-center w-4 h-4 rounded-md font-bold leading-none ${
-                            !selectedFournisseurId || !puAriary || isBlocked ? 'bg-gray-300 text-gray-500' : 'bg-white/20'
-                          }`}>
-                            +
-                          </span>
-                        )}
-                        {loading ? 'Création...' : 'Créer entête'}
-                      </button>
-
+                      <Button variant="primary" icon={<FiPlus size={15} />} onClick={() => setShowCreateModal(true)} disabled={!canManageAttestation}>
+                        Ajouter un en-tête
+                      </Button>
                       <FournisseurAlerteBadge />
                     </div>
                   )}
@@ -584,6 +518,72 @@ const PageViewAttestation = () => {
                     moduleName="attestation"
                   />
                 )}
+
+                <CreateEnteteModal
+                  isOpen={showCreateModal}
+                  onClose={() => setShowCreateModal(false)}
+                  onSubmit={handleCreate}
+                  loading={loading}
+                  submitDisabled={!selectedFournisseurId || !puAriary || isBlocked}
+                >
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 uppercase tracking-widest mb-2">
+                      Fournisseur <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={selectedFournisseurId}
+                        onChange={(e) => {
+                          const id = e.target.value;
+                          setSelectedFournisseurId(id);
+                          if (id) dispatch(fetchLastCommentaireFournisseur(id));
+                          else dispatch(clearCommentaireFournisseur());
+                        }}
+                        className="w-full h-10 appearance-none border border-gray-300 rounded-xl pl-3 pr-9 text-sm
+                          text-slate-700 bg-white
+                          hover:border-gray-400
+                          focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400
+                          transition-colors cursor-pointer"
+                      >
+                        <option value="">— Choisir un fournisseur —</option>
+                        {fournisseurs.map((f) => (
+                          <option key={f.id} value={f.id}>{f.code} - {f.libelle}</option>
+                        ))}
+                      </select>
+                      <svg
+                        className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+                        fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 uppercase tracking-widest mb-2">
+                      Prix unitaire <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        min={0}
+                        readOnly
+                        placeholder="Prix unitaire"
+                        value={puAriary}
+                        onChange={(e) => setPuAriary(e.target.value === '' ? '' : Number(e.target.value))}
+                        className={`w-full h-10 border rounded-xl pl-3 pr-9 text-sm font-semibold
+                          focus:outline-none focus:ring-2 focus:ring-indigo-400 transition-colors ${
+                          puAriary !== prixActif && puAriary !== ''
+                            ? 'border-indigo-400 bg-indigo-50 text-indigo-700'
+                            : 'border-gray-300 bg-white text-slate-700 hover:border-gray-400'
+                        }`}
+                      />
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400 pointer-events-none">
+                        Ar
+                      </span>
+                    </div>
+                  </div>
+                </CreateEnteteModal>
 
                 {/* Modal sélecteur PDF attestation */}
                 {showPdfModal && (

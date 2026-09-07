@@ -1,9 +1,11 @@
-import { FiX, FiEdit3, FiPlus, FiSave, FiPercent, FiAlertCircle } from 'react-icons/fi';
+import { FiX, FiEdit3, FiSave, FiPercent, FiAlertCircle } from 'react-icons/fi';
 import type { ProspectionEntete } from '../../app/front_office/prospectionsEntetesSlice';
 import type { AppDispatch, RootState } from '../../app/store';
 import { useDispatch, useSelector } from 'react-redux';
 import { clearCommentaireFournisseur, fetchLastCommentaireFournisseur } from '../../app/front_office/fournisseurCommentaire/fournisseurCommentaireSlice';
 import FournisseurAlerteBadge from '../fournisseurAlerteBadget/FournisseurAlerteBadge';
+import Button from '../ui/Button';
+import CreateEnteteModal from './CreateEnteteModal';
 
 interface ProspectionModalsProps {
   selectedEntete: ProspectionEntete | null;
@@ -205,30 +207,19 @@ export default function ProspectionModals({
 
             {/* Footer */}
             <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3 rounded-b-xl">
-              <button
-                onClick={onCloseEdit}
-                disabled={isSaving}
-                className="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
-              >
+              <Button variant="secondary" onClick={onCloseEdit} disabled={isSaving}>
                 Annuler
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="primary"
                 onClick={onSaveEdit}
                 disabled={isSaving}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition-all disabled:opacity-50 active:scale-95"
+                icon={isSaving
+                  ? <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  : <FiSave size={16} />}
               >
-                {isSaving ? (
-                  <>
-                    <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                    Sauvegarde...
-                  </>
-                ) : (
-                  <>
-                    <FiSave size={16} />
-                    Enregistrer
-                  </>
-                )}
-              </button>
+                {isSaving ? 'Sauvegarde...' : 'Enregistrer'}
+              </Button>
             </div>
           </div>
         </Backdrop>
@@ -237,140 +228,103 @@ export default function ProspectionModals({
       {/* ════════════════════════════════════════
           MODAL CRÉATION
       ════════════════════════════════════════ */}
-      {showCreateModal && (
-        <Backdrop>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl">
-            <ModalHeader
-              icon={<FiPlus size={18} />}
-              title="Nouvelle prospection"
-              subtitle="Ajouter un nouvel en-tête"
-              onClose={onCloseCreate}
-              disabled={isCreating}
-              accentColor="amber"
-            />
+      <CreateEnteteModal
+        isOpen={showCreateModal}
+        onClose={onCloseCreate}
+        onSubmit={onConfirmCreate}
+        loading={isCreating}
+        submitDisabled={!newEntete.fournisseurId || isBlocked}
+        submitLabel="Créer la prospection"
+      >
+        {/* Section Client facturé - mise en évidence */}
+        <ClientHighlight clientFacture={clientFacture} />
 
-            <div className="p-6 space-y-6">
-              {/* Section Client facturé - mise en évidence */}
-              <ClientHighlight clientFacture={clientFacture} />
-
-              {/* Section Fournisseur */}
-              <div>
-                <h4 className="text-sm font-semibold text-gray-900 mb-4">Sélectionner un fournisseur</h4>
-                <label className={labelCls}>
-                  Fournisseur <span className="text-red-500">*</span>
-                </label>
-                {fournisseursLoading ? (
-                  <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 rounded-lg border border-gray-300">
-                    <span className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-                    <span className="text-sm text-gray-500">Chargement des fournisseurs...</span>
-                  </div>
-                ) : (
-                  <select
-                    value={newEntete.fournisseurId}
-                    onChange={(e) => {
-                      const id = e.target.value;
-                      setNewEntete({ ...newEntete, fournisseurId: id });
-                      if (id) dispatch(fetchLastCommentaireFournisseur(id));
-                      else dispatch(clearCommentaireFournisseur());
-                    }}
-                    className={inputCls}
-                    required
-                    disabled={isCreating}
-                  >
-                    <option value="">— Choisir un fournisseur —</option>
-                    {fournisseurs.map((f) => (
-                      <option key={f.id} value={f.id}>
-                        {f.code} — {f.libelle}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-
-              {/* Section Crédit et Type de vol */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={labelCls}>Crédit</label>
-                  <select
-                    value={newEntete.credit}
-                    onChange={(e) => setNewEntete({ ...newEntete, credit: e.target.value })}
-                    className={inputCls}
-                    disabled={isCreating}
-                  >
-                    {/* Le crédit par défaut du client est la première option */}
-                    {clientFacture?.creditdefault && (
-                      <option value={clientFacture.creditdefault} className="font-semibold">
-                        ✓ {clientFacture.creditdefault} (Recommandé)
-                      </option>
-                    )}
-                    <option value="CREDIT_0">Crédit 0 (Au comptant)</option>
-                    <option value="CREDIT_15">Crédit 15 jours</option>
-                    <option value="CREDIT_30">Crédit 30 jours</option>
-                    <option value="CREDIT_60">Crédit 60 jours</option>
-                    <option value="CREDIT_90">Crédit 90 jours</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className={labelCls}>Type de vol</label>
-                  <select
-                    value={newEntete.typeVol}
-                    onChange={(e) => setNewEntete({ ...newEntete, typeVol: e.target.value })}
-                    className={inputCls}
-                    disabled={isCreating}
-                  >
-                    <option value="">— Choisir un type —</option>
-                    <option value="NATIONAL">Vol national</option>
-                    <option value="LONG_COURRIER">Long courrier</option>
-                    <option value="REGIONAL">Vol régional</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Message d'alerte si bloqué */}
-              {isBlocked && (
-                <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-lg p-4">
-                  <FiAlertCircle size={18} className="text-red-600 flex-shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-semibold text-red-900 mb-0.5">Fournisseur bloqué</p>
-                    <p className="text-xs text-red-700">
-                      Ce fournisseur présente une alerte de niveau élevé. La création est désactivée pour cette prospection.
-                    </p>
-                  </div>
-                </div>
-              )}
+        {/* Section Fournisseur */}
+        <div>
+          <label className={labelCls}>
+            Fournisseur <span className="text-red-500">*</span>
+          </label>
+          {fournisseursLoading ? (
+            <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 rounded-lg border border-gray-300">
+              <span className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+              <span className="text-sm text-gray-500">Chargement des fournisseurs...</span>
             </div>
+          ) : (
+            <select
+              value={newEntete.fournisseurId}
+              onChange={(e) => {
+                const id = e.target.value;
+                setNewEntete({ ...newEntete, fournisseurId: id });
+                if (id) dispatch(fetchLastCommentaireFournisseur(id));
+                else dispatch(clearCommentaireFournisseur());
+              }}
+              className={inputCls}
+              required
+              disabled={isCreating}
+            >
+              <option value="">— Choisir un fournisseur —</option>
+              {fournisseurs.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.code} — {f.libelle}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
 
-            {/* Footer */}
-            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3 rounded-b-xl">
-              <button
-                onClick={onCloseCreate}
-                disabled={isCreating}
-                className="px-5 py-2.5 bg-white border border-gray-300 text-gray-700 text-sm font-semibold rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={onConfirmCreate}
-                disabled={isCreating || !newEntete.fournisseurId || isBlocked}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
-              >
-                {isCreating ? (
-                  <>
-                    <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                    Création...
-                  </>
-                ) : (
-                  <>
-                    <FiPlus size={16} />
-                    Créer la prospection
-                  </>
-                )}
-              </button>
+        {/* Section Crédit et Type de vol */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className={labelCls}>Crédit</label>
+            <select
+              value={newEntete.credit}
+              onChange={(e) => setNewEntete({ ...newEntete, credit: e.target.value })}
+              className={inputCls}
+              disabled={isCreating}
+            >
+              {/* Le crédit par défaut du client est la première option */}
+              {clientFacture?.creditdefault && (
+                <option value={clientFacture.creditdefault} className="font-semibold">
+                  ✓ {clientFacture.creditdefault} (Recommandé)
+                </option>
+              )}
+              <option value="CREDIT_0">Crédit 0 (Au comptant)</option>
+              <option value="CREDIT_15">Crédit 15 jours</option>
+              <option value="CREDIT_30">Crédit 30 jours</option>
+              <option value="CREDIT_60">Crédit 60 jours</option>
+              <option value="CREDIT_90">Crédit 90 jours</option>
+            </select>
+          </div>
+
+          <div>
+            <label className={labelCls}>Type de vol</label>
+            <select
+              value={newEntete.typeVol}
+              onChange={(e) => setNewEntete({ ...newEntete, typeVol: e.target.value })}
+              className={inputCls}
+              disabled={isCreating}
+            >
+              <option value="">— Choisir un type —</option>
+              <option value="NATIONAL">Vol national</option>
+              <option value="LONG_COURRIER">Long courrier</option>
+              <option value="REGIONAL">Vol régional</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Message d'alerte si bloqué */}
+        {isBlocked && (
+          <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-lg p-4">
+            <FiAlertCircle size={18} className="text-red-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold text-red-900 mb-0.5">Fournisseur bloqué</p>
+              <p className="text-xs text-red-700">
+                Ce fournisseur présente une alerte de niveau élevé. La création est désactivée pour cette prospection.
+              </p>
             </div>
           </div>
-        </Backdrop>
-      )}
+        )}
+      </CreateEnteteModal>
 
       <FournisseurAlerteBadge />
     </>

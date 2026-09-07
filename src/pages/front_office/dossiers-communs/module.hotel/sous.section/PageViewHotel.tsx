@@ -23,10 +23,11 @@ import { useHotelPdf } from '../../module.pdf/pdf.generation/hooks/usePdfGenerat
 import type { PdfAudience, PdfDesignId } from '../../module.pdf/pdf.generation/types/pdf-design.types';
 import { ModalHotelPdfSelector } from '../components/ModalHotelPdfSelector';
 import { selectServicesByType } from '../../../../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
-import ConfirmDialog from '../../../../../components/ConfirmDialog';
 import { toast } from '../../../../../components/Toast/toast';
 import { useAuthorization } from '../../../../../hooks/useAuthorization';
 import SkeletonTableRows from '../../../../../components/ui/SkeletonTableRows';
+import Button from '../../../../../components/ui/Button';
+import CreateEnteteModal from '../../../../../components/modals/CreateEnteteModal';
 
 const MODULE = 'hotel';
 
@@ -315,43 +316,12 @@ const PageViewHotel = () => {
                     </button>
                   </nav>
 
-                  {/* Sélection fournisseur + création, alignés à droite */}
+                  {/* Création d'en-tête, alignée à droite */}
                   {canManageHotel && (
                     <div className="flex items-center gap-3">
-                      <div className="w-72">
-                        <select
-                          value={selectedFournisseurId}
-                          onChange={(e) => {
-                            const id = e.target.value;
-                            setSelectedFournisseurId(id);
-                            if (id) {
-                              dispatch(fetchLastCommentaireFournisseur(id));
-                            } else {
-                              dispatch(clearCommentaireFournisseur());
-                            }
-                          }}
-                          className="w-full border border-neutral-300 rounded-md px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent transition-all"
-                          disabled={creating}
-                        >
-                          <option value="">Sélectionner un fournisseur</option>
-                          {fournisseurs.map((f: any) => (
-                            <option key={f.id} value={f.id}>
-                              {f.code} - {f.libelle}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                      <button
-                        onClick={() => setShowCreateConfirm(true)}
-                        disabled={creating || !selectedFournisseurId || isBlocked}
-                        className={`shrink-0 px-6 py-2.5 rounded-md text-sm font-medium transition-all ${
-                          creating || !selectedFournisseurId || isBlocked
-                            ? 'bg-neutral-200 text-neutral-400 cursor-not-allowed'
-                            : 'bg-neutral-900 text-white hover:bg-neutral-800 active:scale-95'
-                        }`}
-                      >
-                        {creating ? 'Création en cours...' : 'Créer une en-tête'}
-                      </button>
+                      <Button variant="primary" icon={<FiPlus size={15} />} onClick={() => setShowCreateConfirm(true)}>
+                        Ajouter un en-tête
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -768,19 +738,43 @@ const PageViewHotel = () => {
                   />
                 )}
 
-                <ConfirmDialog
+                <CreateEnteteModal
                   isOpen={showCreateConfirm}
-                  title="Créer une nouvelle en-tête ?"
-                  message={`Une en-tête de benchmarking sera créée pour le fournisseur "${fournisseurs.find((f: any) => f.id === selectedFournisseurId)?.libelle ?? ''}".`}
-                  confirmLabel="Créer"
-                  tone="primary"
-                  isLoading={creating}
                   onClose={() => setShowCreateConfirm(false)}
-                  onConfirm={() => {
+                  onSubmit={() => {
                     handleCreate();
                     setShowCreateConfirm(false);
                   }}
-                />
+                  loading={creating}
+                  submitDisabled={!selectedFournisseurId || isBlocked}
+                >
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-700 uppercase tracking-widest mb-2">
+                      Fournisseur <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={selectedFournisseurId}
+                      onChange={(e) => {
+                        const id = e.target.value;
+                        setSelectedFournisseurId(id);
+                        if (id) {
+                          dispatch(fetchLastCommentaireFournisseur(id));
+                        } else {
+                          dispatch(clearCommentaireFournisseur());
+                        }
+                      }}
+                      className="w-full border border-neutral-300 rounded-md px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-neutral-900 focus:border-transparent transition-all"
+                      disabled={creating}
+                    >
+                      <option value="">Sélectionner un fournisseur</option>
+                      {fournisseurs.map((f: any) => (
+                        <option key={f.id} value={f.id}>
+                          {f.code} - {f.libelle}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </CreateEnteteModal>
 
               </div>
             </div> 

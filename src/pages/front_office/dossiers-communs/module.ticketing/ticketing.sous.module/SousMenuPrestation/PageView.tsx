@@ -12,6 +12,7 @@ import SuiviTabSection from '../../../module.suivi/SuiviTabSection';
 import BeneficiaireListPage from '../../../module.client.beneficiaire/BeneficiaireListPageForClientFacture';
 import { useAuthorization } from '../../../../../../hooks/useAuthorization';
 import SkeletonTableRows from '../../../../../../components/ui/SkeletonTableRows';
+import Button from '../../../../../../components/ui/Button';
 
 const MODULE = 'ticketing';
 
@@ -131,6 +132,7 @@ export default function PageView() {
                       Suivi
                     </button>
                   </nav>
+                  {/* Bouton création en-tete */}
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setSortEntetes(o => o === 'desc' ? 'asc' : 'desc')}
@@ -143,12 +145,9 @@ export default function PageView() {
                       {sortEntetes === 'desc' ? 'Plus récent' : 'Plus ancien'}
                     </button>
                     {canManageTicketing && (
-                      <button
-                        onClick={openCreateModal}
-                        className="shrink-0 inline-flex items-center gap-2 bg-linear-to-r from-indigo-500 to-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm hover:from-indigo-600 hover:to-indigo-700 transition-all"
-                      >
-                        <FiPlus size={15} /> Ajouter un en-tête
-                      </button>
+                      <Button variant="primary" icon={<FiPlus size={15} />} onClick={openCreateModal}>
+                        Ajouter un en-tête
+                      </Button>
                     )}
                   </div>
                 </div>
@@ -189,12 +188,9 @@ export default function PageView() {
                         <p className="text-base font-semibold text-slate-500 mb-1">Aucun en-tête de prospection</p>
                         <p className="text-sm text-slate-400 mb-4">Cliquez sur le bouton ci-dessus pour commencer.</p>
                         {canManageTicketing && (
-                          <button
-                            onClick={openCreateModal}
-                            className="inline-flex items-center gap-2 bg-linear-to-r from-indigo-500 to-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium shadow-sm"
-                          >
-                            <FiPlus size={15} /> Ajouter un en-tête
-                          </button>
+                          <Button variant="primary" icon={<FiPlus size={15} />} onClick={openCreateModal}>
+                            Ajouter un en-tête
+                          </Button>
                         )}
                       </div>
                     ) : (
@@ -219,9 +215,7 @@ export default function PageView() {
                                   return sortEntetes === 'desc' ? dateB - dateA : dateA - dateB;
                                 })
                                 .map((entete) => (
-                                <tr key={entete.id} className="hover:bg-amber-50/30 transition-colors group cursor-pointer"
-                                  onClick={() => navigate(`/dossiers-communs/ticketing/pages/prospection/${entete.id}`)}
-                                  >
+                                <tr key={entete.id} className="hover:bg-amber-50/30 transition-colors group">
                                   <td className="px-5 py-3.5 whitespace-nowrap">
                                     <span className="inline-flex items-center gap-1.5 text-sm font-bold text-slate-800">
                                       <FiHash size={12} className="text-slate-400" />
@@ -263,7 +257,7 @@ export default function PageView() {
                                         </button>
                                       )}
                                       <button
-                                        
+                                        onClick={() => navigate(`/dossiers-communs/ticketing/pages/prospection/${entete.id}`)}
                                         className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded-lg transition-colors"
                                       >
                                         Détail <FiArrowRight size={11} />

@@ -18,6 +18,7 @@ import { Badge, Td, Th } from './atoms';
 import SkeletonTableRows from '../../../../../components/ui/SkeletonTableRows';
 import { ArrowRight, ChevronDown, ClipboardCheck, FileText, Plus } from 'lucide-react';
 import { useAuthorization } from '../../../../../hooks/useAuthorization';
+import Button from '../../../../../components/ui/Button';
 
 const MODULE = 'assurance';
 
@@ -59,41 +60,23 @@ const AssuranceProspectionListe = () => {
         <div className="shrink-0 px-4 bg-slate-200 rounded-t-xl">
           <div className="flex items-center justify-between">
             <AssuranceHeader numeroassurance={prestationId} nomPassager={''} navigate={navigate} isDetail={false} isProspection={true} isDevis={false} />
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setSortOrder(o => o === 'desc' ? 'asc' : 'desc')}
-                className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-all"
-              >
-                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} className={`transition-transform duration-200 ${sortOrder === 'asc' ? 'rotate-180' : ''}`}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h13M3 8h9M3 12h5m10-4v12m0 0l-4-4m4 4l4-4" />
-                </svg>
-                {sortOrder === 'desc' ? 'Plus récent' : 'Plus ancien'}
-              </button>
-              {canManageAssurance && (
-                <button
-                  onClick={() => setOpenCreate(true)}
-                  disabled={!prestationId}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold rounded-lg transition shadow-sm"
-                >
-                  + Nouvelle prospection
-                </button>
-              )}
-            </div>
+            
           </div>
         </div>
 
         {/* ── Tabs sous-section ── */}
         <div className="px-4 border-b border-neutral-50 bg-slate-200 rounded-b-xl">
           <DossierActifCard gradient="from-green-400 via-green-400 to-green-500" />
-          <nav className="flex p-1 rounded-lg mb-2">
+          <div className='flex justify-between'>
+            <nav className="flex p-1 rounded-lg mb-2">
             {[{ id: 'lignes', label: 'Prospections assurance', count: list.length }, { id: 'suivi', label: 'Suivi' }].map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTabSousSection(tab.id)}
-                className={`px-4 py-1.5 text-sm font-medium rounded-sm transition-all duration-200 ${
+                className={`px-4 py-1.5 mr-3 text-sm font-medium rounded-sm transition-all duration-200  ${
                   activeTabSousSection === tab.id
-                    ? 'bg-white text-slate-800 shadow-sm ring-1 ring-slate-200/50'
-                    : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+                    ? 'bg-white text-slate-800 shadow-sm ring-1 ring-slate-200/50 '
+                    : 'text-slate-500 hover:text-slate-700 hover:bg-slate-300 bg-slate-300'
                 }`}
               >
                 {tab.label}
@@ -105,6 +88,23 @@ const AssuranceProspectionListe = () => {
               </button>
             ))}
           </nav>
+          <div className="flex items-center gap-2">
+              <button
+                onClick={() => setSortOrder(o => o === 'desc' ? 'asc' : 'desc')}
+                className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-all"
+              >
+                <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} className={`transition-transform duration-200 ${sortOrder === 'asc' ? 'rotate-180' : ''}`}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 4h13M3 8h9M3 12h5m10-4v12m0 0l-4-4m4 4l4-4" />
+                </svg>
+                {sortOrder === 'desc' ? 'Plus récent' : 'Plus ancien'}
+              </button>
+              {canManageAssurance && (
+                <Button variant="primary" size="sm" icon={<Plus size={15} />} onClick={() => setOpenCreate(true)} disabled={!prestationId}>
+                  Ajouter un en-tête
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* ── Contenu ── */}
