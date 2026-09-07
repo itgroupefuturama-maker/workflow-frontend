@@ -37,6 +37,7 @@ import { billetDetailItems } from './components.billet/utils/ticketingHeaderItem
 import PageSkeleton from '../../../../../components/ui/PageSkeleton';
 import SuiviTabSection from '../../module.suivi/SuiviTabSection';
 import { toast } from '../../../../../components/Toast/toast';
+import Button from '../../../../../components/ui/Button';
 
 const Billet = () => {
   const navigate = useNavigate();
@@ -359,12 +360,9 @@ const Billet = () => {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button
-              onClick={() => navigate(-1)}
-              className="px-6 py-2.5 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors font-medium"
-            >
+            <Button variant="ghost" onClick={() => navigate(-1)}>
               Retour
-            </button>
+            </Button>
           </div>
         </div>
       </div>

@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../../../../../app/store';
+import Button from '../../../../../../components/ui/Button';
 
 import {
   createCommentaire,
@@ -284,12 +285,9 @@ const SuiviTabContent: React.FC<SuiviTabContentProps> = ({
                   placeholder="Ajouter un commentaire..." 
                   className="flex-1 px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                 />
-                <button 
-                  onClick={handleCreateComment} 
-                  className="px-6 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 active:bg-blue-800 transition-colors shadow-sm hover:shadow-md"
-                >
+                <Button variant="primary" onClick={handleCreateComment}>
                   Ajouter
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -440,12 +438,9 @@ const SuiviTabContent: React.FC<SuiviTabContentProps> = ({
                     onChange={(e) => setNewMoment(e.target.value)} 
                     className="flex-1 px-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent outline-none transition-all" 
                   />
-                  <button 
-                    onClick={handleCreateRappel} 
-                    className="px-6 py-2.5 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 active:bg-green-800 transition-colors shadow-sm hover:shadow-md whitespace-nowrap"
-                  >
+                  <Button variant="primary" onClick={handleCreateRappel} className="whitespace-nowrap">
                     Ajouter
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>

@@ -13,6 +13,7 @@ import RaisonAnnulationListe from '../../../module.parametre/RaisonAnnulation/Ra
 import GestionPrixListe from '../../../module.attestation.voyage/SousMenuPrestation/GestionPrixListe';
 import ServiceSpecifiqueListe from '../../../module.parametre/ServiceSpecifique/ServiceSpecifiqueListe';
 import { API_URL } from '../../../../../../service/env';
+import Button from '../../../../../../components/ui/Button';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -179,13 +180,10 @@ export default function ParametreView() {
                           placeholder="Rechercher un pays"
                           className="w-full text-xs px-3 py-2 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-300"
                         />
-                        <button
-                          onClick={() => setModalPaysOpen(true)}
-                          className="w-full inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-2 rounded-lg shadow-sm transition-all duration-200"
-                        >
+                        <Button variant="primary" size="sm" onClick={() => setModalPaysOpen(true)} className="w-full justify-center">
                           <span className="text-sm leading-none">+</span>
                           Nouveau pays
-                        </button>
+                        </Button>
                       </div>
                       <div className="overflow-y-auto max-h-[560px]">
                         {paysState.loading ? (
@@ -274,18 +272,19 @@ export default function ParametreView() {
                                 </button>
                               ))}
                             </div>
-                            <button
+                            <Button
+                              variant="primary"
+                              size="sm"
                               onClick={() => {
                                 // "Associer une exigence" réutilise la modal Association existante,
                                 // "Ajouter une destination" réutilise la modal Destination existante.
                                 if (activePaysTab === 'destinations') setModalDestinationOpen(true);
                                 else setModalAssociationOpen(true);
                               }}
-                              className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg shadow-sm transition-all duration-200"
                             >
                               <span className="text-sm leading-none">+</span>
                               {activePaysTab === 'destinations' ? 'Ajouter une destination' : 'Associer une exigence'}
-                            </button>
+                            </Button>
                           </div>
 
                           <div className="p-6">
@@ -349,13 +348,10 @@ export default function ParametreView() {
                             {exigenceState.items.length} type{exigenceState.items.length > 1 ? 's' : ''}
                           </p>
                         </div>
-                        <button
-                          onClick={() => setModalExigenceOpen(true)}
-                          className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg shadow-sm transition-all duration-200"
-                        >
+                        <Button variant="primary" size="sm" onClick={() => setModalExigenceOpen(true)}>
                           <span className="text-sm leading-none">+</span>
                           Nouvelle exigence
-                        </button>
+                        </Button>
                       </div>
                       <table className="min-w-full">
                         <thead>
@@ -390,13 +386,10 @@ export default function ParametreView() {
                             {destinationState.items.length} destination{destinationState.items.length > 1 ? 's' : ''}
                           </p>
                         </div>
-                        <button
-                          onClick={() => setModalDestinationOpen(true)}
-                          className="inline-flex items-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium px-3 py-1.5 rounded-lg shadow-sm transition-all duration-200"
-                        >
+                        <Button variant="primary" size="sm" onClick={() => setModalDestinationOpen(true)}>
                           <span className="text-sm leading-none">+</span>
                           Nouvelle destination
-                        </button>
+                        </Button>
                       </div>
                       <table className="min-w-full">
                         <thead>

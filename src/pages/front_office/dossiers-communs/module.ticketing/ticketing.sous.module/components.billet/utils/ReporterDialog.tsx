@@ -1,6 +1,7 @@
 // ReporterDialog.tsx
 import { useState } from 'react';
 import type { BilletLigne } from '../../../../../../../app/front_office/billetSlice';
+import Button from '../../../../../../../components/ui/Button';
 
 interface ReporterDialogProps {
   billet: BilletLigne['billet'][0] | null;
@@ -54,6 +55,7 @@ export const ReporterDialog: React.FC<ReporterDialogProps> = ({ billet, onConfir
             </p>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="text-slate-400 hover:text-slate-600 transition-colors mt-0.5"
           >
@@ -98,25 +100,12 @@ export const ReporterDialog: React.FC<ReporterDialogProps> = ({ billet, onConfir
 
         {/* Actions */}
         <div className="flex gap-2.5 px-5 pb-5">
-          <button
-            onClick={onClose}
-            className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200
-                       text-[13px] font-medium text-slate-600
-                       hover:bg-slate-50 transition-colors"
-          >
+          <Button variant="secondary" onClick={onClose} className="flex-1 justify-center">
             Annuler
-          </button>
-          <button
-            onClick={handleConfirm}
-            disabled={!date}
-            className="flex-1 px-4 py-2.5 rounded-xl
-                       text-[13px] font-semibold text-white
-                       bg-amber-500 hover:bg-amber-600 active:scale-[0.98]
-                       disabled:opacity-40 disabled:cursor-not-allowed
-                       transition-all"
-          >
+          </Button>
+          <Button variant="warning" onClick={handleConfirm} disabled={!date} className="flex-1 justify-center">
             Confirmer le report
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { FiX, FiSave } from 'react-icons/fi';
 import { toast } from '../../../../../components/Toast/toast';
+import Button from '../../../../../components/ui/Button';
 
 interface AddProspectionLigneModalProps {
   isOpen: boolean;
@@ -834,30 +835,19 @@ export default function AddProspectionLigneModal({
 
         {/* ── Footer ── */}
         <div className="bg-white border-t border-gray-200 px-6 py-4 flex justify-end items-center gap-3 shrink-0">
-          <button
-            onClick={onClose}
-            disabled={isSaving}
-            className="px-5 py-2.5 border border-gray-200 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
-          >
+          <Button variant="secondary" onClick={onClose} disabled={isSaving}>
             Annuler
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="primary"
             onClick={handleSubmit}
             disabled={isSaving}
-            className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            icon={isSaving
+              ? <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+              : <FiSave size={16} />}
           >
-            {isSaving ? (
-              <>
-                <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                Enregistrement...
-              </>
-            ) : (
-              <>
-                <FiSave size={16} />
-                Enregistrer la ligne
-              </>
-            )}
-          </button>
+            {isSaving ? 'Enregistrement...' : 'Enregistrer la ligne'}
+          </Button>
         </div>
       </div>
     </div>

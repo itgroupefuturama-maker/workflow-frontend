@@ -13,6 +13,7 @@ import { API_URL } from '../../../../../service/env';
 import { TicketingHeader } from './components.billet/TicketingHeader';
 import { devisListeItems } from './components.billet/utils/ticketingHeaderItems';
 import { PdfDownloadButton } from '../../module.pdf/pdf.generation/components/PdfDownloadButton';
+import Button from '../../../../../components/ui/Button';
 import { toast } from '../../../../../components/Toast/toast';
 import SkeletonTableRows from '../../../../../components/ui/SkeletonTableRows';
 import { useAuthorization } from '../../../../../hooks/useAuthorization';
@@ -689,7 +690,8 @@ export default function Devis () {
                   </div>
 
                   <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
-                    <button
+                    <Button
+                      variant="secondary"
                       onClick={() => {
                         setShowValidateModal(false);
                         setPendingValidateId(null);
@@ -697,27 +699,19 @@ export default function Devis () {
                         setPreuveClientPreview(null);
                       }}
                       disabled={validateLoading}
-                      className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
                     >
                       Annuler
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                      variant="primary"
                       onClick={handleConfirmValidate}
                       disabled={validateLoading}
-                      className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                      icon={validateLoading
+                        ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        : <FiCheck size={16} />}
                     >
-                      {validateLoading ? (
-                        <>
-                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          En cours...
-                        </>
-                      ) : (
-                        <>
-                          <FiCheck size={16} />
-                          Confirmer l'approbation
-                        </>
-                      )}
-                    </button>
+                      {validateLoading ? 'En cours...' : "Confirmer l'approbation"}
+                    </Button>
                   </div>
                 </div>
               </div>
