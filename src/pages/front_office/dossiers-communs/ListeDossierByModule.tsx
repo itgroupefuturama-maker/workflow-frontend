@@ -1,11 +1,17 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchDossiersCommunsPaginated, setCurrentClientFactureId, type DossierCommun } from '../../../app/front_office/dossierCommunSlice';
 import type { RootState, AppDispatch } from '../../../app/store';
-import {FiFolder, FiSearch, FiRefreshCw, FiArrowLeft, FiCalendar, FiUser} from 'react-icons/fi';
+import {FiFolder, FiSearch, FiRefreshCw, FiArrowLeft, FiCalendar, FiUser, FiCheck} from 'react-icons/fi';
 import { useDebouncedValue } from '../../../hooks/useDebouncedValue';
 import Pagination from '../../../components/Pagination';
+
+const STATUT_OPTIONS = [
+  { value: '', label: 'Tous les statuts' },
+  { value: 'CREER', label: 'Actif' },
+  { value: 'ANNULER', label: 'Annulé' },
+];
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -24,17 +30,35 @@ function ListeDossierByModule() {
   const debouncedSearch = useDebouncedValue(searchTerm, 400);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
+  const [statutFilter, setStatutFilter] = useState("");
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+  const [showFilterMenu, setShowFilterMenu] = useState(false);
+  const [showSortMenu, setShowSortMenu] = useState(false);
+  const filterMenuRef = useRef<HTMLDivElement>(null);
+  const sortMenuRef = useRef<HTMLDivElement>(null);
 
-  // Revenir à la page 1 quand la recherche change
+  // Ferme les menus Filtrer/Trier au clic en dehors
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (filterMenuRef.current && !filterMenuRef.current.contains(target)) setShowFilterMenu(false);
+      if (sortMenuRef.current && !sortMenuRef.current.contains(target)) setShowSortMenu(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // Revenir à la page 1 quand la recherche ou le filtre changent
   useEffect(() => {
     setPage(1);
-  }, [debouncedSearch]);
+  }, [debouncedSearch, statutFilter]);
 
   const loadList = () => {
     dispatch(fetchDossiersCommunsPaginated({
       page,
       limit,
       search: debouncedSearch || undefined,
+      statut: statutFilter || undefined,
       module,
     }));
   };
@@ -42,7 +66,14 @@ function ListeDossierByModule() {
   useEffect(() => {
     loadList();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dispatch, page, limit, debouncedSearch, module]);
+  }, [dispatch, page, limit, debouncedSearch, statutFilter, module]);
+
+  // Tri appliqué sur la page courante (la liste est déjà paginée côté serveur)
+  const sortedDossiers = [...filteredDossiers].sort((a, b) => {
+    const dateA = new Date(a.createdAt).getTime();
+    const dateB = new Date(b.createdAt).getTime();
+    return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+  });
 
   const handleRefresh = () => {
     loadList();
@@ -123,19 +154,67 @@ function ListeDossierByModule() {
                   <FiRefreshCw className={loadingDossiers ? 'animate-spin' : ''} size={16} />
                 </button>
 
-                <button className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all shadow-sm">
-                  <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                  </svg>
-                  Filtrer
-                </button>
+                <div className="relative" ref={filterMenuRef}>
+                  <button
+                    onClick={() => { setShowFilterMenu(o => !o); setShowSortMenu(false); }}
+                    className={`flex items-center gap-2 px-4 py-2 text-sm font-bold rounded-xl border transition-all shadow-sm ${
+                      statutFilter
+                        ? 'text-indigo-600 bg-indigo-50 border-indigo-200'
+                        : 'text-slate-600 bg-white border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    <svg className={`w-4 h-4 ${statutFilter ? 'text-indigo-500' : 'text-slate-400'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                    </svg>
+                    Filtrer
+                    {statutFilter && (
+                      <span className="text-[10px] font-bold bg-indigo-600 text-white px-1.5 py-0.5 rounded-full">1</span>
+                    )}
+                  </button>
+                  {showFilterMenu && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-lg py-1.5 z-20">
+                      {STATUT_OPTIONS.map(opt => (
+                        <button
+                          key={opt.value}
+                          onClick={() => { setStatutFilter(opt.value); setShowFilterMenu(false); }}
+                          className="w-full flex items-center justify-between gap-2 px-3.5 py-2 text-sm text-left text-slate-700 hover:bg-slate-50 transition-colors"
+                        >
+                          {opt.label}
+                          {statutFilter === opt.value && <FiCheck size={14} className="text-indigo-600" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
-                <button className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all shadow-sm">
-                  <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
-                  </svg>
-                  Trier
-                </button>
+                <div className="relative" ref={sortMenuRef}>
+                  <button
+                    onClick={() => { setShowSortMenu(o => !o); setShowFilterMenu(false); }}
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-slate-600 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-all shadow-sm"
+                  >
+                    <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4h13M3 8h9m-9 4h6m4 0l4-4m0 0l4 4m-4-4v12" />
+                    </svg>
+                    Trier
+                  </button>
+                  {showSortMenu && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-lg py-1.5 z-20">
+                      {([
+                        { value: 'desc', label: 'Date création — Plus récent' },
+                        { value: 'asc', label: 'Date création — Plus ancien' },
+                      ] as const).map(opt => (
+                        <button
+                          key={opt.value}
+                          onClick={() => { setSortOrder(opt.value); setShowSortMenu(false); }}
+                          className="w-full flex items-center justify-between gap-2 px-3.5 py-2 text-sm text-left text-slate-700 hover:bg-slate-50 transition-colors"
+                        >
+                          {opt.label}
+                          {sortOrder === opt.value && <FiCheck size={14} className="text-indigo-600" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -170,7 +249,7 @@ function ListeDossierByModule() {
                         </td>
                       </tr>
                     ))
-                  ) : filteredDossiers.map((dossier) => (
+                  ) : sortedDossiers.map((dossier) => (
                     <tr
                       key={dossier.id}
                       onClick={() => handleOpenDossier(dossier)}
