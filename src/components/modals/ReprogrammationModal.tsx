@@ -6,7 +6,7 @@ import type { AppDispatch, RootState } from '../../app/store';
 import { fetchClientBeneficiaireInfos } from '../../app/portail_client/clientBeneficiaireInfosSlice';
 import type { BilletLigne, ServiceSpecifique } from '../../app/front_office/billetSlice';
 import { fetchRaisonsAnnulation } from '../../app/front_office/parametre_ticketing/raisonAnnulationSlice';
-import type { ServicePreference } from '../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
+import { selectServicesByType, type ServicePreference } from '../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
 import { toast } from '../Toast/toast';
 
 type ModifType = 'SIMPLE' | 'COM' | 'PEN' | 'COM_PEN';
@@ -42,7 +42,7 @@ export default function ReprogrammationModal({
     (state: RootState) => state.raisonAnnulation
   );
 
-  const servicesStore = useSelector((state: RootState) => state.serviceSpecifique.items);
+  const servicesStore = useSelector(selectServicesByType('TICKET'));
 
   // Après les autres useState existants :
   const [prefParPassager, setPrefParPassager] = useState<Record<string, string[]>>({});

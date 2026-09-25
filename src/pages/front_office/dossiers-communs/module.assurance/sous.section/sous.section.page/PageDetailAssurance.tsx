@@ -32,8 +32,8 @@ const PageDetailAssurance = () => {
   const numeroDos = location.state?.numeroDos ?? '—';
 
   const tabs = [
-    { id: 'prospection', label: 'Listes des prospections' },
-    { id: 'assurance',   label: 'Listes des assurance' },
+    // { id: 'prospection', label: 'Listes des prospections' },
+    // { id: 'assurance',   label: 'Listes des assurance' },
   ];
 
   const [activeTab, setActiveTab]       = useState(location.state?.targetTab || 'assurance');

@@ -1,43 +1,56 @@
-export default function TabContainer({ tabs, activeTab, setActiveTab, children }: any) {
+interface Tab {
+  id: string;
+  label: string;
+}
+
+interface TabContainerProps {
+  tabs: Tab[];
+  activeTab: string;
+  setActiveTab: (id: string) => void;
+  children: React.ReactNode;
+  /** Couleur d'accent optionnelle (ex: 'bg-green-500' pour Assurance, 'bg-orange-500' pour Hôtel).
+   *  Reprend la couleur du module actif dans la barre du haut pour garder une cohérence visuelle. */
+  accentClassName?: string;
+}
+
+export default function TabContainer({
+  tabs,
+  activeTab,
+  setActiveTab,
+  children,
+  accentClassName = 'bg-slate-700',
+}: TabContainerProps) {
   return (
-    <div className="flex flex-col h-full w-full overflow-hidden bg-white rounded-xl">
-      {/* Barre d'onglets avec fond gris bleuté doux */}
-      <div className="flex items-end bg-slate-300">
-        {tabs.map((tab: any) => {
+    <div className="flex flex-col h-full w-full overflow-hidden bg-white rounded-xl border border-slate-200 shadow-sm">
+      {/* Barre d'onglets — style plat, cohérent avec la barre de navigation du haut */}
+      <div className="flex items-center gap-1 px-2 bg-white border-b border-slate-200 shrink-0">
+        {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`
-                relative px-8 py-3 text-sm font-semibold
-                rounded-t-[18px] 
+                relative px-4 py-3 text-xs font-semibold whitespace-nowrap transition-colors
                 ${isActive
-                  ? 'bg-white text-slate-800 z-10' 
-                  : 'bg-slate-300 text-slate-500 border-r border-slate-300  translate-y-1'
+                  ? 'text-slate-800'
+                  : 'text-slate-400 hover:text-slate-600'
                 }
               `}
             >
               {tab.label}
-              
-              {/* Optionnel : L'effet d'arrondi inversé sur les coins bas (nécessite du CSS custom ou des div) */}
               {isActive && (
-                <>
-                  <div className="absolute bottom-0 -left-[10px] w-[10px] h-[10px] bg-white">
-                    <div className="w-full h-full bg-slate-300 rounded-br-[50px]"></div>
-                  </div>
-                  <div className="absolute bottom-0 -right-[10px] w-[10px] h-[10px] bg-white">
-                    <div className="w-full h-full bg-slate-300 rounded-bl-[10px]"></div>
-                  </div>
-                </>
+                <span
+                  className={`absolute left-2 right-2 -bottom-px h-0.5 rounded-full ${accentClassName}`}
+                />
               )}
             </button>
           );
         })}
       </div>
 
-      {/* Contenu du tableau */}
-      <div className="relative z-20 flex-1 bg-white p-4 overflow-auto">
+      {/* Contenu */}
+      <div className="relative flex-1 bg-white p-4 overflow-auto">
         <div className="animate-fadeIn h-full">
           {children}
         </div>

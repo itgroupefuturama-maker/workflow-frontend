@@ -78,8 +78,8 @@ const PageViewAttestation = () => {
   const canCreate = !!prestationId && fournisseurs.length > 0;
 
   const tabs = [
-    { id: 'prospection', label: 'Listes des entête attestation' },
-    { id: 'beneficiaire', label: 'Listes des bénéficiaires' }
+    // { id: 'prospection', label: 'Listes des entête attestation' },
+    // { id: 'beneficiaire', label: 'Listes des bénéficiaires' }
   ];
   
   const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'prospection');
@@ -167,7 +167,8 @@ const PageViewAttestation = () => {
     dispatch(setSelectedEntete(id));
     
     // 2. Naviguer vers le détail
-    navigate(`/dossiers-communs/attestation/details`);
+    navigate(`/dossiers-communs/attestation/details`, { state: { targetTab: 'prospection' } });
+    
   };
 
   const handleTabChange = (tab: string) => {

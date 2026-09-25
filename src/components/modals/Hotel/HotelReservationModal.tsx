@@ -5,6 +5,7 @@ import type { AppDispatch, RootState } from '../../../app/store';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchClientBeneficiaireInfos } from '../../../app/portail_client/clientBeneficiaireInfosSlice';
 import { fetchPreferencesBeneficiaire } from '../../../app/back_office/clientFacturesSlice';
+import { selectServicesByType } from '../../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
 import PreferencesInlinePanel from './PreferencesInlinePanel';
 import { toast } from '../../Toast/toast';
 
@@ -46,7 +47,7 @@ const HotelReservationModal: React.FC<HotelReservationModalProps> = ({
     (state: RootState) => state.clientBeneficiaireInfos
   );
   // Services spécifiques pour les préférences
-  const servicesStore = useSelector((state: RootState) => state.serviceSpecifique.items);
+  const servicesStore = useSelector(selectServicesByType('HOTEL'));
 
   const [formData, setFormData] = useState({
     numeroResa: '',

@@ -15,9 +15,9 @@ const PageViewAssurance = () => {
   const navigate = useNavigate();
 
   const tabs = [
-    { id: 'prospection', label: 'Listes des prospections' },
-    { id: 'assurance',   label: 'Listes des assurance' },
-    { id: 'beneficiaire', label: 'Listes des bénéficiaires' }
+    // { id: 'prospection', label: 'Listes des prospections' },
+    // { id: 'assurance',   label: 'Listes des assurance' },
+    // { id: 'beneficiaire', label: 'Listes des bénéficiaires' }
   ];
 
   const [activeTab, setActiveTab] = useState('prospection');

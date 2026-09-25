@@ -236,8 +236,8 @@ export default function Devis () {
   const [directionLoading, setDirectionLoading] = useState<{ [key: string]: boolean }>({});
 
   const tabs = [
-    { id: 'prospection', label: 'Listes des entête prospection' },
-    { id: 'billet', label: 'Listes des billets' }
+    // { id: 'prospection', label: 'Listes des entête prospection' },
+    // { id: 'billet', label: 'Listes des billets' }
   ];
 
   const [showValidateModal, setShowValidateModal] = useState(false);
@@ -250,7 +250,10 @@ export default function Devis () {
 
   const handleTabChange = (id: string) => {
     if (id === 'billet') {
-      navigate(`/dossiers-communs/ticketing/pages`, { state: { targetTab: 'billet' } });
+      // On remonte au parent (PageView) en passant le state pour l'onglet
+      navigate(`/dossiers-communs/ticketing/pages`, { 
+        state: { targetTab: 'billet' }
+      });
     } else {
       setActiveTab(id);
     }

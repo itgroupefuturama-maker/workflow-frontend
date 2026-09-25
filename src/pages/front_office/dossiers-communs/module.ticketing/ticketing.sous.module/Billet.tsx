@@ -38,6 +38,7 @@ import PageSkeleton from '../../../../../components/ui/PageSkeleton';
 import SuiviTabSection from '../../module.suivi/SuiviTabSection';
 import { toast } from '../../../../../components/Toast/toast';
 import Button from '../../../../../components/ui/Button';
+import { selectServicesByType } from '../../../../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
 
 const Billet = () => {
   const navigate = useNavigate();
@@ -65,12 +66,11 @@ const Billet = () => {
   const [selectedLigneForReprog, setSelectedLigneForReprog] = useState<BilletLigne | null>(null);
 
   // Dans le composant Billet
-  const serviceState = useSelector((state: RootState) => state.serviceSpecifique);
-  const services = serviceState.items;   // ← tableau des services { id, code, libelle, type, ... }
+  const services = useSelector(selectServicesByType('TICKET'));
 
   const tabs = [
-    { id: 'prospection', label: 'Listes des entête prospection' },
-    { id: 'billet', label: 'Listes des billets' }
+    // { id: 'prospection', label: 'Listes des entête prospection' },
+    // { id: 'billet', label: 'Listes des billets' }
   ];
 
   const [innerTab, setInnerTab] = useState('billet');

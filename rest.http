@@ -1,0 +1,11 @@
+####################### ODOO #################################################################################
+# GET PARTNERS
+GET http://192.168.88.67:8069/api/partners
+Authorization: Bearer 123
+X-Odoo-Database: abt_2026_09_08
+
+####################### ODOO #################################################################################
+# GET PRODUCTS
+GET http://192.168.88.67:8069/api/products
+Authorization: Bearer 123
+X-Odoo-Database: abt_2026_09_08

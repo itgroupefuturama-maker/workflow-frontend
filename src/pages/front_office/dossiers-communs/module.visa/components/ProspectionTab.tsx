@@ -232,7 +232,7 @@ const ProspectionTab = ({ prestationId }: Props) => {
 
                         {/* VOIR DÉTAIL (Action Principale/Navigation) */}
                         <button
-                          onClick={(e) => { e.stopPropagation(); navigate(`/dossiers-communs/visa/details/${entete.id}`); }}
+                          onClick={(e) => { e.stopPropagation(); navigate(`/dossiers-communs/visa/details/${entete.id}`, { state: { targetTab: 'prospection' } }); }}
                           className="
                             px-3 py-1.5 text-xs font-semibold rounded-lg transition-all
                             bg-indigo-600 text-white hover:bg-indigo-700 

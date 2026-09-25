@@ -106,8 +106,8 @@ const PageDetailVisa = () => {
   } | null>(null);
 
   const tabs = [
-      { id: 'prospection', label: 'Listes des prospections' },
-      { id: 'visa',        label: 'Listes des visa' },
+      // { id: 'prospection', label: 'Listes des prospections' },
+      // { id: 'visa',        label: 'Listes des visa' },
   ];
 
   const [activeTabSousSection, setActiveTabSousSection] = useState('lignes');

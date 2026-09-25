@@ -43,8 +43,8 @@ export default function ProspectionDetail() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const tabs = [
-    { id: 'prospection', label: 'Listes des entête prospection' },
-    { id: 'billet', label: 'Listes des billets' }
+    // { id: 'prospection', label: 'Listes des entête prospection' },
+    // { id: 'billet', label: 'Listes des billets' }
   ];
 
   const [activeTab, setActiveTab] = useState('prospection');
@@ -187,23 +187,6 @@ export default function ProspectionDetail() {
     const mtServiceCieAriary  = puServiceCieAriary  * nombre;
     const mtPenaliteCieAriary = puPenaliteCieAriary * nombre;
 
-    // ── Montant Client Devise = Mt Cie Devise * (1 + commission%) ────
-    const facteur = 1 + commissionPct / 100;
-    const mtBilletClientDevise   = mtBilletCieDevise   * facteur;
-    const mtServiceClientDevise  = mtServiceCieDevise  * facteur;
-    const mtPenaliteClientDevise = mtPenaliteCieDevise * facteur;
-
-    // ── Montant Client Ariary = Mt Client Devise * Taux ──────────────
-    const mtBilletClientAriary   = mtBilletClientDevise   * taux;
-    const mtServiceClientAriary  = mtServiceClientDevise  * taux;
-    const mtPenaliteClientAriary = mtPenaliteClientDevise * taux;
-
-    // ── Commission = Mt Client Devise - Mt Cie Devise ────────────────
-    const commissionEnDevise = (mtBilletClientDevise   - mtBilletCieDevise)
-                            + (mtServiceClientDevise  - mtServiceCieDevise)
-                            + (mtPenaliteClientDevise - mtPenaliteCieDevise);
-    const commissionEnAriary = commissionEnDevise * taux;
-
     // ── Taxe : saisie soit du taux (%), soit du montant direct (règle de trois inversée) ──
     const modeSaisieTaxe = formData.modeSaisieTaxe === 'MONTANT' ? 'MONTANT' : 'POURCENTAGE';
     let tauxTaxe: number;
@@ -216,6 +199,26 @@ export default function ProspectionDetail() {
       montantTaxeDevise = puBilletCieDevise * (tauxTaxe / 100);
     }
     const montantTaxeAriary = montantTaxeDevise * taux;
+
+    // ── Montant Client Devise hors taxe = Mt Cie Devise * (1 + commission%) ──
+    const facteur = 1 + commissionPct / 100;
+    const mtBilletClientDeviseHorsTaxe = mtBilletCieDevise   * facteur;
+    const mtServiceClientDevise        = mtServiceCieDevise  * facteur;
+    const mtPenaliteClientDevise       = mtPenaliteCieDevise * facteur;
+
+    // ── Montant Client Devise Billet = hors taxe + taxe (taxe transparente, pas de commission dessus) ──
+    const mtBilletClientDevise = mtBilletClientDeviseHorsTaxe + montantTaxeDevise;
+
+    // ── Montant Client Ariary = Mt Client Devise * Taux ──────────────
+    const mtBilletClientAriary   = mtBilletClientDevise   * taux;
+    const mtServiceClientAriary  = mtServiceClientDevise  * taux;
+    const mtPenaliteClientAriary = mtPenaliteClientDevise * taux;
+
+    // ── Commission (sur le prix billet hors taxe uniquement — la taxe est reversée telle quelle) ──
+    const commissionEnDevise = (mtBilletClientDeviseHorsTaxe - mtBilletCieDevise)
+                            + (mtServiceClientDevise  - mtServiceCieDevise)
+                            + (mtPenaliteClientDevise - mtPenaliteCieDevise);
+    const commissionEnAriary = commissionEnDevise * taux;
 
     return {
       departId:      formData.departId,
@@ -612,7 +615,9 @@ export default function ProspectionDetail() {
       if (response.data?.success) {
         setSelectedLigneIds([]);
         setSelectionMode(false);
-        navigate(`/dossiers-communs/ticketing/pages/devis/${enteteId}`)
+        navigate(`/dossiers-communs/ticketing/pages/devis/${enteteId}`, {
+          state: { targetTab: 'prospection' }
+        })
       } else {
         toast.error('Réponse invalide du serveur');
       }
@@ -915,7 +920,9 @@ export default function ProspectionDetail() {
                 </nav>
                 {/* Navigation & Consultation */}
                 <button
-                  onClick={() => navigate(`/dossiers-communs/ticketing/pages/devis/${enteteId}`)}
+                  onClick={() => navigate(`/dossiers-communs/ticketing/pages/devis/${enteteId}`, {
+                    state: { targetTab: 'prospection' }
+                  })}
                   className="flex items-center gap-2 px-4 py-2 mb-2 text-sm font-semibold text-blue-600 bg-white border border-blue-500 rounded-lg hover:bg-blue-600 hover:text-white transition-all active:scale-95"
                 >
                   <FiFileText size={15} />

@@ -205,8 +205,8 @@ export default function PageHotelDevis() {
   const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'prospection');
 
   const tabs = [
-    { id: 'prospection', label: 'Listes des entête benchmarking' },
-    { id: 'hotel', label: 'Listes des reservation hotel' }
+    // { id: 'prospection', label: 'Listes des entête benchmarking' },
+    // { id: 'hotel', label: 'Listes des reservation hotel' }
   ];
 
   const handleTabChange = (id: string) => {

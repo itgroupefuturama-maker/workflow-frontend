@@ -6,8 +6,8 @@ import PageLoader from '../../../../components/PageLoader';
 const HomePageAssurance = () => {
 
   return (
-    <div className="flex flex-1 h-full min-h-0  overflow-hidden">
-      {/* La Sidebar prendra automatiquement 100% de la hauteur grâce à h-screen */}
+    <div className="flex flex-col flex-1 h-full min-h-0 overflow-hidden">
+      {/* La Sidebar est maintenant une barre horizontale, empilée au-dessus du contenu */}
       <Sidebar module="assurance"/>
       {/* Le contenu principal */}
         {/* Zone de contenu scrollable indépendamment de la sidebar */}

@@ -37,8 +37,8 @@ const BenchmarkingDetailPage = () => {
   const showPreferences = useSelector((state: RootState) => state.ui.showPreferences);
 
   const tabs = [
-    { id: 'prospection', label: 'Listes des entête benchmarking' },
-    { id: 'hotel', label: 'Listes des reservation hotel' }
+    // { id: 'prospection', label: 'Listes des entête benchmarking' },
+    // { id: 'hotel', label: 'Listes des reservation hotel' }
   ];
 
   const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'prospection');

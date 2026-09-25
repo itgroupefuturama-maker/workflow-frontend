@@ -53,9 +53,9 @@ const PageViewHotel = () => {
   } = useSelector((state: RootState) => state.hotelProspectionEntete);
 
   const tabs = [
-    { id: 'prospection', label: 'Listes des entête benchmarking' },
-    { id: 'hotel', label: 'Listes des reservation hotel' },
-    { id: 'beneficiaire', label: 'Listes des bénéficiaires' }
+    // { id: 'prospection', label: 'Listes des entête benchmarking' },
+    // { id: 'hotel', label: 'Listes des reservation hotel' },
+    // { id: 'beneficiaire', label: 'Listes des bénéficiaires' }
   ];
 
   const { lastComment, confirmed } = useSelector(
@@ -201,7 +201,9 @@ const PageViewHotel = () => {
     // 1. Marquer comme sélectionné dans Redux
     dispatch(setSelectedEntete(id));
     // 2. Naviguer vers le détail
-    navigate(`/dossiers-communs/hotel/details`);
+    navigate(`/dossiers-communs/hotel/details`, {
+      state: { targetTab: 'prospection' }
+    });
   };
 
   const handleCreateHotelFromBenchmarking = async (payload: {
@@ -484,7 +486,9 @@ const PageViewHotel = () => {
                                           disabled={entete.isDevis !== true}
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            navigate(`/dossiers-communs/hotel/devishotel/${entete.id}`);
+                                            navigate(`/dossiers-communs/hotel/devishotel/${entete.id}`, {
+                                              state: { targetTab: 'prospection' }
+                                            });
                                           }}
                                           className={`flex items-center text-xs font-medium bg-white text-neutral-900 px-4 py-2 rounded-md transition-colors ${
                                             entete.isDevis !== true

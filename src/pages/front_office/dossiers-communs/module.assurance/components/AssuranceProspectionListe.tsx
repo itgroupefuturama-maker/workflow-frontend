@@ -216,7 +216,7 @@ const AssuranceProspectionListe = () => {
 
                                     {/* 3. Bouton Navigation (Style Icon-only ou Ghost) */}
                                     <button
-                                      onClick={() => navigate(`/dossiers-communs/assurance/detailsProspection/${entete.id}`, { state: { numeroDos: entete.prestation.numeroDos } })}
+                                      onClick={() => navigate(`/dossiers-communs/assurance/detailsProspection/${entete.id}`, { state: { numeroDos: entete.prestation.numeroDos, targetTab: 'prospection' } })}
                                       className="p-1.5 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-all"
                                       title="Voir les détails"
                                     >

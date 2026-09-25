@@ -35,8 +35,8 @@ const DetailAttestation = () => {
   const { current: clientFactureDetail } = useSelector((state: RootState) => state.clientFactures);
 
   const tabs = [
-    { id: 'prospection', label: 'Listes des entête attestation' },
-    { id: 'beneficiaire', label: 'Listes des bénéficiaires' },
+    // { id: 'prospection', label: 'Listes des entête attestation' },
+    // { id: 'beneficiaire', label: 'Listes des bénéficiaires' },
   ];
 
   const [activeTabEntete, setActiveTabEntete] = useState(location.state?.targetTab || 'prospection');

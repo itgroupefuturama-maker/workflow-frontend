@@ -9,6 +9,7 @@ interface AddProspectionLigneModalProps {
   destinations: any[];
   servicesDisponibles: any[];
   onSave: (payload: any) => Promise<void>;
+  commissionAppliquer?: number;
 }
 
 export default function AddProspectionLigneModal({
@@ -17,6 +18,7 @@ export default function AddProspectionLigneModal({
   destinations,
   servicesDisponibles,
   onSave,
+  commissionAppliquer = 0,
 }: AddProspectionLigneModalProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [serviceValues, setServiceValues] = useState<{ serviceSpecifiqueId: string; valeur: string }[]>([]);
@@ -124,7 +126,7 @@ export default function AddProspectionLigneModal({
   // Après les useEffect, remplacer les calculs dérivés par :
   const taux         = form.tauxEchange || 0;
   const nombre       = form.nombre || 1;
-  const commissionPct = Number(/* passez la prop commissionAppliquer si disponible */ 0);
+  const commissionPct = Number(commissionAppliquer) || 0;
   const facteur      = 1 + commissionPct / 100;
 
   // PU Cie Devise (saisis)
@@ -145,22 +147,6 @@ export default function AddProspectionLigneModal({
   const mtServiceCieAriary  = puServiceAriary * nombre;
   const mtPenaliteCieAriary = puPenaliteAriary * nombre;
 
-  // Mt Client Devise = Mt Cie Devise * facteur
-  const mtBilletClientDevise   = mtBilletCieDevise  * facteur;
-  const mtServiceClientDevise  = mtServiceCieDevise * facteur;
-  const mtPenaliteClientDevise = form.montantPenaliteCompagnieDevise * facteur;
-
-  // Mt Client Ariary = Mt Client Devise * taux
-  const mtBilletClientAriary   = mtBilletClientDevise   * taux;
-  const mtServiceClientAriary  = mtServiceClientDevise  * taux;
-  const mtPenaliteClientAriary = mtPenaliteClientDevise * taux;
-
-  // Commission
-  const commissionEnDevise = (mtBilletClientDevise   - mtBilletCieDevise)
-                          + (mtServiceClientDevise  - mtServiceCieDevise)
-                          + (mtPenaliteClientDevise - form.montantPenaliteCompagnieDevise);
-  const commissionEnAriary = commissionEnDevise * taux;
-
   // Taxe : saisie soit du taux (%), soit du montant direct (règle de trois inversée)
   const tauxTaxe = form.modeSaisieTaxe === 'MONTANT'
     ? (puBilletCieDevise > 0 ? (form.montantTaxeDevise / puBilletCieDevise) * 100 : 0)
@@ -169,6 +155,25 @@ export default function AddProspectionLigneModal({
     ? form.montantTaxeDevise
     : puBilletCieDevise * (form.tauxTaxe / 100);
   const montantTaxeAriary = montantTaxeDevise * taux;
+
+  // Mt Client Devise hors taxe = Mt Cie Devise * facteur
+  const mtBilletClientDeviseHorsTaxe = mtBilletCieDevise  * facteur;
+  const mtServiceClientDevise        = mtServiceCieDevise * facteur;
+  const mtPenaliteClientDevise       = form.montantPenaliteCompagnieDevise * facteur;
+
+  // Mt Client Devise Billet = hors taxe + taxe (taxe transparente, pas de commission dessus)
+  const mtBilletClientDevise = mtBilletClientDeviseHorsTaxe + montantTaxeDevise;
+
+  // Mt Client Ariary = Mt Client Devise * taux
+  const mtBilletClientAriary   = mtBilletClientDevise   * taux;
+  const mtServiceClientAriary  = mtServiceClientDevise  * taux;
+  const mtPenaliteClientAriary = mtPenaliteClientDevise * taux;
+
+  // Commission (sur le prix billet hors taxe uniquement — la taxe est reversée telle quelle)
+  const commissionEnDevise = (mtBilletClientDeviseHorsTaxe - mtBilletCieDevise)
+                          + (mtServiceClientDevise  - mtServiceCieDevise)
+                          + (mtPenaliteClientDevise - form.montantPenaliteCompagnieDevise);
+  const commissionEnAriary = commissionEnDevise * taux;
 
   const set = (field: string, value: any) => setForm((prev) => ({ ...prev, [field]: value }));
 

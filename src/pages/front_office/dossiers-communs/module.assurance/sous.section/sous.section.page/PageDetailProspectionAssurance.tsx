@@ -32,8 +32,8 @@ const PageDetailProspectionAssurance = () => {
     useSelector((s: RootState) => s.assuranceProspection);
 
   const tabs = [
-    { id: 'prospection', label: 'Listes des prospections' },
-    { id: 'assurance',   label: 'Listes des assurance' },
+    // { id: 'prospection', label: 'Listes des prospections' },
+    // { id: 'assurance',   label: 'Listes des assurance' },
   ];
   const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'prospection');
 

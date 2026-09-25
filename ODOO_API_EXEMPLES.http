@@ -1,0 +1,426 @@
+### Variables communes
+### Remplacez baseUrl par l'adresse réelle du serveur (voir INFRASTRUCTURE.pdf,
+### ex: http://100.121.137.127:5050 en Tailscale, ou http://localhost:5050 en local).
+### apiKey = valeur de ODOO_INBOUND_API_KEY (transmise séparément par canal sécurisé).
+
+# @baseUrl = http://andry:5050
+@baseUrl = http://192.168.88.102:5050
+@apiKey = 0b44c66bb267d4bb47943f8b2850a3fd40203cad90648c749b006b82df184f1a
+
+####################### AUTHENTIFICATION #######################################################
+# Toutes les requêtes ci-dessous doivent porter ce header :
+#   X-Odoo-Api-Key: {{apiKey}}
+# Voir src/guards/odoo-api-key.guard.ts et INTEGRATION_ODOO_FACTURATION.md §4.
+
+
+####################### 1. BILLET — APPROUVER #################################################
+# Odoo confirme la validation de la réservation (étape "approuver" du flux, §4.1)
+PUT {{baseUrl}}/billet/REMPLACER_ID_BILLET_ENTETE/a-approuver
+X-Odoo-Api-Key: {{apiKey}}
+
+### Réponse workflow-backend (simplifiée — l'objet réel inclut billetLigne, devis, etc.)
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+
+{
+  "id": "clx_entete_id",
+  "statut": "BC_CLIENT_A_APPROUVER",
+  "devisId": "clx_devis_id"
+}
+
+
+####################### 2. BILLET — RÉGLER FACTURE #############################################
+# Odoo confirme le règlement de la facture (étape "regler-facture" du flux, §4.2)
+PUT {{baseUrl}}/billet/REMPLACER_ID_BILLET_ENTETE/regler-facture
+X-Odoo-Api-Key: {{apiKey}}
+
+### Réponse workflow-backend (simplifiée)
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+
+{
+  "id": "clx_entete_id",
+  "statut": "FACTURE_REGLEE",
+  "devisId": "clx_devis_id"
+}
+
+
+####################### 3. CLIENT FACTURÉ — CREATE #############################################
+# `code` (ex: "ClF-12") est généré automatiquement, ne pas l'envoyer.
+POST {{baseUrl}}/client-factures
+X-Odoo-Api-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "libelle": "Société AAA",
+  "profilRisque": "FAIBLE",
+  "tauxBase": 0,
+  "volDomestique": 3,
+  "volRegional": 2,
+  "longCourrier": 1,
+  "auComptant": 0,
+  "credit15jrs": 0.5,
+  "credit30jrs": 1,
+  "credit60jrs": 2,
+  "credit90jrs": 3,
+  "creditdefault": "CREDIT_60",
+  "statut": "ACTIF",
+  "dateApplication": "2026-01-01T00:00:00.000Z"
+}
+
+### Réponse workflow-backend
+HTTP/1.1 201 Created
+Content-Type: application/json; charset=utf-8
+
+{
+  "id": "clx_clientfacture_id",
+  "code": "ClF-12",
+  "libelle": "Société X",
+  "profilRisque": "FAIBLE",
+  "tauxBase": 0,
+  "volDomestique": 3,
+  "volRegional": 2,
+  "longCourrier": 1,
+  "auComptant": 0,
+  "credit15jrs": 0.5,
+  "credit30jrs": 1,
+  "credit60jrs": 2,
+  "credit90jrs": 3,
+  "creditdefault": "CREDIT_60",
+  "statut": "ACTIF",
+  "dateApplication": "2026-01-01T00:00:00.000Z",
+  "dateCreation": "2026-09-18T10:00:00.000Z",
+  "updatedAt": "2026-09-18T10:00:00.000Z",
+  "userId": null
+}
+
+
+####################### 4. CLIENT FACTURÉ — LISTER ##############################################
+GET {{baseUrl}}/client-factures
+X-Odoo-Api-Key: {{apiKey}}
+
+### Réponse workflow-backend (tableau, mêmes champs que le CREATE)
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+
+[
+  { "id": "clx_clientfacture_id", "code": "ClF-12", "libelle": "Société X", "statut": "ACTIF" }
+]
+
+
+####################### 5. CLIENT FACTURÉ — LIRE UN SEUL #######################################
+GET {{baseUrl}}/client-factures/REMPLACER_ID_CLIENT_FACTURE
+X-Odoo-Api-Key: {{apiKey}}
+
+### Réponse workflow-backend (mêmes champs que le CREATE)
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+
+{ "id": "clx_clientfacture_id", "code": "ClF-12", "libelle": "Société X", "statut": "ACTIF" }
+
+
+####################### 6. CLIENT FACTURÉ — MODIFIER ############################################
+# Tous les champs sont optionnels, envoyez seulement ceux à changer.
+PATCH {{baseUrl}}/client-factures/REMPLACER_ID_CLIENT_FACTURE
+X-Odoo-Api-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "libelle": "Société X Modifiée",
+  "statut": "INACTIF"
+}
+
+### Réponse workflow-backend
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+
+{ "id": "clx_clientfacture_id", "code": "ClF-12", "libelle": "Société X Modifiée", "statut": "INACTIF" }
+
+
+####################### 7. CLIENT FACTURÉ — SUPPRIMER ###########################################
+DELETE {{baseUrl}}/client-factures/REMPLACER_ID_CLIENT_FACTURE
+X-Odoo-Api-Key: {{apiKey}}
+
+### Réponse workflow-backend
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+
+{ "id": "clx_clientfacture_id", "statut": "SUPPRIMER" }
+
+
+####################### 8. CLIENT BÉNÉFICIAIRE — CREATE #########################################
+# `code` est généré automatiquement. `libelle` et `typeClient` obligatoires.
+# typeClient: SIMPLE | GOLD | SILVER | BRONZE | VIP | PLATINIUM
+POST {{baseUrl}}/client-beneficiaires
+X-Odoo-Api-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "libelle": "RAKOTO Jean",
+  "typeClient": "SIMPLE",
+  "statut": "ACTIF",
+  "dateApplication": "2026-01-01T00:00:00.000Z"
+}
+
+### Réponse workflow-backend
+HTTP/1.1 201 Created
+Content-Type: application/json; charset=utf-8
+
+{
+  "id": "clx_clientbeneficiaire_id",
+  "code": "ClB-8",
+  "libelle": "RAKOTO Jean",
+  "typeClient": "SIMPLE",
+  "statut": "ACTIF",
+  "dateApplication": "2026-01-01T00:00:00.000Z",
+  "dateCreation": "2026-09-18T10:00:00.000Z",
+  "updatedAt": "2026-09-18T10:00:00.000Z"
+}
+
+
+####################### 9. CLIENT BÉNÉFICIAIRE — LISTER ##########################################
+GET {{baseUrl}}/client-beneficiaires
+X-Odoo-Api-Key: {{apiKey}}
+
+### Réponse workflow-backend (tableau, mêmes champs que le CREATE)
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+
+[
+  { "id": "clx_clientbeneficiaire_id", "code": "ClB-8", "libelle": "RAKOTO Jean", "typeClient": "SIMPLE" }
+]
+
+
+####################### 10. CLIENT BÉNÉFICIAIRE — LIRE UN SEUL ###################################
+GET {{baseUrl}}/client-beneficiaires/REMPLACER_ID_CLIENT_BENEFICIAIRE
+X-Odoo-Api-Key: {{apiKey}}
+
+### Réponse workflow-backend (mêmes champs que le CREATE)
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+
+{ "id": "clx_clientbeneficiaire_id", "code": "ClB-8", "libelle": "RAKOTO Jean", "typeClient": "SIMPLE" }
+
+
+####################### 11. CLIENT BÉNÉFICIAIRE — MODIFIER #######################################
+PATCH {{baseUrl}}/client-beneficiaires/REMPLACER_ID_CLIENT_BENEFICIAIRE
+X-Odoo-Api-Key: {{apiKey}}
+Content-Type: application/json
+
+{
+  "libelle": "RAKOTO Jean Modifié",
+  "typeClient": "GOLD"
+}
+
+### Réponse workflow-backend
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+
+{ "id": "clx_clientbeneficiaire_id", "code": "ClB-8", "libelle": "RAKOTO Jean Modifié", "typeClient": "GOLD" }
+
+
+####################### 12. CLIENT BÉNÉFICIAIRE — SUPPRIMER ######################################
+DELETE {{baseUrl}}/client-beneficiaires/REMPLACER_ID_CLIENT_BENEFICIAIRE
+X-Odoo-Api-Key: {{apiKey}}
+
+### Réponse workflow-backend
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+
+{ "id": "clx_clientbeneficiaire_id" }
+
+
+####################### 13. PAYS — CREATE (avec photo) ###########################################
+# ⚠️ multipart/form-data, pas du JSON. `pays` (texte) + `photo` (fichier image) obligatoires.
+POST {{baseUrl}}/exigence-destination/pays
+X-Odoo-Api-Key: {{apiKey}}
+Content-Type: multipart/form-data; boundary=----boundaryOdoo
+
+------boundaryOdoo
+Content-Disposition: form-data; name="pays"
+
+France
+------boundaryOdoo
+Content-Disposition: form-data; name="photo"; filename="france.jpg"
+Content-Type: image/jpeg
+
+< ./chemin/vers/france.jpg
+------boundaryOdoo--
+
+### Réponse workflow-backend
+HTTP/1.1 201 Created
+Content-Type: application/json; charset=utf-8
+
+{
+  "id": "clx_pays_id",
+  "pays": "France",
+  "photo": "uploads/pays/1234567890-987654321.jpg",
+  "createdAt": "2026-09-18T10:00:00.000Z",
+  "updatedAt": "2026-09-18T10:00:00.000Z"
+}
+
+
+####################### 14. PAYS — LISTER #########################################################
+GET {{baseUrl}}/exigence-destination/pays
+X-Odoo-Api-Key: {{apiKey}}
+
+### Réponse workflow-backend (tableau, mêmes champs que le CREATE)
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+
+[
+  { "id": "clx_pays_id", "pays": "France", "photo": "uploads/pays/1234567890-987654321.jpg" }
+]
+
+
+####################### 15. PAYS — LIRE UN SEUL ###################################################
+GET {{baseUrl}}/exigence-destination/pays/REMPLACER_ID_PAYS
+X-Odoo-Api-Key: {{apiKey}}
+
+### Réponse workflow-backend (mêmes champs que le CREATE)
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+
+{ "id": "clx_pays_id", "pays": "France", "photo": "uploads/pays/1234567890-987654321.jpg" }
+
+
+####################### 16. PAYS — MODIFIER (sans photo) #########################################
+PUT {{baseUrl}}/exigence-destination/pays/REMPLACER_ID_PAYS
+X-Odoo-Api-Key: {{apiKey}}
+Content-Type: application/json
+
+{ "pays": "Allemagne" }
+
+### Réponse workflow-backend
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+
+{ "id": "clx_pays_id", "pays": "Allemagne", "photo": "uploads/pays/1234567890-987654321.jpg" }
+
+
+####################### 17. PAYS — MODIFIER LA PHOTO #############################################
+# ⚠️ multipart/form-data. `photo` (fichier image) obligatoire.
+PUT {{baseUrl}}/exigence-destination/pays/REMPLACER_ID_PAYS/photo
+X-Odoo-Api-Key: {{apiKey}}
+Content-Type: multipart/form-data; boundary=----boundaryOdoo
+
+------boundaryOdoo
+Content-Disposition: form-data; name="photo"; filename="allemagne.jpg"
+Content-Type: image/jpeg
+
+< ./chemin/vers/allemagne.jpg
+------boundaryOdoo--
+
+### Réponse workflow-backend
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+
+{ "id": "clx_pays_id", "pays": "Allemagne", "photo": "uploads/pays/1111111111-222222222.jpg" }
+
+
+####################### 18. PAYS — SUPPRIMER ######################################################
+DELETE {{baseUrl}}/exigence-destination/pays/REMPLACER_ID_PAYS
+X-Odoo-Api-Key: {{apiKey}}
+
+### Réponse workflow-backend
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+
+{ "success": true, "message": "Pays supprimé" }
+
+
+####################### 19. DESTINATION / VILLE — CREATE ##########################################
+# `code` (ex: "DV-5") est généré automatiquement. `ville` et `paysId` obligatoires
+# (paysId = id renvoyé par la création du pays, §13).
+POST {{baseUrl}}/exigence-destination/destination
+X-Odoo-Api-Key: {{apiKey}}
+Content-Type: application/json
+
+{ "ville": "Paris", "paysId": "clx_pays_id" }
+
+### Réponse workflow-backend
+HTTP/1.1 201 Created
+Content-Type: application/json; charset=utf-8
+
+{
+  "id": "clx_destination_id",
+  "code": "DV-5",
+  "ville": "Paris",
+  "paysId": "clx_pays_id",
+  "createdAt": "2026-09-18T10:00:00.000Z",
+  "updatedAt": "2026-09-18T10:00:00.000Z"
+}
+
+
+####################### 20. DESTINATION / VILLE — LISTER ##########################################
+GET {{baseUrl}}/exigence-destination/destination
+X-Odoo-Api-Key: {{apiKey}}
+
+### Réponse workflow-backend (tableau, mêmes champs que le CREATE)
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+
+[
+  { "id": "clx_destination_id", "code": "DV-5", "ville": "Paris", "paysId": "clx_pays_id" }
+]
+
+
+####################### 21. DESTINATION / VILLE — LIRE UNE SEULE ##################################
+GET {{baseUrl}}/exigence-destination/destination/REMPLACER_ID_DESTINATION
+X-Odoo-Api-Key: {{apiKey}}
+
+### Réponse workflow-backend (mêmes champs que le CREATE)
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+
+{ "id": "clx_destination_id", "code": "DV-5", "ville": "Paris", "paysId": "clx_pays_id" }
+
+
+####################### 22. DESTINATION / VILLE — LIRE PAR CODE ###################################
+GET {{baseUrl}}/exigence-destination/destination/code/DV-5
+X-Odoo-Api-Key: {{apiKey}}
+
+### Réponse workflow-backend (mêmes champs que le CREATE)
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+
+{ "id": "clx_destination_id", "code": "DV-5", "ville": "Paris", "paysId": "clx_pays_id" }
+
+
+####################### 23. DESTINATION / VILLE — LIRE PAR PAYS ###################################
+GET {{baseUrl}}/exigence-destination/destination/pays/REMPLACER_ID_PAYS
+X-Odoo-Api-Key: {{apiKey}}
+
+### Réponse workflow-backend (tableau, mêmes champs que le CREATE)
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+
+[
+  { "id": "clx_destination_id", "code": "DV-5", "ville": "Paris", "paysId": "clx_pays_id" }
+]
+
+
+####################### 24. DESTINATION / VILLE — MODIFIER ########################################
+# Tous les champs sont optionnels.
+PUT {{baseUrl}}/exigence-destination/destination/REMPLACER_ID_DESTINATION
+X-Odoo-Api-Key: {{apiKey}}
+Content-Type: application/json
+
+{ "ville": "Lyon" }
+
+### Réponse workflow-backend
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+
+{ "id": "clx_destination_id", "code": "DV-5", "ville": "Lyon", "paysId": "clx_pays_id" }
+
+
+####################### 25. DESTINATION / VILLE — SUPPRIMER #######################################
+DELETE {{baseUrl}}/exigence-destination/destination/REMPLACER_ID_DESTINATION
+X-Odoo-Api-Key: {{apiKey}}
+
+### Réponse workflow-backend
+HTTP/1.1 200 OK
+Content-Type: application/json; charset=utf-8
+
+{ "success": true, "message": "Destination supprimée" }

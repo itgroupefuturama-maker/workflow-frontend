@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
@@ -9,122 +9,208 @@ import {
   addBeneficiaireToClientFacture,
   removeBeneficiaireFromClientFacture,
 } from '../../../app/back_office/clientFacturesSlice';
-import type { RootState, AppDispatch } from '../../../app/store';
-import { FiArrowLeft, FiTrash2, FiSearch, FiPlus, FiLoader, FiChevronUp, FiChevronDown, FiUserPlus, FiCheck} from 'react-icons/fi';
-import { Spinner } from '../../front_office/dossiers-communs/module.parametre/components/Spinner';
+import {
+  createClientBeneficiaireInfos,
+  fetchClientBeneficiaireInfos,
+  updateClientBeneficiaireInfo,
+  type ClientBeneficiaireInfo,
+} from '../../../app/portail_client/clientBeneficiaireInfosSlice';
 import { fetchGoogleCalendarAuthUrl } from '../../../app/front_office/parametre_utilisateur/userSlice';
+import type { RootState, AppDispatch } from '../../../app/store';
+import { API_URL } from '../../../service/env';
 import { toast } from '../../../components/Toast/toast';
+import {
+  FiArrowLeft, FiTrash2, FiSearch, FiPlus, FiLoader, FiCheck, FiX,
+  FiUser, FiFileText, FiCalendar, FiPhone, FiUpload, FiEdit2, FiClock,
+} from 'react-icons/fi';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
-const ScrollIndicator = ({ listRef }: { listRef: React.RefObject<HTMLDivElement | null> }) => {
-    const scroll = (direction: 'up' | 'down') => {
-      listRef.current?.scrollBy({ 
-        top: direction === 'up' ? -120 : 120, 
-        behavior: 'smooth' 
-      });
-    };
+// ── Helpers ────────────────────────────────────────────────────────────────
 
-    return (
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-lg border border-gray-200">
-        <button type="button" onClick={() => scroll('up')} className="p-1 hover:bg-white hover:shadow-sm rounded text-indigo-600 transition-all">
-          <FiChevronUp size={14} />
-        </button>
-        <button type="button" onClick={() => scroll('down')} className="p-1 hover:bg-white hover:shadow-sm rounded text-indigo-600 transition-all">
-          <FiChevronDown size={14} />
-        </button>
-      </div>
-    );
-  };
+function getMonthsUntilExpiry(dateStr: string): number {
+  return (new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24 * 30.44);
+}
 
-const ClientBeneficiaireFormPage = () => {
+function getValidityStripe(dateValiditeDoc: string): string {
+  const m = getMonthsUntilExpiry(dateValiditeDoc);
+  if (m < 3) return 'bg-red-500';
+  if (m < 9) return 'bg-orange-400';
+  if (m < 12) return 'bg-yellow-400';
+  return 'bg-emerald-500';
+}
+
+function formatDate(s?: string | null) {
+  if (!s) return '—';
+  return new Date(s).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+const DOC_LABEL: Record<string, string> = {
+  PASSEPORT: 'Passeport',
+  CIN: 'CIN',
+  LAISSE_PASSER: 'Laissez-passer',
+};
+
+const toISO = (d: string) => (d ? `${d}T00:00:00.000Z` : '');
+
+// ── Sous-composants ──────────────────────────────────────────────────────────
+
+const SectionLabel = ({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) => (
+  <p className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">
+    {icon} {children}
+  </p>
+);
+
+const Field: React.FC<{ label: string; children: React.ReactNode; span?: number }> = ({ label, children, span }) => (
+  <div className={span ? `col-span-${span}` : ''}>
+    <label className="block text-[11px] font-semibold text-slate-500 mb-1.5 uppercase">{label}</label>
+    {children}
+  </div>
+);
+
+const inputCls =
+  'w-full px-3 py-2.5 text-[13px] bg-slate-50 border border-slate-200 rounded-lg ' +
+  'focus:outline-none focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 transition-all ' +
+  'placeholder:text-slate-300 text-slate-800';
+
+/** Ligne de liste simple, séparée par un trait — remplace les listes en "cartes" trop spacieuses. */
+const ListRow = ({
+  leading,
+  title,
+  subtitle,
+  trailing,
+}: {
+  leading?: React.ReactNode;
+  title: React.ReactNode;
+  subtitle?: React.ReactNode;
+  trailing?: React.ReactNode;
+}) => (
+  <div className="flex items-center gap-3 py-2.5 px-1 border-b border-slate-100 last:border-b-0">
+    {leading}
+    <div className="min-w-0 flex-1">
+      <p className="text-[13px] font-semibold text-slate-800 truncate">{title}</p>
+      {subtitle && <p className="text-[11px] text-slate-400 truncate mt-0.5">{subtitle}</p>}
+    </div>
+    {trailing}
+  </div>
+);
+
+// ── Page principale ──────────────────────────────────────────────────────────
+
+export default function ClientBeneficiaireFormPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+
+  const { data: beneficiaires } = useSelector((s: RootState) => s.clientBeneficiaires);
+  const { data: clientFactures } = useSelector((s: RootState) => s.clientFactures);
+  const { list: infosList, loadingList: loadingInfosList, loading: loadingInfoSave } = useSelector(
+    (s: RootState) => s.clientBeneficiaireInfos
+  );
+
+  const currentBeneficiaire = beneficiaires.find((b) => b.id === id);
+
+  const [message, setMessage] = useState<{ text: string; isError: boolean } | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(false);
-
-  const { data: beneficiaires } = useSelector((state: RootState) => state.clientBeneficiaires);
-  const { data: clientFactures } = useSelector((state: RootState) => state.clientFactures);
-
-  const scrollAssocRef = useRef<HTMLDivElement>(null);
-  const scrollAvailRef = useRef<HTMLDivElement>(null);
-
-  const currentBeneficiaire = beneficiaires.find(b => b.id === id);
-
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [message, setMessage] = useState({ text: '', isError: false });
+  const [isSavingParams, setIsSavingParams] = useState(false);
+  const [isSavingInfo, setIsSavingInfo] = useState(false);
   const [searchFacture, setSearchFacture] = useState('');
+  const [editingInfo, setEditingInfo] = useState<ClientBeneficiaireInfo | null>(null);
 
+  // ── Colonne droite : paramètres du bénéficiaire ──
   const [libelle, setLibelle] = useState(currentBeneficiaire?.libelle ?? '');
-
   const [statut, setStatut] = useState<'ACTIF' | 'INACTIF'>(
     (currentBeneficiaire?.statut as 'ACTIF' | 'INACTIF') ?? 'ACTIF'
   );
-
-  const [typeClient, setTypeClient] = useState<'SIMPLE' | 'GOLD'| 'SILVER' | 'BRONZE' | 'VIP' >(
-    (currentBeneficiaire?.typeClient as 'SIMPLE' | 'GOLD'| 'SILVER' | 'BRONZE' | 'VIP') ?? 'SIMPLE'
+  const [typeClient, setTypeClient] = useState<'SIMPLE' | 'GOLD' | 'SILVER' | 'BRONZE' | 'VIP'>(
+    (currentBeneficiaire?.typeClient as 'SIMPLE' | 'GOLD' | 'SILVER' | 'BRONZE' | 'VIP') ?? 'SIMPLE'
   );
 
-  const isFormInvalid = !libelle.trim();
+  // ── Colonne gauche : informations complémentaires ──
+  const [prenom, setPrenom] = useState('');
+  const [nom, setNom] = useState('');
+  const [nationalite, setNationalite] = useState('');
+  const [clientType, setClientType] = useState<'ADULTE' | 'ENFANT' | 'BEBE' | 'JEUNE'>('ADULTE');
+  const [typeDoc, setTypeDoc] = useState<'LAISSE_PASSER' | 'PASSEPORT' | 'CIN'>('PASSEPORT');
+  const [referenceDoc, setReferenceDoc] = useState('');
+  const [dateDelivranceDoc, setDateDelivranceDoc] = useState('');
+  const [dateValiditeDoc, setDateValiditeDoc] = useState('');
+  const [dateNaissance, setDateNaissance] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
+  const [tel, setTel] = useState('');
+  const [document, setDocument] = useState<File | null>(null);
 
-  const handleSubmit = async () => {
+  useEffect(() => {
+    if (id) dispatch(fetchClientBeneficiaireInfos(id));
+  }, [id, dispatch]);
+
+  useEffect(() => {
+    if (!editingInfo) return;
+    setPrenom(editingInfo.prenom);
+    setNom(editingInfo.nom);
+    setNationalite(editingInfo.nationalite || '');
+    setClientType(editingInfo.clientType ?? 'ADULTE');
+    setTypeDoc(editingInfo.typeDoc as 'LAISSE_PASSER' | 'PASSEPORT' | 'CIN');
+    setReferenceDoc(editingInfo.referenceDoc);
+    setDateDelivranceDoc(editingInfo.dateDelivranceDoc.split('T')[0]);
+    setDateValiditeDoc(editingInfo.dateValiditeDoc.split('T')[0]);
+    setDateNaissance(editingInfo.dateNaissance?.split('T')[0] ?? '');
+    setWhatsapp(editingInfo.whatsapp ?? '');
+    setTel(editingInfo.tel ?? '');
+    setDocument(null);
+  }, [editingInfo]);
+
+  const hasParamsChanges = useMemo(() => {
+    if (!currentBeneficiaire) return false;
+    return (
+      libelle !== currentBeneficiaire.libelle ||
+      statut !== currentBeneficiaire.statut ||
+      typeClient !== currentBeneficiaire.typeClient
+    );
+  }, [libelle, statut, typeClient, currentBeneficiaire]);
+
+  const isParamsInvalid = !libelle.trim();
+
+  const availableClientFactures = useMemo(() => {
+    const linkedIds = currentBeneficiaire?.factures.map((f) => f.clientFacture.id) || [];
+    return clientFactures.filter(
+      (cf) =>
+        !linkedIds.includes(cf.id) &&
+        (cf.libelle.toLowerCase().includes(searchFacture.toLowerCase()) ||
+          cf.code.toLowerCase().includes(searchFacture.toLowerCase()))
+    );
+  }, [clientFactures, currentBeneficiaire, searchFacture]);
+
+  const notify = (text: string, isError = false) => {
+    setMessage({ text, isError });
+    setTimeout(() => setMessage(null), 3000);
+  };
+
+  // ── Actions : paramètres généraux ──
+  const handleSaveParams = async () => {
     if (!currentBeneficiaire) return;
-
-    setIsSubmitting(true);
-    setMessage({ text: '', isError: false });
-
-    const result = await dispatch(updateClientBeneficiaire({
-      id: currentBeneficiaire.id,
-      libelle,
-      statut,
-      typeClient, 
-    }));
-
+    setIsSavingParams(true);
+    const result = await dispatch(
+      updateClientBeneficiaire({ id: currentBeneficiaire.id, libelle, statut, typeClient })
+    );
     if (updateClientBeneficiaire.fulfilled.match(result)) {
-      setMessage({ text: 'Modifications enregistrées avec succès !', isError: false });
-      setTimeout(() => navigate(-1), 1500);
+      notify('Paramètres enregistrés.');
     } else {
-      setMessage({ text: 'Erreur lors de la sauvegarde.', isError: true });
+      notify('Erreur lors de la sauvegarde des paramètres.', true);
     }
-    setIsSubmitting(false);
+    setIsSavingParams(false);
   };
 
   const handleAddClientFacture = async (clientFactureId: string) => {
-    setIsSubmitting(true);
-    const result = await dispatch(addBeneficiaireToClientFacture({
-      id: clientFactureId,
-      beneficiaireId: id!
-    }));
-    
-    if (addBeneficiaireToClientFacture.fulfilled.match(result)) {
-      setMessage({ text: 'Association réussie !', isError: false });
-      // On efface le message après 2 secondes pour ne pas polluer l'écran
-      setTimeout(() => setMessage({ text: '', isError: false }), 2000);
-    }
-    
+    const result = await dispatch(addBeneficiaireToClientFacture({ id: clientFactureId, beneficiaireId: id! }));
+    if (addBeneficiaireToClientFacture.fulfilled.match(result)) notify('Association réussie.');
     await dispatch(fetchClientBeneficiaires());
-    setIsSubmitting(false);
   };
 
   const handleRemoveClientFacture = async (clientFactureId: string) => {
-    setIsSubmitting(true);
-
-    const result = await dispatch(removeBeneficiaireFromClientFacture({
-      id: clientFactureId,
-      beneficiaireId: id!
-    }));
-    
-    if (removeBeneficiaireFromClientFacture.fulfilled.match(result)) {
-      setMessage({ text: 'Association supprimée !', isError: false });
-      // On efface le message après 2 secondes pour ne pas polluer l'écran
-      setTimeout(() => setMessage({ text: '', isError: false }), 2000);
-    }
-    await dispatch(removeBeneficiaireFromClientFacture({
-      id: clientFactureId,
-      beneficiaireId: id!
-    }));
+    const result = await dispatch(removeBeneficiaireFromClientFacture({ id: clientFactureId, beneficiaireId: id! }));
+    if (removeBeneficiaireFromClientFacture.fulfilled.match(result)) notify('Association supprimée.');
     await dispatch(fetchClientBeneficiaires());
-    setIsSubmitting(false);
   };
 
   const handleConnectGoogle = async () => {
@@ -133,274 +219,406 @@ const ClientBeneficiaireFormPage = () => {
     try {
       const url = await dispatch(fetchGoogleCalendarAuthUrl(id)).unwrap();
       window.open(url, '_blank', 'noopener,noreferrer');
-    } catch (err) {
+    } catch {
       toast.error('Impossible de récupérer le lien Google Calendar');
     } finally {
       setLoadingAuth(false);
     }
   };
 
+  // ── Actions : informations complémentaires ──
+  const handleSubmitInfo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id) return;
+    setIsSavingInfo(true);
 
-  const hasChanges = useMemo(() => {
-    if (!currentBeneficiaire) return false;
-    return (
-      libelle !== currentBeneficiaire.libelle ||
-      statut !== currentBeneficiaire.statut ||
-      typeClient !== currentBeneficiaire.typeClient // ← NOUVEAU
-    );
-  }, [libelle, statut, typeClient, currentBeneficiaire]);
+    const payload = {
+      prenom,
+      nom,
+      nationalite: nationalite || '',
+      clientType,
+      typeDoc,
+      referenceDoc,
+      dateDelivranceDoc: toISO(dateDelivranceDoc),
+      dateValiditeDoc: toISO(dateValiditeDoc),
+      dateNaissance: dateNaissance ? toISO(dateNaissance) : undefined,
+      whatsapp: whatsapp || undefined,
+      tel: tel || undefined,
+      document: document || undefined,
+    };
 
-  const availableClientFactures = useMemo(() => {
-    const linkedIds = currentBeneficiaire?.factures.map(f => f.clientFacture.id) || [];
-    return clientFactures.filter(cf =>
-      !linkedIds.includes(cf.id) &&
-      (cf.libelle.toLowerCase().includes(searchFacture.toLowerCase()) ||
-       cf.code.toLowerCase().includes(searchFacture.toLowerCase()))
-    );
-  }, [clientFactures, currentBeneficiaire, searchFacture]);
+    if (editingInfo) {
+      const result = await dispatch(updateClientBeneficiaireInfo({ id: editingInfo.id, ...payload }));
+      if (updateClientBeneficiaireInfo.fulfilled.match(result)) {
+        notify('Informations mises à jour.');
+        setEditingInfo(null);
+      } else if (updateClientBeneficiaireInfo.rejected.match(result)) {
+        notify((result.payload as string) || 'Une erreur est survenue.', true);
+      }
+    } else {
+      const result = await dispatch(createClientBeneficiaireInfos({ clientbeneficiaireId: id, ...payload }));
+      if (createClientBeneficiaireInfos.fulfilled.match(result)) {
+        notify('Informations enregistrées.');
+        setEditingInfo(null);
+      } else if (createClientBeneficiaireInfos.rejected.match(result)) {
+        notify((result.payload as string) || 'Une erreur est survenue.', true);
+      }
+    }
+
+    setIsSavingInfo(false);
+    setDocument(null);
+    setDateNaissance('');
+  };
+
+  const handleEditInfo = (info: ClientBeneficiaireInfo) => {
+    setEditingInfo(info);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   if (!currentBeneficiaire) {
-    return <div className="p-8 text-center text-gray-500">Chargement...</div>;
+    return <div className="p-8 text-center text-slate-400 text-sm">Chargement...</div>;
   }
 
   return (
-    <div className="min-h-screen bg-gray-50/50 pb-20 px-6">
+    <div className="min-h-screen bg-slate-50 pb-16 px-6">
       <div className="max-w-[1400px] mx-auto pt-8">
-        
-        {/* Header épuré */}
-        <div className="flex items-center justify-between mb-10">
-          <div className="flex items-center gap-5">
-            <button 
-              onClick={() => navigate(-1)} 
-              className="p-2.5 bg-white border border-gray-200 rounded-lg shadow-sm hover:bg-gray-50 transition-all text-gray-500 hover:text-indigo-600"
-            >
-              <FiArrowLeft size={20} />
-            </button>
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-bold text-gray-900 leading-tight">
-                  {currentBeneficiaire.libelle}
-                </h1>
-                <span className="px-2 py-1 bg-gray-100 text-gray-500 text-[10px] font-mono rounded border border-gray-200">
-                  ID: {currentBeneficiaire.code}
-                </span>
-              </div>
-              <p className="text-sm text-gray-400 mt-1 font-medium">Édition du bénéficiaire et des associations clients</p>
-            </div>
-          </div>
 
-          {/* Bouton secondaire flottant */}
+        {/* Header */}
+        <div className="flex items-center gap-4 mb-6">
           <button
-            onClick={() => navigate(`infos`, { state: { libelle: currentBeneficiaire.libelle } })}
-            className="flex items-center gap-2 px-5 py-2 bg-white border border-indigo-200 text-indigo-600 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-indigo-50 transition-all shadow-sm"
+            onClick={() => navigate(-1)}
+            className="p-2.5 bg-white border border-slate-200 rounded-lg shadow-sm hover:bg-slate-50 transition-colors text-slate-500 hover:text-indigo-600"
           >
-            <FiUserPlus size={16} />
-            Infos Complémentaires
+            <FiArrowLeft size={18} />
           </button>
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl font-bold text-slate-900 leading-tight">{currentBeneficiaire.libelle}</h1>
+              <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-mono rounded border border-slate-200">
+                {currentBeneficiaire.code}
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 mt-0.5">Fiche complète du bénéficiaire</p>
+          </div>
         </div>
 
-        {message.text && (
-          <div className={`fixed top-8 right-8 z-50 p-4 rounded-xl shadow-xl border flex items-center gap-3 animate-in fade-in slide-in-from-right-5 duration-300 ${
-            message.isError ? 'bg-red-50 border-red-200 text-red-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'
-          }`}>
-            <div className={`p-2 rounded-lg ${message.isError ? 'bg-red-100' : 'bg-emerald-100'}`}>
-              {message.isError ? <FiTrash2 /> : <FiUserPlus />}
-            </div>
-            <span className="text-sm font-bold pr-4">{message.text}</span>
+        {/* Notification unique */}
+        {message && (
+          <div
+            className={`mb-5 px-4 py-3 rounded-lg border flex items-center gap-2.5 text-[13px] font-medium ${
+              message.isError ? 'bg-red-50 border-red-200 text-red-700' : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+            }`}
+          >
+            {message.isError ? <FiX size={15} /> : <FiCheck size={15} />}
+            {message.text}
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
-          {/* Colonne GAUCHE : Configuration */}
-          <div className="lg:col-span-4 space-y-6">
-            <section className="bg-white border border-gray-200 rounded-xl shadow-sm p-6">
-              <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-6">Paramètres Généraux</h3>
-              
-              <div className="space-y-5">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-2 uppercase">Libellé du bénéficiaire</label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={libelle}
-                      onChange={(e) => setLibelle(e.target.value.toUpperCase())}
-                      className={`w-full px-4 py-3 bg-gray-50/50 border rounded-lg text-sm font-bold text-gray-800 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 transition-all outline-none ${
-                        !libelle ? 'border-red-200' : 'border-gray-200 focus:border-indigo-500'
-                      }`}
-                      placeholder="EX: CLIENT NOM"
-                    />
-                    {!libelle && (
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[9px] font-bold text-red-500 bg-red-50 px-2 py-1 rounded">REQUIS</span>
-                    )}
-                  </div>
-                </div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-2 uppercase">Statut du compte</label>
-                  <select
-                    value={statut}
-                    onChange={(e) => setStatut(e.target.value as 'ACTIF' | 'INACTIF')}
-                    className="w-full px-4 py-3 bg-gray-50/50 border border-gray-200 rounded-lg font-bold text-sm focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
-                  >
-                    <option value="ACTIF text-emerald-600">● ACTIF</option>
-                    <option value="INACTIF text-gray-400">○ INACTIF</option>
-                  </select>
-                </div>
+          {/* ══ Colonne GAUCHE (compacte) : paramètres + associations ══ */}
+          <div className="lg:col-span-5 space-y-5">
 
-                <div>
-                  <label className="block text-xs font-semibold text-gray-500 mb-2 uppercase">
-                    Type de client
-                  </label>
-                  <select
-                    value={typeClient}
-                    onChange={(e) => setTypeClient(e.target.value as 'SIMPLE' | 'GOLD'| 'SILVER' | 'BRONZE' | 'VIP')}
-                    className="w-full px-4 py-3 bg-gray-50/50 border border-gray-200 rounded-lg font-bold text-sm focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
-                  >
-                    <option value="SIMPLE">SIMPLE</option>
-                    <option value="GOLD">GOLD</option>
-                    <option value="SILVER">SILVER</option>
-                    <option value="BRONZE">BRONZE</option>
-                    <option value="VIP">VIP</option>
-                    <option value="PLATINIUM">PLATINIUM</option>
-                  </select>
-                </div>
-              </div>
-            </section>
-
-            <div>
-              <button
-                onClick={handleConnectGoogle}
-                disabled={loadingAuth}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium text-white bg-gray-800 hover:bg-gray-900 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loadingAuth ? (
-                  <Spinner className="w-3.5 h-3.5" />
-                ) : (
-                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5">
-                    <path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                    <path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                    <path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                    <path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                  </svg>
-                )}
-                {loadingAuth ? 'Chargement...' : 'Connecter Google Calendar'}
-              </button>
-            </div>
-
-            {/* Validation Card */}
-            <section className="bg-indigo-600 rounded-xl shadow-lg shadow-indigo-100 p-6 text-white">
-              <h4 className="text-xs font-bold uppercase tracking-widest opacity-70 mb-4">Actions de sauvegarde</h4>
-              <button
-                onClick={handleSubmit}
-                disabled={isSubmitting || !hasChanges || isFormInvalid}
-                className={`w-full py-3 rounded-lg font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-3 transition-all ${
-                  hasChanges && !isFormInvalid
-                    ? 'bg-white text-indigo-600 hover:bg-gray-100'
-                    : 'bg-indigo-500/50 text-indigo-200 cursor-not-allowed shadow-none'
-                }`}
-              >
-                {isSubmitting ? <FiLoader className="animate-spin" /> : <FiCheck />}
-                {hasChanges ? 'Enregistrer les modifications' : 'Aucun changement'}
-              </button>
-              {!hasChanges && !isSubmitting && (
-                <p className="text-[10px] text-center mt-3 opacity-60 font-medium italic">Modifiez un champ pour activer la sauvegarde</p>
-              )}
-            </section>
-          </div>
-
-          {/* Colonne DROITE : Associations */}
-          <div className="lg:col-span-8">
-            <div className="bg-white border border-gray-200 rounded-xl shadow-sm flex flex-col min-h-[600px] overflow-hidden">
-              
-              {/* Header Liste 1 */}
-              <div className="p-6 border-b border-gray-100 bg-gray-50/30 flex justify-between items-center">
-                <div>
-                  <h4 className="text-xs font-bold text-gray-900 uppercase tracking-widest">Clients Facturés Associés</h4>
-                  <p className="text-[10px] text-gray-400 font-medium mt-1">Éléments actuellement reliés à ce bénéficiaire</p>
-                </div>
-                {currentBeneficiaire.factures.length > 3 && <ScrollIndicator listRef={scrollAssocRef} />}
-              </div>
-
-              {/* Liste 1 : Associés */}
-              <div 
-                ref={scrollAssocRef}
-                className="p-6 flex-1 space-y-3 overflow-y-auto max-h-[350px] custom-scrollbar"
-              >
-                {currentBeneficiaire.factures.map((f) => (
-                  <div key={f.clientFacture.id} className="group flex items-center justify-between p-4 bg-white border border-gray-100 rounded-xl hover:border-indigo-200 hover:shadow-sm transition-all">
-                    <div className="flex items-center gap-4">
-                      <div className="w-8 h-8 bg-indigo-50 rounded flex items-center justify-center text-indigo-600 text-[10px] font-bold">CF</div>
-                      <div>
-                        <p className="font-bold text-sm text-gray-800 leading-tight">{f.clientFacture.libelle}</p>
-                        <p className="text-[10px] text-gray-400 font-mono mt-1 uppercase tracking-tighter">Code: {f.clientFacture.code}</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleRemoveClientFacture(f.clientFacture.id)}
-                      className="p-2 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                      title="Dissocier"
-                    >
-                      <FiTrash2 size={16} />
-                    </button>
-                  </div>
-                ))}
-                {currentBeneficiaire.factures.length === 0 && (
-                  <div className="text-center py-16 border-2 border-dashed border-gray-100 rounded-2xl bg-gray-50/50">
-                    <p className="text-xs text-gray-400 font-medium italic">Aucun client facturé associé pour le moment</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Zone de recherche & Ajout */}
-              <div className="p-6 bg-gray-50/80 border-t border-gray-100">
-                <div className="flex items-center justify-between mb-4 px-1">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Rechercher & Ajouter</span>
-                  {availableClientFactures.length > 3 && <ScrollIndicator listRef={scrollAvailRef} />}
-                </div>
-
-                <div className="relative mb-6 shadow-sm">
-                  <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+            <section className="bg-white border border-slate-200 rounded-xl shadow-sm p-5">
+              <SectionLabel icon={null}>Paramètres généraux</SectionLabel>
+              <div className="space-y-4">
+                <Field label="Libellé">
                   <input
                     type="text"
-                    placeholder="Tapez le nom d'un client facturé..."
+                    value={libelle}
+                    onChange={(e) => setLibelle(e.target.value.toUpperCase())}
+                    className={`${inputCls} font-bold ${!libelle ? 'border-red-200' : ''}`}
+                    placeholder="EX: CLIENT NOM"
+                  />
+                </Field>
+                <div className="grid grid-cols-2 gap-4">
+                  <Field label="Statut">
+                    <select value={statut} onChange={(e) => setStatut(e.target.value as 'ACTIF' | 'INACTIF')} className={`${inputCls} font-semibold`}>
+                      <option value="ACTIF">Actif</option>
+                      <option value="INACTIF">Inactif</option>
+                    </select>
+                  </Field>
+                  <Field label="Type client">
+                    <select value={typeClient} onChange={(e) => setTypeClient(e.target.value as typeof typeClient)} className={`${inputCls} font-semibold`}>
+                      <option value="SIMPLE">Simple</option>
+                      <option value="GOLD">Gold</option>
+                      <option value="SILVER">Silver</option>
+                      <option value="BRONZE">Bronze</option>
+                      <option value="VIP">VIP</option>
+                    </select>
+                  </Field>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 mt-5 pt-4 border-t border-slate-100">
+                <button
+                  onClick={handleConnectGoogle}
+                  disabled={loadingAuth}
+                  className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold text-slate-600 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {loadingAuth ? <FiLoader size={13} className="animate-spin" /> : null}
+                  Connecter Google Calendar
+                </button>
+                <button
+                  onClick={handleSaveParams}
+                  disabled={isSavingParams || !hasParamsChanges || isParamsInvalid}
+                  className={`ml-auto flex items-center gap-1.5 px-4 py-2 rounded-lg text-[11px] font-semibold transition-colors ${
+                    hasParamsChanges && !isParamsInvalid
+                      ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                      : 'bg-slate-100 text-slate-300 cursor-not-allowed'
+                  }`}
+                >
+                  {isSavingParams ? <FiLoader size={13} className="animate-spin" /> : <FiCheck size={13} />}
+                  Enregistrer
+                </button>
+              </div>
+            </section>
+
+            <section className="bg-white border border-slate-200 rounded-xl shadow-sm p-5">
+              <div className="flex items-center justify-between mb-1">
+                <SectionLabel icon={null}>Clients facturés associés</SectionLabel>
+                <span className="text-[10px] font-semibold text-slate-400">{currentBeneficiaire.factures.length}</span>
+              </div>
+
+              {currentBeneficiaire.factures.length === 0 ? (
+                <p className="text-[12px] text-slate-300 italic py-4 text-center">Aucun client facturé associé.</p>
+              ) : (
+                <div className="max-h-56 overflow-y-auto -mx-1 px-1">
+                  {currentBeneficiaire.factures.map((f) => (
+                    <ListRow
+                      key={f.clientFacture.id}
+                      title={f.clientFacture.libelle}
+                      subtitle={f.clientFacture.code}
+                      trailing={
+                        <button
+                          onClick={() => handleRemoveClientFacture(f.clientFacture.id)}
+                          className="p-1.5 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors shrink-0"
+                          title="Dissocier"
+                        >
+                          <FiTrash2 size={14} />
+                        </button>
+                      }
+                    />
+                  ))}
+                </div>
+              )}
+
+              {/* Clients disponibles — toujours visible, filtrable par la recherche */}
+              <div className="mt-4 pt-4 border-t border-slate-100">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
+                    À associer ({availableClientFactures.length})
+                  </span>
+                </div>
+                <div className="relative mb-2">
+                  <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
+                  <input
+                    type="text"
+                    placeholder="Filtrer la liste..."
                     value={searchFacture}
                     onChange={(e) => setSearchFacture(e.target.value)}
-                    className="w-full pl-11 pr-4 py-3 bg-white border border-gray-200 rounded-xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all text-sm"
+                    className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-lg outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 transition-all text-[12px]"
                   />
                 </div>
-
-                {/* Liste 2 : Disponibles */}
-                <div 
-                  ref={scrollAvailRef}
-                  className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-56 overflow-y-auto pr-2 custom-scrollbar"
-                >
-                  {availableClientFactures.map((cf) => (
-                    <button
-                      key={cf.id}
-                      onClick={() => handleAddClientFacture(cf.id)}
-                      className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-xl hover:border-indigo-300 hover:bg-white transition-all group"
-                    >
-                      <div className="text-left overflow-hidden">
-                        <p className="font-bold text-xs text-gray-700 truncate">{cf.libelle}</p>
-                        <p className="text-[9px] text-gray-400 font-mono">{cf.code}</p>
-                      </div>
-                      <div className="bg-indigo-50 text-indigo-600 p-1.5 rounded-md group-hover:bg-indigo-600 group-hover:text-white transition-all shrink-0">
-                        <FiPlus size={14} />
-                      </div>
-                    </button>
-                  ))}
-                  {availableClientFactures.length === 0 && searchFacture && (
-                    <div className="col-span-2 py-8 text-center text-xs text-gray-400 italic">Aucun résultat trouvé</div>
+                <div className="max-h-56 overflow-y-auto -mx-1 px-1">
+                  {availableClientFactures.length === 0 ? (
+                    <p className="text-[11px] text-slate-300 italic py-3 text-center">
+                      {searchFacture ? 'Aucun résultat.' : 'Tous les clients facturés sont déjà associés.'}
+                    </p>
+                  ) : (
+                    availableClientFactures.map((cf) => (
+                      <ListRow
+                        key={cf.id}
+                        title={cf.libelle}
+                        subtitle={cf.code}
+                        trailing={
+                          <button
+                            onClick={() => handleAddClientFacture(cf.id)}
+                            className="p-1.5 text-indigo-500 hover:text-white hover:bg-indigo-600 rounded-lg transition-colors shrink-0"
+                            title="Associer"
+                          >
+                            <FiPlus size={14} />
+                          </button>
+                        }
+                      />
+                    ))
                   )}
                 </div>
               </div>
+            </section>
+          </div>
+
+          {/* ══ Colonne DROITE (large) : informations complémentaires ══ */}
+          <div className="lg:col-span-7 space-y-5">
+            <form onSubmit={handleSubmitInfo} className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+
+
+              {editingInfo && (
+                <div className="bg-amber-50 border-b border-amber-200 px-5 py-2.5 flex items-center justify-between">
+                  <span className="flex items-center gap-2 text-amber-700 text-[12px] font-semibold">
+                    <FiEdit2 size={13} /> Édition — {editingInfo.prenom} {editingInfo.nom}
+                  </span>
+                  <button type="button" onClick={() => setEditingInfo(null)} className="text-amber-700 text-[11px] underline hover:no-underline">
+                    Annuler
+                  </button>
+                </div>
+              )}
+
+              <div className="px-5 py-4 border-b border-slate-100">
+                <SectionLabel icon={<FiUser size={12} />}>Identité et statut</SectionLabel>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <Field label="Prénom *">
+                    <input className={inputCls} value={prenom} onChange={(e) => setPrenom(e.target.value)} required />
+                  </Field>
+                  <Field label="Nom *">
+                    <input className={inputCls} value={nom} onChange={(e) => setNom(e.target.value)} required />
+                  </Field>
+                  <Field label="Nationalité">
+                    <input className={inputCls} value={nationalite} onChange={(e) => setNationalite(e.target.value)} />
+                  </Field>
+                  <Field label="Type de client">
+                    <select className={inputCls} value={clientType} onChange={(e) => setClientType(e.target.value as typeof clientType)}>
+                      <option value="ADULTE">Adulte</option>
+                      <option value="ENFANT">Enfant</option>
+                      <option value="BEBE">Bébé</option>
+                      <option value="JEUNE">Jeune</option>
+                    </select>
+                  </Field>
+                </div>
+              </div>
+
+              <div className="px-5 py-4 border-b border-slate-100">
+                <SectionLabel icon={<FiFileText size={12} />}>Document principal</SectionLabel>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <Field label="Type de document">
+                    <select className={inputCls} value={typeDoc} onChange={(e) => setTypeDoc(e.target.value as typeof typeDoc)}>
+                      <option value="PASSEPORT">Passeport</option>
+                      <option value="CIN">CIN</option>
+                      <option value="LAISSE_PASSER">Laissez-passer</option>
+                    </select>
+                  </Field>
+                  <Field label="Référence document">
+                    <input className={inputCls} value={referenceDoc} onChange={(e) => setReferenceDoc(e.target.value)} />
+                  </Field>
+                  <Field label="Date de délivrance">
+                    <input type="date" className={inputCls} value={dateDelivranceDoc} onChange={(e) => setDateDelivranceDoc(e.target.value)} />
+                  </Field>
+                  <Field label="Date de validité">
+                    <input type="date" className={inputCls} value={dateValiditeDoc} onChange={(e) => setDateValiditeDoc(e.target.value)} />
+                  </Field>
+                </div>
+              </div>
+
+              <div className="px-5 py-4 border-b border-slate-100">
+                <SectionLabel icon={<FiCalendar size={12} />}>Informations personnelles</SectionLabel>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <Field label="Date de naissance">
+                    <input type="date" className={inputCls} value={dateNaissance} onChange={(e) => setDateNaissance(e.target.value)} />
+                  </Field>
+                </div>
+              </div>
+
+              <div className="px-5 py-4">
+                <SectionLabel icon={<FiPhone size={12} />}>Contact et pièces jointes</SectionLabel>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <Field label="WhatsApp">
+                    <input type="tel" className={inputCls} value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} />
+                  </Field>
+                  <Field label="Téléphone">
+                    <input type="tel" className={inputCls} value={tel} onChange={(e) => setTel(e.target.value)} />
+                  </Field>
+                  <div className="col-span-2">
+                    <label className="block text-[11px] font-semibold text-slate-500 mb-1.5 uppercase">Document (PDF)</label>
+                    <label className="flex flex-col items-center justify-center gap-1 w-full h-[42px] flex-row px-3 border border-dashed border-slate-200 rounded-lg cursor-pointer bg-slate-50 hover:bg-slate-100 hover:border-slate-300 transition-colors">
+                      <FiUpload size={14} className="text-slate-400 shrink-0" />
+                      <span className="text-[11px] text-slate-500 truncate ml-1.5">
+                        {document ? document.name : editingInfo?.document ? 'Fichier existant — cliquer pour remplacer' : 'Glisser un PDF ou cliquer'}
+                      </span>
+                      <input type="file" accept=".pdf" className="hidden" onChange={(e) => e.target.files && setDocument(e.target.files[0])} />
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 px-5 py-3.5 border-t border-slate-100 flex justify-end">
+                <button
+                  type="submit"
+                  disabled={isSavingInfo || loadingInfoSave}
+                  className="flex items-center gap-2 px-5 py-2 bg-slate-900 text-white text-[12px] font-semibold rounded-lg hover:bg-slate-800 disabled:opacity-50 transition-colors"
+                >
+                  {isSavingInfo || loadingInfoSave ? <FiLoader size={14} className="animate-spin" /> : <FiCheck size={14} />}
+                  {editingInfo ? 'Enregistrer les modifications' : 'Enregistrer les informations'}
+                </button>
+              </div>
+            </form>
+
+            {/* Historique — liste simple */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+              <div className="flex items-center gap-2 mb-1">
+                <FiClock size={14} className="text-slate-400" />
+                <h2 className="text-[12px] font-bold text-slate-700 uppercase tracking-wide">
+                  Historique des saisies ({infosList.length})
+                </h2>
+              </div>
+
+              {loadingInfosList ? (
+                <p className="text-center text-[12px] text-slate-400 py-6">Chargement...</p>
+              ) : infosList.length === 0 ? (
+                <p className="text-center text-[12px] text-slate-300 py-6 italic">Aucune donnée enregistrée.</p>
+              ) : (
+                <div className="mt-2">
+                  {infosList.map((info) => {
+                    const stripe = info.typeDoc === 'PASSEPORT' ? getValidityStripe(info.dateValiditeDoc) : 'bg-slate-200';
+                    const initials = `${info.prenom[0]}${info.nom[0]}`.toUpperCase();
+                    return (
+                      <ListRow
+                        key={info.id}
+                        leading={
+                          <div className="relative shrink-0">
+                            <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-[11px] font-bold text-slate-500">
+                              {initials}
+                            </div>
+                            <span className={`absolute -left-1 top-0 bottom-0 w-1 rounded-full ${stripe}`} />
+                          </div>
+                        }
+                        title={`${info.prenom} ${info.nom}`}
+                        subtitle={
+                          <>
+                            {DOC_LABEL[info.typeDoc] ?? info.typeDoc} · {info.referenceDoc} · Validité {formatDate(info.dateValiditeDoc)}
+                          </>
+                        }
+                        trailing={
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {info.document && (
+                              <a
+                                href={`${API_URL}/${info.document}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                                title="Voir le document"
+                              >
+                                <FiFileText size={14} />
+                              </a>
+                            )}
+                            <button
+                              onClick={() => handleEditInfo(info)}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                              title="Modifier"
+                            >
+                              <FiEdit2 size={14} />
+                            </button>
+                          </div>
+                        }
+                      />
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
+
         </div>
       </div>
     </div>
   );
-};
-
-export default ClientBeneficiaireFormPage;
+}

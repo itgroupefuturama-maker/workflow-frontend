@@ -15,9 +15,9 @@ const PageViewVisa = () => {
   const navigate = useNavigate();
 
   const tabs = [
-    { id: 'prospection', label: 'Listes des prospections' },
-    { id: 'visa',        label: 'Listes des visa' },
-    { id: 'beneficiaire', label: 'Listes des bénéficiaires' }
+    // { id: 'prospection', label: 'Listes des prospections' },
+    // { id: 'visa',        label: 'Listes des visa' },
+    // { id: 'beneficiaire', label: 'Listes des bénéficiaires' }
   ];
 
   const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'prospection');

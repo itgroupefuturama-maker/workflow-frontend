@@ -67,22 +67,6 @@ function NewLineRow({
   const mtServiceCieAriary  = puServiceCieAriary  * nombre;
   const mtPenaliteCieAriary = puPenaliteCieAriary * nombre;
 
-  // Mt Client Devise = Mt Cie Devise * facteur
-  const mtBilletClientDevise   = mtBilletCieDevise   * facteur;
-  const mtServiceClientDevise  = mtServiceCieDevise  * facteur;
-  const mtPenaliteClientDevise = mtPenaliteCieDevise * facteur;
-
-  // Mt Client Ariary = Mt Client Devise * taux
-  const mtBilletClientAriary   = mtBilletClientDevise   * taux;
-  const mtServiceClientAriary  = mtServiceClientDevise  * taux;
-  const mtPenaliteClientAriary = mtPenaliteClientDevise * taux;
-
-  // Commission = Mt Client Devise - Mt Cie Devise
-  const commissionEnDevise = (mtBilletClientDevise   - mtBilletCieDevise)
-                          + (mtServiceClientDevise  - mtServiceCieDevise)
-                          + (mtPenaliteClientDevise - mtPenaliteCieDevise);
-  const commissionEnAriary = commissionEnDevise * taux;
-
   // Taxe : saisie soit du taux (%), soit du montant direct (règle de trois inversée)
   const modeSaisieTaxe = newLine.modeSaisieTaxe || 'POURCENTAGE';
   const tauxTaxe = modeSaisieTaxe === 'MONTANT'
@@ -92,6 +76,25 @@ function NewLineRow({
     ? (newLine.montantTaxeDevise || 0)
     : puBilletCieDevise * (tauxTaxe / 100);
   const montantTaxeAriary = montantTaxeDevise * taux;
+
+  // Mt Client Devise hors taxe = Mt Cie Devise * facteur
+  const mtBilletClientDeviseHorsTaxe = mtBilletCieDevise   * facteur;
+  const mtServiceClientDevise        = mtServiceCieDevise  * facteur;
+  const mtPenaliteClientDevise       = mtPenaliteCieDevise * facteur;
+
+  // Mt Client Devise Billet = hors taxe + taxe (taxe transparente, pas de commission dessus)
+  const mtBilletClientDevise = mtBilletClientDeviseHorsTaxe + montantTaxeDevise;
+
+  // Mt Client Ariary = Mt Client Devise * taux
+  const mtBilletClientAriary   = mtBilletClientDevise   * taux;
+  const mtServiceClientAriary  = mtServiceClientDevise  * taux;
+  const mtPenaliteClientAriary = mtPenaliteClientDevise * taux;
+
+  // Commission (sur le prix billet hors taxe uniquement — la taxe est reversée telle quelle)
+  const commissionEnDevise = (mtBilletClientDeviseHorsTaxe - mtBilletCieDevise)
+                          + (mtServiceClientDevise  - mtServiceCieDevise)
+                          + (mtPenaliteClientDevise - mtPenaliteCieDevise);
+  const commissionEnAriary = commissionEnDevise * taux;
 
   const autoReadonlyCls = "w-full min-w-[140px] px-3 py-2 border border-slate-200 rounded-lg text-sm text-right font-medium bg-slate-100 text-slate-600 cursor-not-allowed";
   const commissionCls   = "w-full min-w-[140px] px-3 py-2 border border-green-300 rounded-lg text-sm text-right font-bold bg-green-50 text-green-700 cursor-not-allowed";

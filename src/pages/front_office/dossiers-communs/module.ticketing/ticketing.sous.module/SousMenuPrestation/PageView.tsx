@@ -61,9 +61,9 @@ export default function PageView() {
   }, [location.state?.targetTab]);
 
   const tabs = [
-    { id: 'prospection', label: 'Listes des entête prospection' },
-    { id: 'billet',      label: 'Listes des billets'            },
-    { id: 'beneficiaire', label: 'Listes des bénéficiaires' },
+    // { id: 'prospection', label: 'Listes des entête prospection' },
+    // { id: 'billet',      label: 'Listes des billets'            },
+    // { id: 'beneficiaire', label: 'Listes des bénéficiaires' },
   ];
 
   const [activeTabSousSection, setActiveTabSousSection] = useState('lignes');

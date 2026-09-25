@@ -3,7 +3,7 @@ import { FiX, FiTrash2, FiCheck } from 'react-icons/fi';
 import type { AppDispatch, RootState } from '../../app/store';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchClientBeneficiaireInfos } from '../../app/portail_client/clientBeneficiaireInfosSlice';
-import type { ServicePreference } from '../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
+import { selectServicesByType, type ServicePreference } from '../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
 import ReactDOM from 'react-dom';
 import PreferencesInlinePanel from './Hotel/PreferencesInlinePanel';
 import { fetchPreferencesBeneficiaire } from '../../app/back_office/clientFacturesSlice';
@@ -106,7 +106,7 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
   const [prefParPassager, setPrefParPassager] = useState<Record<string, string[]>>({});
 
   // Préférences dispo : on récupère depuis le store pour les services actifs
-  const servicesStore = useSelector((state: RootState) => state.serviceSpecifique.items);
+  const servicesStore = useSelector(selectServicesByType('TICKET'));
 
   const handlePreuveResaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
