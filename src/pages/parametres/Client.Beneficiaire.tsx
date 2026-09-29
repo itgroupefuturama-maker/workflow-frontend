@@ -2,16 +2,24 @@ import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
   fetchClientBeneficiairesPaginated,
-  createClientBeneficiaire,
-  updateClientBeneficiaire,
-  activateClientBeneficiaire,
-  deactivateClientBeneficiaire,
-  deleteClientBeneficiaire,
 } from '../../app/back_office/clientBeneficiairesSlice';
+// Gestion des clients bénéficiaires désormais assurée par l'équipe Odoo :
+// cette page n'est plus qu'un écran d'affichage. La création, l'édition,
+// l'activation/désactivation et la suppression sont conservées en commentaire
+// ci-dessous pour une éventuelle réactivation future. Seul "Modifier" reste,
+// renommé "Voir" en lecture seule.
+// import {
+//   createClientBeneficiaire,
+//   updateClientBeneficiaire,
+//   activateClientBeneficiaire,
+//   deactivateClientBeneficiaire,
+//   deleteClientBeneficiaire,
+// } from '../../app/back_office/clientBeneficiairesSlice';
 import type { RootState, AppDispatch } from '../../app/store';
-import type { ClientBeneficiaire } from '../../app/back_office/clientBeneficiairesSlice';
-import { FiPlus, FiX, FiCheckCircle, FiAlertCircle, FiLoader, FiUserCheck, FiTag, FiSearch, FiArrowLeft } from 'react-icons/fi';
-import AuditModal from '../../components/AuditModal';
+// import type { ClientBeneficiaire } from '../../app/back_office/clientBeneficiairesSlice';
+import { FiAlertCircle, FiLoader, FiUserCheck, FiTag, FiSearch, FiArrowLeft } from 'react-icons/fi';
+// import { FiPlus, FiX, FiCheckCircle } from 'react-icons/fi';
+// import AuditModal from '../../components/AuditModal';
 import { useNavigate } from 'react-router-dom';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import Pagination from '../../components/Pagination';
@@ -29,21 +37,21 @@ const ClientBeneficiairePage = () => {
     listError: globalError,
   } = useSelector((state: RootState) => state.clientBeneficiaires);
 
-  // UI States
-  const [activeModal, setActiveModal] = useState<'none' | 'form'>('none');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [editingClient, setEditingClient] = useState<ClientBeneficiaire | null>(null);
-  const [message, setMessage] = useState({ text: '', isError: false });
+  // UI States — désactivés avec les actions (création/édition/audit)
+  // const [activeModal, setActiveModal] = useState<'none' | 'form'>('none');
+  // const [isSubmitting, setIsSubmitting] = useState(false);
+  // const [editingClient, setEditingClient] = useState<ClientBeneficiaire | null>(null);
+  // const [message, setMessage] = useState({ text: '', isError: false });
 
   // Form States
-  const [libelle, setLibelle] = useState('');
-  const [statut, setStatut] = useState<'ACTIF' | 'INACTIF'>('ACTIF');
+  // const [libelle, setLibelle] = useState('');
+  // const [statut, setStatut] = useState<'ACTIF' | 'INACTIF'>('ACTIF');
 
-  const [typeClient, setTypeClient] = useState<'SIMPLE' | 'GOLD'| 'SILVER' | 'BRONZE' | 'VIP' >('SIMPLE');
+  // const [typeClient, setTypeClient] = useState<'SIMPLE' | 'GOLD'| 'SILVER' | 'BRONZE' | 'VIP' >('SIMPLE');
 
   // Audit
-  const [auditEntityId, setAuditEntityId] = useState<string | null>(null);
-  const [auditEntityName, setAuditEntityName] = useState('');
+  // const [auditEntityId, setAuditEntityId] = useState<string | null>(null);
+  // const [auditEntityName, setAuditEntityName] = useState('');
 
   // États pour la recherche & les filtres serveur
   const [globalSearch, setGlobalSearch] = useState('');
@@ -73,53 +81,53 @@ const ClientBeneficiairePage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch, page, limit, debouncedSearch, statutFilter, typeClientFilter]);
 
-  const closeModals = () => {
-    setActiveModal('none');
-    setEditingClient(null);
-    setLibelle('');
-    setStatut('ACTIF');
-    setTypeClient('SIMPLE');
-    setMessage({ text: '', isError: false });
-  };
+  // const closeModals = () => {
+  //   setActiveModal('none');
+  //   setEditingClient(null);
+  //   setLibelle('');
+  //   setStatut('ACTIF');
+  //   setTypeClient('SIMPLE');
+  //   setMessage({ text: '', isError: false });
+  // };
 
-  const handleAction = async (actionFn: any, payload: any) => {
-    setIsSubmitting(true);
-    await dispatch(actionFn(payload));
-    loadList(); // resynchronise la page paginée après activation/désactivation/suppression
-    setIsSubmitting(false);
-  };
+  // const handleAction = async (actionFn: any, payload: any) => {
+  //   setIsSubmitting(true);
+  //   await dispatch(actionFn(payload));
+  //   loadList(); // resynchronise la page paginée après activation/désactivation/suppression
+  //   setIsSubmitting(false);
+  // };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
+  // const handleSubmit = async (e: React.FormEvent) => {
+  //   e.preventDefault();
+  //   setIsSubmitting(true);
 
-    const dateApplication = new Date().toISOString();
+  //   const dateApplication = new Date().toISOString();
 
-    if (editingClient) {
-      const result = await dispatch(updateClientBeneficiaire({ id: editingClient.id, libelle, statut, typeClient }));
-      if (updateClientBeneficiaire.fulfilled.match(result)) {
-        setMessage({ text: 'Client bénéficiaire mis à jour !', isError: false });
-        loadList();
-        setTimeout(closeModals, 1500);
-      } else {
-        setMessage({ text: 'Une erreur est survenue.', isError: true });
-      }
-    } else {
-      const result = await dispatch(createClientBeneficiaire({ libelle, statut, typeClient, dateApplication }))
-      if (createClientBeneficiaire.fulfilled.match(result)) {
-        setMessage({ text: 'Client bénéficiaire créé !', isError: false });
-        loadList();
-        setTimeout(closeModals, 1500);
-      } else {
-        setMessage({ text: 'Une erreur est survenue.', isError: true });
-      }
-    }
-    setIsSubmitting(false);
-  };
+  //   if (editingClient) {
+  //     const result = await dispatch(updateClientBeneficiaire({ id: editingClient.id, libelle, statut, typeClient }));
+  //     if (updateClientBeneficiaire.fulfilled.match(result)) {
+  //       setMessage({ text: 'Client bénéficiaire mis à jour !', isError: false });
+  //       loadList();
+  //       setTimeout(closeModals, 1500);
+  //     } else {
+  //       setMessage({ text: 'Une erreur est survenue.', isError: true });
+  //     }
+  //   } else {
+  //     const result = await dispatch(createClientBeneficiaire({ libelle, statut, typeClient, dateApplication }))
+  //     if (createClientBeneficiaire.fulfilled.match(result)) {
+  //       setMessage({ text: 'Client bénéficiaire créé !', isError: false });
+  //       loadList();
+  //       setTimeout(closeModals, 1500);
+  //     } else {
+  //       setMessage({ text: 'Une erreur est survenue.', isError: true });
+  //     }
+  //   }
+  //   setIsSubmitting(false);
+  // };
 
   return (
     <div className="p-8 max-w-[1600px] mx-auto animate-in fade-in duration-500">
-      {/* Overlay loading */}
+      {/* Overlay loading — désactivé, plus aucune action ne peut le déclencher
       {isSubmitting && (
         <div className="fixed inset-0 z-60 bg-white/20 backdrop-blur-[1px] flex items-center justify-center">
           <div className="bg-white p-6 rounded-3xl shadow-2xl flex flex-col items-center gap-3 border border-gray-100">
@@ -128,6 +136,7 @@ const ClientBeneficiairePage = () => {
           </div>
         </div>
       )}
+      */}
 
       {/* HEADER */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-10">
@@ -139,15 +148,17 @@ const ClientBeneficiairePage = () => {
             <h2 className="text-3xl font-black text-gray-900 flex items-center gap-3">
               <FiUserCheck className="text-indigo-600" />Clients Bénéficiaires
             </h2>
-            <p className="text-gray-500 font-medium italic">Gérez les bénéficiaires et leurs clients facturés.</p>
+            <p className="text-gray-500 font-medium italic">Gérez les bénéficiaires.</p>
           </div>
         </div>
+        {/* Création désactivée — gérée via Odoo désormais
         <button
           onClick={() => { setEditingClient(null); setActiveModal('form'); }}
           className="bg-indigo-600 hover:bg-indigo-700 text-white px-7 py-3.5 rounded-2xl font-black transition-all shadow-lg shadow-indigo-100 flex items-center gap-2"
         >
           <FiPlus size={20} /> Nouveau Client Bénéficiaire
         </button>
+        */}
       </div>
 
       {globalError && (
@@ -275,12 +286,13 @@ const ClientBeneficiairePage = () => {
                 </td>
                 <td className="px-6 py-4 text-center">
                   <div className="flex justify-center gap-4 text-[11px] font-black uppercase tracking-tighter">
-                    <button 
+                    <button
                       onClick={() => navigate(`/parametre/client-beneficiaire/${client.id}`)}
                       className="text-blue-600 hover:underline"
                     >
-                      Modifier
+                      Voir
                     </button>
+                    {/* Actions désactivées — gérées via Odoo désormais
                     <button
                       onClick={() => handleAction(client.statut === 'ACTIF' ? deactivateClientBeneficiaire : activateClientBeneficiaire, { id: client.id })}
                       className={client.statut === 'ACTIF' ? 'text-amber-600 hover:underline' : 'text-emerald-600 hover:underline'}
@@ -296,6 +308,7 @@ const ClientBeneficiairePage = () => {
                     <button onClick={() => window.confirm('Supprimer ?') && handleAction(deleteClientBeneficiaire, { id: client.id })} className="text-red-500 hover:underline border-l border-gray-100 pl-4">
                       Supprimer
                     </button>
+                    */}
                   </div>
                 </td>
               </tr>
@@ -324,7 +337,7 @@ const ClientBeneficiairePage = () => {
         />
       </div>
 
-      {/* MODALE FORMULAIRE */}
+      {/* MODALE FORMULAIRE — désactivée, la création/édition se fait maintenant via Odoo
       {activeModal === 'form' && (
         <div className="fixed inset-0 z-110 flex items-center justify-center bg-gray-900/40 backdrop-blur-sm p-4 animate-in fade-in zoom-in-95 duration-200">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-xl overflow-hidden border border-white/20">
@@ -403,7 +416,9 @@ const ClientBeneficiairePage = () => {
           </div>
         </div>
       )}
+      */}
 
+      {/* Audit désactivé — plus de "Tracer" pour le déclencher
       <AuditModal
         entity="CLIENT_BENEFICIAIRE"
         entityId={auditEntityId}
@@ -411,6 +426,7 @@ const ClientBeneficiairePage = () => {
         isOpen={!!auditEntityId}
         onClose={() => setAuditEntityId(null)}
       />
+      */}
     </div>
   );
 };

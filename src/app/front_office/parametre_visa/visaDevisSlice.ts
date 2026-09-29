@@ -32,7 +32,7 @@ export interface VisaDevisDetail {
     };
     consulat: {
       id: string;
-      nom: string;
+      libelle: string;
       createdAt: string;
       updatedAt: string;
     };
@@ -62,7 +62,7 @@ export interface VisaDevisDetail {
     updatedAt: string;
     consulat: {                      // ← ajouté
       id: string;
-      nom: string;
+      libelle: string;
       createdAt: string;
       updatedAt: string;
     };

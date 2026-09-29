@@ -193,10 +193,10 @@ const ProspectionTab = ({ prestationId }: Props) => {
                               {entete.prestation.numeroDos}
                             </p>
                             <span className="font-mono text-[11px] bg-white border border-gray-200 text-gray-700 px-2 py-0.5 rounded-md font-bold">
-                              {entete.consulat.nom}
+                              {entete.consulat.libelle}
                             </span>
                           </div>
-                          <p className="text-xs text-gray-400 mt-0.5">{entete.consulat.nom}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">{entete.consulat.libelle}</p>
                         </div>
                       </div>
 

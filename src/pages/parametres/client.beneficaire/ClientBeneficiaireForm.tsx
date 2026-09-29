@@ -1,14 +1,18 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
+// import { useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
-import {
-  updateClientBeneficiaire,
-  fetchClientBeneficiaires,
-} from '../../../app/back_office/clientBeneficiairesSlice';
-import {
-  addBeneficiaireToClientFacture,
-  removeBeneficiaireFromClientFacture,
-} from '../../../app/back_office/clientFacturesSlice';
+// Paramètres généraux et associations client facturé désormais gérés via Odoo :
+// ces deux blocs passent en lecture seule. Le reste de la page (identité,
+// documents, Google Calendar) reste géré dans notre application.
+// import {
+//   updateClientBeneficiaire,
+//   fetchClientBeneficiaires,
+// } from '../../../app/back_office/clientBeneficiairesSlice';
+// import {
+//   addBeneficiaireToClientFacture,
+//   removeBeneficiaireFromClientFacture,
+// } from '../../../app/back_office/clientFacturesSlice';
 import {
   createClientBeneficiaireInfos,
   fetchClientBeneficiaireInfos,
@@ -20,9 +24,10 @@ import type { RootState, AppDispatch } from '../../../app/store';
 import { API_URL } from '../../../service/env';
 import { toast } from '../../../components/Toast/toast';
 import {
-  FiArrowLeft, FiTrash2, FiSearch, FiPlus, FiLoader, FiCheck, FiX,
+  FiArrowLeft, FiLoader, FiCheck, FiX,
   FiUser, FiFileText, FiCalendar, FiPhone, FiUpload, FiEdit2, FiClock,
 } from 'react-icons/fi';
+// import { FiTrash2, FiSearch, FiPlus } from 'react-icons/fi';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -52,6 +57,19 @@ const DOC_LABEL: Record<string, string> = {
 };
 
 const toISO = (d: string) => (d ? `${d}T00:00:00.000Z` : '');
+
+const STATUT_LABELS: Record<string, string> = {
+  ACTIF: 'Actif',
+  INACTIF: 'Inactif',
+};
+
+const TYPE_CLIENT_LABELS: Record<string, string> = {
+  SIMPLE: 'Simple',
+  GOLD: 'Gold',
+  SILVER: 'Silver',
+  BRONZE: 'Bronze',
+  VIP: 'VIP',
+};
 
 // ── Sous-composants ──────────────────────────────────────────────────────────
 
@@ -103,7 +121,7 @@ export default function ClientBeneficiaireFormPage() {
   const dispatch = useAppDispatch();
 
   const { data: beneficiaires } = useSelector((s: RootState) => s.clientBeneficiaires);
-  const { data: clientFactures } = useSelector((s: RootState) => s.clientFactures);
+  // const { data: clientFactures } = useSelector((s: RootState) => s.clientFactures);
   const { list: infosList, loadingList: loadingInfosList, loading: loadingInfoSave } = useSelector(
     (s: RootState) => s.clientBeneficiaireInfos
   );
@@ -112,17 +130,19 @@ export default function ClientBeneficiaireFormPage() {
 
   const [message, setMessage] = useState<{ text: string; isError: boolean } | null>(null);
   const [loadingAuth, setLoadingAuth] = useState(false);
-  const [isSavingParams, setIsSavingParams] = useState(false);
+  // const [isSavingParams, setIsSavingParams] = useState(false);
   const [isSavingInfo, setIsSavingInfo] = useState(false);
-  const [searchFacture, setSearchFacture] = useState('');
+  // const [searchFacture, setSearchFacture] = useState('');
   const [editingInfo, setEditingInfo] = useState<ClientBeneficiaireInfo | null>(null);
 
   // ── Colonne droite : paramètres du bénéficiaire ──
   const [libelle, setLibelle] = useState(currentBeneficiaire?.libelle ?? '');
-  const [statut, setStatut] = useState<'ACTIF' | 'INACTIF'>(
+  // Statut et Type client passés en lecture seule (dropdown -> champ simple) :
+  // le setter n'est plus utilisé nulle part, seule la valeur reste lue pour l'affichage.
+  const [statut] = useState<'ACTIF' | 'INACTIF'>(
     (currentBeneficiaire?.statut as 'ACTIF' | 'INACTIF') ?? 'ACTIF'
   );
-  const [typeClient, setTypeClient] = useState<'SIMPLE' | 'GOLD' | 'SILVER' | 'BRONZE' | 'VIP'>(
+  const [typeClient] = useState<'SIMPLE' | 'GOLD' | 'SILVER' | 'BRONZE' | 'VIP'>(
     (currentBeneficiaire?.typeClient as 'SIMPLE' | 'GOLD' | 'SILVER' | 'BRONZE' | 'VIP') ?? 'SIMPLE'
   );
 
@@ -160,58 +180,58 @@ export default function ClientBeneficiaireFormPage() {
     setDocument(null);
   }, [editingInfo]);
 
-  const hasParamsChanges = useMemo(() => {
-    if (!currentBeneficiaire) return false;
-    return (
-      libelle !== currentBeneficiaire.libelle ||
-      statut !== currentBeneficiaire.statut ||
-      typeClient !== currentBeneficiaire.typeClient
-    );
-  }, [libelle, statut, typeClient, currentBeneficiaire]);
+  // const hasParamsChanges = useMemo(() => {
+  //   if (!currentBeneficiaire) return false;
+  //   return (
+  //     libelle !== currentBeneficiaire.libelle ||
+  //     statut !== currentBeneficiaire.statut ||
+  //     typeClient !== currentBeneficiaire.typeClient
+  //   );
+  // }, [libelle, statut, typeClient, currentBeneficiaire]);
 
-  const isParamsInvalid = !libelle.trim();
+  // const isParamsInvalid = !libelle.trim();
 
-  const availableClientFactures = useMemo(() => {
-    const linkedIds = currentBeneficiaire?.factures.map((f) => f.clientFacture.id) || [];
-    return clientFactures.filter(
-      (cf) =>
-        !linkedIds.includes(cf.id) &&
-        (cf.libelle.toLowerCase().includes(searchFacture.toLowerCase()) ||
-          cf.code.toLowerCase().includes(searchFacture.toLowerCase()))
-    );
-  }, [clientFactures, currentBeneficiaire, searchFacture]);
+  // const availableClientFactures = useMemo(() => {
+  //   const linkedIds = currentBeneficiaire?.factures.map((f) => f.clientFacture.id) || [];
+  //   return clientFactures.filter(
+  //     (cf) =>
+  //       !linkedIds.includes(cf.id) &&
+  //       (cf.libelle.toLowerCase().includes(searchFacture.toLowerCase()) ||
+  //         cf.code.toLowerCase().includes(searchFacture.toLowerCase()))
+  //   );
+  // }, [clientFactures, currentBeneficiaire, searchFacture]);
 
   const notify = (text: string, isError = false) => {
     setMessage({ text, isError });
     setTimeout(() => setMessage(null), 3000);
   };
 
-  // ── Actions : paramètres généraux ──
-  const handleSaveParams = async () => {
-    if (!currentBeneficiaire) return;
-    setIsSavingParams(true);
-    const result = await dispatch(
-      updateClientBeneficiaire({ id: currentBeneficiaire.id, libelle, statut, typeClient })
-    );
-    if (updateClientBeneficiaire.fulfilled.match(result)) {
-      notify('Paramètres enregistrés.');
-    } else {
-      notify('Erreur lors de la sauvegarde des paramètres.', true);
-    }
-    setIsSavingParams(false);
-  };
+  // ── Actions : paramètres généraux — désactivées, gérées via Odoo désormais ──
+  // const handleSaveParams = async () => {
+  //   if (!currentBeneficiaire) return;
+  //   setIsSavingParams(true);
+  //   const result = await dispatch(
+  //     updateClientBeneficiaire({ id: currentBeneficiaire.id, libelle, statut, typeClient })
+  //   );
+  //   if (updateClientBeneficiaire.fulfilled.match(result)) {
+  //     notify('Paramètres enregistrés.');
+  //   } else {
+  //     notify('Erreur lors de la sauvegarde des paramètres.', true);
+  //   }
+  //   setIsSavingParams(false);
+  // };
 
-  const handleAddClientFacture = async (clientFactureId: string) => {
-    const result = await dispatch(addBeneficiaireToClientFacture({ id: clientFactureId, beneficiaireId: id! }));
-    if (addBeneficiaireToClientFacture.fulfilled.match(result)) notify('Association réussie.');
-    await dispatch(fetchClientBeneficiaires());
-  };
+  // const handleAddClientFacture = async (clientFactureId: string) => {
+  //   const result = await dispatch(addBeneficiaireToClientFacture({ id: clientFactureId, beneficiaireId: id! }));
+  //   if (addBeneficiaireToClientFacture.fulfilled.match(result)) notify('Association réussie.');
+  //   await dispatch(fetchClientBeneficiaires());
+  // };
 
-  const handleRemoveClientFacture = async (clientFactureId: string) => {
-    const result = await dispatch(removeBeneficiaireFromClientFacture({ id: clientFactureId, beneficiaireId: id! }));
-    if (removeBeneficiaireFromClientFacture.fulfilled.match(result)) notify('Association supprimée.');
-    await dispatch(fetchClientBeneficiaires());
-  };
+  // const handleRemoveClientFacture = async (clientFactureId: string) => {
+  //   const result = await dispatch(removeBeneficiaireFromClientFacture({ id: clientFactureId, beneficiaireId: id! }));
+  //   if (removeBeneficiaireFromClientFacture.fulfilled.match(result)) notify('Association supprimée.');
+  //   await dispatch(fetchClientBeneficiaires());
+  // };
 
   const handleConnectGoogle = async () => {
     if (!id) return;
@@ -329,9 +349,11 @@ export default function ClientBeneficiaireFormPage() {
                     onChange={(e) => setLibelle(e.target.value.toUpperCase())}
                     className={`${inputCls} font-bold ${!libelle ? 'border-red-200' : ''}`}
                     placeholder="EX: CLIENT NOM"
+                    disabled
                   />
                 </Field>
                 <div className="grid grid-cols-2 gap-4">
+                  {/* Odoo gère désormais cette donnée — dropdown remplacé par un champ simple
                   <Field label="Statut">
                     <select value={statut} onChange={(e) => setStatut(e.target.value as 'ACTIF' | 'INACTIF')} className={`${inputCls} font-semibold`}>
                       <option value="ACTIF">Actif</option>
@@ -347,6 +369,25 @@ export default function ClientBeneficiaireFormPage() {
                       <option value="VIP">VIP</option>
                     </select>
                   </Field>
+                  */}
+                  <Field label="Statut">
+                    <input
+                      type="text"
+                      value={STATUT_LABELS[statut] ?? statut}
+                      className={`${inputCls} font-semibold`}
+                      disabled
+                      readOnly
+                    />
+                  </Field>
+                  <Field label="Type client">
+                    <input
+                      type="text"
+                      value={TYPE_CLIENT_LABELS[typeClient] ?? typeClient}
+                      className={`${inputCls} font-semibold`}
+                      disabled
+                      readOnly
+                    />
+                  </Field>
                 </div>
               </div>
 
@@ -359,6 +400,7 @@ export default function ClientBeneficiaireFormPage() {
                   {loadingAuth ? <FiLoader size={13} className="animate-spin" /> : null}
                   Connecter Google Calendar
                 </button>
+                {/* Enregistrer — désactivé, ces paramètres sont gérés via Odoo désormais
                 <button
                   onClick={handleSaveParams}
                   disabled={isSavingParams || !hasParamsChanges || isParamsInvalid}
@@ -371,6 +413,7 @@ export default function ClientBeneficiaireFormPage() {
                   {isSavingParams ? <FiLoader size={13} className="animate-spin" /> : <FiCheck size={13} />}
                   Enregistrer
                 </button>
+                */}
               </div>
             </section>
 
@@ -389,6 +432,7 @@ export default function ClientBeneficiaireFormPage() {
                       key={f.clientFacture.id}
                       title={f.clientFacture.libelle}
                       subtitle={f.clientFacture.code}
+                      /* Dissocier — désactivé, ces associations sont gérées via Odoo désormais
                       trailing={
                         <button
                           onClick={() => handleRemoveClientFacture(f.clientFacture.id)}
@@ -398,12 +442,13 @@ export default function ClientBeneficiaireFormPage() {
                           <FiTrash2 size={14} />
                         </button>
                       }
+                      */
                     />
                   ))}
                 </div>
               )}
 
-              {/* Clients disponibles — toujours visible, filtrable par la recherche */}
+              {/* Clients disponibles à associer — désactivé, géré via Odoo désormais
               <div className="mt-4 pt-4 border-t border-slate-100">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
@@ -445,6 +490,7 @@ export default function ClientBeneficiaireFormPage() {
                   )}
                 </div>
               </div>
+              */}
             </section>
           </div>
 

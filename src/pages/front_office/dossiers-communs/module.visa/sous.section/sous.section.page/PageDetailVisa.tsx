@@ -409,7 +409,7 @@ const PageDetailVisa = () => {
 
                                   {/* Consulat */}
                                   <td className="px-4 py-3 whitespace-nowrap">
-                                    <p className="text-xs font-medium text-gray-700 capitalize">{consulat?.nom ?? '—'}</p>
+                                    <p className="text-xs font-medium text-gray-700 capitalize">{consulat?.libelle ?? '—'}</p>
                                     <p className="text-[10px] text-gray-400">{fmtNum(vp.puConsulatDevise)} {vp.devise}</p>
                                   </td>
 
@@ -537,7 +537,7 @@ const PageDetailVisa = () => {
                                         </div>
                                         <div className="bg-white border border-gray-100 rounded-xl p-3 space-y-1">
                                           <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Consulat</p>
-                                          <p className="text-xs font-semibold text-gray-800 capitalize">{consulat?.nom ?? '—'}</p>
+                                          <p className="text-xs font-semibold text-gray-800 capitalize">{consulat?.libelle ?? '—'}</p>
                                           <p className="text-[10px] text-gray-500">PU : {fmtNum(vp.puConsulatDevise)} {vp.devise}</p>
                                           <p className="text-[10px] text-gray-500">PU Ar : {fmtNum(vp.puConsulatAriary)} Ar</p>
                                         </div>

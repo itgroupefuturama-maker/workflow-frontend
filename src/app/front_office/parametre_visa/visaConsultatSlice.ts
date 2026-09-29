@@ -4,6 +4,7 @@ import axios from '../../../service/Axios';
 export interface VisaConsultat {
   id: string;
   nom: string;
+  code: string;
   createdAt: string;
   updatedAt: string;
 }

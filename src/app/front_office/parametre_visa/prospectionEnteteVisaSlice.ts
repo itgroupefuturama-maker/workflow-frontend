@@ -28,7 +28,7 @@ export interface VisaProspectionEntete {
   prestationId: string;
   consulat: {
     id: string;
-    nom: string;
+    libelle: string;
     createdAt: string;
     updatedAt: string;
   };

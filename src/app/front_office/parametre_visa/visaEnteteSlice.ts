@@ -130,7 +130,7 @@ export interface VisaLigne {
       visaEntree: { id: string; entree: string };
       pays: { id: string; pays: string; photo: string };
     };
-    consulat: { id: string; nom: string; createdAt: string; updatedAt: string };
+    consulat: { id: string; libelle: string; createdAt: string; updatedAt: string };
   };
 }
 
@@ -152,7 +152,7 @@ export interface VisaEntete {
     consulatId: string;          // ← ajouté
     consulat: {                  // ← ajouté
       id: string;
-      nom: string;
+      libelle: string;
       createdAt: string;
       updatedAt: string;
     };

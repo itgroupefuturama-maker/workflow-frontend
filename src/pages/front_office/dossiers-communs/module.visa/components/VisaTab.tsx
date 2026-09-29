@@ -156,7 +156,7 @@ const VisaTab = () => {
                         </p>
                         {consulat && (
                           <span className="text-[11px] bg-white border border-gray-200 text-gray-500 px-2 py-0.5 rounded-md capitalize">
-                            {consulat.nom}
+                            {consulat.libelle}
                           </span>
                         )}
                       </div>
@@ -241,7 +241,7 @@ const VisaTab = () => {
 
                               {/* Consulat */}
                               <td className="px-4 py-3 text-sm text-gray-600 capitalize">
-                                {consulat?.nom ?? '—'}
+                                {consulat?.libelle ?? '—'}
                               </td>
 
                               {/* PU client */}

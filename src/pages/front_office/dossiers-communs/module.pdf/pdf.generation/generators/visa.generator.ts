@@ -43,7 +43,7 @@ export const generateVisaPdf = (
     { label: 'Référence',     value: devis.reference },
     { label: 'Dossier',       value: prospectionVisa.prestation.numeroDos },
     { label: 'Client facturé',value: prospectionVisa.clientFacture },
-    { label: 'Consulat',      value: prospectionVisa.consulat.nom },
+    { label: 'Consulat',      value: prospectionVisa.consulat.libelle },
     { label: 'Statut devis',  value: fmt.replace_(devis.statut) },
     { label: 'Date création', value: fmt.date(devis.createdAt) },
     // Direction uniquement
@@ -128,7 +128,7 @@ function _drawTableDirection(
       `${l.visaParams?.pays?.pays ?? '—'} — ${l.visaParams?.visaType?.nom ?? '—'}`,
       `${fmt.date(l.dateDepart)} → ${fmt.date(l.dateRetour)}`,
       String(l.nombre),
-      l.consulat?.nom ?? '—',                          // ← fix
+      l.consulat?.libelle ?? '—',
       `${fmt.number(l.puConsulatDevise)} ${l.devise}`,
       fmt.ariary(l.commissionAriary),
       `${fmt.number(l.puClientDevise)} ${l.devise}`,
@@ -158,7 +158,7 @@ function _drawTableClient(
       `${l.visaParams?.pays?.pays ?? '—'} — ${l.visaParams?.visaType?.nom ?? '—'}`,
       `${fmt.date(l.dateDepart)} → ${fmt.date(l.dateRetour)}`,
       String(l.nombre),
-      l.consulat?.nom ?? '—',                          // ← fix
+      l.consulat?.libelle ?? '—',
       `${fmt.number(l.puClientDevise)} ${l.devise}`,
       fmt.ariary(l.montantTotalClientAriary),
     ])

@@ -185,6 +185,9 @@ export default function ParametreView() {
                           Nouveau pays
                         </Button>
                       </div>
+                      {/* <div>
+                        <h1>liste des pays {filteredPays.length}</h1>
+                      </div> */}
                       <div className="overflow-y-auto max-h-[560px]">
                         {paysState.loading ? (
                           <div className="py-10 flex justify-center">

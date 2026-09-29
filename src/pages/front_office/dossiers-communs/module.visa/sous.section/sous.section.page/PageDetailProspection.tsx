@@ -430,7 +430,7 @@ const PageDetailProspection = () => {
                                         <div className="px-4 py-3 space-y-0.5">
                                         <p className="text-xs text-gray-400 uppercase tracking-wide">Consulat</p>
                                         <p className="text-sm font-medium text-gray-800 capitalize">
-                                            {ligne.consulat?.nom ?? '—'}
+                                            {ligne.consulat?.libelle ?? '—'}
                                         </p>
                                         <p className="text-xs text-gray-500">
                                             PU : {fmt(ligne.puConsulatDevise)} {ligne.devise} / {fmt(ligne.puConsulatAriary)} Ar

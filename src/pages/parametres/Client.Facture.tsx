@@ -96,7 +96,7 @@ const ClientFacturePage = () => {
   };
 
   return (
-    <div className="p-8 max-w-[1600px] mx-auto animate-in fade-in duration-500">
+    <div className="p-8 max-w-[2600px] mx-auto animate-in fade-in duration-500">
       {isSubmitting && (
         <div className="fixed inset-0 z-100 flex items-center justify-center bg-white/40 backdrop-blur-[2px]">
           <div className="bg-white p-6 rounded-3xl shadow-2xl flex flex-col items-center gap-4 border border-gray-100">
@@ -156,7 +156,7 @@ const ClientFacturePage = () => {
         </div>
 
         {/* Partie Centrale : Sélecteur d'action (Design Minimaliste) */}
-        <div className="flex flex-col items-center gap-2">
+        {/* <div className="flex flex-col items-center gap-2">
           <div className="inline-flex items-center bg-gray-100/80 p-1 rounded-xl border border-gray-200">
             {[
               { id: 'modifier', label: 'Modifier', icon: <FiEdit3 size={14} /> },
@@ -179,13 +179,13 @@ const ClientFacturePage = () => {
             ))}
           </div>
           {/* Texte explicatif discret */}
-          <span className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] animate-pulse">
+          {/* <span className="text-[9px] font-black text-gray-400 uppercase tracking-[0.2em] animate-pulse">
             Mode {selectedAction} actif : cliquez sur une ligne
           </span>
-        </div>
+        </div> */} 
 
         {/* Partie Droite : Nouveau Client */}
-        <div className="flex justify-end">
+        {/* <div className="flex justify-end">
           <button
             onClick={() => navigate('/parametre/client-facture/nouveau')}
             className="bg-indigo-600 hover:bg-indigo-700 text-white px-7 py-3.5 rounded-2xl font-black transition-all shadow-lg shadow-indigo-100 flex items-center gap-2"
@@ -193,7 +193,7 @@ const ClientFacturePage = () => {
             <FiPlus size={18} />
             <span>Nouveau Client</span>
           </button>
-        </div>
+        </div> */}
       </div>
 
       
@@ -316,7 +316,7 @@ const ClientFacturePage = () => {
                             title="Modifier"
                           >
                             {/* <FiEdit3 size={20} /> */}
-                            Modifier
+                            Voir
                           </button>
                         )}
 

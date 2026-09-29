@@ -1,19 +1,41 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
+// import { useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate, useParams } from 'react-router-dom';
-import {
-  createClientFacture,
-  updateClientFacture,
-  addBeneficiaireToClientFacture,
-  removeBeneficiaireFromClientFacture,
-  fetchClientFactures,
-  assignUserToClientFacture,
-} from '../../../app/back_office/clientFacturesSlice';
+// Gestion des clients facturés désormais assurée par l'équipe Odoo :
+// cette page n'est plus qu'un écran d'affichage. Les actions de création/modification
+// du client et d'ajout/suppression de bénéficiaire sont conservées en commentaire
+// ci-dessous pour une éventuelle réactivation future.
+// Seule l'assignation du responsable reste gérée dans notre application.
+import { assignUserToClientFacture } from '../../../app/back_office/clientFacturesSlice';
+// import {
+//   createClientFacture,
+//   updateClientFacture,
+//   addBeneficiaireToClientFacture,
+//   removeBeneficiaireFromClientFacture,
+//   fetchClientFactures,
+// } from '../../../app/back_office/clientFacturesSlice';
 import type { RootState, AppDispatch } from '../../../app/store';
-import { FiArrowLeft, FiTrash2, FiSearch, FiUserPlus, FiLoader, FiChevronDown, FiChevronUp } from 'react-icons/fi';
+import { FiArrowLeft, FiChevronDown, FiChevronUp, FiLoader } from 'react-icons/fi';
+// import { FiTrash2, FiSearch, FiUserPlus } from 'react-icons/fi';
 import { useRef } from 'react';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
+
+const PROFIL_RISQUE_LABELS: Record<string, string> = {
+  FAIBLE: 'Faible',
+  MOYEN: 'Moyen',
+  ELEVE: 'Élevé',
+  TRES_ELEVE: 'Très élevé',
+};
+
+const CREDIT_DEFAULT_LABELS: Record<string, string> = {
+  CREDIT_0: 'Au comptant (0j)',
+  CREDIT_15: 'Crédit 15 jours',
+  CREDIT_30: 'Crédit 30 jours',
+  CREDIT_60: 'Crédit 60 jours',
+  CREDIT_90: 'Crédit 90 jours',
+};
 
 const ClientFactureFormPage = () => {
   const { id } = useParams<{ id?: string }>();
@@ -21,19 +43,20 @@ const ClientFactureFormPage = () => {
   const dispatch = useAppDispatch();
 
   const { data: clients } = useSelector((state: RootState) => state.clientFactures);
-  const { data: allBeneficiaires } = useSelector((state: RootState) => state.clientBeneficiaires);
+  // const { data: allBeneficiaires } = useSelector((state: RootState) => state.clientBeneficiaires);
   const { data: users } = useSelector((state: RootState) => state.users);
 
   const isEdit = !!id;
   const currentClient = clients.find(c => c.id === id);
 
   const scrollAssocRef = useRef<HTMLDivElement>(null);
-  const scrollAvailRef = useRef<HTMLDivElement>(null);
+  // const scrollAvailRef = useRef<HTMLDivElement>(null);
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [message, setMessage] = useState({ text: '', isError: false });
-  const [searchTerm, setSearchTerm] = useState('');
+  // const [isSubmitting, setIsSubmitting] = useState(false);
+  // const [message, setMessage] = useState({ text: '', isError: false });
+  // const [searchTerm, setSearchTerm] = useState('');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [isSavingResponsable, setIsSavingResponsable] = useState(false);
 
   const [formData, setFormData] = useState({
     code: 'CLT-001',
@@ -52,30 +75,30 @@ const ClientFactureFormPage = () => {
     statut: 'ACTIF' as 'ACTIF' | 'INACTIF'
   });
 
-  const hasChanges = useMemo(() => {
-    if (!isEdit || !currentClient) return true;
+  // const hasChanges = useMemo(() => {
+  //   if (!isEdit || !currentClient) return true;
 
-    const responsableChanged = (currentClient.user?.id || null) !== (selectedUserId || null);
-    return (
-      formData.code !== currentClient.code ||
-      formData.libelle !== currentClient.libelle ||
-      formData.profilRisque !== currentClient.profilRisque ||
-      formData.creditdefault !== currentClient.creditdefault ||
-      formData.tauxBase !== currentClient.tauxBase ||
-      formData.volDomestique !== currentClient.volDomestique ||
-      formData.volRegional !== currentClient.volRegional ||
-      formData.longCourrier !== currentClient.longCourrier ||
-      formData.auComptant !== currentClient.auComptant ||
-      formData.credit15jrs !== currentClient.credit15jrs ||
-      formData.credit30jrs !== currentClient.credit30jrs ||
-      formData.credit60jrs !== currentClient.credit60jrs ||
-      formData.credit90jrs !== currentClient.credit90jrs ||
-      formData.statut !== currentClient.statut ||
-      responsableChanged
-    );
-  }, [formData, currentClient, isEdit, selectedUserId]);
+  //   const responsableChanged = (currentClient.user?.id || null) !== (selectedUserId || null);
+  //   return (
+  //     formData.code !== currentClient.code ||
+  //     formData.libelle !== currentClient.libelle ||
+  //     formData.profilRisque !== currentClient.profilRisque ||
+  //     formData.creditdefault !== currentClient.creditdefault ||
+  //     formData.tauxBase !== currentClient.tauxBase ||
+  //     formData.volDomestique !== currentClient.volDomestique ||
+  //     formData.volRegional !== currentClient.volRegional ||
+  //     formData.longCourrier !== currentClient.longCourrier ||
+  //     formData.auComptant !== currentClient.auComptant ||
+  //     formData.credit15jrs !== currentClient.credit15jrs ||
+  //     formData.credit30jrs !== currentClient.credit30jrs ||
+  //     formData.credit60jrs !== currentClient.credit60jrs ||
+  //     formData.credit90jrs !== currentClient.credit90jrs ||
+  //     formData.statut !== currentClient.statut ||
+  //     responsableChanged
+  //   );
+  // }, [formData, currentClient, isEdit, selectedUserId]);
 
-  const isFormInvalid = !formData.libelle.trim() || !formData.code.trim();
+  // const isFormInvalid = !formData.libelle.trim() || !formData.code.trim();
 
   useEffect(() => {
     if (isEdit && currentClient) {
@@ -105,67 +128,81 @@ const ClientFactureFormPage = () => {
     }
   }, [isEdit, currentClient]);
 
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
-    setMessage({ text: '', isError: false });
+  // const handleSubmit = async () => {
+  //   setIsSubmitting(true);
+  //   setMessage({ text: '', isError: false });
 
+  //   try {
+  //     if (isEdit && currentClient) {
+  //       await dispatch(updateClientFacture({ id, ...formData }));
+
+  //       const currentResponsibleId = currentClient.user?.id || null;
+  //       if (selectedUserId !== currentResponsibleId) {
+  //         if (selectedUserId) {
+  //           await dispatch(assignUserToClientFacture({ id: id!, userId: selectedUserId }));
+  //         }
+  //       }
+
+  //       setMessage({ text: 'Client facturé mis à jour avec succès !', isError: false });
+  //     } else {
+  //       await dispatch(createClientFacture({ ...formData, dateApplication: new Date().toISOString() }));
+  //       setMessage({ text: 'Client facturé créé avec succès !', isError: false });
+  //     }
+
+  //     setTimeout(() => navigate(-1), 1500);
+  //   } catch (err) {
+  //     setMessage({ text: 'Erreur lors de l\'enregistrement.', isError: true });
+  //   } finally {
+  //     setIsSubmitting(false);
+  //   }
+  // };
+
+  const responsableChanged = (currentClient?.user?.id || null) !== (selectedUserId || null);
+
+  const handleUpdateResponsable = async () => {
+    if (!isEdit || !id || !responsableChanged) return;
+    setIsSavingResponsable(true);
     try {
-      if (isEdit && currentClient) {
-        await dispatch(updateClientFacture({ id, ...formData }));
-
-        const currentResponsibleId = currentClient.user?.id || null;
-        if (selectedUserId !== currentResponsibleId) {
-          if (selectedUserId) {
-            await dispatch(assignUserToClientFacture({ id: id!, userId: selectedUserId }));
-          }
-        }
-
-        setMessage({ text: 'Client facturé mis à jour avec succès !', isError: false });
-      } else {
-        await dispatch(createClientFacture({ ...formData, dateApplication: new Date().toISOString() }));
-        setMessage({ text: 'Client facturé créé avec succès !', isError: false });
+      if (selectedUserId) {
+        await dispatch(assignUserToClientFacture({ id, userId: selectedUserId }));
       }
-
-      setTimeout(() => navigate(-1), 1500);
-    } catch (err) {
-      setMessage({ text: 'Erreur lors de l\'enregistrement.', isError: true });
     } finally {
-      setIsSubmitting(false);
+      setIsSavingResponsable(false);
     }
   };
 
-  const handleAddBeneficiaire = async (beneficiaireId: string) => {
-    if (isEdit) {
-      setIsSubmitting(true);
-      const result = await dispatch(addBeneficiaireToClientFacture({ id: id!, beneficiaireId }));
-      if (addBeneficiaireToClientFacture.fulfilled.match(result)) {
-        setMessage({ text: 'Bénéficiaire ajouté !', isError: false });
-        setTimeout(() => setMessage({ text: '', isError: false }), 2000);
-      }
-      await dispatch(fetchClientFactures());
-      setIsSubmitting(false);
-    }
-  };
+  // const handleAddBeneficiaire = async (beneficiaireId: string) => {
+  //   if (isEdit) {
+  //     setIsSubmitting(true);
+  //     const result = await dispatch(addBeneficiaireToClientFacture({ id: id!, beneficiaireId }));
+  //     if (addBeneficiaireToClientFacture.fulfilled.match(result)) {
+  //       setMessage({ text: 'Bénéficiaire ajouté !', isError: false });
+  //       setTimeout(() => setMessage({ text: '', isError: false }), 2000);
+  //     }
+  //     await dispatch(fetchClientFactures());
+  //     setIsSubmitting(false);
+  //   }
+  // };
 
-  const handleRemoveBeneficiaire = async (beneficiaireId: string) => {
-    if (isEdit) {
-      setIsSubmitting(true);
-      const result = await dispatch(removeBeneficiaireFromClientFacture({ id: id!, beneficiaireId }));
-      if (removeBeneficiaireFromClientFacture.fulfilled.match(result)) {
-        setMessage({ text: 'Bénéficiaire supprimé !', isError: false });
-        setTimeout(() => setMessage({ text: '', isError: false }), 2000);
-      }
-      await dispatch(fetchClientFactures());
-      setIsSubmitting(false);
-    }
-  };
+  // const handleRemoveBeneficiaire = async (beneficiaireId: string) => {
+  //   if (isEdit) {
+  //     setIsSubmitting(true);
+  //     const result = await dispatch(removeBeneficiaireFromClientFacture({ id: id!, beneficiaireId }));
+  //     if (removeBeneficiaireFromClientFacture.fulfilled.match(result)) {
+  //       setMessage({ text: 'Bénéficiaire supprimé !', isError: false });
+  //       setTimeout(() => setMessage({ text: '', isError: false }), 2000);
+  //     }
+  //     await dispatch(fetchClientFactures());
+  //     setIsSubmitting(false);
+  //   }
+  // };
 
-  const availableBeneficiaires = useMemo(() => {
-    return allBeneficiaires.filter(ben =>
-      !currentClient?.beneficiaires.some(l => l.clientBeneficiaireId === ben.id) &&
-      (ben.libelle.toLowerCase().includes(searchTerm.toLowerCase()) || ben.code.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
-  }, [allBeneficiaires, currentClient, searchTerm]);
+  // const availableBeneficiaires = useMemo(() => {
+  //   return allBeneficiaires.filter(ben =>
+  //     !currentClient?.beneficiaires.some(l => l.clientBeneficiaireId === ben.id) &&
+  //     (ben.libelle.toLowerCase().includes(searchTerm.toLowerCase()) || ben.code.toLowerCase().includes(searchTerm.toLowerCase()))
+  //   );
+  // }, [allBeneficiaires, currentClient, searchTerm]);
 
   const ScrollIndicator = ({ listRef }: { listRef: React.RefObject<HTMLDivElement | null> }) => {
     const scroll = (direction: 'up' | 'down') => {
@@ -218,17 +255,17 @@ const ClientFactureFormPage = () => {
         </div>
       </div>
 
-      {/* Message de notification */}
-      {message.text && (
+      {/* Message de notification — désactivé avec les actions (plus rien ne peut le déclencher) */}
+      {/* {message.text && (
         <div className={`fixed top-24 right-6 z-50 px-6 py-4 rounded-lg shadow-lg flex items-center gap-3 animate-in fade-in slide-in-from-top-2 duration-300 ${
-          message.isError 
-            ? 'bg-red-50 text-red-800 border border-red-200' 
+          message.isError
+            ? 'bg-red-50 text-red-800 border border-red-200'
             : 'bg-green-50 text-green-800 border border-green-200'
         }`}>
           {message.isError ? <FiTrash2 size={18} /> : <FiUserPlus size={18} />}
           <span className="text-sm font-medium">{message.text}</span>
         </div>
-      )}
+      )} */}
 
       {/* Contenu principal */}
       <div className="max-w-7xl mx-auto px-6 py-8">
@@ -255,13 +292,14 @@ const ClientFactureFormPage = () => {
                   </div> */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Nom & Prenom (Libellé)</label>
-                    <input 
-                      type="text" 
-                      value={formData.libelle} 
-                      onChange={e => setFormData({ ...formData, libelle: e.target.value })} 
+                    <input
+                      type="text"
+                      value={formData.libelle}
+                      onChange={e => setFormData({ ...formData, libelle: e.target.value })}
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 placeholder-gray-400 focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
                       placeholder="Nom du client"
-                      required 
+                      required
+                      disabled
                     />
                   </div>
                 {/* </div> */}
@@ -269,9 +307,10 @@ const ClientFactureFormPage = () => {
                 {/* <div className="grid grid-cols-2 gap-4"> */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Profil de risque</label>
-                    <select 
-                      value={formData.profilRisque} 
-                      onChange={e => setFormData({ ...formData, profilRisque: e.target.value as any })} 
+                    {/* Odoo gère désormais cette donnée — dropdown remplacé par un champ simple
+                    <select
+                      value={formData.profilRisque}
+                      onChange={e => setFormData({ ...formData, profilRisque: e.target.value as any })}
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
                     >
                       <option value="FAIBLE">Faible</option>
@@ -279,6 +318,14 @@ const ClientFactureFormPage = () => {
                       <option value="ELEVE">Élevé</option>
                       <option value="TRES_ELEVE">Très élevé</option>
                     </select>
+                    */}
+                    <input
+                      type="text"
+                      value={PROFIL_RISQUE_LABELS[formData.profilRisque] ?? formData.profilRisque}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                      disabled
+                      readOnly
+                    />
                   </div>
                   {/* <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Statut</label>
@@ -310,13 +357,15 @@ const ClientFactureFormPage = () => {
                       value={formData.tauxBase}
                       onChange={e => setFormData({ ...formData, tauxBase: parseFloat(e.target.value) || 0 })}
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 placeholder-gray-400 focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                      disabled
                     />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Crédit par défaut</label>
-                    <select 
-                      value={formData.creditdefault} 
-                      onChange={e => setFormData({ ...formData, creditdefault: e.target.value as any })} 
+                    {/* Odoo gère désormais cette donnée — dropdown remplacé par un champ simple
+                    <select
+                      value={formData.creditdefault}
+                      onChange={e => setFormData({ ...formData, creditdefault: e.target.value as any })}
                       className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
                     >
                       <option value="CREDIT_0">Au comptant (0j)</option>
@@ -325,6 +374,14 @@ const ClientFactureFormPage = () => {
                       <option value="CREDIT_60">Crédit 60 jours</option>
                       <option value="CREDIT_90">Crédit 90 jours</option>
                     </select>
+                    */}
+                    <input
+                      type="text"
+                      value={CREDIT_DEFAULT_LABELS[formData.creditdefault] ?? formData.creditdefault}
+                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                      disabled
+                      readOnly
+                    />
                   </div>
                 </div>
 
@@ -346,6 +403,7 @@ const ClientFactureFormPage = () => {
                           value={(formData as any)[field.id]}
                           onChange={e => setFormData({ ...formData, [field.id]: parseFloat(e.target.value) || 0 })}
                           className="w-full px-3 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 text-sm placeholder-gray-400 focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                          disabled
                         />
                       </div>
                     ))}
@@ -370,6 +428,7 @@ const ClientFactureFormPage = () => {
                           value={(formData as any)[field.id]}
                           onChange={e => setFormData({ ...formData, [field.id]: parseFloat(e.target.value) || 0 })}
                           className="w-full px-3 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 text-sm placeholder-gray-400 focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
+                          disabled
                         />
                       </div>
                     ))}
@@ -388,7 +447,7 @@ const ClientFactureFormPage = () => {
                   value={selectedUserId || ''}
                   onChange={(e) => setSelectedUserId(e.target.value || null)}
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-900 focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-                  disabled={isSubmitting}
+                  disabled={!isEdit || isSavingResponsable}
                 >
                   <option value="">-- Pas de responsable assigné --</option>
                   {users.map((user) => (
@@ -397,6 +456,21 @@ const ClientFactureFormPage = () => {
                     </option>
                   ))}
                 </select>
+
+                {isEdit && (
+                  <button
+                    onClick={handleUpdateResponsable}
+                    disabled={!responsableChanged || isSavingResponsable}
+                    className={`mt-3 px-5 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition-colors ${
+                      !responsableChanged || isSavingResponsable
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                    }`}
+                  >
+                    {isSavingResponsable ? <FiLoader className="animate-spin" size={16} /> : null}
+                    {isSavingResponsable ? 'Enregistrement...' : 'Enregistrer le responsable'}
+                  </button>
+                )}
               </div>
 
               {selectedUserId && (
@@ -444,13 +518,13 @@ const ClientFactureFormPage = () => {
                           <p className="font-medium text-sm text-gray-900 truncate">{link.clientBeneficiaire?.libelle}</p>
                           <p className="text-xs text-gray-500">{link.clientBeneficiaire?.code}</p>
                         </div>
-                        <button 
-                          onClick={() => handleRemoveBeneficiaire(link.clientBeneficiaireId)} 
+                        {/* <button
+                          onClick={() => handleRemoveBeneficiaire(link.clientBeneficiaireId)}
                           className="text-red-500 hover:text-red-700 p-1.5 hover:bg-red-50 rounded-lg transition-colors ml-2 flex-shrink-0"
                           title="Supprimer"
                         >
                           <FiTrash2 size={16} />
-                        </button>
+                        </button> */}
                       </div>
                     ))}
                     {(!currentClient || currentClient.beneficiaires.length === 0) && (
@@ -458,10 +532,10 @@ const ClientFactureFormPage = () => {
                     )}
                   </div>
 
-                  {/* Ajouter des bénéficiaires */}
+                  {/* Ajouter des bénéficiaires — désactivé, géré via Odoo désormais
                   <div className="border-t border-gray-200 pt-4">
                     <p className="text-xs font-medium text-gray-600 uppercase mb-3">Ajouter des bénéficiaires</p>
-                    
+
                     <div className="relative mb-3">
                       <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
                       <input
@@ -473,8 +547,8 @@ const ClientFactureFormPage = () => {
                       />
                     </div>
 
-                    <div 
-                      ref={scrollAvailRef} 
+                    <div
+                      ref={scrollAvailRef}
                       className="space-y-2 max-h-64 overflow-y-auto pr-2"
                     >
                       {availableBeneficiaires.map(ben => (
@@ -497,6 +571,7 @@ const ClientFactureFormPage = () => {
                       )}
                     </div>
                   </div>
+                  */}
                 </>
               ) : (
                 <div className="flex items-center justify-center text-center py-12 text-gray-400">
@@ -517,6 +592,7 @@ const ClientFactureFormPage = () => {
           >
             Annuler
           </button>
+          {/* Bouton Enregistrer/Créer — désactivé, la gestion se fait maintenant via Odoo
           <button
             onClick={handleSubmit}
             disabled={isSubmitting || (isEdit && !hasChanges) || isFormInvalid}
@@ -534,6 +610,7 @@ const ClientFactureFormPage = () => {
               'Créer le client'
             )}
           </button>
+          */}
         </div>
       </div>
     </div>
