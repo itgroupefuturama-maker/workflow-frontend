@@ -4,15 +4,17 @@ import { FiCheck, FiCheckCircle, FiChevronDown, FiChevronRight, FiEye, FiMoreVer
 import { useNavigate, useParams } from 'react-router-dom';
 import type { AppDispatch, RootState } from '../../../../../app/store';
 import { useDispatch, useSelector } from 'react-redux';
-import { approuverDirectionDevis, fetchDevisByEntete, updateApprouverDevisStatut, updateValidateDevisStatut, type Ligne } from '../../../../../app/front_office/devisSlice';
+import { approuverDirectionDevis, fetchDevisByEntete, updateApprouverDevisStatut, updateValidateDevisStatut, type Ligne, type Entete } from '../../../../../app/front_office/devisSlice';
 import { annulerDevis } from '../../../../../app/front_office/devisSlice';
 import axios from '../../../../../service/Axios';
 import TabContainer from '../../../../../layouts/TabContainer';
 import AnnulationDevisModal from '../../../../../components/modals/AnnulationDevisModal';
+import ConfirmDialog from '../../../../../components/ConfirmDialog';
 import { API_URL } from '../../../../../service/env';
 import { TicketingHeader } from './components.billet/TicketingHeader';
 import { devisListeItems } from './components.billet/utils/ticketingHeaderItems';
 import { PdfDownloadButton } from '../../module.pdf/pdf.generation/components/PdfDownloadButton';
+import type { DevisListItem } from '../../module.pdf/pdf.generation/types/devis.types';
 import Button from '../../../../../components/ui/Button';
 import { toast } from '../../../../../components/Toast/toast';
 import SkeletonTableRows from '../../../../../components/ui/SkeletonTableRows';
@@ -63,7 +65,7 @@ function getPrimaryAction(
     onTransformer: () => void;
     onVoirBillets: () => void;
   },
-  _directionLoading: boolean,
+  loadingFlags: { client: boolean; transformer: boolean },
   canManage: boolean
 ): PrimaryAction {
   switch (statut) {
@@ -76,6 +78,7 @@ function getPrimaryAction(
         icon: <FiCheckCircle size={14} />,
         onClick: handlers.onEnvoyerClient,
         variant: 'success',
+        loading: loadingFlags.client,
       };
     case 'DEVIS_A_APPROUVER':
       if (!canManage) return null;
@@ -103,6 +106,7 @@ function getPrimaryAction(
         icon: <FiRefreshCw size={14} />,
         onClick: handlers.onTransformer,
         variant: 'success',
+        loading: loadingFlags.transformer,
       };
     default:
       return null; // ANNULER -> pas d'action principale
@@ -234,6 +238,27 @@ export default function Devis () {
   const [annulationLoading, setAnnulationLoading] = useState(false);
 
   const [directionLoading, setDirectionLoading] = useState<{ [key: string]: boolean }>({});
+  const [clientLoading, setClientLoading] = useState<{ [key: string]: boolean }>({});
+  const [transformerLoading, setTransformerLoading] = useState<{ [key: string]: boolean }>({});
+
+  // Boîte de confirmation partagée pour toutes les actions de cette page — jamais de
+  // window.confirm natif, toujours notre propre ConfirmDialog.
+  const [pendingAction, setPendingAction] = useState<{
+    devisId: string;
+    title: string;
+    message: string;
+    confirmLabel: string;
+    tone: 'danger' | 'warning' | 'primary';
+    run: () => void;
+  } | null>(null);
+
+  const isPendingLoading = pendingAction
+    ? !!clientLoading[pendingAction.devisId] || !!transformerLoading[pendingAction.devisId] || !!directionLoading[pendingAction.devisId]
+    : false;
+
+  const handleConfirmPending = () => {
+    pendingAction?.run();
+  };
 
   const tabs = [
     // { id: 'prospection', label: 'Listes des entête prospection' },
@@ -271,11 +296,16 @@ export default function Devis () {
 
   const handleAsAapprouved = async (billetId: string) => {
     if (!enteteId) return;
+
+    setClientLoading((prev) => ({ ...prev, [billetId]: true }));
     try {
       await dispatch(updateApprouverDevisStatut({ enteteId: billetId })).unwrap();
       dispatch(fetchDevisByEntete(enteteId));
+      setPendingAction(null);
     } catch (err: any) {
       toast.error('Erreur lors du changement de statut');
+    } finally {
+      setClientLoading((prev) => ({ ...prev, [billetId]: false }));
     }
   };
 
@@ -307,7 +337,6 @@ export default function Devis () {
 
   const handleApprouverDirection = async (devisId: string, reference: string) => {
     if (!enteteId) return;
-    if (!window.confirm(`Envoyer le devis ${reference} à la direction ?\nCela générera le PDF commission.`)) return;
 
     setDirectionLoading((prev) => ({ ...prev, [devisId]: true }));
     try {
@@ -324,6 +353,7 @@ export default function Devis () {
         const pdfUrl = `${API_URL}/${filepath}`;
         window.open(pdfUrl, '_blank');
         dispatch(fetchDevisByEntete(enteteId));
+        setPendingAction(null);
       } else {
         throw new Error('Chemin du PDF non reçu');
       }
@@ -387,12 +417,13 @@ export default function Devis () {
                             </td>
                           </tr>
                         ) : devisList.map((devis) => {
-                          const entete = devis.data?.entete || {};
+                          const entete: Partial<Entete> = devis.data?.entete || {};
                           const prospectionEntete = devis.prospectionEntete || {};
                           const lignes = devis.data?.lignes || [];
                           const isOpen = openDevisId === devis.id;
 
                           const handleCreateBillet = async () => {
+                            setTransformerLoading((prev) => ({ ...prev, [devis.id]: true }));
                             try {
                               const payload = {
                                 devisId: devis.id,
@@ -400,6 +431,7 @@ export default function Devis () {
                               };
                               const response = await axios.post('/billet/entete', payload);
                               if (response.data?.success && response.data?.data?.id) {
+                                setPendingAction(null);
                                 navigate(`/dossiers-communs/ticketing/pages/billet/${devis.id}?prospectionEnteteId=${devis.data?.entete?.id}`);
                               } else {
                                 toast.error('Erreur lors de la création du billet');
@@ -408,6 +440,8 @@ export default function Devis () {
                               console.error('Erreur création billet:', err);
                               const msg = err.response?.data?.message || 'Erreur serveur';
                               toast.error(`Échec création billet : ${msg}`);
+                            } finally {
+                              setTransformerLoading((prev) => ({ ...prev, [devis.id]: false }));
                             }
                           };
 
@@ -464,18 +498,41 @@ export default function Devis () {
                                         devis.statut,
                                         devis.transformeEnBilletAt,
                                         {
-                                          onEnvoyerDirection: () => handleApprouverDirection(devis.id, devis.reference),
-                                          onEnvoyerClient: () => handleAsAapprouved(devis.id),
+                                          onEnvoyerDirection: () => setPendingAction({
+                                            devisId: devis.id,
+                                            title: 'Envoyer à la direction',
+                                            message: `Envoyer le devis ${devis.reference} à la direction ? Cela générera le PDF commission.`,
+                                            confirmLabel: 'Envoyer',
+                                            tone: 'primary',
+                                            run: () => handleApprouverDirection(devis.id, devis.reference),
+                                          }),
+                                          onEnvoyerClient: () => setPendingAction({
+                                            devisId: devis.id,
+                                            title: 'Envoyer au client',
+                                            message: `Envoyer le devis ${devis.reference} au client ?`,
+                                            confirmLabel: 'Envoyer',
+                                            tone: 'primary',
+                                            run: () => handleAsAapprouved(devis.id),
+                                          }),
                                           onApprouverClient: () => handleAsValidate(devis.id),
-                                          onTransformer: handleCreateBillet,
+                                          onTransformer: () => setPendingAction({
+                                            devisId: devis.id,
+                                            title: 'Transformer en billet',
+                                            message: `Transformer le devis ${devis.reference} en billet ?`,
+                                            confirmLabel: 'Transformer',
+                                            tone: 'primary',
+                                            run: handleCreateBillet,
+                                          }),
                                           onVoirBillets: () => navigate(`/dossiers-communs/ticketing/pages/billet/${devis.id}?prospectionEnteteId=${devis.data?.entete?.id}`),
                                         },
-                                        !!directionLoading[devis.id],
+                                        { client: !!clientLoading[devis.id], transformer: !!transformerLoading[devis.id] },
                                         canManageTicketing
                                       )}
                                     />
                                     <PdfDownloadButton
-                                    data={devis}                           // ← devis est déjà un DevisListItem
+                                    // GET /devis/entete/:id (ce screen) garantit toujours `data` rempli,
+                                    // contrairement à GET /devis (liste paginée globale) — d'où le non-null ici.
+                                    data={{ ...devis, data: devis.data! } as DevisListItem}
                                     filename={`${devis.reference}.pdf`}
                                   />
                                     <RowMenu
@@ -484,8 +541,15 @@ export default function Devis () {
                                         {
                                           label: 'Envoyer à la direction',
                                           icon: <FiCheck size={14} />,
-                                          disabled: devis.statut !== 'CREER' || !canManageTicketing,
-                                          onClick: () => handleApprouverDirection(devis.id, devis.reference),
+                                          disabled: devis.statut !== 'CREER' || !canManageTicketing || !!directionLoading[devis.id],
+                                          onClick: () => setPendingAction({
+                                            devisId: devis.id,
+                                            title: 'Envoyer à la direction',
+                                            message: `Envoyer le devis ${devis.reference} à la direction ? Cela générera le PDF commission.`,
+                                            confirmLabel: 'Envoyer',
+                                            tone: 'primary',
+                                            run: () => handleApprouverDirection(devis.id, devis.reference),
+                                          }),
                                         },
                                         {
                                           label: 'Voir les billets',
@@ -582,6 +646,17 @@ export default function Devis () {
                   </div>
               </div>
             )}
+
+            <ConfirmDialog
+              isOpen={!!pendingAction}
+              title={pendingAction?.title}
+              message={pendingAction?.message ?? ''}
+              confirmLabel={pendingAction?.confirmLabel}
+              tone={pendingAction?.tone}
+              isLoading={isPendingLoading}
+              onConfirm={handleConfirmPending}
+              onClose={() => setPendingAction(null)}
+            />
 
             {selectedDevisForCancel && (
               <AnnulationDevisModal
