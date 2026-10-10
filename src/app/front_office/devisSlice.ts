@@ -34,12 +34,17 @@ export interface Devis {
   urlPdfCom: string | null;
   billetEnteteId?: string | null;
   transformeEnBilletAt?: string | null;
+  // Sur GET /devis (liste globale paginée), ce champ est parfois null — les infos fiables
+  // sont alors sur prospectionEntete/prospectionLigne (voir
+  // FRONTEND_API_PAGINATION_DEVIS_BILLET_LIGNE.http).
   data: {
     entete: Entete;
     lignes: Ligne[];
     dateCreation: string;
     totalGeneral: number;
-  };
+  } | null;
+  // Présent sur GET /devis (liste globale paginée) — les lignes de prospection liées à ce devis.
+  prospectionLigne?: Ligne[];
   prospectionEntete: {        // ← AJOUTER
     id: string;
     preuveClient: string | null;
@@ -167,17 +172,61 @@ export interface Ligne{
     serviceProspectionLigne: ServiceProspectionLigne[];
 }
 
+export interface PaginationMeta {
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface FetchDevisPaginatedParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  statut?: string;
+}
+
 interface DevisState {
   items: Devis[];
   loading: boolean;
   error: string | null;
+  // Liste globale paginée (tous dossiers confondus, écran ListeDossierByModule.tsx) —
+  // distincte de `items` ci-dessus qui reste scopée à une seule entête (Devis.tsx).
+  listData: Devis[];
+  listMeta: PaginationMeta;
+  listLoading: boolean;
+  listError: string | null;
 }
 
 const initialState: DevisState = {
   items: [],
   loading: false,
   error: null,
+  listData: [],
+  listMeta: { total: 0, page: 1, limit: 10, totalPages: 1 },
+  listLoading: false,
+  listError: null,
 };
+
+// Liste globale paginée — GET /devis (tous dossiers confondus, tri createdAt desc).
+// Vérifié via Swagger : même enveloppe double que le reste de l'app, malgré ce que
+// documente FRONTEND_API_PAGINATION_DEVIS_BILLET_LIGNE.http —
+// response.data = { success, data: { data: Devis[], meta: PaginationMeta } }.
+export const fetchDevisPaginated = createAsyncThunk(
+  'devis/fetchDevisPaginated',
+  async (params: FetchDevisPaginatedParams, { rejectWithValue }) => {
+    try {
+      const response = await axios.get('/devis', { params });
+      if (!response.data?.success) {
+        return rejectWithValue(response.data?.message || 'Erreur lors du chargement des devis');
+      }
+      const payload = response.data.data;
+      return { data: (payload.data ?? []) as Devis[], meta: payload.meta as PaginationMeta };
+    } catch (err: any) {
+      return rejectWithValue(err.response?.data?.message || 'Erreur lors du chargement des devis');
+    }
+  }
+);
 
 export const fetchDevisByEntete = createAsyncThunk(
   'devis/fetchByEntete',
@@ -303,6 +352,19 @@ const devisSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder
+      .addCase(fetchDevisPaginated.pending, (state) => {
+        state.listLoading = true;
+        state.listError = null;
+      })
+      .addCase(fetchDevisPaginated.fulfilled, (state, action) => {
+        state.listLoading = false;
+        state.listData = Array.isArray(action.payload.data) ? action.payload.data : [];
+        state.listMeta = action.payload.meta ?? initialState.listMeta;
+      })
+      .addCase(fetchDevisPaginated.rejected, (state, action) => {
+        state.listLoading = false;
+        state.listError = action.payload as string;
+      })
       .addCase(fetchDevisByEntete.pending, (state) => {
         state.loading = true;
         state.error = null;

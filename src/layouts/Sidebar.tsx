@@ -4,7 +4,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
   FiHome, FiSettings, FiChevronDown, FiBarChart2, FiActivity, FiLayers,
   FiMap, FiList, FiPlusSquare, FiFolder, FiLoader, FiArrowLeft, FiUsers,
-  FiSearch, FiCheck
+  FiSearch, FiCheck, FiLock
 } from 'react-icons/fi';
 import type { AppDispatch, RootState } from '../app/store';
 import { setCurrentClientFactureId, type DossierCommun } from '../app/front_office/dossierCommunSlice';
@@ -36,23 +36,40 @@ export default function Sidebar({ module }: SidebarProps) {
     (state: RootState) => state.dossierCommun
   );
 
-  const dossiersTicketing = dossiers.filter(dossier => {
-    return (dossier.dossierCommunColab || []).some(colab =>
+  // Même condition utilisée des deux côtés : liste "sélectionnable" (dossiersTicketing, dérivée de
+  // la liste globale restreinte aux dossiers où l'utilisateur est affecté) ET vérification directe
+  // du dossier actif. Nécessaire car un dossier ouvert en lecture seule depuis
+  // ListeDossierByModule.tsx (non-responsable, visibilité élargie — voir
+  // FRONTEND_PROMPT_DOSSIER_VISIBILITE_NON_RESPONSABLE.md) n'apparaît jamais dans la liste globale
+  // restreinte, même s'il appartient bien à ce module : sans ce check direct, la Sidebar afficherait
+  // "Aucun dossier" et l'effet d'auto-sélection ci-dessous l'écraserait aussitôt.
+  const matchesModule = (dossier?: DossierCommun | null) =>
+    (dossier?.dossierCommunColab || []).some(colab =>
       colab?.status === "CREER" &&
       colab?.module?.nom?.toLowerCase() === module?.toLowerCase() &&
       (colab.prestation || []).length > 0
     );
-  });
+
+  const dossiersTicketing = dossiers.filter(matchesModule);
 
   useEffect(() => {
     if (loadingDossiers || dossiersTicketing.length === 0) return;
-    const activeIsInModule = dossiersTicketing.some(d => d.id === currentClientFactureId?.id);
-    if (!currentClientFactureId || !activeIsInModule) {
+    if (!matchesModule(currentClientFactureId)) {
       dispatch(setCurrentClientFactureId(dossiersTicketing[0]));
     }
-  }, [loadingDossiers, dossiersTicketing.length, module]);
+  }, [loadingDossiers, dossiersTicketing.length, module, currentClientFactureId]);
 
-  const activeDossier = dossiersTicketing.find(d => d.id === currentClientFactureId?.id);
+  const activeDossier = matchesModule(currentClientFactureId) ? currentClientFactureId ?? undefined : undefined;
+
+  // Statut "responsable" du module affiché sur le dossier actif (voir
+  // FRONTEND_PROMPT_DOSSIER_VISIBILITE_NON_RESPONSABLE.md §4) — utilise le champ par colab, fiable
+  // quel que soit l'écran d'où vient `currentClientFactureId`, contrairement au champ au niveau
+  // dossier qui ne reflète le bon module que si la requête d'origine avait `?module=`.
+  const activeColab = activeDossier?.dossierCommunColab?.find(
+    (colab) => colab?.module?.nom?.toLowerCase() === module?.toLowerCase()
+  );
+  const isResponsable = activeColab?.isResponsable;
+  const responsableUser = activeColab?.user;
 
   // ── Menus déroulants (un seul ouvert à la fois) ──
   const navRef = useRef<HTMLElement>(null);
@@ -111,6 +128,7 @@ export default function Sidebar({ module }: SidebarProps) {
             { label: 'Raison Annulation',    path: `parametres/${module}`, icon: <FiMap    size={15} />, tab: 'listeRaisonAnnulation' },
             { label: 'Service & spécifique', path: `parametres/${module}`, icon: <FiLayers size={15} />, tab: 'listeService'          },
             { label: 'Exigence de voyage',   path: `parametres/${module}`, icon: <FiMap    size={15} />, tab: 'listeExigence'         },
+            { label: 'Itinéraires',          path: `parametres/${module}`, icon: <FiMap    size={15} />, tab: 'listeItineraire'       },
           ]
         : module === 'hotel'
         ? [
@@ -348,6 +366,24 @@ export default function Sidebar({ module }: SidebarProps) {
             </div>
           )}
         </div>
+
+        {/* ══ Badge "lecture seule" — affiché quand l'utilisateur connecté n'est pas responsable
+            de ce module sur le dossier actif (voir
+            FRONTEND_PROMPT_DOSSIER_VISIBILITE_NON_RESPONSABLE.md). Phase 1 : indicateur seul, les
+            actions elles-mêmes ne sont pas encore désactivées (Phase 2, module par module). ══ */}
+        {isResponsable === false && (
+          <div
+            className="hidden md:flex items-center gap-1.5 h-9 px-2.5 rounded-lg bg-amber-500/15 border border-amber-400/30 text-amber-200 text-[11px] font-semibold self-center shrink-0"
+            title={
+              responsableUser
+                ? `Responsable de ce dossier : ${responsableUser.prenom} ${responsableUser.nom}`
+                : 'Vous n\'êtes pas responsable de ce dossier pour ce module'
+            }
+          >
+            <FiLock size={12} />
+            <span>Lecture seule</span>
+          </div>
+        )}
 
         {/* ══ Sous-liens du dossier actif (onglets) ══ */}
         {activeDossier && subLinks.length > 0 && (

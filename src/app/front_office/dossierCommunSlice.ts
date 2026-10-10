@@ -44,6 +44,12 @@ export interface DossierCommunColab {
     status: string;
   };
   prestation: Prestation[];
+  // Ajouté par le backend (voir FRONTEND_PROMPT_DOSSIER_VISIBILITE_NON_RESPONSABLE.md) :
+  // l'utilisateur connecté est-il responsable de CE module précis sur ce dossier (ou admin) ?
+  // À utiliser de préférence à `DossierCommun.isResponsable` dès qu'on est dans le contexte
+  // d'un module précis (le champ au niveau dossier n'est fiable que si la requête a été faite
+  // avec `?module=`, sinon il répond "responsable d'au moins un module du dossier").
+  isResponsable?: boolean;
 }
 
 // Interface principale (sans dossierCommunClient)
@@ -62,6 +68,11 @@ export interface DossierCommun {
   user: User;
   clientfacture: ClientFacture;
   dossierCommunColab: DossierCommunColab[];
+  // Ajoutés par le backend — voir le commentaire sur DossierCommunColab.isResponsable pour la
+  // nuance "avec vs sans ?module=". `responsable` est l'affecté du module demandé, `null` si la
+  // requête n'a pas précisé `module`, si c'est /:id, ou si personne n'est affecté.
+  isResponsable?: boolean;
+  responsable?: { id: string; nom: string; prenom: string } | null;
 }
 
 // Payload de création (sans clients)

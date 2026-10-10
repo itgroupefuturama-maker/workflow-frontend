@@ -1,0 +1,658 @@
+### Pagination — GET /devis et nouvelle route GET /billet/ligne
+### Exécutable avec l'extension VS Code « REST Client » ou le client HTTP JetBrains.
+###
+### Remplacez baseUrl par l'adresse du serveur, et token par un access_token
+### valide (obtenu via POST /auth/login). Le navigateur envoie déjà le cookie
+### access_token : le header Authorization n'est utile que pour ce fichier.
+###
+### Format de réponse paginée (commun aux deux routes) :
+### {
+###   "data": [ ... ],
+###   "meta": { "total": 57, "page": 1, "limit": 10, "totalPages": 6 }
+### }
+### - page  : défaut 1
+### - limit : défaut 10, maximum 100
+### Valeur invalide de statut / statusLigne : { "success": false, "message": "... Valeurs possibles : ..." }
+
+@baseUrl = http://localhost:5000
+@token = COLLER_ICI_UN_ACCESS_TOKEN
+
+
+####################### 1. DEVIS — GET /devis ##################################################
+# Rétrocompatible : SANS page/limit, la route renvoie toujours le tableau
+# complet comme avant (aucune régression pour les écrans existants).
+# AVEC page et/ou limit, elle renvoie { data, meta }.
+#
+# Query params (tous optionnels) :
+#   page   : numéro de page
+#   limit  : nombre d'éléments par page
+#   search : recherche (insensible à la casse) sur la référence du devis
+#            ou le libellé du fournisseur
+#   statut : CREER | DEVIS_A_APPROUVER | DEVIS_APPROUVE | BC_CLIENT_A_APPROUVER
+#            | BILLET_EMIS | FACTURE_EMISE | FACTURE_REGLEE | MODIFIER | ANNULER
+# Tri : du plus récent au plus ancien (createdAt desc).
+# Chaque élément de data a exactement la même forme qu'avant.
+# RÉPONSES (HTTP 200)
+#
+# ---- Sans page/limit (1.1) : tableau, inchangé ----
+#   [
+#     {
+#       "id": "cmdevis001",
+#       "reference": "DEV-2026-0012",
+#       "createdAt": "2026-10-08T09:15:00.000Z",
+#       "data": null,
+#       "totalGeneral": 2745600,
+#       "url": "uploads/devis/DEV-2026-0012.pdf",
+#       "urlPdfCom": null,
+#       "statut": "DEVIS_A_APPROUVER",
+#       "prospectionEnteteId": "cmprospentete001",
+#       "rasionAnnulationId": null,
+#       "billetEnteteId": null,
+#       "transformeEnBilletAt": null,
+#       "updatedAt": "2026-10-08T09:15:00.000Z",
+#       "prospectionEntete": {
+#         "id": "cmprospentete001",
+#         "prestationId": "cmprest001",
+#         "numeroEntete": "PRO-2026-0031",
+#         "fournisseurId": "cmfourn001",
+#         "credit": "CREDIT_0",
+#         "typeVol": "LONG_COURRIER",
+#         "commissionPropose": 10,
+#         "commissionAppliquer": 10,
+#         "preuveClient": null,
+#         "createdAt": "2026-10-08T09:15:00.000Z",
+#         "updatedAt": "2026-10-08T09:15:00.000Z",
+#         "prestation": {
+#           "id": "cmprest001",
+#           "numeroDos": "DOS-2026-045",
+#           "status": "CREER",
+#           "dossierCommunColabId": "cmcolab001",
+#           "dossierId": "cmdossier001",
+#           "createdAt": "2026-10-08T09:15:00.000Z",
+#           "updatedAt": "2026-10-08T09:15:00.000Z"
+#         },
+#         "fournisseur": {
+#           "id": "cmfourn001",
+#           "odooId": 57,
+#           "code": "FRN-3",
+#           "libelle": "AIR MADAGASCAR",
+#           "type": "FOURNISSEUR",
+#           "dateApplication": "2026-10-08T09:15:00.000Z",
+#           "status": "ACTIF",
+#           "dateActivation": "2026-10-08T09:15:00.000Z",
+#           "dateDesactivation": null,
+#           "createdAt": "2026-10-08T09:15:00.000Z",
+#           "updatedAt": "2026-10-08T09:15:00.000Z"
+#         }
+#       },
+#       "prospectionLigne": [
+#         {
+#           "id": "cmprospligne001",
+#           "numeroDosRef": "DOS-2026-045",
+#           "numeroVol": "MD050",
+#           "origineLine": null,
+#           "prospectionEnteteId": "cmprospentete001",
+#           "status": "CREER",
+#           "avion": "A340",
+#           "itineraire": "TNR - CDG",
+#           "departId": "cmdesttnr001",
+#           "nombre": 1,
+#           "destinationId": "cmdestcdg001",
+#           "itineraireId": "cmitin001",
+#           "classe": "ECONOMIE",
+#           "typePassager": "ADULTE",
+#           "dateHeureDepart": "2026-11-02T05:30:00.000Z",
+#           "dateHeureArrive": "2026-11-02T17:45:00.000Z",
+#           "dureeVol": "10h15",
+#           "dureeEscale": "0h",
+#           "conditionModif": "Modifiable avec frais",
+#           "conditionAnnul": "Remboursable à 80%",
+#           "heurefermeture": 2,
+#           "puBilletCompagnieDevise": 500,
+#           "puServiceCompagnieDevise": 20,
+#           "puPenaliteCompagnieDevise": 0,
+#           "devise": "EUR",
+#           "tauxEchange": 4800,
+#           "puBilletCompagnieAriary": 2400000,
+#           "puServiceCompagnieAriary": 96000,
+#           "puPenaliteCompagnieAriary": 0,
+#           "montantBilletCompagnieDevise": 500,
+#           "montantServiceCompagnieDevise": 20,
+#           "montantPenaliteCompagnieDevise": 0,
+#           "montantBilletCompagnieAriary": 2400000,
+#           "montantServiceCompagnieAriary": 96000,
+#           "montantPenaliteCompagnieAriary": 0,
+#           "montantBilletClientDevise": 550,
+#           "montantServiceClientDevise": 22,
+#           "montantPenaliteClientDevise": 0,
+#           "montantBilletClientAriary": 2640000,
+#           "montantServiceClientAriary": 105600,
+#           "montantPenaliteClientAriary": 0,
+#           "commissionEnDevise": 52,
+#           "commissionEnAriary": 249600,
+#           "tauxTaxe": null,
+#           "montantTaxeDevise": null,
+#           "montantTaxeAriary": null,
+#           "aeroportDepart": "TNR",
+#           "aeroportArrivee": "CDG",
+#           "dateLimitePaiement": null,
+#           "dateDevis": "2026-10-08T09:15:00.000Z",
+#           "devisId": "cmdevis001",
+#           "createdAt": "2026-10-08T09:15:00.000Z",
+#           "updatedAt": "2026-10-08T09:15:00.000Z",
+#           "destinationVoyage": {
+#             "id": "cmdestcdg001",
+#             "odooId": 12,
+#             "code": "DV-5",
+#             "ville": "Paris",
+#             "createdAt": "2026-10-08T09:15:00.000Z",
+#             "updatedAt": "2026-10-08T09:15:00.000Z",
+#             "paysId": "cmpaysfr001",
+#             "pays": {
+#               "id": "cmpaysfr001",
+#               "odooId": 3,
+#               "pays": "France",
+#               "photo": null,
+#               "createdAt": "2026-10-08T09:15:00.000Z",
+#               "updatedAt": "2026-10-08T09:15:00.000Z",
+#               "paysVoyage": [
+#                 {
+#                   "id": "cmpv001",
+#                   "paysId": "cmpaysfr001",
+#                   "exigenceVoyageId": "cmexig001",
+#                   "createdAt": "2026-10-08T09:15:00.000Z",
+#                   "updatedAt": "2026-10-08T09:15:00.000Z",
+#                   "exigenceVoyage": {
+#                     "id": "cmexig001",
+#                     "type": "VISA",
+#                     "description": "Visa Schengen obligatoire",
+#                     "perimetre": "Ressortissants malgaches",
+#                     "createdAt": "2026-10-08T09:15:00.000Z",
+#                     "updatedAt": "2026-10-08T09:15:00.000Z"
+#                   }
+#                 }
+#               ]
+#             }
+#           },
+#           "serviceProspectionLigne": [
+#             {
+#               "id": "cmspl001",
+#               "prospectionLigneId": "cmprospligne001",
+#               "serviceSpecifiqueId": "cmss001",
+#               "valeur": "23kg",
+#               "createdAt": "2026-10-08T09:15:00.000Z",
+#               "updatedAt": "2026-10-08T09:15:00.000Z",
+#               "serviceSpecifique": {
+#                 "id": "cmss001",
+#                 "code": "SS-1",
+#                 "libelle": "Bagage soute",
+#                 "type": null,
+#                 "typeService": null,
+#                 "createdAt": "2026-10-08T09:15:00.000Z",
+#                 "updatedAt": "2026-10-08T09:15:00.000Z"
+#               }
+#             }
+#           ]
+#         }
+#       ]
+#     }
+#   ]
+#
+# ---- Avec page/limit (1.2 à 1.6) : { data, meta } — chaque élément de data = même devis qu'au-dessus ----
+#   {
+#     "data": [
+#       {
+#         "id": "cmdevis001",
+#         "reference": "DEV-2026-0012",
+#         "createdAt": "2026-10-08T09:15:00.000Z",
+#         "data": null,
+#         "totalGeneral": 2745600,
+#         "url": "uploads/devis/DEV-2026-0012.pdf",
+#         "urlPdfCom": null,
+#         "statut": "DEVIS_A_APPROUVER",
+#         "prospectionEnteteId": "cmprospentete001",
+#         "rasionAnnulationId": null,
+#         "billetEnteteId": null,
+#         "transformeEnBilletAt": null,
+#         "updatedAt": "2026-10-08T09:15:00.000Z",
+#         "prospectionEntete": {
+#           "id": "cmprospentete001",
+#           "prestationId": "cmprest001",
+#           "numeroEntete": "PRO-2026-0031",
+#           "fournisseurId": "cmfourn001",
+#           "credit": "CREDIT_0",
+#           "typeVol": "LONG_COURRIER",
+#           "commissionPropose": 10,
+#           "commissionAppliquer": 10,
+#           "preuveClient": null,
+#           "createdAt": "2026-10-08T09:15:00.000Z",
+#           "updatedAt": "2026-10-08T09:15:00.000Z",
+#           "prestation": {
+#             "id": "cmprest001",
+#             "numeroDos": "DOS-2026-045",
+#             "status": "CREER",
+#             "dossierCommunColabId": "cmcolab001",
+#             "dossierId": "cmdossier001",
+#             "createdAt": "2026-10-08T09:15:00.000Z",
+#             "updatedAt": "2026-10-08T09:15:00.000Z"
+#           },
+#           "fournisseur": {
+#             "id": "cmfourn001",
+#             "odooId": 57,
+#             "code": "FRN-3",
+#             "libelle": "AIR MADAGASCAR",
+#             "type": "FOURNISSEUR",
+#             "dateApplication": "2026-10-08T09:15:00.000Z",
+#             "status": "ACTIF",
+#             "dateActivation": "2026-10-08T09:15:00.000Z",
+#             "dateDesactivation": null,
+#             "createdAt": "2026-10-08T09:15:00.000Z",
+#             "updatedAt": "2026-10-08T09:15:00.000Z"
+#           }
+#         },
+#         "prospectionLigne": [
+#           {
+#             "id": "cmprospligne001",
+#             "numeroDosRef": "DOS-2026-045",
+#             "numeroVol": "MD050",
+#             "origineLine": null,
+#             "prospectionEnteteId": "cmprospentete001",
+#             "status": "CREER",
+#             "avion": "A340",
+#             "itineraire": "TNR - CDG",
+#             "departId": "cmdesttnr001",
+#             "nombre": 1,
+#             "destinationId": "cmdestcdg001",
+#             "itineraireId": "cmitin001",
+#             "classe": "ECONOMIE",
+#             "typePassager": "ADULTE",
+#             "dateHeureDepart": "2026-11-02T05:30:00.000Z",
+#             "dateHeureArrive": "2026-11-02T17:45:00.000Z",
+#             "dureeVol": "10h15",
+#             "dureeEscale": "0h",
+#             "conditionModif": "Modifiable avec frais",
+#             "conditionAnnul": "Remboursable à 80%",
+#             "heurefermeture": 2,
+#             "puBilletCompagnieDevise": 500,
+#             "puServiceCompagnieDevise": 20,
+#             "puPenaliteCompagnieDevise": 0,
+#             "devise": "EUR",
+#             "tauxEchange": 4800,
+#             "puBilletCompagnieAriary": 2400000,
+#             "puServiceCompagnieAriary": 96000,
+#             "puPenaliteCompagnieAriary": 0,
+#             "montantBilletCompagnieDevise": 500,
+#             "montantServiceCompagnieDevise": 20,
+#             "montantPenaliteCompagnieDevise": 0,
+#             "montantBilletCompagnieAriary": 2400000,
+#             "montantServiceCompagnieAriary": 96000,
+#             "montantPenaliteCompagnieAriary": 0,
+#             "montantBilletClientDevise": 550,
+#             "montantServiceClientDevise": 22,
+#             "montantPenaliteClientDevise": 0,
+#             "montantBilletClientAriary": 2640000,
+#             "montantServiceClientAriary": 105600,
+#             "montantPenaliteClientAriary": 0,
+#             "commissionEnDevise": 52,
+#             "commissionEnAriary": 249600,
+#             "tauxTaxe": null,
+#             "montantTaxeDevise": null,
+#             "montantTaxeAriary": null,
+#             "aeroportDepart": "TNR",
+#             "aeroportArrivee": "CDG",
+#             "dateLimitePaiement": null,
+#             "dateDevis": "2026-10-08T09:15:00.000Z",
+#             "devisId": "cmdevis001",
+#             "createdAt": "2026-10-08T09:15:00.000Z",
+#             "updatedAt": "2026-10-08T09:15:00.000Z",
+#             "destinationVoyage": {
+#               "id": "cmdestcdg001",
+#               "odooId": 12,
+#               "code": "DV-5",
+#               "ville": "Paris",
+#               "createdAt": "2026-10-08T09:15:00.000Z",
+#               "updatedAt": "2026-10-08T09:15:00.000Z",
+#               "paysId": "cmpaysfr001",
+#               "pays": {
+#                 "id": "cmpaysfr001",
+#                 "odooId": 3,
+#                 "pays": "France",
+#                 "photo": null,
+#                 "createdAt": "2026-10-08T09:15:00.000Z",
+#                 "updatedAt": "2026-10-08T09:15:00.000Z",
+#                 "paysVoyage": [
+#                   {
+#                     "id": "cmpv001",
+#                     "paysId": "cmpaysfr001",
+#                     "exigenceVoyageId": "cmexig001",
+#                     "createdAt": "2026-10-08T09:15:00.000Z",
+#                     "updatedAt": "2026-10-08T09:15:00.000Z",
+#                     "exigenceVoyage": {
+#                       "id": "cmexig001",
+#                       "type": "VISA",
+#                       "description": "Visa Schengen obligatoire",
+#                       "perimetre": "Ressortissants malgaches",
+#                       "createdAt": "2026-10-08T09:15:00.000Z",
+#                       "updatedAt": "2026-10-08T09:15:00.000Z"
+#                     }
+#                   }
+#                 ]
+#               }
+#             },
+#             "serviceProspectionLigne": [
+#               {
+#                 "id": "cmspl001",
+#                 "prospectionLigneId": "cmprospligne001",
+#                 "serviceSpecifiqueId": "cmss001",
+#                 "valeur": "23kg",
+#                 "createdAt": "2026-10-08T09:15:00.000Z",
+#                 "updatedAt": "2026-10-08T09:15:00.000Z",
+#                 "serviceSpecifique": {
+#                   "id": "cmss001",
+#                   "code": "SS-1",
+#                   "libelle": "Bagage soute",
+#                   "type": null,
+#                   "typeService": null,
+#                   "createdAt": "2026-10-08T09:15:00.000Z",
+#                   "updatedAt": "2026-10-08T09:15:00.000Z"
+#                 }
+#               }
+#             ]
+#           }
+#         ]
+#       }
+#     ],
+#     "meta": {
+#       "total": 57,
+#       "page": 1,
+#       "limit": 10,
+#       "totalPages": 6
+#     }
+#   }
+#
+# ---- Aucun résultat ----
+#   {
+#     "data": [],
+#     "meta": {
+#       "total": 0,
+#       "page": 1,
+#       "limit": 10,
+#       "totalPages": 0
+#     }
+#   }
+#
+# ---- statut invalide ----
+#   {
+#     "success": false,
+#     "message": "statut invalide. Valeurs possibles : CREER, DEVIS_A_APPROUVER, DEVIS_APPROUVE, BC_CLIENT_A_APPROUVER, BILLET_EMIS, FACTURE_EMISE, FACTURE_REGLEE, MODIFIER, ANNULER"
+#   }
+
+### 1.1 Comportement inchangé — liste complète (tableau)
+GET {{baseUrl}}/devis
+Authorization: Bearer {{token}}
+
+### 1.2 Première page, 10 par page
+GET {{baseUrl}}/devis?page=1&limit=10
+Authorization: Bearer {{token}}
+
+### 1.3 Page 2, 20 par page
+GET {{baseUrl}}/devis?page=2&limit=20
+Authorization: Bearer {{token}}
+
+### 1.4 Recherche (référence ou fournisseur)
+GET {{baseUrl}}/devis?page=1&limit=10&search=AIR
+Authorization: Bearer {{token}}
+
+### 1.5 Filtre par statut
+GET {{baseUrl}}/devis?page=1&limit=10&statut=DEVIS_A_APPROUVER
+Authorization: Bearer {{token}}
+
+### 1.6 Recherche + statut combinés
+GET {{baseUrl}}/devis?page=1&limit=10&search=DEV&statut=DEVIS_APPROUVE
+Authorization: Bearer {{token}}
+
+
+####################### 2. LIGNES DE BILLET — GET /billet/ligne (NOUVEAU) ######################
+# Nouvelle route : toutes les lignes de billet, tous dossiers confondus.
+# Toujours paginée (renvoie toujours { data, meta }, même sans page/limit).
+#
+# Query params (tous optionnels) :
+#   page           : numéro de page
+#   limit          : nombre d'éléments par page
+#   search         : recherche (insensible à la casse) sur le PNR (reservation),
+#                    le numéro de billet de l'entête (BIL-...), le numéro de vol
+#                    ou l'itinéraire
+#   statut         : statut de la ligne — CREER | ASSIGNER | CLOTURER | EMIS
+#                    | ANNULER | ... (enum Statut, liste complète dans Swagger)
+#   statusLigne    : INITIALE | MODIFIER | ANNULER | ANNULATION
+#   billetEnteteId : limiter aux lignes d'un billet (entête) donné
+# Tri : de la plus récente à la plus ancienne (createdAt desc).
+#
+# Chaque élément de data contient la ligne de billet avec :
+#   - prospectionLigne : vol (numéro, itinéraire, dates, classe...)
+#   - billetEntete     : entête (numeroBillet, devisId, ...)
+#   - billet[]         : billets émis, avec clientbeneficiaireInfo (passager)
+#
+# Les routes existantes ne changent pas :
+#   GET /billet/ligne/entete/:billetEnteteId  (lignes d'un billet, non paginé)
+#   GET /billet/ligne/:id                     (une ligne)
+# RÉPONSES (HTTP 200)
+#
+# ---- { data, meta } (2.1 à 2.7) ----
+#   {
+#     "data": [
+#       {
+#         "id": "cmbilligne001",
+#         "statut": "CLOTURER",
+#         "statusLigne": "INITIALE",
+#         "origineLine": null,
+#         "referenceLine": null,
+#         "prospectionLigneId": "cmprospligne001",
+#         "billetEnteteId": "cmbilentete001",
+#         "nombre": 1,
+#         "reservation": "ABC123",
+#         "puResaBilletCompagnieDevise": 500,
+#         "puResaServiceCompagnieDevise": 20,
+#         "puResaPenaliteCompagnieDevise": 0,
+#         "devise": "EUR",
+#         "resaTauxEchange": 4800,
+#         "puResaBilletCompagnieAriary": 2400000,
+#         "puResaServiceCompagnieAriary": 96000,
+#         "puResaPenaliteCompagnieAriary": 0,
+#         "puResaBilletClientDevise": 550,
+#         "puResaServiceClientDevise": 22,
+#         "puResaPenaliteClientDevise": 0,
+#         "puResaBilletClientAriary": 2640000,
+#         "puResaServiceClientAriary": 105600,
+#         "puResaPenaliteClientAriary": 0,
+#         "conditionModif": "Modifiable avec frais",
+#         "conditionAnnul": "Remboursable à 80%",
+#         "raisonAnnul": null,
+#         "rasionAnnulationId": null,
+#         "puResaMontantBilletCompagnieDevise": 500,
+#         "puResaMontantServiceCompagnieDevise": 20,
+#         "puResaMontantPenaliteCompagnieDevise": 0,
+#         "puResaMontantBilletCompagnieAriary": 2400000,
+#         "puResaMontantServiceCompagnieAriary": 96000,
+#         "puResaMontantPenaliteCompagnieAriary": 0,
+#         "puResaMontantBilletClientDevise": 550,
+#         "puResaMontantServiceClientDevise": 22,
+#         "puResaMontantPenaliteClientDevise": 0,
+#         "puResaMontantBilletClientAriary": 2640000,
+#         "puResaMontantServiceClientAriary": 105600,
+#         "puResaMontantPenaliteClientAriary": 0,
+#         "resaCommissionEnDevise": 52,
+#         "resaCommissionEnAriary": 249600,
+#         "emissionTauxChange": 4850,
+#         "puEmissionBilletCompagnieAriary": 2425000,
+#         "puEmissionServiceCompagnieAriary": 97000,
+#         "puEmissionPenaliteCompagnieAriary": 0,
+#         "puEmissionBilletClientAriary": 2667500,
+#         "puEmissionServiceClientAriary": 106700,
+#         "puEmissionPenaliteClientAriary": 0,
+#         "emissionMontantBilletCompagnieAriary": 2425000,
+#         "emissionMontantServiceCompagnieAriary": 97000,
+#         "emissionMontantPenaliteCompagnieAriary": 0,
+#         "emissionMontantBilletClientAriary": 2667500,
+#         "emissionMontantServiceClientAriary": 106700,
+#         "emissionMontantPenaliteClientAriary": 0,
+#         "emissionCommissionEnDevise": 52,
+#         "emissionCommissionEnAriary": 252200,
+#         "preuveResa": "uploads/billets/preuve-resa-abc123.pdf",
+#         "createdAt": "2026-10-08T09:15:00.000Z",
+#         "updatedAt": "2026-10-08T09:15:00.000Z",
+#         "prospectionLigne": {
+#           "id": "cmprospligne001",
+#           "numeroDosRef": "DOS-2026-045",
+#           "numeroVol": "MD050",
+#           "origineLine": null,
+#           "prospectionEnteteId": "cmprospentete001",
+#           "status": "CREER",
+#           "avion": "A340",
+#           "itineraire": "TNR - CDG",
+#           "departId": "cmdesttnr001",
+#           "nombre": 1,
+#           "destinationId": "cmdestcdg001",
+#           "itineraireId": "cmitin001",
+#           "classe": "ECONOMIE",
+#           "typePassager": "ADULTE",
+#           "dateHeureDepart": "2026-11-02T05:30:00.000Z",
+#           "dateHeureArrive": "2026-11-02T17:45:00.000Z",
+#           "dureeVol": "10h15",
+#           "dureeEscale": "0h",
+#           "conditionModif": "Modifiable avec frais",
+#           "conditionAnnul": "Remboursable à 80%",
+#           "heurefermeture": 2,
+#           "puBilletCompagnieDevise": 500,
+#           "puServiceCompagnieDevise": 20,
+#           "puPenaliteCompagnieDevise": 0,
+#           "devise": "EUR",
+#           "tauxEchange": 4800,
+#           "puBilletCompagnieAriary": 2400000,
+#           "puServiceCompagnieAriary": 96000,
+#           "puPenaliteCompagnieAriary": 0,
+#           "montantBilletCompagnieDevise": 500,
+#           "montantServiceCompagnieDevise": 20,
+#           "montantPenaliteCompagnieDevise": 0,
+#           "montantBilletCompagnieAriary": 2400000,
+#           "montantServiceCompagnieAriary": 96000,
+#           "montantPenaliteCompagnieAriary": 0,
+#           "montantBilletClientDevise": 550,
+#           "montantServiceClientDevise": 22,
+#           "montantPenaliteClientDevise": 0,
+#           "montantBilletClientAriary": 2640000,
+#           "montantServiceClientAriary": 105600,
+#           "montantPenaliteClientAriary": 0,
+#           "commissionEnDevise": 52,
+#           "commissionEnAriary": 249600,
+#           "tauxTaxe": null,
+#           "montantTaxeDevise": null,
+#           "montantTaxeAriary": null,
+#           "aeroportDepart": "TNR",
+#           "aeroportArrivee": "CDG",
+#           "dateLimitePaiement": null,
+#           "dateDevis": "2026-10-08T09:15:00.000Z",
+#           "devisId": "cmdevis001",
+#           "createdAt": "2026-10-08T09:15:00.000Z",
+#           "updatedAt": "2026-10-08T09:15:00.000Z"
+#         },
+#         "billetEntete": {
+#           "id": "cmbilentete001",
+#           "numeroBillet": "BIL-202610-0004",
+#           "devisId": "cmdevis001",
+#           "prospectionEnteteId": "cmprospentete001",
+#           "statut": "BILLET_EMIS",
+#           "totalCompagnie": 2496000,
+#           "commissionPropose": 10,
+#           "commissionAppliquer": 10,
+#           "totalCommission": 249600,
+#           "raisonAnnul": null,
+#           "createdAt": "2026-10-08T09:15:00.000Z",
+#           "updatedAt": "2026-10-08T09:15:00.000Z"
+#         },
+#         "billet": [
+#           {
+#             "id": "cmbillet001",
+#             "clientbeneficiaireInfoId": "cmcbi001",
+#             "billetLigneId": "cmbilligne001",
+#             "statut": "EMIS",
+#             "pjBillet": "uploads/billets/tkt-0001.pdf",
+#             "numeroBillet": "258-1234567890",
+#             "createdAt": "2026-10-08T09:15:00.000Z",
+#             "updatedAt": "2026-10-08T09:15:00.000Z",
+#             "clientbeneficiaireInfo": {
+#               "id": "cmcbi001",
+#               "nom": "RAKOTO",
+#               "prenom": "Jean",
+#               "nationalite": "MG",
+#               "document": null,
+#               "referenceDoc": "12AB34567",
+#               "typeDoc": "PASSEPORT",
+#               "dateDelivranceDoc": "2024-01-01T00:00:00.000Z",
+#               "dateValiditeDoc": "2029-01-01T00:00:00.000Z",
+#               "dateNaissance": "1990-05-12T00:00:00.000Z",
+#               "clientType": "ADULTE",
+#               "whatsapp": null,
+#               "tel": "+261340000000",
+#               "clientbeneficiaireId": "cmcb001",
+#               "clientBeneficiaireFormId": null,
+#               "statut": "ACTIF",
+#               "createdAt": "2026-10-08T09:15:00.000Z",
+#               "updatedAt": "2026-10-08T09:15:00.000Z"
+#             }
+#           }
+#         ]
+#       }
+#     ],
+#     "meta": {
+#       "total": 134,
+#       "page": 1,
+#       "limit": 10,
+#       "totalPages": 14
+#     }
+#   }
+#
+# ---- Aucun résultat ----
+#   {
+#     "data": [],
+#     "meta": {
+#       "total": 0,
+#       "page": 1,
+#       "limit": 10,
+#       "totalPages": 0
+#     }
+#   }
+#
+# ---- statut invalide (même format pour statusLigne) ----
+#   {
+#     "success": false,
+#     "message": "statut invalide. Valeurs possibles : ACTIF, INACTIF, CREER, ..."
+#   }
+
+### 2.1 Première page (valeurs par défaut : page=1, limit=10)
+GET {{baseUrl}}/billet/ligne
+Authorization: Bearer {{token}}
+
+### 2.2 Page 2, 20 par page
+GET {{baseUrl}}/billet/ligne?page=2&limit=20
+Authorization: Bearer {{token}}
+
+### 2.3 Recherche (PNR, numéro de billet, numéro de vol, itinéraire)
+GET {{baseUrl}}/billet/ligne?page=1&limit=10&search=ABC123
+Authorization: Bearer {{token}}
+
+### 2.4 Filtre par statut
+GET {{baseUrl}}/billet/ligne?page=1&limit=10&statut=CLOTURER
+Authorization: Bearer {{token}}
+
+### 2.5 Filtre par statusLigne
+GET {{baseUrl}}/billet/ligne?page=1&limit=10&statusLigne=MODIFIER
+Authorization: Bearer {{token}}
+
+### 2.6 Lignes d'un billet (entête) donné, paginées
+GET {{baseUrl}}/billet/ligne?page=1&limit=10&billetEnteteId=REMPLACER_PAR_ID_ENTETE
+Authorization: Bearer {{token}}
+
+### 2.7 Tous les filtres combinés
+GET {{baseUrl}}/billet/ligne?page=1&limit=10&search=MD&statut=CREER&statusLigne=INITIALE
+Authorization: Bearer {{token}}
