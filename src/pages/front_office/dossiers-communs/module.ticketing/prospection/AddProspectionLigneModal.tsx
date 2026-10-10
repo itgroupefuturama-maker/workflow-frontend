@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { FiX, FiSave } from 'react-icons/fi';
 import { toast } from '../../../../../components/Toast/toast';
 import Button from '../../../../../components/ui/Button';
+import { useItineraireCascade } from '../../../../../hooks/useItineraireCascade';
+import ItineraireCascadeFields from '../../../../../components/ItineraireCascadeFields';
 
 interface AddProspectionLigneModalProps {
   isOpen: boolean;
   onClose: () => void;
-  destinations: any[];
   servicesDisponibles: any[];
   onSave: (payload: any) => Promise<void>;
   commissionAppliquer?: number;
@@ -15,13 +16,13 @@ interface AddProspectionLigneModalProps {
 export default function AddProspectionLigneModal({
   isOpen,
   onClose,
-  destinations,
   servicesDisponibles,
   onSave,
   commissionAppliquer = 0,
 }: AddProspectionLigneModalProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [serviceValues, setServiceValues] = useState<{ serviceSpecifiqueId: string; valeur: string }[]>([]);
+  const cascade = useItineraireCascade();
 
   const [showJson, setShowJson] = useState(false);
 
@@ -100,19 +101,20 @@ export default function AddProspectionLigneModal({
       });
       setServiceValues(servicesDisponibles.map((s) => ({ serviceSpecifiqueId: s.id, valeur: '' })));
       setIsSaving(false);
+      cascade.reset();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
-  // Calcul itinéraire auto
+  // Synchronise departId/destinationId/itineraire depuis la cascade (source de vérité du trajet).
   useEffect(() => {
-    const depart = destinations.find((d) => d.id === form.departId);
-    const dest = destinations.find((d) => d.id === form.destinationId);
-    let itineraire = '';
-    if (depart && dest) itineraire = `${depart.ville || depart.code} → ${dest.ville || dest.code}`;
-    else if (depart) itineraire = `${depart.ville} → ?`;
-    else if (dest) itineraire = `? → ${dest.ville}`;
-    setForm((prev) => ({ ...prev, itineraire }));
-  }, [form.departId, form.destinationId, destinations]);
+    setForm((prev) => ({
+      ...prev,
+      departId: cascade.villeDepartId,
+      destinationId: cascade.selectedItineraire?.villeArriveeId ?? '',
+      itineraire: cascade.selectedItineraire?.libelle ?? '',
+    }));
+  }, [cascade.villeDepartId, cascade.selectedItineraire]);
 
   // Calcul durée vol auto
   // useEffect(() => {
@@ -179,7 +181,7 @@ export default function AddProspectionLigneModal({
 
   const handleSubmit = async () => {
     if (!form.departId || !form.destinationId) {
-      toast.error('Veuillez sélectionner un aéroport de départ et une destination');
+      toast.error('Veuillez sélectionner un itinéraire complet (départ → arrivée)');
       return;
     }
     if (!form.numeroVol.trim() || !form.dateHeureDepart) {
@@ -379,36 +381,20 @@ export default function AddProspectionLigneModal({
                 </select>
               </div>
 
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Départ <span className="text-red-500">*</span></label>
-                <select value={form.departId} onChange={(e) => set('departId', e.target.value)} className={inputCls}>
-                  <option value="">— Sélectionner —</option>
-                  {destinations.map((d) => <option key={d.id} value={d.id}>{d.code} – {d.ville}</option>)}
-                </select>
-              </div>
+              <ItineraireCascadeFields
+                cascade={cascade}
+                selectClassName={inputCls}
+                readonlyClassName={readonlyCls}
+                itineraireWrapperClassName="sm:col-span-2"
+              />
 
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Destination <span className="text-red-500">*</span></label>
-                <select value={form.destinationId} onChange={(e) => set('destinationId', e.target.value)} className={inputCls}>
-                  <option value="">— Sélectionner —</option>
-                  {destinations.map((d) => <option key={d.id} value={d.id}>{d.code} – {d.ville}</option>)}
-                </select>
-              </div>
-
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">
-                  Itinéraire <span className="ml-1 text-gray-400 normal-case font-normal">(calculé auto)</span>
-                </label>
-                <input type="text" value={form.itineraire} readOnly placeholder="Sélectionnez départ et destination" className={readonlyCls} />
-              </div>
-
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Date / Heure départ de {destinations.find((d) => d.id === form.departId)?.ville} <span className="text-red-500">*</span></label>
+                <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Date / Heure départ de {cascade.villeDepartOptions.find((v) => v.id === cascade.villeDepartId)?.ville} <span className="text-red-500">*</span></label>
                 <input type="datetime-local" value={form.dateHeureDepart} onChange={(e) => set('dateHeureDepart', e.target.value)} className={inputCls} />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Date / Heure arrivée à {destinations.find((d) => d.id === form.destinationId)?.ville} <span className="text-red-500">*</span></label>
+                <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Date / Heure arrivée à {cascade.selectedItineraire?.villeArrivee.ville} <span className="text-red-500">*</span></label>
                 <input type="datetime-local" value={form.dateHeureArrive} onChange={(e) => set('dateHeureArrive', e.target.value)} className={inputCls} />
               </div>
 

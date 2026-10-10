@@ -12,6 +12,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import RaisonAnnulationListe from '../../../module.parametre/RaisonAnnulation/RaisonAnnulationListe';
 import GestionPrixListe from '../../../module.attestation.voyage/SousMenuPrestation/GestionPrixListe';
 import ServiceSpecifiqueListe from '../../../module.parametre/ServiceSpecifique/ServiceSpecifiqueListe';
+import ItineraireListe from './ItineraireListe';
 import { API_URL } from '../../../../../../service/env';
 import Button from '../../../../../../components/ui/Button';
 
@@ -29,6 +30,7 @@ export default function ParametreView() {
     { id: 'listeRaisonAnnulation', label: 'Raison Annulation' },
     { id: 'listeService', label: 'Services & Spécifiques' },
     { id: 'listeExigence', label: 'Exigences de Voyage' },
+    { id: 'listeItineraire', label: 'Itinéraires' },
   ];
 
   const tabsAttestation = [
@@ -116,6 +118,13 @@ export default function ParametreView() {
             ══════════════════════════════════════ */}
             {activeTab === 'listeRaisonAnnulation' && (
               <RaisonAnnulationListe />
+            )}
+
+            {/* ══════════════════════════════════════
+                TAB : ITINÉRAIRES
+            ══════════════════════════════════════ */}
+            {activeTab === 'listeItineraire' && (
+              <ItineraireListe />
             )}
 
             {/* ══════════════════════════════════════

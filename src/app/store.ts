@@ -42,9 +42,11 @@ import prospectionsEntetesReducer from './front_office/prospectionsEntetesSlice'
 import prospectionsLignesReducer from './front_office/prospectionsLignesSlice';
 import serviceSpecifiqueReducer from './front_office/parametre_ticketing/serviceSpecifiqueSlice';
 import devisReducer from './front_office/devisSlice';
+import billetLigneReducer from './front_office/billetLigneSlice';
 import exigenceReducer from './front_office/parametre_ticketing/exigenceSlice';
 import destinationReducer from './front_office/parametre_ticketing/destinationSlice';
 import paysReducer from './front_office/parametre_ticketing/paysSlice';
+import itineraireReducer from './front_office/parametre_ticketing/itineraireSlice';
 import associationsPaysVoyageReducer from './front_office/parametre_ticketing/associationsPaysVoyageSlice';
 import billetReducer from './front_office/billetSlice';
 import suiviReducer from './front_office/suiviSlice';
@@ -142,9 +144,11 @@ const appReducer = combineReducers({
   prospectionsLignes: prospectionsLignesReducer,
   serviceSpecifique: serviceSpecifiqueReducer,
   devis: devisReducer,
+  billetLigne: billetLigneReducer,
   exigence: exigenceReducer,
   destination: destinationReducer,
   pays: paysReducer,
+  itineraire: itineraireReducer,
   associationsPaysVoyage: associationsPaysVoyageReducer,
   billet: billetReducer,
   suivi: suiviReducer,

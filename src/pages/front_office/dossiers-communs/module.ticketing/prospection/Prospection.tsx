@@ -21,6 +21,7 @@ import { ChevronDown } from 'lucide-react';
 import { selectServicesByType } from '../../../../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
 import { toast } from '../../../../../components/Toast/toast';
 import Skeleton from '../../../../../components/ui/Skeleton';
+import { useItineraireCascade } from '../../../../../hooks/useItineraireCascade';
 
 export default function ProspectionDetail() {
   const { enteteId } = useParams<{ enteteId: string }>();
@@ -71,7 +72,21 @@ export default function ProspectionDetail() {
   );
 
   const [newLine, setNewLine] = useState<any>(null);
-  
+  const cascade = useItineraireCascade();
+
+  // Synchronise departId/destinationId de la nouvelle ligne depuis la cascade d'itinéraire
+  // (source de vérité du trajet) — tant qu'aucune ligne n'est en cours de création, no-op.
+  useEffect(() => {
+    setNewLine((prev: any) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        departId: cascade.villeDepartId,
+        destinationId: cascade.selectedItineraire?.villeArriveeId ?? '',
+      };
+    });
+  }, [cascade.villeDepartId, cascade.selectedItineraire]);
+
 
   const [collapsedGroups, setCollapsedGroups] = useState({
     infosVol: false,
@@ -328,9 +343,11 @@ export default function ProspectionDetail() {
   const applySuggestion = (s: any) => {
     updateNewLineField('numeroVol',      s.numeroVol      || '');
     updateNewLineField('avion',          s.avion          || '');
-    updateNewLineField('itineraire',     s.itineraire     || '');
-    updateNewLineField('departId',       s.departId       || '');
-    updateNewLineField('destinationId',  s.destinationId  || '');
+    // Résout l'itinéraire complet (pays inclus) depuis la combinaison départ/destination
+    // suggérée, pour que la cascade affiche le même trajet que celui qui sera envoyé.
+    if (s.departId && s.destinationId) {
+      cascade.presetFromIds(s.departId, s.destinationId);
+    }
     updateNewLineField('classe',         s.classe         || 'ECONOMIE');
     updateNewLineField('typePassager',   s.typePassager   || 'ADULTE');
     updateNewLineField('dureeVol',       s.dureeVol       || '');
@@ -374,7 +391,7 @@ export default function ProspectionDetail() {
     if (!newLine || !enteteId) return;
 
     if (!newLine.departId || !newLine.destinationId) {
-      toast.error('Veuillez sélectionner un aéroport de départ et une destination');
+      toast.error('Veuillez sélectionner un itinéraire complet (départ → arrivée)');
       return;
     }
     if (!newLine.numeroVol.trim() || !newLine.dateHeureDepart) {
@@ -420,6 +437,7 @@ export default function ProspectionDetail() {
       await dispatch(createProspectionLigne(payload)).unwrap();
       dispatch(fetchProspectionLignes(enteteId));
       setNewLine(null);
+      cascade.reset();
     } catch (err: any) {
       toast.error(err?.message || 'Veuillez vérifier la console', 'Erreur création');
       setNewLine((prev: any) => ({ ...prev, isSaving: false }));
@@ -491,35 +509,8 @@ export default function ProspectionDetail() {
     }
   };
 
-  const updateItineraireAuto = (updatedLine: any) => {
-    const depart = destinations.find(d => d.id === updatedLine.departId);
-    const dest = destinations.find(d => d.id === updatedLine.destinationId);
-
-    let newItineraire = '';
-    if (depart && dest) {
-      newItineraire = `${depart?.ville || depart?.code || '?'} → ${dest?.ville || dest?.code || '?'}`;
-    } else if (depart) {
-      newItineraire = `${depart.ville} - ?`;
-    } else if (dest) {
-      newItineraire = `? - ${dest.ville}`;
-    }
-
-    return {
-      ...updatedLine,
-      itineraire: newItineraire,
-    };
-  };
-
   const updateNewLineField = (field: string, value: any) => {
-    setNewLine((prev: any) => {
-      let updated = { ...prev, [field]: value };
-
-      if (field === 'departId' || field === 'destinationId') {
-        updated = updateItineraireAuto(updated);
-      }
-
-      return updated;
-    });
+    setNewLine((prev: any) => ({ ...prev, [field]: value }));
   };
 
   const updateServiceValue = (index: number, newValeur: string) => {
@@ -532,6 +523,8 @@ export default function ProspectionDetail() {
 
   const handleAddNewLine = () => {
     if (newLine) return;
+
+    cascade.reset();
 
     // Tout déplier quand NewLineRow s'affiche
     setCollapsedGroups({
@@ -556,7 +549,6 @@ export default function ProspectionDetail() {
       destinationId: '',
       numeroVol: '',
       avion: '',
-      itineraire: '',
       classe: 'ECONOMIE',
       typePassager: 'ADULTE',
       dateHeureDepart: '',
@@ -628,6 +620,7 @@ export default function ProspectionDetail() {
   };
 
   const handleCancelNewLine = () => {
+    cascade.reset();
     setNewLine(null);
   };
 
@@ -1519,7 +1512,7 @@ export default function ProspectionDetail() {
                             <NewLineRow
                               newLine={newLine}
                               commissionPct={entete?.commissionAppliquer || 0}
-                              destinations={destinations}
+                              cascade={cascade}
                               servicesDisponibles={servicesDisponibles}
                               updateNewLineField={updateNewLineField}
                               updateServiceValue={updateServiceValue}
@@ -1548,7 +1541,6 @@ export default function ProspectionDetail() {
         <AddProspectionLigneModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-          destinations={destinations}
           servicesDisponibles={servicesDisponibles}
           onSave={handleSaveFromModal}
         />

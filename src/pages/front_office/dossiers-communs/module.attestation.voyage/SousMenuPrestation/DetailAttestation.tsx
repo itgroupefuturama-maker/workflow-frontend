@@ -539,7 +539,6 @@ const DetailAttestation = () => {
           <AddLigneModal
             isOpen={modalOpen}
             onClose={() => setModalOpen(false)}
-            destinations={destinations}
             beneficiaires={clientFactureDetail?.beneficiaires || []}
             attestationEnteteId={selectedId!}
             onLigneCreated={() => {

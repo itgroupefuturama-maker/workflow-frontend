@@ -4,11 +4,12 @@ import type { AppDispatch, RootState } from '../../../../../app/store';
 import { fetchClientBeneficiaireInfos } from '../../../../../app/portail_client/clientBeneficiaireInfosSlice';
 import { createAttestationLigne } from '../../../../../app/front_office/parametre_attestation/attestationEnteteSlice';
 import { fetchAttestationParams } from '../../../../../app/front_office/parametre_attestation/attestationParamsSlice';
+import { useItineraireCascade } from '../../../../../hooks/useItineraireCascade';
+import ItineraireCascadeFields from '../../../../../components/ItineraireCascadeFields';
 
 type Props = {
   isOpen: boolean;
   onClose: () => void;
-  destinations: any[];
   beneficiaires: any[];
   attestationEnteteId: string;
   onLigneCreated: () => void;
@@ -17,12 +18,12 @@ type Props = {
 const AddLigneModal = ({
   isOpen,
   onClose,
-  destinations,
   beneficiaires,
   attestationEnteteId,
   onLigneCreated,
 }: Props) => {
   const dispatch = useDispatch<AppDispatch>();
+  const cascade = useItineraireCascade();
 
   const { items: prixItems } = useSelector((state: RootState) => state.attestationParams);
   const prixActif = prixItems.find((p) => p.status === 'ACTIF') ?? null;
@@ -66,21 +67,15 @@ const AddLigneModal = ({
   //   if (duree) setFormData((prev) => ({ ...prev, dureeVol: duree }));
   // }, [formData.dateHeureDepart, formData.dateHeureArrive]);
 
-  // ─── Calcul automatique itinéraire ───────────────────────────────────────
+  // ─── Synchronise departId/destinationId/itineraire depuis la cascade ─────
   useEffect(() => {
-    const depart = destinations.find((d) => d.id === formData.departId);
-    const dest = destinations.find((d) => d.id === formData.destinationId);
-    if (depart && dest) {
-      setFormData((prev) => ({
-        ...prev,
-        itineraire: `${depart.ville} (${depart.paysVoyage?.pays || depart.code || '?'}) → ${dest.ville} (${dest.paysVoyage?.pays || dest.code || '?'})`,
-      }));
-    } else if (depart) {
-      setFormData((prev) => ({ ...prev, itineraire: `${depart.ville} → ?` }));
-    } else if (dest) {
-      setFormData((prev) => ({ ...prev, itineraire: `? → ${dest.ville}` }));
-    }
-  }, [formData.departId, formData.destinationId, destinations]);
+    setFormData((prev) => ({
+      ...prev,
+      departId: cascade.villeDepartId,
+      destinationId: cascade.selectedItineraire?.villeArriveeId ?? '',
+      itineraire: cascade.selectedItineraire?.libelle ?? '',
+    }));
+  }, [cascade.villeDepartId, cascade.selectedItineraire]);
 
   // Remplacez le useState de beneficiairePassagers par deux states
   const [beneficiairePassagers, setBeneficiairePassagers] = useState<Record<string, any[]>>({});
@@ -139,6 +134,10 @@ const AddLigneModal = ({
   const handleSubmit = async () => {
     if (selectedPassagerIds.length === 0) {
       setError('Veuillez sélectionner au moins un passager.');
+      return;
+    }
+    if (!formData.departId || !formData.destinationId) {
+      setError('Veuillez sélectionner un itinéraire complet (départ → arrivée).');
       return;
     }
     setSubmitting(true);
@@ -416,41 +415,12 @@ const AddLigneModal = ({
                 </div>
               ))}
 
-              {/* Départ */}
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Départ</label>
-                <select name="departId" value={formData.departId} onChange={handleInputChange}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white">
-                  <option value="">Sélectionner</option>
-                  {destinations.map((d) => <option key={d.id} value={d.id}>{d.ville}</option>)}
-                </select>
-              </div>
-
-              {/* Destination */}
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Destination</label>
-                <select name="destinationId" value={formData.destinationId} onChange={handleInputChange}
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white">
-                  <option value="">Sélectionner</option>
-                  {destinations.map((d) => <option key={d.id} value={d.id}>{d.ville}</option>)}
-                </select>
-              </div>
-
-              {/* Itinéraire — calculé automatiquement, lecture seule */}
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">
-                  Itinéraire
-                  <span className="ml-2 text-gray-400 normal-case tracking-normal font-normal">(calculé auto)</span>
-                </label>
-                <input
-                  type="text"
-                  name="itineraire"
-                  value={formData.itineraire}
-                  readOnly
-                  placeholder="Sélectionnez un départ et une destination"
-                  className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-slate-100 text-slate-500 cursor-not-allowed"
-                />
-              </div>
+              <ItineraireCascadeFields
+                cascade={cascade}
+                selectClassName="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                readonlyClassName="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-slate-100 text-slate-500 cursor-not-allowed"
+                itineraireWrapperClassName="sm:col-span-2"
+              />
 
               {/* Classe */}
               <div>

@@ -1,10 +1,11 @@
 import { useRef } from "react";
 import { FiSave, FiX } from "react-icons/fi";
+import type { ItineraireCascade } from "../../../../../hooks/useItineraireCascade";
 
 interface NewLineRowProps {
   newLine: any;
   commissionPct: number;
-  destinations: any[];
+  cascade: ItineraireCascade;
   servicesDisponibles: any[];
   updateNewLineField: (field: string, value: any) => void;
   updateServiceValue: (index: number, value: string) => void;
@@ -22,7 +23,7 @@ interface NewLineRowProps {
 function NewLineRow({
   newLine,
   commissionPct,
-  destinations,
+  cascade,
   servicesDisponibles,
   updateNewLineField,
   updateServiceValue,
@@ -236,54 +237,71 @@ function NewLineRow({
         />
       </td>
 
+      {/* Cascade itinéraire : Pays départ → Ville départ (empilés dans la cellule "Départ") */}
       <td className="px-4 py-3">
-        <select
-          value={newLine.departId}
-          onChange={e => updateNewLineField('departId', e.target.value)}
-          className={inputClassName}
-          required
-        >
-          <option value="">— Départ —</option>
-          {destinations.map(d => (
-            <option key={d.id} value={d.id}>
-              {d.code} – {d.ville}
-            </option>
-          ))}
-        </select>
+        <div className="flex flex-col gap-1">
+          <select
+            value={cascade.paysDepartId}
+            onChange={e => cascade.selectPaysDepart(e.target.value)}
+            className={inputClassName}
+            required
+          >
+            <option value="">— Pays départ —</option>
+            {cascade.paysDepartOptions.map(p => (
+              <option key={p.id} value={p.id}>{p.pays}</option>
+            ))}
+          </select>
+          <select
+            value={cascade.villeDepartId}
+            onChange={e => cascade.selectVilleDepart(e.target.value)}
+            className={inputClassName}
+            disabled={!cascade.paysDepartId}
+            required
+          >
+            <option value="">— Ville départ —</option>
+            {cascade.villeDepartOptions.map(v => (
+              <option key={v.id} value={v.id}>{v.ville}</option>
+            ))}
+          </select>
+        </div>
       </td>
 
+      {/* Cascade itinéraire : Pays arrivée → Ville arrivée (empilés dans la cellule "Destination") */}
       <td className="px-4 py-3">
-        <select
-          value={newLine.destinationId}
-          onChange={e => updateNewLineField('destinationId', e.target.value)}
-          className={inputClassName}
-          required
-        >
-          <option value="">— Destination —</option>
-          {destinations.map(d => (
-            <option key={d.id} value={d.id}>
-              {d.code} – {d.ville}
-            </option>
-          ))}
-        </select>
+        <div className="flex flex-col gap-1">
+          <select
+            value={cascade.paysArriveeId}
+            onChange={e => cascade.selectPaysArrivee(e.target.value)}
+            className={inputClassName}
+            disabled={!cascade.villeDepartId}
+            required
+          >
+            <option value="">— Pays arrivée —</option>
+            {cascade.paysArriveeOptions.map(p => (
+              <option key={p.id} value={p.id}>{p.pays}</option>
+            ))}
+          </select>
+          <select
+            value={cascade.itineraireId}
+            onChange={e => cascade.selectItineraire(e.target.value)}
+            className={inputClassName}
+            disabled={!cascade.paysArriveeId}
+            required
+          >
+            <option value="">— Ville arrivée —</option>
+            {cascade.villeArriveeOptions.map(it => (
+              <option key={it.id} value={it.id}>{it.villeArrivee.ville}</option>
+            ))}
+          </select>
+        </div>
       </td>
 
       <td className="px-4 py-3">
         <div className="flex items-center gap-2 px-3 py-2 border border-blue-300 rounded-lg bg-blue-50/50 text-sm min-w-[160px]">
-          {newLine.departId && destinations.find(d => d.id === newLine.departId) ? (
-            <span className="font-semibold text-blue-800">
-              {destinations.find(d => d.id === newLine.departId)?.code}
-            </span>
+          {cascade.selectedItineraire ? (
+            <span className="font-semibold text-blue-800">{cascade.selectedItineraire.libelle}</span>
           ) : (
-            <span className="text-slate-400">?</span>
-          )}
-          <span className="text-slate-500 font-bold">→</span>
-          {newLine.destinationId && destinations.find(d => d.id === newLine.destinationId) ? (
-            <span className="font-semibold text-blue-800">
-              {destinations.find(d => d.id === newLine.destinationId)?.code}
-            </span>
-          ) : (
-            <span className="text-slate-400">?</span>
+            <span className="text-slate-400">Sélectionnez un trajet complet</span>
           )}
         </div>
       </td>
