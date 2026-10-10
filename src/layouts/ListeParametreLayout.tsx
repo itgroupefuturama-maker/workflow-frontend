@@ -1,8 +1,9 @@
-import { Suspense, useEffect } from 'react';
+import { Suspense, useEffect, useRef } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import io, { Socket } from 'socket.io-client';
 import AppBar from '../components/AppBar'; // ton AppBar actuelle
+import { toast } from '../components/Toast/toast';
 import { fetchDossiersCommuns } from '../app/front_office/dossierCommunSlice';
 import { fetchPrivileges } from '../app/back_office/privilegesSlice';
 import { fetchProfiles } from '../app/back_office/profilesSlice';
@@ -33,6 +34,10 @@ export default function ParametreLayout() {
   const navigate = useNavigate();
   const { token, user } = useSelector((state: RootState) => state.auth);
 
+  // true dès qu'une coupure a été détectée — sert à distinguer la connexion initiale
+  // (silencieuse) d'une reconnexion après coupure (qui déclenche le toast ci-dessous).
+  const wasDisconnected = useRef(false);
+
   // Gestion du socket global
   useEffect(() => {
     if (!token || !user?.id) return;
@@ -41,8 +46,11 @@ export default function ParametreLayout() {
       transports: ['websocket'],
       autoConnect: true,
       reconnection: true,
-      reconnectionAttempts: 5,
+      // Pas de reconnectionAttempts : Socket.io retente indéfiniment (défaut = Infinity).
+      // Avec un plafond fini, le client abandonnait après ~15-20s et restait bloqué en
+      // "Hors ligne" si le serveur mettait plus longtemps à revenir (nécessitait un F5).
       reconnectionDelay: 3000,
+      reconnectionDelayMax: 10000,
       // Fonction plutôt qu'objet statique : chaque tentative de connexion/reconnexion
       // (y compris la reconnexion automatique interne de Socket.io) relit le token
       // courant dans le store, au lieu de renvoyer celui figé à la création du socket.
@@ -51,9 +59,21 @@ export default function ParametreLayout() {
 
     // Indicateur "hors ligne" (AppBar) — reflète l'état réel de la connexion socket,
     // y compris les coupures/reprises réseau après la connexion initiale.
-    socket.on('connect', () => dispatch(setSocketConnected(true)));
-    socket.on('disconnect', () => dispatch(setSocketConnected(false)));
-    socket.on('connect_error', () => dispatch(setSocketConnected(false)));
+    socket.on('connect', () => {
+      dispatch(setSocketConnected(true));
+      if (wasDisconnected.current) {
+        toast.success('Connexion au serveur rétablie.');
+        wasDisconnected.current = false;
+      }
+    });
+    socket.on('disconnect', () => {
+      dispatch(setSocketConnected(false));
+      wasDisconnected.current = true;
+    });
+    socket.on('connect_error', () => {
+      dispatch(setSocketConnected(false));
+      wasDisconnected.current = true;
+    });
 
     // Écoute l'événement 'notification' (cloche AppBar, voir FRONTEND_PROMPT_REASSIGNATION_COLAB.md)
     socket.on('notification', (data: any) => {
@@ -120,7 +140,7 @@ export default function ParametreLayout() {
   return (
     <div className="flex flex-col h-screen bg-slate-200">
       <AppBar isBackOffice={true} />
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 min-h-0 overflow-auto">
         <Suspense fallback={<PageLoader />}>
           <Outlet />
         </Suspense>

@@ -3,9 +3,15 @@ import { API_PROXY_URL } from './env'; // Ton fallback pour .env
 import { store } from '../app/store'; // Importe ton Redux store (assure-toi que c'est exporté depuis app/store.ts)
 import { login, logout } from '../app/authSlice'; // Importe les actions Redux
 
+// Sans timeout, une requête vers un serveur injoignable (wifi coupé, backend down) reste
+// en attente jusqu'au timeout TCP du système (peut dépasser la minute) avant de rejeter —
+// l'app reste bloquée sur un loader sans feedback pendant tout ce temps.
+const REQUEST_TIMEOUT = 8000;
+
 const axiosInstance = axios.create({
   baseURL: API_PROXY_URL,
   withCredentials: true, // envoie/reçoit les cookies httpOnly d'auth (access_token, refresh_token, csrf_token)
+  timeout: REQUEST_TIMEOUT,
   headers: {
     'Content-Type': 'application/json',
     'Accept': '*/*',
@@ -44,6 +50,7 @@ export async function refreshAccessToken(): Promise<string> {
   const csrfToken = getCookie('csrf_token');
   const refreshResponse = await axios.post(`${API_PROXY_URL}/auth/refresh`, {}, {
     withCredentials: true,
+    timeout: REQUEST_TIMEOUT,
     headers: csrfToken ? { 'X-CSRF-Token': csrfToken } : undefined,
   });
 

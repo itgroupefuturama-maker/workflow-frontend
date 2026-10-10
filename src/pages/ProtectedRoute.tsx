@@ -21,14 +21,43 @@ function ProtectedRoute({ adminOnly = false }: { adminOnly?: boolean }) {
       setBootstrapping(false);
       return;
     }
-    refreshAccessToken()
-      .catch(() => {
-        // Cookie absent/expiré : l'utilisateur n'est en fait plus authentifié malgré
-        // isAuthenticated=true persisté — sans ça il resterait bloqué en bootstrapping infini
-        // ou passerait à travers avec un token toujours vide.
-        dispatch(logout());
-      })
-      .finally(() => setBootstrapping(false));
+
+    let cancelled = false;
+    let attempt = 0;
+
+    const attemptRefresh = () => {
+      refreshAccessToken()
+        .then(() => {
+          if (!cancelled) setBootstrapping(false);
+        })
+        .catch((error) => {
+          if (cancelled) return;
+
+          // Pas de réponse du serveur (timeout, wifi coupé, backend injoignable) : ce n'est
+          // pas une session invalide, juste une coupure réseau. On ne déconnecte pas —
+          // on retente avec un backoff, comme le fait déjà Socket.io pour le temps réel.
+          const isNetworkError = !error?.response;
+          if (isNetworkError) {
+            attempt += 1;
+            const delay = Math.min(3000 * attempt, 15000);
+            setTimeout(() => {
+              if (!cancelled) attemptRefresh();
+            }, delay);
+            return;
+          }
+
+          // Le serveur a répondu (401/403...) : le cookie refresh_token est bien absent/expiré,
+          // l'utilisateur n'est en fait plus authentifié malgré isAuthenticated=true persisté.
+          dispatch(logout());
+          setBootstrapping(false);
+        });
+    };
+
+    attemptRefresh();
+
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
