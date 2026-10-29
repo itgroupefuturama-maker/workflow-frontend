@@ -82,7 +82,7 @@ const Billet = () => {
     { id: 'suivi', label: 'Suivi' },
   ];
 
-  const { current: billet, loading, error } = useSelector((state: RootState) => state.billet);
+  const { current: billet, loading } = useSelector((state: RootState) => state.billet);
   const { current: clientFacture, loading: cfLoading, error: cfError } = useSelector(
     (state: RootState) => state.clientFactures
   );
@@ -151,8 +151,17 @@ const Billet = () => {
   const [selectedBenefName] = useState<string>('');
   const [selectedBenefId] = useState<string | null>(null);
 
+  // Premier chargement de CE billet : seul cas où toute la page passe en squelette. Les re-fetch
+  // déclenchés par les actions (réservation, émission, report…) n'affichent qu'un voile sur le tableau.
+  const [initialLoad, setInitialLoad] = useState<{ enteteId: string; ok: boolean } | null>(null);
+
   useEffect(() => {
-    if (enteteId) dispatch(fetchBilletById(enteteId));
+    if (!enteteId) return;
+    let active = true;
+    dispatch(fetchBilletById(enteteId)).then((res) => {
+      if (active) setInitialLoad({ enteteId, ok: fetchBilletById.fulfilled.match(res) });
+    });
+    return () => { active = false; };
   }, [enteteId, dispatch]);
 
   useEffect(() => {
@@ -331,9 +340,11 @@ const Billet = () => {
   //   );
   // }
 
-  if (loading || cfLoading || cfError) return <PageSkeleton />;
+  const isFirstLoad = initialLoad?.enteteId !== enteteId;
 
-  if (error || !billet) {
+  if (isFirstLoad || (cfLoading && !clientFacture) || cfError) return <PageSkeleton />;
+
+  if (!initialLoad?.ok || !billet) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
         
@@ -420,6 +431,7 @@ const Billet = () => {
               {/* CONTENU : BILLET */}
               {innerTab === 'billet' && (
                 <BilletTable
+                  loading={loading}
                   lignes={lignes}
                   groups={groups}
                   billet={billet}

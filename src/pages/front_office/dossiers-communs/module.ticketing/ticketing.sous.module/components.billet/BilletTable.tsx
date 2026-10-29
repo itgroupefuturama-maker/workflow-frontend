@@ -13,6 +13,7 @@ const PriceCell = ({ value, isCurrency = false, className = "" }: { value: numbe
 );
 
 interface BilletTableProps {
+  loading?: boolean;
   lignes: any[];
   groups: any[];
   billet: any;
@@ -68,6 +69,7 @@ const ServicesSpecifiquesCell = ({
 };
 
 const BilletTable: React.FC<BilletTableProps> = ({
+  loading = false,
   lignes,
   billet,
   handleOpenReservation,
@@ -130,7 +132,16 @@ const BilletTable: React.FC<BilletTableProps> = ({
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="relative overflow-x-auto" aria-busy={loading}>
+      {/* Voile pendant un re-fetch : le tableau reste visible mais non cliquable (évite les doubles actions) */}
+      {loading && (
+        <div className="absolute inset-0 z-20 flex items-start justify-center pt-16 bg-white/60 backdrop-blur-[1px]">
+          <div className="flex items-center gap-3 px-4 py-2 bg-white rounded-lg shadow border border-slate-200">
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-indigo-600" />
+            <span className="text-sm font-medium text-slate-600">Mise à jour…</span>
+          </div>
+        </div>
+      )}
       <div className="bg-white overflow-hidden border border-slate-300">
         {/* Titre + icône filtre */}
         <div className="border-b p-3 border-slate-300 flex items-center justify-between">
