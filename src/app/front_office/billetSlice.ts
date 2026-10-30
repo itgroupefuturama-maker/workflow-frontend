@@ -3,30 +3,19 @@ import axios from '../../service/Axios';
 import type { ModePaiement } from './prospectionsLignesSlice';
 import type { Devis } from './devisSlice';
 
-export interface AnnulationBilletPayload {
-  tauxChange: number;
-  resaCommissionEnDevise: number;
-  resaCommissionEnAriary: number;
-  emissionCommissionEnDevise: number;
-  emissionCommissionEnAriary: number;
-  rasionAnnulationId: string;     // ← CHANGEMENT ici
-  type: string;                   // "SIMPLE" | "COM" | "PEN" | "COM_PEN" ?
-  lignes: {
-    id: string;
-    puResaPenaliteCompagnieDevise: number;
-    puResaMontantPenaliteCompagnieDevise: number;
-    conditionAnnul: string;
-  }[];
-}
+// Payload de POST /billet/:id/annuler : une ligne par appel, avant comme après émission
+export type TypeAnnulation = 'SIMPLE' | 'COM' | 'PEN' | 'COM_PEN';
 
-export interface AnnulationEmissionPayload {
-  raisonAnnul: string;
-  lignes: {
-    id: string;
-    puResaPenaliteCompagnieDevise: number;
-    puResaMontantPenaliteCompagnieDevise: number;
-    conditionAnnul: string;
-  }[];
+export interface AnnulationBilletPayload {
+  id: string;                          // billetLigneId à annuler
+  rasionAnnulationId: string;          // (sic) nom attendu par le back
+  conditionAnnul: string;              // texte saisi par l'agent
+  type: TypeAnnulation;
+  tauxChange: number;
+  resaCommissionEnDevise?: number;     // COM / COM_PEN
+  resaCommissionEnAriary?: number;
+  puResaPenaliteCompagnieDevise?: number;        // PEN / COM_PEN
+  puResaMontantPenaliteCompagnieDevise?: number;
 }
 
 export interface ServiceSpecifique {
@@ -273,6 +262,74 @@ export interface BilletLigne {
       updatedAt: string;
     };
   }> | [];
+  // Historique des reprogrammations ayant produit cette ligne (plus récentes d'abord)
+  reprogrammations?: BilletLigneReprogrammation[];
+}
+
+// ─── Reprogrammation : frais et prise en charge ───────────────
+// Voir FRONTEND_PROMPT_REPROGRAMMATION_FRAIS.md. Les Decimal sont renvoyés en chaîne par l'API :
+// toujours passer par Number(...) avant affichage ou calcul.
+export type TypeFraisReprogrammation = 'COMMISSION' | 'SERVICE' | 'PENALITE' | 'SURCLASSEMENT';
+export type ALaChargeDe = 'CLIENT' | 'AGENCE';
+
+export interface FraisReprogrammationPayload {
+  typeFrais: TypeFraisReprogrammation;
+  montantDevise: number;
+  montantAriary: number;
+  aLaChargeDe: ALaChargeDe;
+}
+
+export interface BilletLigneReprogrammationFrais {
+  id: string;
+  typeFrais: TypeFraisReprogrammation;
+  montantDevise: string;
+  montantAriary: string;
+  aLaChargeDe: ALaChargeDe;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BilletLigneReprogrammation {
+  id: string;
+  billetLigneId: string;
+  ancienneBilletLigneId: string;
+  raisonAnnulationId: string | null;
+  raisonAnnulation?: { id: string; libelle: string } | null;
+  tauxEchange: string;
+  devise: string;
+  ancienneClasse: string;
+  nouvelleClasse: string;
+  ancienneDateHeureDepart: string | null;
+  nouvelleDateHeureDepart: string | null;
+  ancienneDateHeureArrive: string | null;
+  nouvelleDateHeureArrive: string | null;
+  createdById: string;
+  createdBy?: { id: string; nom: string; prenom: string; email: string };
+  createdAt: string;
+  updatedAt: string;
+  frais: BilletLigneReprogrammationFrais[];
+}
+
+export interface ReprogrammationPayload {
+  id: string;
+  conditionModif: string;
+  raisonAnnulationId: string | null;
+  resaTauxEchange: number;
+  devise: string;
+  classe: string;
+  dateHeureDepart?: string;
+  dateHeureArrive?: string;
+  passagers: Array<{
+    clientbeneficiaireInfoId: string;
+    clientBeneficiaireId: string;
+    servicePreferenceIds: string[];
+  }>;
+  services: Array<{ serviceSpecifiqueId: string; valeur: string }>;
+  puResaBilletCompagnieDevise: number;
+  puResaServiceCompagnieDevise: number;
+  puResaMontantBilletCompagnieDevise: number;
+  puResaMontantServiceCompagnieDevise: number;
+  frais: FraisReprogrammationPayload[];
 }
 
 export interface BilletEntete {
@@ -294,6 +351,8 @@ export interface BilletEntete {
   passager: any[]; // à typer plus tard si besoin
   // Relation devis incluse par l'API (même pattern que prospectionEntete ci-dessus)
   devis?: Devis;
+  // 10 derniers envois à Odoo, du plus récent au plus ancien
+  odooEnvois?: OdooEnvoi[];
 }
 
 export interface EmissionPayload {
@@ -410,51 +469,68 @@ export const addReservationToLigne = createAsyncThunk(
   }
 );
 
-// Thunk : Changer le statut de l'entête (ex: vers "A Approuver")
-export const updateApprouverBilletEnteteStatut = createAsyncThunk(
-  'billet/updateEnteteStatut',
-  async (
-    { enteteId }: { enteteId: string},
-    { rejectWithValue }
-  ) => {
-    try {
-      const response = await axios.put(`/billet/${enteteId}/a-approuver`);
-      if (!response.data?.success) {
-        throw new Error('Échec du changement de statut');
-      }
-      return response.data;
-    } catch (err: any) {
-      return rejectWithValue(
-        err.response?.data?.message || 'Erreur lors du changement de statut'
-      );
-    }
+// ────────────────────────────────────────────────
+// Envois à Odoo : le front ne change plus le statut du billet, il soumet le dossier
+// et Odoo fait avancer le statut plus tard (voir FRONTEND_PROMPT_ODOO_BILLET_V2.md).
+// Le backend n'attend que l'accusé de réception d'Odoo (≈ 10 s max) ; 502 = non reçu, à renvoyer.
+// ────────────────────────────────────────────────
+export type OdooEventType = 'TICKET_SALE_ORDER_SUBMITTED' | 'TICKET_PURCHASE_ORDER_SUBMITTED';
+export type OdooEnvoiStatut = 'EN_COURS' | 'RECU' | 'ECHEC';
+
+export interface OdooEnvoi {
+  id: string;
+  eventType: OdooEventType;
+  eventId?: string;
+  sequence: number;
+  statut: OdooEnvoiStatut;
+  httpStatus: number | null;
+  erreur: string | null;
+  nombreTentatives: number;
+  referenceBcClient?: string | null;
+  valideAt?: string | null;
+  odooReference?: string | null;
+  commentaireOdoo?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OdooSoumissionResponse {
+  envoi: OdooEnvoi;
+  billet: BilletEntete;
+}
+
+const odooErrorMessage = (err: any, fallback: string): string =>
+  err.response?.data?.message || err.message || fallback;
+
+// « Approuver » : envoie la vente à Odoo (PUT /billet/:id/a-approuver), le statut reste CREER
+export const soumettreVenteOdoo = createAsyncThunk<
+  OdooSoumissionResponse,
+  { enteteId: string },
+  { rejectValue: string }
+>('billet/soumettreVenteOdoo', async ({ enteteId }, { rejectWithValue }) => {
+  try {
+    const response = await axios.put(`/billet/${enteteId}/a-approuver`);
+    if (response.data?.success === false) throw new Error(response.data?.message || 'Échec de l\'envoi à Odoo');
+    return (response.data?.data ?? response.data) as OdooSoumissionResponse;
+  } catch (err: any) {
+    return rejectWithValue(odooErrorMessage(err, 'Erreur lors de l\'envoi de la vente à Odoo'));
   }
-);
+});
 
-// Thunk : Changer le statut de l'entête (ex: vers "RESERVE")
-export const updateBilletEnteteStatut = createAsyncThunk(
-  'billet/updateEnteteStatut',
-  async (
-    { billetId, referenceFacClient }: { billetId: string; referenceFacClient: string },
-    { rejectWithValue }
-  ) => {
-    try {
-      const payload = { referenceFacClient };
-      const response = await axios.put(`/billet/${billetId}/emettre`, payload);
-
-      if (!response.data?.success) {
-        throw new Error('Échec de l\'émission de la facture');
-      }
-
-      // On renvoie idéalement le billet mis à jour si le back le renvoie
-      return response.data.data || { billetId, referenceFacClient };
-    } catch (err: any) {
-      return rejectWithValue(
-        err.response?.data?.message || 'Erreur lors de l\'émission de la facture'
-      );
-    }
+// « Émettre » : envoie l'achat à Odoo (PUT /billet/:id/emettre), le statut reste BC_CLIENT_A_APPROUVER
+export const soumettreAchatOdoo = createAsyncThunk<
+  OdooSoumissionResponse,
+  { billetId: string; referenceBcClient: string },
+  { rejectValue: string }
+>('billet/soumettreAchatOdoo', async ({ billetId, referenceBcClient }, { rejectWithValue }) => {
+  try {
+    const response = await axios.put(`/billet/${billetId}/emettre`, { referenceBcClient });
+    if (response.data?.success === false) throw new Error(response.data?.message || 'Échec de l\'envoi à Odoo');
+    return (response.data?.data ?? response.data) as OdooSoumissionResponse;
+  } catch (err: any) {
+    return rejectWithValue(odooErrorMessage(err, 'Erreur lors de l\'envoi de l\'achat à Odoo'));
   }
-);
+});
 
 // Thunk pour émettre une ligne
 export const emitBilletLigne = createAsyncThunk<
@@ -524,59 +600,7 @@ export const fetchBilletsByDossierCommun = createAsyncThunk<
   }
 );
 
-// ────────────────────────────────────────────────
-// Thunk : Émettre la facture client (PUT /billet/{id}/emettre-facture)
-// ────────────────────────────────────────────────
-export const emettreFactureClient = createAsyncThunk(
-  'billet/emettreFacture',
-  async (
-    { billetId, referenceFacClient }: { billetId: string; referenceFacClient: string },
-    { rejectWithValue }
-  ) => {
-    try {
-      const payload = { referenceFacClient };
-      const response = await axios.put(`/billet/${billetId}/emettre-facture`, payload);
-
-      if (!response.data?.success) {
-        throw new Error('Échec de l\'émission de la facture');
-      }
-
-      // On renvoie idéalement le billet mis à jour si le back le renvoie
-      return response.data.data || { billetId, referenceFacClient };
-    } catch (err: any) {
-      return rejectWithValue(
-        err.response?.data?.message || 'Erreur lors de l\'émission de la facture'
-      );
-    }
-  }
-);
-
-// ────────────────────────────────────────────────
-// Thunk : Marquer la facture comme réglée (PUT /billet/{id}/regler-facture)
-// ────────────────────────────────────────────────
-export const reglerFactureClient = createAsyncThunk(
-  'billet/reglerFacture',
-  async (
-    billetId: string,
-    { rejectWithValue }
-  ) => {
-    try {
-      const response = await axios.put(`/billet/${billetId}/regler-facture`);
-
-      if (!response.data?.success) {
-        throw new Error('Échec du règlement de la facture');
-      }
-
-      return response.data.data || { billetId };
-    } catch (err: any) {
-      return rejectWithValue(
-        err.response?.data?.message || 'Erreur lors du règlement de la facture'
-      );
-    }
-  }
-);
-
-// Thunk annulation réservation (avant émission)
+// Thunk annulation d'une ligne, avant ou après émission (même route : POST /billet/:id/annuler)
 export const annulerBillet = createAsyncThunk(
   'billet/annuler',
   async (
@@ -605,26 +629,9 @@ export const annulerBillet = createAsyncThunk(
   }
 );
 
-// Thunk annulation émission (après émission)
-export const annulerEmissionBillet = createAsyncThunk(
-  'billet/annulerEmission',
-  async (
-    { billetId, payload }: { billetId: string; payload: AnnulationEmissionPayload },
-    { rejectWithValue }
-  ) => {
-    try {
-      const res = await axios.patch(`/billet/${billetId}/annuler-emission`, payload);
-      if (!res.data?.success) throw new Error('Échec annulation émission');
-      return res.data;
-    } catch (err: any) {
-      return rejectWithValue(err.response?.data?.message || 'Erreur annulation émission');
-    }
-  }
-);
-
 export const reprogrammerLigne = createAsyncThunk(
   'billet/reprogrammer',
-  async ({ billetId, payload }: { billetId: string; payload: any }, { rejectWithValue }) => {
+  async ({ billetId, payload }: { billetId: string; payload: ReprogrammationPayload }, { rejectWithValue }) => {
     try {
       const res = await axios.patch(`/billet/${billetId}/reprogrammer`, payload);
       if (!res.data?.success) throw new Error('Échec reprogrammation');
@@ -685,21 +692,6 @@ const billetSlice = createSlice({
       state.error = action.payload as string;
     })
 
-    .addCase(updateBilletEnteteStatut.pending, (state) => {
-      state.loading = true;
-      state.error = null;
-    })
-    .addCase(updateBilletEnteteStatut.fulfilled, (state, action) => {
-      state.loading = false;
-      // Si le serveur renvoie le billet mis à jour dans action.payload.data
-      if (action.payload?.data) {
-        state.current = action.payload.data;
-      }
-    })
-    .addCase(updateBilletEnteteStatut.rejected, (state, action) => {
-      state.loading = false;
-      state.error = action.payload as string;
-    })
     .addCase(emitBilletLigne.pending, (state) => {
       state.loading = true;
       state.error = null;
@@ -735,39 +727,6 @@ const billetSlice = createSlice({
       state.errorList = action.payload as string;
       state.list = [];
     })
-    // Émettre facture
-    .addCase(emettreFactureClient.pending, (state) => {
-      state.loading = true;
-      state.error = null;
-    })
-    .addCase(emettreFactureClient.fulfilled, (state, action) => {
-      state.loading = false;
-      // Si le back renvoie le billet complet → mise à jour
-      if (action.payload && 'numeroBillet' in action.payload) {
-        state.current = action.payload;
-      }
-      // Sinon on re-fetchera de toute façon (voir composant)
-    })
-    .addCase(emettreFactureClient.rejected, (state, action) => {
-      state.loading = false;
-      state.error = action.payload as string;
-    })
-
-    // Régler facture
-    .addCase(reglerFactureClient.pending, (state) => {
-      state.loading = true;
-      state.error = null;
-    })
-    .addCase(reglerFactureClient.fulfilled, (state, action) => {
-      state.loading = false;
-      if (action.payload && 'numeroBillet' in action.payload) {
-        state.current = action.payload;
-      }
-    })
-    .addCase(reglerFactureClient.rejected, (state, action) => {
-      state.loading = false;
-      state.error = action.payload as string;
-    })
     // ────────────────────────────────────────────────
     // Annulation de la réservation (avant émission)
     // ────────────────────────────────────────────────
@@ -784,36 +743,6 @@ const billetSlice = createSlice({
     .addCase(annulerBillet.rejected, (state, action) => {
       state.loading = false;
       state.error = action.payload as string;
-    })
-
-    // ────────────────────────────────────────────────
-    // Annulation de l'émission (après émission)
-    // ────────────────────────────────────────────────
-    .addCase(annulerEmissionBillet.pending, (state) => {
-      state.loading = true;
-      state.error = null;
-    })
-    .addCase(annulerEmissionBillet.fulfilled, (state, action) => {
-      state.loading = false;
-      
-      // Même logique que ci-dessus
-      if (state.current && action.meta.arg.payload.lignes.length > 0) {
-        state.current.billetLigne = state.current.billetLigne.map(ligne => {
-          const updated = action.meta.arg.payload.lignes.find(u => u.id === ligne.id);
-          if (updated) {
-            return {
-              ...ligne,
-              statut: 'ANNULE_EMISSION',     // adapte au vrai statut
-              // mise à jour éventuelle des champs
-            };
-          }
-          return ligne;
-        });
-      }
-    })
-    .addCase(annulerEmissionBillet.rejected, (state, action) => {
-      state.loading = false;
-      state.error = action.payload as string || 'Échec annulation émission';
     })
 
     .addCase(reporterLigne.pending, (state) => {

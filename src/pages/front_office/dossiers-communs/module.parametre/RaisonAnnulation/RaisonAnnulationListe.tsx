@@ -25,30 +25,6 @@ export default function RaisonAnnulationListe() {
     setLoadingId(null);
   };
 
-  if (loading) {
-    return (
-      <div className="p-10 text-center animate-pulse text-slate-500">
-        Chargement des raisons d'annulation...
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-6 bg-red-50 border border-red-200 rounded-lg text-red-700">
-        {error}
-      </div>
-    );
-  }
-
-  if (items.length === 0) {
-    return (
-      <div className="p-10 text-center text-slate-500 italic">
-        Aucune raison d'annulation trouvée
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-4">
 
@@ -70,8 +46,16 @@ export default function RaisonAnnulationListe() {
       {/* ══ TABLE ══ */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
 
-        {/* Empty state */}
-        {items.length === 0 ? (
+        {/* Le header (et donc le bouton de création) reste visible même si la liste est vide ou en erreur */}
+        {loading && items.length === 0 ? (
+          <div className="p-10 text-center animate-pulse text-slate-500">
+            Chargement des raisons d'annulation...
+          </div>
+        ) : error && items.length === 0 ? (
+          <div className="m-4 p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+            {error}
+          </div>
+        ) : items.length === 0 ? (
           <div className="py-16 flex flex-col items-center gap-3">
             <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
               <span className="text-2xl">🚫</span>

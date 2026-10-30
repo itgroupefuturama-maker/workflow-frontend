@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../app/store';
 import { createRaisonAnnulation } from '../../app/front_office/parametre_ticketing/raisonAnnulationSlice';
+import { toast } from '../Toast/toast';
 
 interface Props {
   isOpen: boolean;
@@ -15,12 +16,12 @@ export default function RaisonAnnulationModal({ isOpen, onClose }: Props) {
   const [libelle, setLibelle] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
 
-//   useEffect(() => {
-//     if (isOpen) {
-//       setLibelle('');
-//       setFormError(null);
-//     }
-//   }, [isOpen]);
+  // Vider le formulaire à la fermeture, sinon l'ancien libellé réapparaît à la réouverture
+  const fermer = () => {
+    setLibelle('');
+    setFormError(null);
+    onClose();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,9 +32,10 @@ export default function RaisonAnnulationModal({ isOpen, onClose }: Props) {
 
     try {
       await dispatch(createRaisonAnnulation(libelle.trim())).unwrap();
-      onClose();
-    } catch (err) {
-      // l'erreur est déjà gérée dans le slice
+      toast.success('Raison d\'annulation créée');
+      fermer();
+    } catch {
+      // l'erreur est déjà gérée dans le slice (createError)
     }
   };
 
@@ -69,7 +71,7 @@ export default function RaisonAnnulationModal({ isOpen, onClose }: Props) {
           <div className="flex justify-end gap-3 mt-8">
             <button
               type="button"
-              onClick={onClose}
+              onClick={fermer}
               className="px-5 py-2.5 text-slate-700 bg-slate-100 rounded-lg hover:bg-slate-200"
               disabled={createLoading}
             >

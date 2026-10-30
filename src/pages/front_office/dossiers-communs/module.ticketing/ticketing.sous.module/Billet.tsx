@@ -5,12 +5,10 @@ import type { RootState, AppDispatch } from '../../../../../app/store';
 import {
   fetchBilletById,
   addReservationToLigne,
-  updateBilletEnteteStatut,
   type BilletLigne,
   emitBilletLigne,
-  updateApprouverBilletEnteteStatut,
-  emettreFactureClient,
-  reglerFactureClient,
+  soumettreVenteOdoo,
+  soumettreAchatOdoo,
   annulerBillet,
   type AnnulationBilletPayload,
   reprogrammerLigne,
@@ -25,7 +23,6 @@ import BeneficiaireInfosModal from '../../../../../components/modals/Beneficiair
 import TabContainer from '../../../../../layouts/TabContainer';
 import { fetchSuivisPaginated } from '../../../../../app/front_office/suiviSlice';
 import EmissionBilletModal from '../../../../../components/modals/EmissionBilletModal';
-import FactureClientModal from '../../../../../components/modals/FactureClientModal';
 import { fetchCommentairesByPrestation,  } from '../../../../../app/front_office/commentaireSlice';
 import BilletInfoCards from './components.billet/BilletInfoCards';
 import BilletTable from './components.billet/BilletTable';
@@ -37,8 +34,16 @@ import { billetDetailItems } from './components.billet/utils/ticketingHeaderItem
 import PageSkeleton from '../../../../../components/ui/PageSkeleton';
 import SuiviTabSection from '../../module.suivi/SuiviTabSection';
 import { toast } from '../../../../../components/Toast/toast';
+import { onBilletStatut } from '../../../../../service/notifications';
 import Button from '../../../../../components/ui/Button';
 import { selectServicesByType } from '../../../../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
+
+// Les thunks rejettent avec le message du back (string) : on l'affiche tel quel
+const messageErreur = (err: unknown, fallback: string): string =>
+  typeof err === 'string' ? err : err instanceof Error && err.message ? err.message : fallback;
+
+// Reprogrammation, annulation ou modification de réservation après un envoi à Odoo : le billet repasse en CREER
+const MSG_A_RESOUMETTRE = 'Dossier modifié : à soumettre de nouveau à Odoo (bouton Approuver)';
 
 const Billet = () => {
   const navigate = useNavigate();
@@ -56,14 +61,16 @@ const Billet = () => {
 
   const [activeTab, setActiveTab] = useState('billet');
 
-  const [showFactureModal, setShowFactureModal] = useState(false);
-  const [, setFactureReference] = useState('');
+  // Envoi à Odoo en cours depuis cette page : le back attend l'accusé de réception d'Odoo (≈ 10 s max)
+  const [envoiOdooEnCours, setEnvoiOdooEnCours] = useState<'VENTE' | 'ACHAT' | null>(null);
 
   const [showEmissionModal, setShowEmissionModal] = useState(false);
-  const [, setEmissionReference] = useState('');
 
   const [showReprogModal, setShowReprogModal] = useState(false);
   const [selectedLigneForReprog, setSelectedLigneForReprog] = useState<BilletLigne | null>(null);
+  const [reprogSubmitting, setReprogSubmitting] = useState(false);
+  // Réservation / émission de ligne en cours : bloque le double clic (2e requête refusée par le back)
+  const [ligneSubmitting, setLigneSubmitting] = useState<'RESA' | 'EMISSION' | null>(null);
 
   // Dans le composant Billet
   const services = useSelector(selectServicesByType('TICKET'));
@@ -164,6 +171,16 @@ const Billet = () => {
     return () => { active = false; };
   }, [enteteId, dispatch]);
 
+  // Odoo a changé le statut de CE billet (socket 'billet:statut', envoyé à tous) : on recharge pour
+  // mettre à jour statut, boutons et odooEnvois sans action de l'agent.
+  const billetEnteteId = billet?.id;
+  useEffect(() => {
+    if (!enteteId || !billetEnteteId) return;
+    return onBilletStatut((e) => {
+      if (e.billetEnteteId === billetEnteteId) dispatch(fetchBilletById(enteteId));
+    });
+  }, [enteteId, billetEnteteId, dispatch]);
+
   useEffect(() => {
     if (clientFactureId) dispatch(fetchClientFactureById(clientFactureId));
   }, [clientFactureId, dispatch]);
@@ -179,8 +196,11 @@ const Billet = () => {
   };
 
   const handleSubmitReservation = async (data: any) => {
-    if (!selectedLigne) return;
+    if (!selectedLigne || ligneSubmitting) return;
+    // Modifier la réservation d'une ligne FAIT après un envoi à Odoo remet le billet en CREER
+    const modifApresEnvoi = selectedLigne.statut === 'FAIT' && (billet?.odooEnvois?.length ?? 0) > 0;
 
+    setLigneSubmitting('RESA');
     try {
       await dispatch(
         addReservationToLigne({
@@ -192,8 +212,11 @@ const Billet = () => {
       if (enteteId) dispatch(fetchBilletById(enteteId));
       setModalOpen(false);
       setSelectedLigne(null);
-    } catch (err: any) {
-      toast.error('Erreur réservation : ' + (err.message || '—'));
+      if (modifApresEnvoi) toast.info(MSG_A_RESOUMETTRE);
+    } catch (err) {
+      toast.error(messageErreur(err, 'Erreur lors de la réservation'));
+    } finally {
+      setLigneSubmitting(null);
     }
   };
 
@@ -202,8 +225,8 @@ const Billet = () => {
     try {
       await dispatch(reporterLigne(ligne.id)).unwrap();
       dispatch(fetchBilletById(enteteId));
-    } catch (err: any) {
-      toast.error('Erreur lors du report : ' + (err.message || 'Erreur inconnue'));
+    } catch (err) {
+      toast.error(messageErreur(err, 'Erreur lors du report'));
     }
   };
 
@@ -213,8 +236,9 @@ const Billet = () => {
   };
 
   const handleSubmitEmission = async (data: any) => {
-    if (!selectedLigneForEmission) return;
+    if (!selectedLigneForEmission || ligneSubmitting) return;
 
+    setLigneSubmitting('EMISSION');
     try {
       await dispatch(
         emitBilletLigne({
@@ -226,8 +250,20 @@ const Billet = () => {
       if (enteteId) dispatch(fetchBilletById(enteteId));
       setEmissionModalOpen(false);
       setSelectedLigneForEmission(null);
-    } catch (err: any) {
-      toast.error('Erreur lors de l\'émission : ' + (err.message || '—'));
+    } catch (err) {
+      const message = messageErreur(err, "Erreur lors de l'émission");
+      // « doit être 'FAIT' avant d'ajouter l'émission (statut actuel : CLOTURER) » : une requête précédente
+      // a déjà émis la ligne → on recharge au lieu d'afficher un échec
+      if (message.includes("avant d'ajouter l'émission") && message.includes('CLOTURER')) {
+        if (enteteId) dispatch(fetchBilletById(enteteId));
+        setEmissionModalOpen(false);
+        setSelectedLigneForEmission(null);
+        toast.info('La ligne est déjà émise');
+      } else {
+        toast.error(message);
+      }
+    } finally {
+      setLigneSubmitting(null);
     }
   };
 
@@ -242,30 +278,46 @@ const Billet = () => {
   const allLinesReservation = lignesActives.length > 0 &&
     lignesActives.every(l => l.statut === 'FAIT' || l.statut === 'MODIFIER' || l.statut === 'ANNULER');
 
+  // Émission possible seulement quand toutes les lignes sont traitées (CLOTURER, MODIFIER ou ANNULER)
+  // et qu'au moins une est CLOTURER (sinon il n'y a rien à émettre)
   const allLinesEmission = lignesActives.length > 0 &&
-    lignesActives.every(l => l.statut === 'CLOTURER' || l.statut === 'MODIFIER' || l.statut === 'ANNULER' || l.statut === 'FAIT');
+    lignesActives.every(l => l.statut === 'CLOTURER' || l.statut === 'MODIFIER' || l.statut === 'ANNULER') &&
+    lignesActives.some(l => l.statut === 'CLOTURER');
 
-  const handleMarkAsReserved = async (billetId: string) => {
-    if (!enteteId) return;
+  // Le statut n'avance plus ici : il change plus tard, quand Odoo valide. On recharge quand même
+  // le billet après l'envoi (succès ou échec) pour afficher le nouvel état dans odooEnvois.
+  const handleSoumettreVente = async (billetId: string) => {
+    if (!enteteId || envoiOdooEnCours) return;
+    setEnvoiOdooEnCours('VENTE');
     try {
-      await dispatch(updateApprouverBilletEnteteStatut({ enteteId: billetId })).unwrap();
+      await dispatch(soumettreVenteOdoo({ enteteId: billetId })).unwrap();
+      toast.success('Dossier envoyé à Odoo, en attente de validation');
+    } catch (err) {
+      toast.error(typeof err === 'string' ? err : "Erreur lors de l'envoi de la vente à Odoo");
+    } finally {
+      setEnvoiOdooEnCours(null);
       dispatch(fetchBilletById(enteteId));
-    } catch (err: any) {
-      toast.error('Erreur lors du changement de statut');
     }
   };
 
-  const handleReglerFacture = async () => {
-    if (!billet?.id) return;
-
+  // Rejette avec le message du back : EmissionBilletModal l'affiche et reste ouverte (« Confirmer » = renvoyer)
+  const handleSoumettreAchat = async (referenceBcClient: string) => {
+    if (!billet?.id || !enteteId) return;
+    setEnvoiOdooEnCours('ACHAT');
     try {
-      await dispatch(reglerFactureClient(billet.id)).unwrap();
-
-      if (enteteId) dispatch(fetchBilletById(enteteId));
-    } catch (err: any) {
-      toast.error("Erreur : " + (err.message || "Échec règlement facture"));
+      await dispatch(soumettreAchatOdoo({ billetId: billet.id, referenceBcClient })).unwrap();
+      toast.success('Dossier envoyé à Odoo, en attente de validation');
+    } catch (err) {
+      throw new Error(typeof err === 'string' ? err : "Erreur lors de l'envoi de l'achat à Odoo");
+    } finally {
+      setEnvoiOdooEnCours(null);
+      dispatch(fetchBilletById(enteteId));
     }
   };
+
+  // Référence BC client du dernier envoi d'achat, pour pré-remplir un renvoi
+  const derniereReferenceBcClient =
+    billet?.odooEnvois?.find((e) => e.eventType === 'TICKET_PURCHASE_ORDER_SUBMITTED')?.referenceBcClient ?? '';
 
   // ─── Regroupement ───
   const lignes = (billet?.billetLigne || []).filter((l) => l?.prospectionLigne);
@@ -444,10 +496,11 @@ const Billet = () => {
                   serviceById={serviceById}
                   allLinesEmission={allLinesEmission}
                   allLinesReservation={allLinesReservation}
-                  onShowFacture={() => setShowFactureModal(true)}
-                  onRegler={handleReglerFacture}
-                  onApprouver={() => handleMarkAsReserved(billet.id)}
+                  envoiOdooEnCours={envoiOdooEnCours}
+                  onApprouver={() => handleSoumettreVente(billet.id)}
                   onShowEmission={() => setShowEmissionModal(true)}
+                  onRenvoyerAchat={() => setShowEmissionModal(true)}
+                  onActualiser={() => enteteId && dispatch(fetchBilletById(enteteId))}
                   onAnnulerReservation={() => {
                     setAnnulType('reservation');
                     setShowAnnulModal(true);
@@ -488,39 +541,15 @@ const Billet = () => {
               )}
             </div>
 
-            <FactureClientModal
-              isOpen={showFactureModal}
-              onClose={() => {
-                setShowFactureModal(false);
-                setFactureReference('');
-              }}
-              onConfirm={async (reference) => {
-                await dispatch(
-                  emettreFactureClient({
-                    billetId: billet!.id,
-                    referenceFacClient: reference,
-                  })
-                ).unwrap();
-                dispatch(fetchBilletById(enteteId!));
-              }}
-            />
-
-            <EmissionBilletModal
-              isOpen={showEmissionModal}
-              onClose={() => {
-                setShowEmissionModal(false);
-                setEmissionReference('');
-              }}
-              onConfirm={async (reference) => {
-                await dispatch(
-                  updateBilletEnteteStatut({
-                    billetId: billet!.id,
-                    referenceFacClient: reference,     // ← attention : le nom du champ est peut-être trompeur
-                  })
-                ).unwrap();
-                dispatch(fetchBilletById(enteteId!));
-              }}
-            />
+            {/* Monté seulement à l'ouverture pour repartir de la dernière référence envoyée */}
+            {showEmissionModal && (
+              <EmissionBilletModal
+                isOpen={showEmissionModal}
+                initialReference={derniereReferenceBcClient}
+                onClose={() => setShowEmissionModal(false)}
+                onConfirm={handleSoumettreAchat}
+              />
+            )}
 
             {showReprogModal && (
             <>
@@ -534,6 +563,7 @@ const Billet = () => {
                   onSubmit={async (payload) => {
                   if (!billet?.id || !selectedLigneForReprog) return;
 
+                  setReprogSubmitting(true);
                   try {
                     await dispatch(
                       reprogrammerLigne({
@@ -542,16 +572,21 @@ const Billet = () => {
                       })
                     ).unwrap();
 
-                    dispatch(fetchBilletById(enteteId!));
-                  } catch (err: any) {
-                    toast.error(err?.message || 'Erreur lors de la reprogrammation');
-                  } finally {
+                    toast.success('Ligne reprogrammée');
+                    if (billet.odooEnvois?.length) toast.info(MSG_A_RESOUMETTRE);
                     setShowReprogModal(false);
                     setSelectedLigneForReprog(null);
+                    dispatch(fetchBilletById(enteteId!));
+                  } catch (err) {
+                    // La modal reste ouverte : la saisie n'est pas perdue, l'utilisateur peut corriger
+                    // (le backend garantit que rien n'est enregistré en cas d'échec).
+                    toast.error(messageErreur(err, 'Erreur lors de la reprogrammation'));
+                  } finally {
+                    setReprogSubmitting(false);
                   }
                 }}
                   ligne={selectedLigneForReprog}
-                  loading={false} // à connecter si tu as un loading spécifique
+                  loading={reprogSubmitting}
                   serviceById={serviceById}
                 />
               )}
@@ -559,12 +594,15 @@ const Billet = () => {
             )}
 
             {/* Modals */}
-            {selectedLigne && (
+            {/* Monté à chaque ouverture (key) : la modal s'initialise avec la ligne choisie (modif d'une ligne FAIT) */}
+            {selectedLigne && modalOpen && (
               <ReservationModal
+                key={selectedLigne.id}
                 isOpen={modalOpen}
                 onClose={() => setModalOpen(false)}
                 onSubmit={handleSubmitReservation}
                 ligne={selectedLigne}
+                loading={ligneSubmitting === 'RESA'}
               />
             )}
 
@@ -575,6 +613,7 @@ const Billet = () => {
                 onSubmit={handleSubmitEmission}
                 ligne={selectedLigneForEmission}
                 numeroBillet={billet?.numeroBillet || ''}
+                loading={ligneSubmitting === 'EMISSION'}
               />
             )}
 
@@ -598,23 +637,16 @@ const Billet = () => {
                   setAnnulType(null);
                 }}
                 onSubmit={async (payload: AnnulationBilletPayload) => {
-                  if (!billet?.id) return;
+                  if (!billet?.id || annulLoading) return;
                   setAnnulLoading(true);
                   try {
-                    // Si une seule ligne est sélectionnée → on peut filtrer ou adapter le payload
-                    const adaptedPayload = ligneToAnnul
-                      ? { ...payload, ligneIds: [ligneToAnnul.id] } // ← À adapter selon ton API !
-                      : payload;
-
-                    await dispatch(
-                      annulerBillet({
-                        billetId: billet.id,
-                        payload: adaptedPayload,
-                      })
-                    ).unwrap();
+                    // Même route avant et après émission ; la ligne à annuler est dans payload.id
+                    await dispatch(annulerBillet({ billetId: billet.id, payload })).unwrap();
+                    toast.success('Ligne annulée');
+                    if (billet.odooEnvois?.length) toast.info(MSG_A_RESOUMETTRE);
                     dispatch(fetchBilletById(enteteId!));
-                  } catch (err: any) {
-                    toast.error(err?.message || "Erreur lors de l'annulation");
+                  } catch (err) {
+                    toast.error(messageErreur(err, "Erreur lors de l'annulation"));
                   } finally {
                     setAnnulLoading(false);
                     setShowAnnulModal(false);

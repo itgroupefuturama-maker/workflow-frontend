@@ -3,6 +3,7 @@ import type { BilletLigne, ServiceProspectionLigne, ServiceSpecifique } from '..
 import { FiFilter, FiX } from 'react-icons/fi';
 import { API_URL } from '../../../../../../service/env';
 import { BilletActions } from './BilletActions';
+import OdooEnvoisStatus from './OdooEnvoisStatus';
 import { PassagersCell } from './PassagersCell';
 
 // --- Sous-composant pour les cellules de prix (évite la répétition et les erreurs de rendu) ---
@@ -26,8 +27,9 @@ interface BilletTableProps {
   handleReporter: (ligne: BilletLigne) => void;
   allLinesEmission: boolean;
   allLinesReservation: boolean;
-  onShowFacture: () => void;
-  onRegler: () => void;
+  envoiOdooEnCours: 'VENTE' | 'ACHAT' | null;
+  onRenvoyerAchat: () => void;
+  onActualiser: () => void;
   onApprouver: (billetId: string) => void;
   onShowEmission: () => void;
   onAnnulerReservation?: () => void;
@@ -79,8 +81,9 @@ const BilletTable: React.FC<BilletTableProps> = ({
   handleReporter,
   allLinesEmission,
   allLinesReservation,
-  onShowFacture,
-  onRegler,
+  envoiOdooEnCours,
+  onRenvoyerAchat,
+  onActualiser,
   onApprouver,
   onShowEmission,
   onAnnulerReservation,
@@ -170,8 +173,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
               billet={billet}
               allLinesEmission={allLinesEmission}
               allLinesReservation={allLinesReservation}
-              onShowFacture={onShowFacture}
-              onRegler={onRegler}
+              envoiEnCours={envoiOdooEnCours}
               onApprouver={onApprouver}
               onShowEmission={onShowEmission}
               onAnnulerReservation={onAnnulerReservation}
@@ -180,6 +182,14 @@ const BilletTable: React.FC<BilletTableProps> = ({
             
           </div>
         </div>
+
+        <OdooEnvoisStatus
+          envois={billet?.odooEnvois}
+          envoiEnCours={envoiOdooEnCours}
+          onRenvoyerVente={() => onApprouver(billet.id)}
+          onRenvoyerAchat={onRenvoyerAchat}
+          onActualiser={onActualiser}
+        />
 
         {/* Dans le div header, après le titre */}
         <div className="px-5 py-2 bg-slate-200 border-b border-slate-300 flex items-center gap-2 flex-wrap">
@@ -775,9 +785,15 @@ const BilletTable: React.FC<BilletTableProps> = ({
                 const isReserved = !!ligne.reservation?.trim();
                 const isEmitted  = ligne.statut === 'CLOTURER';
                 const canReserve = !isReserved && !['MODIFIER', 'ANNULER', 'FAIT'].includes(ligne.statut || '') ;
+                // Ligne réservée mais pas encore émise : sa réservation reste modifiable (le back refuse après CLOTURER)
+                const canModifierResa = ligne.statut === 'FAIT';
                 const canEmit    = ligne.statut === 'FAIT' && billet?.statut !== 'CREER';
-                const isAnnulerDisabled =
-                  ['ANNULER', 'CLOTURER', 'MODIFIER', 'CREER'].includes(ligne.statut);
+                // Reprogrammer / Annuler : possibles même après émission (CLOTURER), le billet repasse en CREER.
+                // Masqués sur les lignes déjà annulées ou remplacées, les lignes de frais d'annulation
+                // (refusées par le back) et les lignes CREER (pas encore réservées)
+                const canModifierOuAnnuler =
+                  !['ANNULER', 'MODIFIER', 'CREER'].includes(ligne.statut) &&
+                  ligne.statusLigne !== 'ANNULATION';
 
                 return (
                     <tr key={ligne.id} className="hover:bg-slate-50/70 transition-colors text-xs">
@@ -1077,12 +1093,13 @@ const BilletTable: React.FC<BilletTableProps> = ({
                       {/* Conditions */}
                       {!collapsedGroups.annulation ? (
                         <>
-                          <td className="px-4 py-3">{p?.conditionModif || '—'}</td>
-                          <td className="px-4 py-3">{p?.conditionAnnul || '—'}</td>
+                          {/* Conditions enregistrées sur la ligne billet (repli sur la prospection pour la modif) */}
+                          <td className="px-4 py-3">{ligne.conditionModif || p?.conditionModif || '—'}</td>
+                          <td className="px-4 py-3">{ligne.conditionAnnul || '—'}</td>
                         </>
                       ) : (
                         <td className="px-4 py-3 text-center text-xs text-orange-600 bg-orange-50 italic">
-                          {p?.conditionModif ? '⚠️' : '—'}
+                          {ligne.conditionModif || ligne.conditionAnnul ? '⚠️' : '—'}
                         </td>
                       )}
 
@@ -1145,6 +1162,21 @@ const BilletTable: React.FC<BilletTableProps> = ({
                       <td className="px-4 py-3 text-center min-w-[220px]">
                         <div className="flex items-center justify-center gap-2 flex-wrap">
 
+                          {canModifierResa &&
+                            ligne.statusLigne !== 'ANNULATION' &&
+                            ligne.statusLigne !== 'ANNULER' && (
+                            <button
+                              onClick={() => handleOpenReservation(ligne)}
+                              title="Modifier la réservation de cette ligne"
+                              className="flex items-center gap-1 px-3 py-1.5 bg-sky-50 text-sky-700 border border-sky-200 rounded-md text-xs font-semibold hover:bg-sky-600 hover:text-white transition-all active:scale-95"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              Modifier résa
+                            </button>
+                          )}
+
                           {canReserve && 
                             ligne.statusLigne !== 'ANNULATION' && 
                             ligne.statusLigne !== 'ANNULER' && (
@@ -1173,35 +1205,27 @@ const BilletTable: React.FC<BilletTableProps> = ({
                             </button>
                           )}
 
-                          <button
-                            disabled={isAnnulerDisabled}
-                            onClick={() => handleReprogrammer(ligne)}
-                            className={`
-                              flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all
-                              ${isAnnulerDisabled
-                                ? 'bg-gray-50 text-gray-400 border border-gray-200 cursor-not-allowed'
-                                : 'bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-600 hover:text-white active:scale-95'}
-                            `}
-                          >
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                            Modifier
-                          </button>
+                          {canModifierOuAnnuler && (
+                            <button
+                              onClick={() => handleReprogrammer(ligne)}
+                              className="flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-600 hover:text-white active:scale-95"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                              </svg>
+                              Modifier
+                            </button>
+                          )}
 
-                          <button
-                            disabled={isAnnulerDisabled}
-                            onClick={() => handleRemove(ligne)}
-                            className={`
-                              flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all
-                              ${isAnnulerDisabled
-                                ? 'bg-gray-50 text-gray-400 border border-gray-200 cursor-not-allowed'
-                                : 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-600 hover:text-white active:scale-95'}
-                            `}
-                          >
-                            <FiX size={14} />
-                            Annuler
-                          </button>
+                          {canModifierOuAnnuler && (
+                            <button
+                              onClick={() => handleRemove(ligne)}
+                              className="flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all bg-red-50 text-red-700 border border-red-200 hover:bg-red-600 hover:text-white active:scale-95"
+                            >
+                              <FiX size={14} />
+                              Annuler
+                            </button>
+                          )}
 
                           {isEmitted && (
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">

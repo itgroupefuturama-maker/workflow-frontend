@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { FiArrowLeft, FiBell, FiCheck, FiTrash2 } from 'react-icons/fi';
-import type { RootState } from '../../../../../app/store';
+import { store, type AppDispatch, type RootState } from '../../../../../app/store';
+import { setCurrentClientFactureId } from '../../../../../app/front_office/dossierCommunSlice';
+import { ICONE_NOTIFICATION, lienNotification, type AppNotification } from '../../../../../service/notifications';
 import axiosInstance from '../../../../../service/Axios';
 import { toast } from '../../../../../components/Toast/toast';
 
@@ -23,16 +25,17 @@ const formatRelativeTime = (dateString: string) => {
 
 export default function Notifications() {
   const navigate = useNavigate();
+  const dispatch = useDispatch<AppDispatch>();
   const user = useSelector((state: RootState) => state.auth.user);
 
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [loading, setLoading] = useState(false);
 
   const fetchNotifications = async () => {
     if (!user?.id) return;
     setLoading(true);
     try {
-      const res = await axiosInstance.get(`/notifications/user/${user.id}`);
+      const res = await axiosInstance.get('/notifications/me');
       if (res.data.success) setNotifications(res.data.data);
     } catch (e) {
       console.error(e);
@@ -56,6 +59,19 @@ export default function Notifications() {
     }
   };
 
+  // Marque comme lue puis ouvre la page concernée (pas de lien pour les anciennes notifications)
+  const ouvrirNotification = async (n: AppNotification) => {
+    if (!n.isRead) await markAsRead(n.id);
+    const lien = lienNotification(n);
+    if (!lien) return;
+    const { data: dossiers, currentClientFactureId } = store.getState().dossierCommun;
+    const dossier = dossiers.find((d) => d.id === n.data?.dossierCommunId);
+    if (dossier && currentClientFactureId?.id !== dossier.id) {
+      dispatch(setCurrentClientFactureId(dossier));
+    }
+    navigate(lien);
+  };
+
   const deleteNotification = async (id: string) => {
     try {
       await axiosInstance.delete(`/notifications/${id}`);
@@ -69,7 +85,7 @@ export default function Notifications() {
   const markAllAsRead = async () => {
     if (!user?.id) return;
     try {
-      await axiosInstance.patch(`/notifications/user/${user.id}/read-all`);
+      await axiosInstance.patch('/notifications/me/read-all');
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     } catch (e) {
       console.error(e);
@@ -138,9 +154,17 @@ export default function Notifications() {
 
                   <div
                     className="flex-1 min-w-0 cursor-pointer"
-                    onClick={() => !notif.isRead && markAsRead(notif.id)}
+                    onClick={() => ouvrirNotification(notif)}
                   >
-                    <p className={`text-sm leading-snug ${!notif.isRead ? 'font-medium text-gray-800' : 'text-gray-500'}`}>
+                    {notif.titre && (
+                      <p className={`text-sm leading-snug ${!notif.isRead ? 'font-semibold text-gray-900' : 'font-medium text-gray-600'}`}>
+                        {notif.type && ICONE_NOTIFICATION[notif.type] && (
+                          <span className="mr-1.5">{ICONE_NOTIFICATION[notif.type]}</span>
+                        )}
+                        {notif.titre}
+                      </p>
+                    )}
+                    <p className={`text-sm leading-snug ${notif.titre ? 'mt-0.5 ' : ''}${!notif.isRead ? 'font-medium text-gray-800' : 'text-gray-500'}`}>
                       {notif.description}
                     </p>
                     <p className="text-xs text-gray-400 mt-1">

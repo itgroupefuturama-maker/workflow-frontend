@@ -1,24 +1,97 @@
 // src/components/modals/ReprogrammationModal.tsx
-import { useEffect, useState } from 'react';
-import { FiX, FiAlertTriangle, FiCheckCircle, FiTrash2, FiCheck } from 'react-icons/fi';
+// Reprogrammation d'une ligne billet en 3 étapes : Modification → Prix & frais → Récapitulatif.
+// Contrat API : FRONTEND_PROMPT_REPROGRAMMATION_FRAIS.md. Les montants Ariary sont calculés ici
+// (devise × taux, arrondi à l'entier) et envoyés tels quels : le backend ne recalcule rien.
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import {
+  FiX, FiAlertTriangle, FiCheckCircle, FiTrash2, FiChevronDown, FiChevronLeft, FiChevronRight, FiArrowRight,
+} from 'react-icons/fi';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../app/store';
 import { fetchClientBeneficiaireInfos } from '../../app/portail_client/clientBeneficiaireInfosSlice';
-import type { BilletLigne, ServiceSpecifique } from '../../app/front_office/billetSlice';
+import type {
+  ALaChargeDe,
+  BilletLigne,
+  FraisReprogrammationPayload,
+  ReprogrammationPayload,
+  ServiceSpecifique,
+  TypeFraisReprogrammation,
+} from '../../app/front_office/billetSlice';
 import { fetchRaisonsAnnulation } from '../../app/front_office/parametre_ticketing/raisonAnnulationSlice';
 import { selectServicesByType, type ServicePreference } from '../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
 import { toast } from '../Toast/toast';
-
-type ModifType = 'SIMPLE' | 'COM' | 'PEN' | 'COM_PEN';
+import Button from '../ui/Button';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (payload: any) => void;
+  onSubmit: (payload: ReprogrammationPayload) => void;
   ligne: BilletLigne | null | undefined;
   loading?: boolean;
   serviceById: Map<string, ServiceSpecifique>;
 }
+
+type Step = 1 | 2 | 3;
+
+interface Passager {
+  beneficiaireId: string;
+  infoId: string;
+  nomComplet: string;
+  typeDoc?: string;
+  referenceDoc?: string;
+}
+
+interface FraisSaisie {
+  montant: string;               // saisie brute en devise ('' = pas de frais)
+  aLaChargeDe: ALaChargeDe | null;
+}
+
+const CLASSES = [
+  { value: 'ECONOMIE', label: 'Économie' },
+  { value: 'PREMIUM', label: 'Premium' },
+  { value: 'BUSINESS', label: 'Business' },
+  { value: 'FIRST', label: 'First' },
+];
+const classeRank = (c?: string | null) => CLASSES.findIndex((x) => x.value === c);
+const classeLabel = (c?: string | null) => CLASSES.find((x) => x.value === c)?.label || c || '—';
+
+const FRAIS_LABELS: Record<TypeFraisReprogrammation, { label: string; aide: string }> = {
+  COMMISSION: { label: 'Commission', aide: "Commission de l'agence sur la modification" },
+  SERVICE: { label: 'Frais de service', aide: 'Frais de service liés à la modification' },
+  PENALITE: { label: 'Pénalité', aide: 'Pénalité appliquée par la compagnie' },
+  SURCLASSEMENT: { label: 'Surclassement', aide: 'Différence de prix vers la classe supérieure' },
+};
+const FRAIS_ORDER: TypeFraisReprogrammation[] = ['COMMISSION', 'SERVICE', 'PENALITE', 'SURCLASSEMENT'];
+
+const STEPS: { id: Step; label: string }[] = [
+  { id: 1, label: 'Modification' },
+  { id: 2, label: 'Prix & frais' },
+  { id: 3, label: 'Récapitulatif' },
+];
+
+// Valeur d'un <input type="datetime-local"> en heure LOCALE (toISOString() décalerait de l'offset UTC).
+const toLocalInput = (iso?: string | null) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+const fmtDate = (local: string) =>
+  local ? new Date(local).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' }) : '—';
+
+const parseMontant = (s: string) => {
+  const n = parseFloat(s.replace(',', '.'));
+  return isNaN(n) ? 0 : n;
+};
+const toAriary = (devise: number, taux: number) => Math.round(devise * taux);
+const fmtAr = (n: number) => `${n.toLocaleString('fr-FR')} Ar`;
+const fmtDev = (n: number, devise: string) =>
+  `${n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${devise}`;
+
+const inputCls =
+  'w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-slate-50';
+const labelCls = 'block text-xs font-semibold text-slate-600 mb-1.5';
 
 export default function ReprogrammationModal({
   isOpen,
@@ -33,123 +106,201 @@ export default function ReprogrammationModal({
   const beneficiaires = useSelector(
     (state: RootState) => state.clientFactures.current?.beneficiaires || []
   );
-
   const { list: infosList, loadingList: infosLoading } = useSelector(
     (state: RootState) => state.clientBeneficiaireInfos
   );
-
   const { items: raisons, loading: raisonsLoading } = useSelector(
     (state: RootState) => state.raisonAnnulation
   );
-
   const servicesStore = useSelector(selectServicesByType('TICKET'));
 
-  // Après les autres useState existants :
+  const pl = ligne?.prospectionLigne;
+  const devise = ligne?.devise || pl?.devise || 'EUR';
+
+  // Valeurs d'origine (pour signaler ce qui change)
+  const origine = useMemo(
+    () => ({
+      classe: pl?.classe || 'ECONOMIE',
+      depart: toLocalInput(pl?.dateHeureDepart),
+      arrive: toLocalInput(pl?.dateHeureArrive),
+    }),
+    [pl]
+  );
+
+  const [step, setStep] = useState<Step>(1);
+
+  // ─── Étape 1 : modification ───────────────────────────────
+  const [raisonAnnulationId, setRaisonAnnulationId] = useState('');
+  const [conditionModif, setConditionModif] = useState('');
+  const [dateHeureDepart, setDateHeureDepart] = useState(origine.depart);
+  const [dateHeureArrive, setDateHeureArrive] = useState(origine.arrive);
+  const [classe, setClasse] = useState(origine.classe);
+  const [services, setServices] = useState<{ serviceSpecifiqueId: string; valeur: string }[]>(
+    pl?.serviceProspectionLigne?.map((s) => ({ serviceSpecifiqueId: s.serviceSpecifiqueId, valeur: s.valeur })) || []
+  );
+  // Pré-sélection des passagers déjà liés à la ligne (la modal est remontée à chaque ouverture)
+  const [selectedPassagers, setSelectedPassagers] = useState<Passager[]>(() =>
+    (ligne?.billet || []).map((b) => {
+      const info = b.clientbeneficiaireInfo;
+      return {
+        beneficiaireId: info.clientbeneficiaireId,
+        infoId: info.id,
+        nomComplet: `${info.prenom || ''} ${info.nom || ''}`.trim() || 'Passager inconnu',
+        typeDoc: info.typeDoc,
+        referenceDoc: info.referenceDoc,
+      };
+    })
+  );
+  // Préférences modifiées dans la modal, par passager. Un passager absent de cette map garde
+  // les préférences déjà enregistrées sur son billet (voir getPrefs).
   const [prefParPassager, setPrefParPassager] = useState<Record<string, string[]>>({});
-
-  // ─── État multi-passagers ─────────────────────────────────
-  const [selectedPassagers, setSelectedPassagers] = useState<
-    Array<{
-      beneficiaireId: string;
-      infoId: string;
-      nomComplet: string;
-      typeDoc?: string;
-      referenceDoc?: string;
-    }>
-  >([]);
-
   const [currentBeneficiaireId, setCurrentBeneficiaireId] = useState('');
   const [currentInfoId, setCurrentInfoId] = useState('');
 
-  // Ajouter ces états (juste après les autres useState)
-  const [puBilletDevise, setPuBilletDevise] = useState<number>(
-    ligne?.puResaBilletCompagnieDevise || 0
+  // ─── Étape 2 : prix & frais ───────────────────────────────
+  const [tauxChange, setTauxChange] = useState<string>(
+    String(ligne?.resaTauxEchange || pl?.tauxEchange || '')
   );
-  const [puServiceDevise, setPuServiceDevise] = useState<number>(
-    ligne?.puResaServiceCompagnieDevise || 0
-  );
-  const [puPenaliteDevise, setPuPenaliteDevise] = useState<number>(
-    ligne?.puResaPenaliteCompagnieDevise || 0   // ou garder penalitePu si tu préfères
-  );
-  const [puMontantPenalite, setPuMontantPenalite] = useState<number>(
-    ligne?.puResaMontantPenaliteCompagnieDevise || 0   // ou garder penaliteMontant
-  );
-  const [puMontantBilletAriary, setPuMontantBilletAriary] = useState<number>(
-    ligne?.puResaMontantBilletCompagnieDevise || 0
-  );
-  const [puMontantServiceAriary, setPuMontantServiceAriary] = useState<number>(
-    ligne?.puResaMontantServiceCompagnieDevise || 0
-  );
+  // Prix de réservation actuels de la ligne (PU Cie devise réservation) : valeur initiale et base du surclassement
+  const ancienPuBillet = Number(ligne?.puResaBilletCompagnieDevise) || 0;
+  const ancienPuService = Number(ligne?.puResaServiceCompagnieDevise) || 0;
+  const [puBillet, setPuBillet] = useState<string>(String(ancienPuBillet));
+  const [puService, setPuService] = useState<string>(String(ancienPuService));
+  const [frais, setFrais] = useState<Record<TypeFraisReprogrammation, FraisSaisie>>({
+    COMMISSION: { montant: '', aLaChargeDe: null },
+    SERVICE: { montant: '', aLaChargeDe: null },
+    PENALITE: { montant: '', aLaChargeDe: null },
+    SURCLASSEMENT: { montant: '', aLaChargeDe: null },
+  });
 
-  // ─── Autres états du formulaire ───────────────────────────
-  const [typeModif, setTypeModif] = useState<ModifType>('COM_PEN');
-  const [conditionModif] = useState('');
-  const [tauxChange, setTauxChange] = useState<number | ''>(
-    ligne?.prospectionLigne?.tauxEchange || 4500
-  );
-  const [numeroVol] = useState(ligne?.prospectionLigne?.numeroVol || '');
-  const [dateHeureDepartRaw, setDateHeureDepartRaw] = useState(
-    ligne?.prospectionLigne?.dateHeureDepart
-      ? new Date(ligne.prospectionLigne.dateHeureDepart).toISOString().slice(0, 16)
-      : ''
-  );
-  const [dateHeureArriveRaw, setDateHeureArriveRaw] = useState(
-    ligne?.prospectionLigne?.dateHeureArrive
-      ? new Date(ligne.prospectionLigne.dateHeureArrive).toISOString().slice(0, 16)
-      : ''
-  );
-  const [resaCommDevise, setResaCommDevise] = useState(0);
-  const [resaCommAriary, setResaCommAriary] = useState(0);
-  const [penalitePu, setPenalitePu] = useState(0);
-  const [penaliteMontant, setPenaliteMontant] = useState(0);
-  const [showPreview, setShowPreview] = useState(false);
-  const [classe, setClasse] = useState(ligne?.prospectionLigne?.classe || 'ECONOMIE');
-  const [rasionAnnulationId, setRasionAnnulationId] = useState<string>('');
-
-  const [services, setServices] = useState<
-    { serviceSpecifiqueId: string; valeur: string }[]
-  >(
-    ligne?.prospectionLigne?.serviceProspectionLigne?.map((s) => ({
-      serviceSpecifiqueId: s.serviceSpecifiqueId,
-      valeur: s.valeur,
-    })) || []
-  );
-
-  const [sectionActive, setSectionActive] = useState<'date' | 'passager' | 'type'>('date');
-  const selectedInfoDetails = infosList.find(info => info.id === currentInfoId);
-
-  // ─── Pré-sélection des passagers déjà liés à la ligne ─────
   useEffect(() => {
-    if (isOpen && ligne && ligne.billet && ligne.billet.length > 0) {
-      const preselected = ligne.billet.map((b) => {
-        const info = b.clientbeneficiaireInfo;
-        const nomComplet = `${info.prenom || ''} ${info.nom || ''}`.trim() || 'Passager inconnu';
-        return {
-          beneficiaireId: info.clientbeneficiaireId,
-          infoId: info.id,
-          nomComplet,
-          typeDoc: info.typeDoc,
-          referenceDoc: info.referenceDoc,
-        };
-      });
+    if (isOpen) dispatch(fetchRaisonsAnnulation());
+  }, [isOpen, dispatch]);
 
-      setSelectedPassagers(preselected);
-    }
-  }, [isOpen, ligne]);
-
-  // Chargement raisons annulation
   useEffect(() => {
-    if (!isOpen) return;
-    dispatch(fetchRaisonsAnnulation());
-  }, [isOpen, dispatch]); // ← retire raisons.length et raisonsLoading des deps
-
-  // Chargement infos bénéficiaire quand on change le courant
-  useEffect(() => {
-    if (currentBeneficiaireId) {
-      dispatch(fetchClientBeneficiaireInfos(currentBeneficiaireId));
-      setCurrentInfoId('');
-    }
+    if (currentBeneficiaireId) dispatch(fetchClientBeneficiaireInfos(currentBeneficiaireId));
   }, [currentBeneficiaireId, dispatch]);
+
+  // ─── Valeurs dérivées ─────────────────────────────────────
+  const taux = parseMontant(tauxChange);
+  const nbPassagers = selectedPassagers.length;
+  const estSurclassement = classeRank(classe) > classeRank(origine.classe);
+  const fraisVisibles = FRAIS_ORDER.filter((t) => t !== 'SURCLASSEMENT' || estSurclassement);
+
+  const changements = {
+    dates: dateHeureDepart !== origine.depart || dateHeureArrive !== origine.arrive,
+    classe: classe !== origine.classe,
+  };
+
+  const servicesActifs = (pl?.serviceProspectionLigne || []).filter(
+    (s) => s.valeur && s.valeur !== 'false' && s.valeur !== ''
+  );
+
+  // Le billet stocke les préférences en libellés ("Chien", "Chat") alors que l'API attend des ids :
+  // on retrouve les ids parmi les préférences des services actifs de la ligne. Calculé à l'affichage
+  // (et non à l'ouverture) pour fonctionner même si les services sont chargés après.
+  const prefsInitiales = (infoId: string): string[] => {
+    const libelles = ligne?.billet?.find((b) => b.clientbeneficiaireInfoId === infoId)?.servicePreference || [];
+    if (libelles.length === 0) return [];
+    return servicesActifs
+      .flatMap((sa) => servicesStore.find((s) => s.id === sa.serviceSpecifiqueId)?.servicePreference || [])
+      .filter((pref) => libelles.includes(pref.preference))
+      .map((pref) => pref.id);
+  };
+  const getPrefs = (infoId: string) => prefParPassager[infoId] ?? prefsInitiales(infoId);
+
+  // Surclassement non saisi : (nouveau PU billet − PU billet de réservation actuel) × passagers
+  const diffPuBillet = parseMontant(puBillet) - ancienPuBillet;
+  const montantSurclassement = estSurclassement ? Math.max(0, diffPuBillet) * nbPassagers : 0;
+  const montantFrais = (t: TypeFraisReprogrammation) =>
+    t === 'SURCLASSEMENT' ? montantSurclassement : parseMontant(frais[t].montant);
+
+  const fraisPayload: FraisReprogrammationPayload[] = fraisVisibles
+    .filter((t) => montantFrais(t) > 0)
+    .map((t) => {
+      const montantDevise = montantFrais(t);
+      return {
+        typeFrais: t,
+        montantDevise,
+        montantAriary: toAriary(montantDevise, taux),
+        aLaChargeDe: frais[t].aLaChargeDe as ALaChargeDe,
+      };
+    });
+
+  const totalClientAr = fraisPayload.filter((f) => f.aLaChargeDe === 'CLIENT').reduce((s, f) => s + f.montantAriary, 0);
+  const totalAgenceAr = fraisPayload.filter((f) => f.aLaChargeDe === 'AGENCE').reduce((s, f) => s + f.montantAriary, 0);
+
+  // ─── Contrôles par étape ──────────────────────────────────
+  const erreursEtape1 = (): string[] => {
+    const e: string[] = [];
+    if (!conditionModif.trim()) e.push('La condition de modification est obligatoire.');
+    if (nbPassagers === 0) e.push('Au moins un passager est requis.');
+    if (!classe) e.push('La classe est obligatoire.');
+    if (!dateHeureDepart || isNaN(new Date(dateHeureDepart).getTime())) e.push('Date de départ invalide.');
+    if (!dateHeureArrive || isNaN(new Date(dateHeureArrive).getTime())) e.push("Date d'arrivée invalide.");
+    if (dateHeureDepart && dateHeureArrive && new Date(dateHeureArrive) <= new Date(dateHeureDepart)) {
+      e.push("L'arrivée doit être après le départ.");
+    }
+    return e;
+  };
+
+  const erreursEtape2 = (): string[] => {
+    const e: string[] = [];
+    if (!(taux > 0)) e.push('Le taux de change doit être supérieur à 0.');
+    if (parseMontant(puBillet) < 0 || parseMontant(puService) < 0) e.push('Les prix ne peuvent pas être négatifs.');
+    fraisVisibles.forEach((t) => {
+      const m = montantFrais(t);
+      if (m < 0) e.push(`${FRAIS_LABELS[t].label} : montant négatif.`);
+      if (m > 0 && !frais[t].aLaChargeDe) e.push(`${FRAIS_LABELS[t].label} : choisir « À la charge de ».`);
+    });
+    return e;
+  };
+
+  const goTo = (target: Step) => {
+    if (target > step) {
+      const e1 = erreursEtape1();
+      const e2 = target === 3 ? erreursEtape2() : [];
+      if (e1.length || e2.length) {
+        toast.warning([...e1, ...e2].join('\n'));
+        // Ramène sur la première étape en défaut
+        setStep(e1.length ? 1 : 2);
+        return;
+      }
+    }
+    setStep(target);
+  };
+
+  const buildPayload = (): ReprogrammationPayload => ({
+    id: ligne!.id,
+    conditionModif: conditionModif.trim(),
+    raisonAnnulationId: raisonAnnulationId || null,
+    resaTauxEchange: taux,
+    devise,
+    classe,
+    dateHeureDepart: new Date(dateHeureDepart).toISOString(),
+    dateHeureArrive: new Date(dateHeureArrive).toISOString(),
+    passagers: selectedPassagers.map((p) => ({
+      clientbeneficiaireInfoId: p.infoId,
+      clientBeneficiaireId: p.beneficiaireId,
+      servicePreferenceIds: getPrefs(p.infoId),
+    })),
+    services: services.map((s) => ({ serviceSpecifiqueId: s.serviceSpecifiqueId, valeur: s.valeur })),
+    puResaBilletCompagnieDevise: parseMontant(puBillet),
+    puResaServiceCompagnieDevise: parseMontant(puService),
+    // Même convention que ReservationModal : montant = PU × nombre de passagers, en devise
+    puResaMontantBilletCompagnieDevise: parseMontant(puBillet) * nbPassagers,
+    puResaMontantServiceCompagnieDevise: parseMontant(puService) * nbPassagers,
+    frais: fraisPayload,
+  });
+
+  const handleConfirm = () => {
+    const erreurs = [...erreursEtape1(), ...erreursEtape2()];
+    if (erreurs.length) {
+      toast.error(erreurs.join('\n'));
+      return;
+    }
+    onSubmit(buildPayload());
+  };
 
   if (!isOpen) return null;
   if (!ligne) {
@@ -157,49 +308,38 @@ export default function ReprogrammationModal({
       <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
         <div className="bg-white p-8 rounded-xl text-center max-w-md">
           <FiAlertTriangle className="text-red-600 text-5xl mx-auto mb-4" />
-          <p className="text-red-600 font-medium text-lg mb-6">
-            Erreur : ligne à reprogrammer non disponible
-          </p>
-          <button
-            onClick={onClose}
-            className="px-8 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-800"
-          >
-            Fermer
-          </button>
+          <p className="text-red-600 font-medium text-lg mb-6">Erreur : ligne à reprogrammer non disponible</p>
+          <Button variant="secondary" onClick={onClose}>Fermer</Button>
         </div>
       </div>
     );
   }
 
-  // ─── Gestion ajout/suppression passagers ──────────────────
+  // ─── Passagers ────────────────────────────────────────────
+  const selectedInfoDetails = infosList.find((info) => info.id === currentInfoId);
+
   const addPassager = () => {
-    if (!currentBeneficiaireId || !currentInfoId) {
+    const beneficiaire = beneficiaires.find((b) => b.clientBeneficiaireId === currentBeneficiaireId);
+    const info = infosList.find((i) => i.id === currentInfoId);
+    if (!beneficiaire || !info) {
       toast.warning('Veuillez sélectionner un bénéficiaire ET son document');
       return;
     }
-
-    const beneficiaire = beneficiaires.find((b) => b.clientBeneficiaireId === currentBeneficiaireId);
-    const info = infosList.find((i) => i.id === currentInfoId);
-    if (!beneficiaire || !info) return;
-
     if (selectedPassagers.some((p) => p.infoId === currentInfoId)) {
       toast.warning('Ce document est déjà sélectionné');
       return;
     }
-
-    const nomComplet = `${info.prenom || ''} ${info.nom || ''}`.trim() || beneficiaire.clientBeneficiaire.libelle;
-
-    setSelectedPassagers((prev) => [...prev, {
-      beneficiaireId: currentBeneficiaireId,
-      infoId: currentInfoId,
-      nomComplet,
-      typeDoc: info.typeDoc,
-      referenceDoc: info.referenceDoc,
-    }]);
-
-    // ← Initialiser les prefs pour ce passager
+    setSelectedPassagers((prev) => [
+      ...prev,
+      {
+        beneficiaireId: currentBeneficiaireId,
+        infoId: currentInfoId,
+        nomComplet: `${info.prenom || ''} ${info.nom || ''}`.trim() || beneficiaire.clientBeneficiaire.libelle,
+        typeDoc: info.typeDoc,
+        referenceDoc: info.referenceDoc,
+      },
+    ]);
     setPrefParPassager((prev) => ({ ...prev, [currentInfoId]: [] }));
-
     setCurrentBeneficiaireId('');
     setCurrentInfoId('');
   };
@@ -213,242 +353,212 @@ export default function ReprogrammationModal({
     });
   };
 
-  // ─── Construction payload (format exact demandé) ──────────
-  const buildPayload = () => {
-    if (!ligne?.id) throw new Error('ID de la ligne manquant');
 
-    if (selectedPassagers.length === 0) {
-      throw new Error('Au moins un passager est requis');
-    }
+  const setFraisField = (t: TypeFraisReprogrammation, patch: Partial<FraisSaisie>) =>
+    setFrais((prev) => ({ ...prev, [t]: { ...prev[t], ...patch } }));
 
-    if (tauxChange === '' || isNaN(Number(tauxChange))) {
-      throw new Error('Taux de change obligatoire et valide');
-    }
-
-    if (!numeroVol.trim()) throw new Error('Numéro de vol obligatoire');
-    if (!classe) throw new Error('Classe obligatoire');
-
-    let finalDepart = '';
-    if (dateHeureDepartRaw) {
-      const d = new Date(dateHeureDepartRaw);
-      if (!isNaN(d.getTime())) finalDepart = d.toISOString();
-      else throw new Error('Date de départ invalide');
-    }
-
-    let finalArrive = '';
-    if (dateHeureArriveRaw) {
-      const d = new Date(dateHeureArriveRaw);
-      if (!isNaN(d.getTime())) finalArrive = d.toISOString();
-      else throw new Error('Date d’arrivée invalide');
-    }
-
-    return {
-      id: ligne.id,
-      type: typeModif,
-      classe,
-      rasionAnnulationId: rasionAnnulationId || null,
-      conditionAnnul: typeModif !== 'PEN' ? conditionModif.trim() || null : null,
-      conditionModif: typeModif !== 'PEN' ? conditionModif.trim() || null : null,
-      resaTauxEchange: Number(tauxChange),
-      // ← Remplacer passagerIds par passagers
-      passagers: selectedPassagers.map((p) => ({
-        clientbeneficiaireInfoId: p.infoId,
-        clientBeneficiaireId: p.beneficiaireId,
-        servicePreferenceIds: prefParPassager[p.infoId] || [],
-      })),
-      dateHeureDepart: finalDepart,
-      dateHeureArrive: finalArrive,
-      puResaBilletCompagnieDevise: puBilletDevise,
-      puResaServiceCompagnieDevise: puServiceDevise,
-      puResaPenaliteCompagnieDevise: puPenaliteDevise,
-      puResaMontantPenaliteCompagnieDevise: puMontantPenalite,
-      puResaMontantBilletCompagnieDevise: puMontantBilletAriary,
-      puResaMontantServiceCompagnieDevise: puMontantServiceAriary,
-      resaCommissionEnDevise: resaCommDevise || 0,
-      resaCommissionEnAriary: resaCommAriary || 0,
-      devise: ligne.devise || 'EUR',
-      services: services.map((s) => ({
-        serviceSpecifiqueId: s.serviceSpecifiqueId,
-        valeur: s.valeur,
-      })),
-    };
-  };
-
-  const handleSubmit = () => {
-    try {
-      const payload = buildPayload();
-      onSubmit(payload);
-      setShowPreview(false);
-    } catch (err: any) {
-      toast.error(err.message || 'Erreur de validation');
-    }
-  };
-
-  const nombrePassagers = selectedPassagers.length;
-
+  // ─── Rendu ────────────────────────────────────────────────
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[95vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="bg-white border-gray-100 border-b-2 px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
-              <FiAlertTriangle className="text-gray-600" size={20} />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold text-gray-900">Modification de la ligne</h2>
-              <p className="text-sm text-gray-500 mt-0.5">
-                {ligne.prospectionLigne?.itineraire || '—'}
+        <div className="border-b border-slate-200 px-6 py-4">
+          <div className="flex justify-between items-start gap-4">
+            <div className="min-w-0">
+              <h2 className="text-lg font-bold text-slate-900">Reprogrammer la ligne</h2>
+              <p className="text-sm text-slate-500 mt-0.5 truncate">
+                {pl?.itineraire || '—'} · {classeLabel(origine.classe)} · départ {fmtDate(origine.depart)}
               </p>
             </div>
+            <button
+              onClick={onClose}
+              aria-label="Fermer"
+              className="text-slate-400 hover:text-slate-600 p-2 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              <FiX size={20} />
+            </button>
           </div>
-          <button 
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <FiX size={22} />
-          </button>
+
+          {/* Stepper */}
+          <ol className="flex items-center gap-2 mt-4">
+            {STEPS.map((s, i) => (
+              <li key={s.id} className="flex items-center gap-2 flex-1">
+                <button
+                  type="button"
+                  onClick={() => goTo(s.id)}
+                  className={`flex items-center gap-2 text-sm font-semibold ${
+                    step === s.id ? 'text-indigo-700' : step > s.id ? 'text-slate-700' : 'text-slate-400'
+                  }`}
+                >
+                  <span
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-xs ${
+                      step === s.id
+                        ? 'bg-indigo-600 text-white'
+                        : step > s.id
+                        ? 'bg-emerald-500 text-white'
+                        : 'bg-slate-200 text-slate-500'
+                    }`}
+                  >
+                    {step > s.id ? '✓' : s.id}
+                  </span>
+                  {s.label}
+                </button>
+                {i < STEPS.length - 1 && <div className="flex-1 h-px bg-slate-200" />}
+              </li>
+            ))}
+          </ol>
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
-          <div className="max-w-5xl mx-auto space-y-5">
-            {/* Informations de base */}
-            <div className="bg-white border border-gray-100 rounded-lg p-5">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {/* Raison */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Raison Annulation <span className="text-red-600">*</span>
-                  </label>
-                  {raisonsLoading ? (
-                    <div className="flex items-center gap-2 text-gray-500 text-sm py-2">
-                      <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                      Chargement...
-                    </div>
-                  ) : raisons.length === 0 ? (
-                    <div className="text-sm text-gray-500 py-2">Aucune raison disponible</div>
-                  ) : (
-                    <select
-                      value={rasionAnnulationId}
-                      onChange={(e) => setRasionAnnulationId(e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
-                    >
-                      <option value="">-- Sélectionner --</option>
-                      {raisons
-                        .filter((r) => r.statut === 'ACTIF')
-                        .map((r) => (
-                          <option key={r.id} value={r.id}>
-                            {r.libelle}
-                          </option>
-                        ))}
+        <div className="flex-1 overflow-y-auto p-6 bg-slate-50 space-y-4">
+          {/* ═══ Étape 1 : Modification ═══ */}
+          {step === 1 && (
+            <>
+              <Section title="Motif">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelCls}>Raison</label>
+                    {raisonsLoading ? (
+                      <p className="text-sm text-slate-500 py-2">Chargement…</p>
+                    ) : (
+                      <select
+                        value={raisonAnnulationId}
+                        onChange={(e) => setRaisonAnnulationId(e.target.value)}
+                        className={inputCls}
+                      >
+                        <option value="">— Aucune —</option>
+                        {raisons
+                          .filter((r) => r.statut === 'ACTIF')
+                          .map((r) => (
+                            <option key={r.id} value={r.id}>{r.libelle}</option>
+                          ))}
+                      </select>
+                    )}
+                  </div>
+                  <div>
+                    <label className={labelCls}>
+                      Condition de modification <span className="text-red-600">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={conditionModif}
+                      onChange={(e) => setConditionModif(e.target.value)}
+                      className={inputCls}
+                      placeholder="Ex. changement horaire à la demande du client"
+                    />
+                  </div>
+                </div>
+              </Section>
+
+              <Section title="Vol & dates" badge={<ChangeBadge changed={changements.dates} />} defaultOpen>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className={labelCls}>
+                      Départ <span className="text-red-600">*</span>
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={dateHeureDepart}
+                      onChange={(e) => setDateHeureDepart(e.target.value)}
+                      className={inputCls}
+                    />
+                    <p className="text-xs text-slate-400 mt-1">Actuel : {fmtDate(origine.depart)}</p>
+                  </div>
+                  <div>
+                    <label className={labelCls}>
+                      Arrivée <span className="text-red-600">*</span>
+                    </label>
+                    <input
+                      type="datetime-local"
+                      value={dateHeureArrive}
+                      onChange={(e) => setDateHeureArrive(e.target.value)}
+                      className={inputCls}
+                    />
+                    <p className="text-xs text-slate-400 mt-1">Actuel : {fmtDate(origine.arrive)}</p>
+                  </div>
+                </div>
+              </Section>
+
+              <Section title="Classe & services" badge={<ChangeBadge changed={changements.classe} />}>
+                <div className="space-y-4">
+                  <div className="md:w-1/2">
+                    <label className={labelCls}>
+                      Classe <span className="text-red-600">*</span>
+                    </label>
+                    <select value={classe} onChange={(e) => setClasse(e.target.value)} className={inputCls}>
+                      {CLASSES.map((c) => (
+                        <option key={c.value} value={c.value}>{c.label}</option>
+                      ))}
                     </select>
+                    <p className="text-xs text-slate-400 mt-1">Actuelle : {classeLabel(origine.classe)}</p>
+                    {estSurclassement && (
+                      <p className="text-xs text-indigo-700 mt-1">
+                        Surclassement : la différence de prix se saisit à l'étape « Prix & frais ».
+                      </p>
+                    )}
+                  </div>
+
+                  {services.length > 0 && (
+                    <div className="space-y-2">
+                      <p className={labelCls}>Services spécifiques</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                        {services.map((svc, index) => {
+                          const libelle = serviceById.get(svc.serviceSpecifiqueId)?.libelle || 'Service inconnu';
+                          const setValeur = (valeur: string) =>
+                            setServices((prev) => prev.map((s, i) => (i === index ? { ...s, valeur } : s)));
+                          // Les services oui/non sont stockés en 'true' / 'false' : case à cocher plutôt que texte libre
+                          const estBooleen = svc.valeur === 'true' || svc.valeur === 'false';
+                          return estBooleen ? (
+                            <label
+                              key={svc.serviceSpecifiqueId}
+                              className="flex items-center gap-2.5 bg-slate-50 border border-slate-200 px-3 py-2 rounded-lg text-sm text-slate-700 cursor-pointer"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={svc.valeur === 'true'}
+                                onChange={(e) => setValeur(e.target.checked ? 'true' : 'false')}
+                                className="accent-indigo-600"
+                              />
+                              {libelle}
+                            </label>
+                          ) : (
+                            <div key={svc.serviceSpecifiqueId} className="flex items-center gap-2 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg">
+                              <span className="flex-1 text-sm text-slate-700 truncate">{libelle}</span>
+                              <input
+                                type="text"
+                                value={svc.valeur}
+                                onChange={(e) => setValeur(e.target.value)}
+                                aria-label={libelle}
+                                className="w-24 border border-slate-300 rounded px-2 py-1 text-sm focus:ring-2 focus:ring-indigo-500"
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
                   )}
                 </div>
+              </Section>
 
-                {/* Type */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Type de modification <span className="text-red-600">*</span>
-                  </label>
-                  <select
-                    value={typeModif}
-                    onChange={(e) => setTypeModif(e.target.value as ModifType)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
-                  >
-                    <option value="COM_PEN">Commission + Pénalité</option>
-                    <option value="SIMPLE">Simple (sans frais)</option>
-                    <option value="COM">Commission</option>
-                    <option value="PEN">Pénalité</option>
-                  </select>
-                </div>
-
-                {/* Taux */}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Taux de change (Ar) <span className="text-red-600">*</span>
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={tauxChange}
-                    onChange={(e) => setTauxChange(e.target.value === '' ? '' : Number(e.target.value))}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
-                    placeholder="4500"
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Type de reprogrammation */}
-            <div className="bg-white border border-gray-100 rounded-lg p-5">
-              <label className="block text-sm font-bold text-gray-900 mb-3">
-                Type de reprogrammation
-              </label>
-              <div className="grid grid-cols-3 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setSectionActive('date')}
-                  className={`py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
-                    sectionActive === 'date'
-                      ? 'bg-gray-900 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Date / Vol
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSectionActive('passager')}
-                  className={`py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
-                    sectionActive === 'passager'
-                      ? 'bg-gray-900 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Passager
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSectionActive('type')}
-                  className={`py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
-                    sectionActive === 'type'
-                      ? 'bg-gray-900 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Type / Classe
-                </button>
-              </div>
-            </div>
-
-            {/* Section Passagers */}
-            {sectionActive === 'passager' && (
-              <div className="bg-white border border-gray-100 rounded-lg p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <label className="text-sm font-bold text-gray-900">
-                    Passagers associés <span className="text-red-600">*</span>
-                  </label>
-                  <span className="text-xs font-semibold text-gray-600 bg-gray-100 px-2 py-1 rounded">
-                    {nombrePassagers} sélectionné{nombrePassagers > 1 ? 's' : ''}
+              <Section
+                title="Passagers"
+                badge={
+                  <span className="text-xs font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded">
+                    {nbPassagers} sélectionné{nbPassagers > 1 ? 's' : ''}
                   </span>
-                </div>
-
+                }
+              >
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                  {/* Ajout */}
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-xs font-semibold text-gray-600 mb-1.5">
-                        Bénéficiaire
-                      </label>
+                      <label className={labelCls}>Bénéficiaire</label>
                       <select
                         value={currentBeneficiaireId}
                         onChange={(e) => {
                           setCurrentBeneficiaireId(e.target.value);
                           setCurrentInfoId('');
                         }}
-                        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
+                        className={inputCls}
                       >
                         <option value="">— Choisir —</option>
                         {beneficiaires.map((b) => (
@@ -461,155 +571,79 @@ export default function ReprogrammationModal({
 
                     {currentBeneficiaireId && (
                       <div>
-                        <label className="block text-xs font-semibold text-gray-600 mb-1.5">
-                          Document
-                        </label>
+                        <label className={labelCls}>Document</label>
                         {infosLoading ? (
-                          <div className="flex items-center gap-2 text-gray-500 text-sm py-2">
-                            <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin"></div>
-                            Chargement...
-                          </div>
-                        ) : infosList.length === 0 ? (
-                          <div className="text-sm text-gray-500 py-2">Aucun document trouvé</div>
+                          <p className="text-sm text-slate-500 py-2">Chargement…</p>
                         ) : (
-                          <select
-                            value={currentInfoId}
-                            onChange={(e) => setCurrentInfoId(e.target.value)}
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
-                          >
+                          <select value={currentInfoId} onChange={(e) => setCurrentInfoId(e.target.value)} className={inputCls}>
                             <option value="">— Choisir —</option>
                             {infosList
-                              // 1. On filtre pour ne garder que les clients dont le type correspond à la ligne
-                              .filter((info) => info.clientType === ligne.prospectionLigne?.typePassager)
-                              // 2. On affiche uniquement les résultats filtrés
+                              .filter((info) => info.clientType === pl?.typePassager)
                               .map((info) => (
                                 <option key={info.id} value={info.id}>
-                                  {info.prenom} {info.nom} • {info.typeDoc} {info.referenceDoc} ({info.clientType})
+                                  {info.prenom} {info.nom} • {info.typeDoc} {info.referenceDoc}
                                 </option>
-                              ))
-                            }
+                              ))}
                           </select>
                         )}
                       </div>
                     )}
-                    {/* Affichage des détails du document sélectionné */}
+
                     {selectedInfoDetails && (
-                      <div className="mt-4 p-5 bg-linear-to-br from-blue-50 to-blue-100 border-2 border-blue-200 rounded-xl shadow-sm">
-                        <h4 className="text-xs uppercase tracking-wider font-bold text-blue-700 mb-4 flex items-center gap-2">
-                          <FiCheck size={16} className="text-blue-600" /> 
-                          Détails du document sélectionné
-                        </h4>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="col-span-2">
-                            <p className="text-[10px] text-blue-600 uppercase font-bold mb-1">Passager</p>
-                            <p className="text-base font-bold text-gray-900">
-                              {selectedInfoDetails.prenom} {selectedInfoDetails.nom}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-[10px] text-blue-600 uppercase font-bold mb-1">Type Client</p>
-                            <span className="inline-block px-2.5 py-1 bg-white border-2 border-blue-200 rounded-lg text-xs font-bold text-gray-700">
-                              {selectedInfoDetails.clientType}
-                            </span>
-                          </div>
-                          <div>
-                            <p className="text-[10px] text-blue-600 uppercase font-bold mb-1">Nationalité</p>
-                            <p className="text-sm font-semibold text-gray-800">{selectedInfoDetails.nationalite}</p>
-                          </div>
-                          <div>
-                            <p className="text-[10px] text-blue-600 uppercase font-bold mb-1">Type Document</p>
-                            <span className="inline-block px-2.5 py-1 bg-white border-2 border-blue-200 rounded-lg text-xs font-bold text-gray-700">
-                              {selectedInfoDetails.typeDoc}
-                            </span>
-                            <p className="text-xs text-gray-600 mt-1 font-mono">{selectedInfoDetails.referenceDoc}</p>
-                          </div>
-                          <div>
-                            <p className="text-[10px] text-blue-600 uppercase font-bold mb-1">Dates Document</p>
-                            <p className="text-xs text-gray-700">
-                              <span className="font-semibold">Del:</span> {selectedInfoDetails.dateDelivranceDoc}
-                            </p>
-                            <p className="text-xs text-gray-700">
-                              <span className="font-semibold">Val:</span> {selectedInfoDetails.dateValiditeDoc}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-[10px] text-blue-600 uppercase font-bold mb-1">CIN</p>
-                            <span className="inline-block px-2.5 py-1 bg-white border-2 border-blue-200 rounded-lg text-xs font-bold text-gray-700">
-                              {selectedInfoDetails.cin}
-                            </span>
-                            <p className="text-xs text-gray-600 mt-1 font-mono">{selectedInfoDetails.referenceCin}</p>
-                          </div>
-                          <div>
-                            <p className="text-[10px] text-blue-600 uppercase font-bold mb-1">Dates CIN</p>
-                            <p className="text-xs text-gray-700">
-                              <span className="font-semibold">Del:</span> {selectedInfoDetails.dateDelivranceCin}
-                            </p>
-                            <p className="text-xs text-gray-700">
-                              <span className="font-semibold">Val:</span> {selectedInfoDetails.dateValiditeCin}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-[10px] text-blue-600 uppercase font-bold mb-1">WhatsApp</p>
-                            <p className="text-sm font-mono font-bold text-green-600">
-                              {selectedInfoDetails.whatsapp}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-[10px] text-blue-600 uppercase font-bold mb-1">Téléphone</p>
-                            <p className="text-sm font-mono font-bold text-blue-700">
-                              {selectedInfoDetails.tel}
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-[10px] text-blue-600 uppercase font-bold mb-1">Validité Document</p>
-                            <p className={`text-sm font-bold ${new Date(selectedInfoDetails.dateValiditeDoc) < new Date() ? 'text-red-600' : 'text-green-600'}`}>
-                              {new Date(selectedInfoDetails.dateValiditeDoc).toLocaleDateString('fr-FR')}
-                            </p>
-                          </div>
-                        </div>
+                      <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-lg text-sm">
+                        <p className="font-semibold text-slate-900">
+                          {selectedInfoDetails.prenom} {selectedInfoDetails.nom}
+                        </p>
+                        <p className="text-slate-600">
+                          {selectedInfoDetails.typeDoc} {selectedInfoDetails.referenceDoc} · {selectedInfoDetails.nationalite}
+                        </p>
+                        {selectedInfoDetails.dateValiditeDoc && (
+                          <p
+                            className={`text-xs font-semibold mt-1 ${
+                              new Date(selectedInfoDetails.dateValiditeDoc) < new Date() ? 'text-red-600' : 'text-emerald-700'
+                            }`}
+                          >
+                            Document valide jusqu'au {new Date(selectedInfoDetails.dateValiditeDoc).toLocaleDateString('fr-FR')}
+                          </p>
+                        )}
                       </div>
                     )}
 
-                    <button
+                    <Button
                       type="button"
                       onClick={addPassager}
                       disabled={!currentBeneficiaireId || !currentInfoId}
-                      className="w-full px-4 py-2 bg-gray-900 text-white text-sm font-medium rounded-lg disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-800 transition-colors"
+                      className="w-full justify-center"
                     >
-                      + Ajouter
-                    </button>
+                      + Ajouter le passager
+                    </Button>
                   </div>
 
-                  {/* Liste */}
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-2">
-                      Sélectionnés
-                    </label>
-                    {selectedPassagers.length === 0 ? (
-                      <div className="border border-dashed border-gray-300 rounded-lg p-6 text-center text-sm text-gray-400">
+                    {nbPassagers === 0 ? (
+                      <div className="border border-dashed border-slate-300 rounded-lg p-6 text-center text-sm text-slate-400">
                         Aucun passager
                       </div>
                     ) : (
                       <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
                         {selectedPassagers.map((p, idx) => (
-                          <div
-                            key={p.infoId}
-                            className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg p-3 hover:bg-gray-100 transition-colors"
-                          >
-                            <div className="flex items-center gap-2.5">
-                              <span className="shrink-0 w-6 h-6 bg-gray-900 text-white text-xs rounded flex items-center justify-center font-semibold">
+                          <div key={p.infoId} className="flex items-center justify-between bg-white border border-slate-200 rounded-lg p-3">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className="shrink-0 w-6 h-6 bg-slate-800 text-white text-xs rounded flex items-center justify-center font-semibold">
                                 {idx + 1}
                               </span>
                               <div className="min-w-0">
-                                <p className="text-sm font-semibold text-gray-900 truncate">{p.nomComplet}</p>
-                                <p className="text-xs text-gray-500 truncate">
+                                <p className="text-sm font-semibold text-slate-900 truncate">{p.nomComplet}</p>
+                                <p className="text-xs text-slate-500 truncate">
                                   {p.typeDoc} {p.referenceDoc ? `(${p.referenceDoc})` : ''}
                                 </p>
                               </div>
                             </div>
                             <button
+                              type="button"
                               onClick={() => removePassager(p.infoId)}
-                              className="shrink-0 text-gray-400 hover:text-red-600 p-1 hover:bg-red-50 rounded transition-colors"
+                              aria-label={`Retirer ${p.nomComplet}`}
+                              className="shrink-0 text-slate-400 hover:text-red-600 p-1 hover:bg-red-50 rounded transition-colors"
                             >
                               <FiTrash2 size={16} />
                             </button>
@@ -620,415 +654,442 @@ export default function ReprogrammationModal({
                   </div>
                 </div>
 
-                {/* ── Préférences de services par passager ── */}
-                {selectedPassagers.length > 0 && (() => {
-                  const servicesActifs = (ligne?.prospectionLigne?.serviceProspectionLigne || []).filter(
-                    (s: any) => s.valeur && s.valeur !== 'false' && s.valeur !== ''
-                  );
-
-                  if (servicesActifs.length === 0) return null;
-
-                  return (
-                    <div className="mt-5 pt-5 border-t border-gray-200">
-                      <h4 className="text-sm font-bold text-gray-900 mb-4">
-                        Préférences de services
-                        <span className="ml-2 text-xs font-normal text-gray-500">
-                          (par passager)
-                        </span>
-                      </h4>
-
-                      <div className="space-y-4">
-                        {selectedPassagers.map((passager) => {
-                          const prefsPassager = prefParPassager[passager.infoId] || [];
-
-                          return (
-                            <div key={passager.infoId} className="border border-gray-200 rounded-lg overflow-hidden">
-                              {/* Header passager */}
-                              <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200 flex items-center gap-2">
-                                <div className="w-6 h-6 bg-gray-900 text-white rounded-full flex items-center justify-center text-xs font-bold shrink-0">
-                                  {selectedPassagers.indexOf(passager) + 1}
-                                </div>
-                                <span className="text-sm font-semibold text-gray-800">{passager.nomComplet}</span>
-                                {prefsPassager.length > 0 && (
-                                  <span className="ml-auto text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">
-                                    {prefsPassager.length} préf.
+                {/* Préférences de services par passager */}
+                {nbPassagers > 0 && servicesActifs.length > 0 && (
+                  <div className="mt-5 pt-5 border-t border-slate-200 space-y-3">
+                    <p className="text-sm font-semibold text-slate-900">Préférences de services</p>
+                    {selectedPassagers.map((passager) => {
+                      const prefsPassager = getPrefs(passager.infoId);
+                      return (
+                        <div key={passager.infoId} className="border border-slate-200 rounded-lg p-3 bg-white">
+                          <p className="text-sm font-semibold text-slate-800 mb-2">{passager.nomComplet}</p>
+                          <div className="space-y-2">
+                            {servicesActifs.map((serviceActif) => {
+                              const serviceStore = servicesStore.find((s) => s.id === serviceActif.serviceSpecifiqueId);
+                              const prefsDisponibles: ServicePreference[] = serviceStore?.servicePreference || [];
+                              if (prefsDisponibles.length === 0) return null;
+                              return (
+                                <div key={serviceActif.id} className="flex flex-wrap items-center gap-2">
+                                  <span className="text-xs text-slate-500 w-32 shrink-0">
+                                    {serviceStore?.libelle || serviceActif.serviceSpecifique?.libelle || '—'}
                                   </span>
-                                )}
-                              </div>
-
-                              <div className="p-4 space-y-3">
-                                {servicesActifs.map((serviceActif: any) => {
-                                  const serviceStore = servicesStore.find(
-                                    (s) => s.id === serviceActif.serviceSpecifiqueId
-                                  );
-                                  const prefsDisponibles: ServicePreference[] = serviceStore?.servicePreference || [];
-
-                                  if (prefsDisponibles.length === 0) return null;
-
-                                  return (
-                                    <div key={serviceActif.id}>
-                                      <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">
-                                        {serviceStore?.libelle || serviceActif.serviceSpecifique?.libelle || '—'}
-                                        <span className="ml-2 text-gray-400 font-normal normal-case">
-                                          ({serviceActif.valeur})
-                                        </span>
-                                      </p>
-                                      <div className="flex flex-wrap gap-2">
-                                        {prefsDisponibles.map((pref) => {
-                                          const isSelected = prefsPassager.includes(pref.id);
-                                          return (
-                                            <button
-                                              key={pref.id}
-                                              type="button"
-                                              onClick={() => {
-                                                setPrefParPassager((prev) => {
-                                                  const current = prev[passager.infoId] || [];
-                                                  return {
-                                                    ...prev,
-                                                    [passager.infoId]: isSelected
-                                                      ? current.filter((id) => id !== pref.id)
-                                                      : [...current, pref.id],
-                                                  };
-                                                });
-                                              }}
-                                              className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                                                isSelected
-                                                  ? 'bg-indigo-600 text-white border-indigo-600'
-                                                  : 'bg-white text-gray-700 border-gray-300 hover:border-indigo-400 hover:text-indigo-600'
-                                              }`}
-                                            >
-                                              {isSelected && <span className="mr-1">✓</span>}
-                                              {pref.preference}
-                                            </button>
-                                          );
-                                        })}
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })()}
-              </div>
-            )}
-
-            {/* Section Type/Classe */}
-            {sectionActive === 'type' && (
-              <div className="bg-white border border-gray-100 rounded-lg p-5 space-y-4">
-                <div>
-                  <label className="block text-sm font-bold text-gray-900 mb-2">
-                    Classe <span className="text-red-600">*</span>
-                  </label>
-                  <select
-                    value={classe}
-                    onChange={(e) => setClasse(e.target.value)}
-                    className="w-full md:w-1/2 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
-                    required
-                  >
-                    <option value="">-- Choisir --</option>
-                    <option value="ECONOMIE">Économie</option>
-                    <option value="PREMIUM">Premium</option>
-                    <option value="BUSINESS">Business</option>
-                    <option value="FIRST">First</option>
-                  </select>
-                </div>
-
-                {/* Services */}
-                <div className="pt-4 border-t border-gray-100">
-                  <label className="block text-sm font-bold text-gray-900 mb-3">
-                    Services spécifiques
-                  </label>
-                  {services.length > 0 ? (
-                    <div className="space-y-2">
-                      {services.map((svc, index) => {
-                        const lib = serviceById.get(svc.serviceSpecifiqueId)?.libelle || 'Service inconnu';
-                        return (
-                          <div key={index} className="flex items-center gap-3 bg-gray-50 border border-gray-200 p-3 rounded-lg">
-                            <div className="flex-1 text-sm font-medium text-gray-700">{lib}</div>
-                            <input
-                              type="text"
-                              value={svc.valeur}
-                              onChange={(e) => {
-                                const newServices = [...services];
-                                newServices[index].valeur = e.target.value;
-                                setServices(newServices);
-                              }}
-                              className="w-32 border border-gray-300 rounded px-3 py-1.5 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
-                              placeholder="Valeur"
-                            />
+                                  {prefsDisponibles.map((pref) => {
+                                    const isSelected = prefsPassager.includes(pref.id);
+                                    return (
+                                      <button
+                                        key={pref.id}
+                                        type="button"
+                                        onClick={() =>
+                                          setPrefParPassager((prev) => ({
+                                            ...prev,
+                                            [passager.infoId]: isSelected
+                                              ? prefsPassager.filter((id) => id !== pref.id)
+                                              : [...prefsPassager, pref.id],
+                                          }))
+                                        }
+                                        className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${
+                                          isSelected
+                                            ? 'bg-indigo-600 text-white border-indigo-600'
+                                            : 'bg-white text-slate-700 border-slate-300 hover:border-indigo-400'
+                                        }`}
+                                      >
+                                        {isSelected && '✓ '}
+                                        {pref.preference}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              );
+                            })}
                           </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="text-sm text-gray-400 text-center py-4">Aucun service</div>
-                  )}
-                </div>
-              </div>
-            )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </Section>
+            </>
+          )}
 
-            {/* Section Date */}
-            {sectionActive === 'date' && (
-              <div className="bg-white border border-gray-100 rounded-lg p-5">
-                <label className="block text-sm font-bold text-gray-900 mb-3">
-                  Vol & Dates <span className="text-red-600">*</span>
-                </label>
+          {/* ═══ Étape 2 : Prix & frais ═══ */}
+          {step === 2 && (
+            <>
+              <Section title="Taux de change">
+                <div className="flex items-end gap-4">
+                  <div className="w-56">
+                    <label className={labelCls}>
+                      1 {devise} = … Ar <span className="text-red-600">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={tauxChange}
+                      onChange={(e) => setTauxChange(e.target.value)}
+                      className={inputCls}
+                    />
+                  </div>
+                  <p className="text-xs text-slate-500 pb-2.5">Tous les montants en Ariary sont calculés avec ce taux.</p>
+                </div>
+              </Section>
+
+              <Section title="Prix du nouveau billet (compagnie)">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <MontantField
+                    label="PU billet"
+                    devise={devise}
+                    value={puBillet}
+                    onChange={setPuBillet}
+                    taux={taux}
+                    aide={`Prix réservation actuel : ${fmtDev(ancienPuBillet, devise)}`}
+                  />
+                  <MontantField
+                    label="PU service"
+                    devise={devise}
+                    value={puService}
+                    onChange={setPuService}
+                    taux={taux}
+                    aide={`Prix réservation actuel : ${fmtDev(ancienPuService, devise)}`}
+                  />
+                </div>
+                <p className="text-xs text-slate-500 mt-3">
+                  Total pour {nbPassagers} passager{nbPassagers > 1 ? 's' : ''} :{' '}
+                  <span className="font-semibold text-slate-700">
+                    {fmtDev((parseMontant(puBillet) + parseMontant(puService)) * nbPassagers, devise)} ·{' '}
+                    {fmtAr(toAriary((parseMontant(puBillet) + parseMontant(puService)) * nbPassagers, taux))}
+                  </span>
+                </p>
+              </Section>
+
+              <Section title="Frais de la modification">
+                <p className="text-xs text-slate-500 mb-3">
+                  Laisser vide si le frais ne s'applique pas. Pour chaque frais saisi, indiquer qui le paie.
+                </p>
+                <div className="divide-y divide-slate-100 border border-slate-200 rounded-lg bg-white">
+                  {fraisVisibles.map((t) => {
+                    const m = montantFrais(t);
+                    return (
+                      <div key={t} className="grid grid-cols-1 md:grid-cols-[1.2fr_1fr_1fr_auto] gap-3 items-center p-3">
+                        <div>
+                          <p className="text-sm font-semibold text-slate-800">{FRAIS_LABELS[t].label}</p>
+                          <p className="text-xs text-slate-400">
+                            {t === 'SURCLASSEMENT'
+                              ? `(${fmtDev(parseMontant(puBillet), devise)} − ${fmtDev(ancienPuBillet, devise)}) × ${nbPassagers} passager${nbPassagers > 1 ? 's' : ''}`
+                              : FRAIS_LABELS[t].aide}
+                          </p>
+                        </div>
+                        {t === 'SURCLASSEMENT' ? (
+                          <div
+                            className="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-sm text-slate-700 tabular-nums"
+                            title="Calculé automatiquement à partir du PU billet"
+                          >
+                            {m.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            <span className="text-xs text-slate-400">{devise}</span>
+                          </div>
+                        ) : (
+                        <div className="relative">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={frais[t].montant}
+                            onChange={(e) => setFraisField(t, { montant: e.target.value })}
+                            className={`${inputCls} pr-12`}
+                            placeholder="0.00"
+                            aria-label={`${FRAIS_LABELS[t].label} en ${devise}`}
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">{devise}</span>
+                        </div>
+                        )}
+                        <div className="text-sm text-slate-700 tabular-nums">
+                          {m > 0 ? fmtAr(toAriary(m, taux)) : <span className="text-slate-300">—</span>}
+                        </div>
+                        <ChargeToggle
+                          value={frais[t].aLaChargeDe}
+                          disabled={!(m > 0)}
+                          missing={m > 0 && !frais[t].aLaChargeDe}
+                          onChange={(v) => setFraisField(t, { aLaChargeDe: v })}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+                {!estSurclassement && (
+                  <p className="text-xs text-slate-400 mt-2">
+                    Le surclassement n'apparaît que si une classe supérieure est choisie à l'étape 1.
+                  </p>
+                )}
+                {estSurclassement && diffPuBillet <= 0 && (
+                  <p className="text-xs text-amber-700 mt-2">
+                    Le nouveau PU billet n'est pas supérieur au prix de réservation actuel : aucun surclassement à facturer.
+                  </p>
+                )}
+              </Section>
+            </>
+          )}
+
+          {/* ═══ Étape 3 : Récapitulatif ═══ */}
+          {step === 3 && (
+            <>
+              <Section title="Ce qui change">
+                <dl className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm">
+                  <RecapRow label="Départ" avant={fmtDate(origine.depart)} apres={fmtDate(dateHeureDepart)} />
+                  <RecapRow label="Arrivée" avant={fmtDate(origine.arrive)} apres={fmtDate(dateHeureArrive)} />
+                  <RecapRow label="Classe" avant={classeLabel(origine.classe)} apres={classeLabel(classe)} />
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">
-                      Date et heure de départ
-                    </label>
-                    <input
-                      type="datetime-local"
-                      value={dateHeureDepartRaw}
-                      onChange={(e) => setDateHeureDepartRaw(e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
-                      required
-                    />
+                    <dt className="text-xs text-slate-500">Passagers</dt>
+                    <dd className="font-medium text-slate-800">
+                      {selectedPassagers.map((p) => p.nomComplet).join(', ') || '—'}
+                    </dd>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">
-                      Date et heure d'arrivée
-                    </label>
-                    <input
-                      type="datetime-local"
-                      value={dateHeureArriveRaw}
-                      onChange={(e) => setDateHeureArriveRaw(e.target.value)}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
-                      required
-                    />
+                    <dt className="text-xs text-slate-500">Motif</dt>
+                    <dd className="font-medium text-slate-800">
+                      {conditionModif}
+                      {raisonAnnulationId && (
+                        <span className="text-slate-500"> · {raisons.find((r) => r.id === raisonAnnulationId)?.libelle}</span>
+                      )}
+                    </dd>
                   </div>
+                </dl>
+              </Section>
+
+              <Section title="Prix & frais">
+                <p className="text-xs text-slate-500 mb-3">
+                  Taux : 1 {devise} = {taux.toLocaleString('fr-FR')} Ar · Nouveau billet :{' '}
+                  {fmtDev(parseMontant(puBillet), devise)} + service {fmtDev(parseMontant(puService), devise)} par passager
+                </p>
+                {fraisPayload.length === 0 ? (
+                  <p className="text-sm text-slate-500 border border-dashed border-slate-300 rounded-lg p-4 text-center">
+                    Aucun frais : reprogrammation sans frais.
+                  </p>
+                ) : (
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-xs text-slate-500 border-b border-slate-200">
+                        <th className="py-2 font-semibold">Frais</th>
+                        <th className="py-2 font-semibold text-right">{devise}</th>
+                        <th className="py-2 font-semibold text-right">Ariary</th>
+                        <th className="py-2 font-semibold text-right">À la charge de</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {fraisPayload.map((f) => (
+                        <tr key={f.typeFrais}>
+                          <td className="py-2 text-slate-800">{FRAIS_LABELS[f.typeFrais].label}</td>
+                          <td className="py-2 text-right tabular-nums">{fmtDev(f.montantDevise, devise)}</td>
+                          <td className="py-2 text-right tabular-nums">{fmtAr(f.montantAriary)}</td>
+                          <td className="py-2 text-right">
+                            <ChargeBadge value={f.aLaChargeDe} />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </Section>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-white border border-slate-200 rounded-xl p-4">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Payé par le client</p>
+                  <p className="text-2xl font-bold text-slate-900 tabular-nums mt-1">{fmtAr(totalClientAr)}</p>
+                </div>
+                <div className="bg-white border border-slate-200 rounded-xl p-4">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Payé par l'agence</p>
+                  <p className="text-2xl font-bold text-amber-700 tabular-nums mt-1">{fmtAr(totalAgenceAr)}</p>
                 </div>
               </div>
-            )}
-
-            {/* Prix unitaires */}
-            <div className="bg-white border border-gray-100 rounded-lg p-5">
-              <h3 className="text-sm font-bold text-gray-900 mb-4">Prix unitaires (Compagnie)</h3>
-              
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">
-                    PU Billet (Devise)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={puBilletDevise}
-                    onChange={(e) => setPuBilletDevise(Number(e.target.value) || 0)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
-                    placeholder="0.00"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">
-                    PU Billet (Ariary)
-                  </label>
-                  <input
-                    type="number"
-                    step="1"
-                    value={puMontantBilletAriary}
-                    onChange={(e) => setPuMontantBilletAriary(Number(e.target.value) || 0)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
-                    placeholder="0"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">
-                    PU Service (Devise)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={puServiceDevise}
-                    onChange={(e) => setPuServiceDevise(Number(e.target.value) || 0)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
-                    placeholder="0.00"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">
-                    PU Service (Ariary)
-                  </label>
-                  <input
-                    type="number"
-                    step="1"
-                    value={puMontantServiceAriary}
-                    onChange={(e) => setPuMontantServiceAriary(Number(e.target.value) || 0)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
-                    placeholder="0"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">
-                    PU Pénalité (Devise)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={puPenaliteDevise}
-                    onChange={(e) => setPuPenaliteDevise(Number(e.target.value) || 0)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
-                    placeholder="0.00"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-gray-600 mb-1.5">
-                    PU Pénalité (Ariary)
-                  </label>
-                  <input
-                    type="number"
-                    step="1"
-                    value={puMontantPenalite}
-                    onChange={(e) => setPuMontantPenalite(Number(e.target.value) || 0)}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
-                    placeholder="0"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Commission */}
-            {(typeModif === 'COM' || typeModif === 'COM_PEN') && (
-              <div className="bg-white border border-gray-100 rounded-lg p-5">
-                <h3 className="text-sm font-bold text-gray-900 mb-3">Commission</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">Devise</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={resaCommDevise}
-                      onChange={(e) => setResaCommDevise(Number(e.target.value))}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">Ariary</label>
-                    <input
-                      type="number"
-                      value={resaCommAriary}
-                      onChange={(e) => setResaCommAriary(Number(e.target.value))}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
-                      placeholder="0"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Pénalité */}
-            {(typeModif === 'PEN' || typeModif === 'COM_PEN') && (
-              <div className="bg-white border border-gray-100 rounded-lg p-5">
-                <h3 className="text-sm font-bold text-gray-900 mb-3">Pénalité</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">PU Pénalité (Devise)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={penalitePu}
-                      onChange={(e) => setPenalitePu(Number(e.target.value))}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
-                      placeholder="0.00"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-gray-600 mb-1.5">PU Pénalité (Ariary)</label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={penaliteMontant}
-                      onChange={(e) => setPenaliteMontant(Number(e.target.value))}
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-gray-900 focus:border-gray-900"
-                      placeholder="0.00"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+            </>
+          )}
         </div>
 
         {/* Footer */}
-        <div className="border-t bg-white border-gray-100 px-6 py-4">
-          <button
-            onClick={() => setShowPreview(true)}
-            className="w-full py-3 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2"
-            disabled={
-              selectedPassagers.length === 0 ||
-              tauxChange === '' ||
-              isNaN(Number(tauxChange)) ||
-              !numeroVol.trim() ||
-              !dateHeureDepartRaw.trim() ||
-              !dateHeureArriveRaw.trim()
-            }
-          >
-            <FiCheckCircle size={18} />
-            Vérifier avant envoi
-          </button>
+        <div className="border-t border-slate-200 bg-white px-6 py-4 flex items-center justify-between gap-3">
+          {step > 1 ? (
+            <Button variant="secondary" icon={<FiChevronLeft />} onClick={() => setStep((step - 1) as Step)} disabled={loading}>
+              Précédent
+            </Button>
+          ) : (
+            <Button variant="ghost" onClick={onClose}>Annuler</Button>
+          )}
+          {step < 3 ? (
+            <Button onClick={() => goTo((step + 1) as Step)}>
+              Suivant <FiChevronRight />
+            </Button>
+          ) : (
+            <Button
+              onClick={handleConfirm}
+              disabled={loading}
+              icon={
+                loading ? (
+                  <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <FiCheckCircle />
+                )
+              }
+            >
+              {loading ? 'Enregistrement…' : 'Confirmer la reprogrammation'}
+            </Button>
+          )}
         </div>
-
-        {/* Preview Modal */}
-        {showPreview && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-            <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
-              {/* Header */}
-              <div className="bg-white border-b px-6 py-4">
-                <h3 className="text-lg font-bold text-gray-900">Prévisualisation du payload</h3>
-                <p className="text-xs text-gray-500 mt-1">
-                  Ce JSON sera envoyé à l'API <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono">PATCH /billet/{ligne.id}/reprogrammer</code>
-                </p>
-              </div>
-
-              {/* JSON */}
-              <div className="flex-1 p-6 bg-gray-900 overflow-auto">
-                <pre className="text-green-400 font-mono text-xs whitespace-pre-wrap">
-                  {JSON.stringify(buildPayload(), null, 2)}
-                </pre>
-              </div>
-
-              {/* Footer */}
-              <div className="border-t bg-white px-6 py-4 flex gap-3">
-                <button
-                  onClick={() => setShowPreview(false)}
-                  className="flex-1 py-2.5 border border-gray-300 rounded-lg text-sm font-semibold hover:bg-gray-50 transition-colors"
-                >
-                  Retour
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  disabled={loading}
-                  className="flex-1 py-2.5 bg-gray-900 text-white rounded-lg text-sm font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
-                >
-                  {loading ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                      En cours...
-                    </>
-                  ) : (
-                    <>
-                      <FiCheckCircle size={16} />
-                      Confirmer
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
+    </div>
+  );
+}
+
+// ─── Sous-composants ────────────────────────────────────────
+
+function Section({
+  title,
+  badge,
+  defaultOpen = true,
+  children,
+}: {
+  title: string;
+  badge?: ReactNode;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <section className="bg-white border border-slate-200 rounded-xl">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="w-full flex items-center justify-between gap-3 px-5 py-3"
+      >
+        <span className="flex items-center gap-2">
+          <span className="text-sm font-bold text-slate-900">{title}</span>
+          {badge}
+        </span>
+        <FiChevronDown className={`text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && <div className="px-5 pb-5">{children}</div>}
+    </section>
+  );
+}
+
+function ChangeBadge({ changed }: { changed: boolean }) {
+  return changed ? (
+    <span className="text-xs font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">Modifié</span>
+  ) : (
+    <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">Inchangé</span>
+  );
+}
+
+function MontantField({
+  label,
+  devise,
+  value,
+  onChange,
+  taux,
+  aide,
+}: {
+  label: string;
+  devise: string;
+  value: string;
+  onChange: (v: string) => void;
+  taux: number;
+  aide?: string;
+}) {
+  const m = parseMontant(value);
+  return (
+    <div>
+      <label className={labelCls}>{label}</label>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="relative">
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className={`${inputCls} pr-12`}
+            placeholder="0.00"
+            aria-label={`${label} en ${devise}`}
+          />
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">{devise}</span>
+        </div>
+        <div className="flex items-center px-3 rounded-lg bg-slate-50 border border-slate-200 text-sm text-slate-700 tabular-nums">
+          {fmtAr(toAriary(m, taux))}
+        </div>
+      </div>
+      {aide && <p className="text-xs text-slate-400 mt-1">{aide}</p>}
+    </div>
+  );
+}
+
+function ChargeToggle({
+  value,
+  disabled,
+  missing,
+  onChange,
+}: {
+  value: ALaChargeDe | null;
+  disabled: boolean;
+  missing: boolean;
+  onChange: (v: ALaChargeDe) => void;
+}) {
+  const opts: { v: ALaChargeDe; label: string }[] = [
+    { v: 'CLIENT', label: 'Client' },
+    { v: 'AGENCE', label: 'Agence' },
+  ];
+  return (
+    <div
+      role="radiogroup"
+      aria-label="À la charge de"
+      className={`inline-flex rounded-lg border p-0.5 ${missing ? 'border-red-400' : 'border-slate-300'} ${
+        disabled ? 'opacity-40' : ''
+      }`}
+    >
+      {opts.map((o) => (
+        <button
+          key={o.v}
+          type="button"
+          role="radio"
+          aria-checked={value === o.v}
+          disabled={disabled}
+          onClick={() => onChange(o.v)}
+          className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors disabled:cursor-not-allowed ${
+            value === o.v
+              ? o.v === 'CLIENT'
+                ? 'bg-indigo-600 text-white'
+                : 'bg-amber-500 text-white'
+              : 'text-slate-600 hover:bg-slate-100'
+          }`}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ChargeBadge({ value }: { value: ALaChargeDe }) {
+  return value === 'CLIENT' ? (
+    <span className="text-xs font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">Client</span>
+  ) : (
+    <span className="text-xs font-semibold text-amber-700 bg-amber-50 px-2 py-0.5 rounded">Agence</span>
+  );
+}
+
+function RecapRow({ label, avant, apres }: { label: string; avant: string; apres: string }) {
+  const changed = avant !== apres;
+  return (
+    <div>
+      <dt className="text-xs text-slate-500">{label}</dt>
+      <dd className="font-medium text-slate-800 flex items-center gap-2 flex-wrap">
+        {changed ? (
+          <>
+            <span className="text-slate-400 line-through">{avant}</span>
+            <FiArrowRight className="text-slate-400" size={14} />
+            <span className="text-indigo-700">{apres}</span>
+          </>
+        ) : (
+          <span>{apres} <span className="text-xs text-slate-400 font-normal">(inchangé)</span></span>
+        )}
+      </dd>
     </div>
   );
 }

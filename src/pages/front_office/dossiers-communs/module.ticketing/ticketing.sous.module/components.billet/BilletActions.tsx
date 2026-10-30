@@ -1,11 +1,11 @@
-import { FiCheck, FiCheckCircle, FiFileText, FiSend, FiArrowRight } from "react-icons/fi";
+import { FiCheck, FiSend, FiArrowRight } from "react-icons/fi";
 
 interface BilletActionsProps {
   billet: any;
   allLinesEmission: boolean;
   allLinesReservation: boolean;
-  onShowFacture: () => void;
-  onRegler: () => void;
+  // Envoi à Odoo en cours (jusqu'à ~10 s) : bouton concerné désactivé
+  envoiEnCours?: 'VENTE' | 'ACHAT' | null;
   onApprouver: (billetId: string) => void;
   onShowEmission: () => void;
   onAnnulerReservation?: () => void;     // ← nouveau
@@ -56,49 +56,34 @@ export const BilletActions = ({
   billet,
   allLinesEmission,
   allLinesReservation,
-  onShowFacture,
-  onRegler,
+  envoiEnCours = null,
   onApprouver,
   onShowEmission,
 }: BilletActionsProps) => {
   
   return (
     <div className="flex flex-wrap gap-2 justify-end items-center">
-      {/* 1. Mettre à jour la réservation */}
+      {/* 1. Envoie la vente à Odoo : le statut reste CREER jusqu'à la validation d'Odoo */}
       <ActionButton
-        label="Réserver"
+        label={envoiEnCours === 'VENTE' ? 'Envoi à Odoo…' : 'Approuver'}
         icon={FiSend}
         variant="blue"
         onClick={() => onApprouver(billet.id)}
-        disabled={!(allLinesReservation && billet?.statut === 'CREER')}
+        disabled={envoiEnCours !== null || !(allLinesReservation && billet?.statut === 'CREER')}
       />
 
-      {/* 2. Émettre Billet */}
-      <ActionButton
-        label="Émettre Billet"
-        icon={FiCheck}
-        variant="purple"
-        onClick={onShowEmission}
-        disabled={!(allLinesEmission && billet?.statut === 'BC_CLIENT_A_APPROUVER')}
-      />
+      {/* 2. Émettre Billet : affiché seulement quand toutes les lignes sont CLOTURER / MODIFIER / ANNULER */}
+      {allLinesEmission && (
+        <ActionButton
+          label={envoiEnCours === 'ACHAT' ? 'Envoi à Odoo…' : 'Émettre Billet'}
+          icon={FiCheck}
+          variant="purple"
+          onClick={onShowEmission}
+          disabled={envoiEnCours !== null || billet?.statut !== 'BC_CLIENT_A_APPROUVER'}
+        />
+      )}
 
-      {/* 3. Émettre Facture */}
-      <ActionButton
-        label="Facturer"
-        icon={FiFileText}
-        variant="amber"
-        onClick={onShowFacture}
-        disabled={!(billet?.statut === 'BILLET_EMIS')}
-      />
-
-      {/* 4. Régler Facture */}
-      <ActionButton
-        label="Régler"
-        icon={FiCheckCircle}
-        variant="emerald"
-        onClick={onRegler}
-        disabled={!(billet?.statut === 'FACTURE_EMISE')}
-      />
+      {/* Facturer / Régler : réservés à Odoo (les routes renvoient 401 au front) */}
     </div>
   );
 };

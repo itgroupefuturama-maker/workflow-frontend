@@ -17,6 +17,8 @@ interface EmissionModalProps {
   onSubmit: (data: any) => void;
   ligne: any;
   numeroBillet?: string;      // plus vraiment utilisé car multi
+  // Requête en cours : bouton d'envoi bloqué (évite le double envoi)
+  loading?: boolean;
 }
 
 const EmissionModal: React.FC<EmissionModalProps> = ({
@@ -24,6 +26,7 @@ const EmissionModal: React.FC<EmissionModalProps> = ({
   onClose,
   onSubmit,
   ligne,
+  loading = false,
 }) => {
   const [tauxChange, setTauxChange] = useState(ligne?.resaTauxEchange || 4850);
 
@@ -66,6 +69,7 @@ const EmissionModal: React.FC<EmissionModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
 
     // Validation
     if (passagers.length === 0) {
@@ -409,10 +413,10 @@ const EmissionModal: React.FC<EmissionModalProps> = ({
             <button
               onClick={handleSubmit}
               className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed font-semibold shadow-lg hover:shadow-xl transition-all flex items-center gap-2"
-              disabled={passagers.length === 0}
+              disabled={passagers.length === 0 || loading}
             >
               <FiCheckCircle size={20} />
-              Confirmer l'émission
+              {loading ? 'Émission en cours…' : "Confirmer l'émission"}
             </button>
           </div>
         </div>

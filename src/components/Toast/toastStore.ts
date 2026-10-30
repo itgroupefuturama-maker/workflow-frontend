@@ -6,6 +6,7 @@ export interface ToastItem {
   title?: string;
   message: string;
   duration: number;
+  onClick?: () => void;
 }
 
 type Listener = (toasts: ToastItem[]) => void;
@@ -31,9 +32,9 @@ export function dismissToast(id: number) {
   emit();
 }
 
-export function pushToast(type: ToastType, message: string, title?: string, duration = 5000) {
+export function pushToast(type: ToastType, message: string, title?: string, duration = 5000, onClick?: () => void) {
   const id = nextId++;
-  toasts = [...toasts, { id, type, title, message, duration }];
+  toasts = [...toasts, { id, type, title, message, duration, onClick }];
   emit();
   if (duration > 0) {
     setTimeout(() => dismissToast(id), duration);

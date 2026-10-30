@@ -27,7 +27,10 @@ export default function ToastContainer() {
             className={`pointer-events-auto flex items-start gap-3 bg-white border border-gray-200 border-l-4 ${s.border} rounded-lg shadow-lg px-4 py-3 animate-[toast-in_0.2s_ease-out]`}
           >
             <span className={`shrink-0 mt-0.5 text-lg ${s.iconColor}`}>{s.icon}</span>
-            <div className="flex-1 min-w-0">
+            <div
+              className={`flex-1 min-w-0 ${t.onClick ? 'cursor-pointer' : ''}`}
+              onClick={t.onClick ? () => { t.onClick?.(); dismissToast(t.id); } : undefined}
+            >
               {t.title && <p className="text-sm font-semibold text-gray-900">{t.title}</p>}
               <p className="text-sm text-gray-600 leading-snug break-words">{t.message}</p>
             </div>

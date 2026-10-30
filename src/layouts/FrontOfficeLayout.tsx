@@ -6,6 +6,7 @@ import AppBar from '../components/AppBar'; // ton AppBar actuelle
 import { store } from '../app/store';
 import type { RootState, AppDispatch } from '../app/store';
 import { setSocketConnected, notificationReceived } from '../app/uiSlice';
+import { emitBilletStatut, emitNotification, type BilletStatutEvent } from '../service/notifications';
 import AppLoader from './AppLoader';
 import PageLoader from '../components/PageLoader';
 import { toast } from '../components/Toast/toast';
@@ -63,11 +64,17 @@ export default function FrontOfficeLayout() {
     });
 
     // Notifications temps réel (cloche AppBar) — voir FRONTEND_PROMPT_REASSIGNATION_COLAB.md
+    // Si la notification complète est jointe (nouveau format), la cloche l'ajoute directement en tête ;
+    // sinon (ancien format), elle recharge sa liste — voir FRONTEND_PROMPT_NOTIFICATIONS_ODOO_BILLET.md
     socket.on('notification', (data: any) => {
       if (data?.entityType === 'NOTIFICATION' && data?.action === 'CREATE' && data?.receiverId === user.id) {
-        dispatch(notificationReceived());
+        if (data.notification) emitNotification(data.notification);
+        else dispatch(notificationReceived());
       }
     });
+
+    // Changement de statut d'un billet par Odoo (envoyé à tous) : la page Billet se recharge si concernée
+    socket.on('billet:statut', (data: BilletStatutEvent) => emitBilletStatut(data));
 
     return () => {
       socket.disconnect();

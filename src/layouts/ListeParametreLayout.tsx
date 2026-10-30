@@ -25,6 +25,7 @@ import { fetchFournisseurs } from '../app/back_office/fournisseursSlice';
 import { store } from '../app/store';
 import type { RootState, AppDispatch } from '../app/store';
 import { setSocketConnected, notificationReceived } from '../app/uiSlice';
+import { emitNotification } from '../service/notifications';
 import PageLoader from '../components/PageLoader';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
@@ -82,7 +83,9 @@ export default function ParametreLayout() {
         data.action === 'CREATE' &&
         data.receiverId === user.id
       ) {
-        dispatch(notificationReceived());
+        // Nouveau format : notification complète jointe → ajout direct dans la cloche
+        if (data.notification) emitNotification(data.notification);
+        else dispatch(notificationReceived());
 
         // Optionnel : refresh des données concernées
         if (data.payload?.relatedEntity === 'DOSSIER_COMMUN') {

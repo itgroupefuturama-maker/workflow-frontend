@@ -6,4 +6,7 @@ export const toast = {
   error: (message: string, title?: string) => pushToast('error', message, title, 6000),
   warning: (message: string, title?: string) => pushToast('warning', message, title, 5000),
   info: (message: string, title?: string) => pushToast('info', message, title, 4000),
+  // Toast cliquable (ex. notification temps réel qui ouvre la page concernée)
+  notification: (message: string, title?: string, onClick?: () => void) =>
+    pushToast('info', message, title, 6000, onClick),
 };

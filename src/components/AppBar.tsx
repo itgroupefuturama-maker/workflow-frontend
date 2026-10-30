@@ -1,9 +1,11 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { FiHelpCircle, FiBell, FiUser, FiChevronDown, FiLogOut, FiX, FiTrash2, FiHome, FiCheck, FiSettings, FiWifiOff } from "react-icons/fi";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { logout } from '../app/authSlice';
 import { useDispatch, useSelector } from 'react-redux';
-import { persistor, type AppDispatch, type RootState } from '../app/store';
+import { persistor, store, type AppDispatch, type RootState } from '../app/store';
+import { setCurrentClientFactureId } from '../app/front_office/dossierCommunSlice';
+import { ICONE_NOTIFICATION, lienNotification, onNotification, type AppNotification } from '../service/notifications';
 import logo from '../assets/logo.jpg';
 import axiosInstance from '../service/Axios';
 import { toast } from './Toast/toast';
@@ -47,7 +49,7 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
   const [openUserMenu, setOpenUserMenu]         = useState(false);
   const [openProfileModal, setOpenProfileModal] = useState(false);
   const [openNotifications, setOpenNotifications] = useState(false);
-  const [notifications, setNotifications]       = useState<any[]>([]);
+  const [notifications, setNotifications]       = useState<AppNotification[]>([]);
   const [loadingNotifs, setLoadingNotifs]       = useState(false);
 
   const userMenuRef  = useRef<HTMLDivElement>(null);
@@ -79,9 +81,9 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
     if (!user?.id) return;
     setLoadingNotifs(true);
     try {
-      const res = await axiosInstance.get(`/notifications/user/${user.id}`);
+      const res = await axiosInstance.get('/notifications/me');
       if (res.data.success) setNotifications(res.data.data);
-      return res.data.data as any[] | undefined;
+      return res.data.data as AppNotification[] | undefined;
     } catch (e) {
       console.error(e);
       toast.error('Erreur lors du chargement des notifications');
@@ -92,7 +94,7 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
 
   useEffect(() => { fetchNotifications(); }, [user?.id]);
 
-  // Réception temps réel (socket 'notification', voir FrontOfficeLayout.tsx/ListeParametreLayout.tsx) :
+  // Réception temps réel, ancien format (socket 'notification' sans notification jointe) :
   // refetch puis toast si un nouvel élément est bien apparu en tête de liste. `lastNotifIdRef` reste
   // `null` tant qu'aucun fetch initial n'a eu lieu, pour ne pas toaster au premier chargement.
   useEffect(() => {
@@ -114,15 +116,38 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
-  const markAsRead = async (id: string) => {
-    try {
-      await axiosInstance.patch(`/notifications/${id}/read`);
-      setNotifications((prev) => prev.map((n) => n.id === id ? { ...n, isRead: true } : n));
-    } catch (e) {
-      console.error(e);
-      toast.error('Impossible de marquer la notification comme lue');
+  // Clic sur une notification (cloche ou toast) : marque comme lue puis ouvre la page concernée.
+  // Les anciennes notifications n'ont pas de lien : on se contente de les marquer comme lues.
+  const ouvrirNotification = useCallback(async (n: AppNotification) => {
+    if (!n.isRead) {
+      try {
+        await axiosInstance.patch(`/notifications/${n.id}/read`);
+        setNotifications((prev) => prev.map((x) => x.id === n.id ? { ...x, isRead: true } : x));
+      } catch (e) {
+        console.error(e);
+        toast.error('Impossible de marquer la notification comme lue');
+      }
     }
-  };
+    const lien = lienNotification(n);
+    if (!lien) return;
+    // Sélectionne le dossier de la notification s'il est déjà chargé (la page Billet lit le client facturé
+    // du dossier courant). La page elle-même se charge sur le devisId de l'URL.
+    const { data: dossiers, currentClientFactureId } = store.getState().dossierCommun;
+    const dossier = dossiers.find((d) => d.id === n.data?.dossierCommunId);
+    if (dossier && currentClientFactureId?.id !== dossier.id) {
+      dispatch(setCurrentClientFactureId(dossier));
+    }
+    setOpenNotifications(false);
+    navigate(lien);
+  }, [dispatch, navigate]);
+
+  // Réception temps réel, nouveau format : la notification complète arrive avec l'événement socket,
+  // pas besoin de recharger la liste.
+  useEffect(() => onNotification((n) => {
+    setNotifications((prev) => prev.some((x) => x.id === n.id) ? prev : [n, ...prev]);
+    lastNotifIdRef.current = n.id;
+    toast.notification(n.description, n.titre ?? undefined, () => ouvrirNotification(n));
+  }), [ouvrirNotification]);
 
   const deleteNotification = async (id: string) => {
     try {
@@ -137,7 +162,7 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
   const markAllAsRead = async () => {
     if (!user?.id) return;
     try {
-      await axiosInstance.patch(`/notifications/user/${user.id}/read-all`);
+      await axiosInstance.patch('/notifications/me/read-all');
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     } catch (e) {
       console.error(e);
@@ -314,9 +339,17 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
                               {/* Contenu */}
                               <div
                                 className="flex-1 min-w-0 cursor-pointer"
-                                onClick={() => !notif.isRead && markAsRead(notif.id)}
+                                onClick={() => ouvrirNotification(notif)}
                               >
-                                <p className={`text-sm leading-snug ${!notif.isRead ? 'font-medium text-gray-800' : 'text-gray-500'}`}>
+                                {notif.titre && (
+                                  <p className={`text-sm leading-snug ${!notif.isRead ? 'font-semibold text-gray-900' : 'font-medium text-gray-600'}`}>
+                                    {notif.type && ICONE_NOTIFICATION[notif.type] && (
+                                      <span className="mr-1.5">{ICONE_NOTIFICATION[notif.type]}</span>
+                                    )}
+                                    {notif.titre}
+                                  </p>
+                                )}
+                                <p className={`leading-snug ${notif.titre ? 'text-xs mt-0.5 ' : 'text-sm '}${!notif.isRead ? 'font-medium text-gray-800' : 'text-gray-500'}`}>
                                   {notif.description}
                                 </p>
                                 <p className="text-xs text-gray-400 mt-0.5">

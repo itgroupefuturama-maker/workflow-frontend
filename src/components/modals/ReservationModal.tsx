@@ -14,6 +14,8 @@ interface ReservationModalProps {
   onClose: () => void;
   onSubmit: (data: any) => void;
   ligne: any;
+  // Requête en cours : boutons d'envoi bloqués (évite le double envoi)
+  loading?: boolean;
 }
 
 const ReservationModal: React.FC<ReservationModalProps> = ({
@@ -21,6 +23,7 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
   onClose,
   onSubmit,
   ligne,
+  loading = false,
 }) => {
   const dispatch = useDispatch<AppDispatch>();
   const [prefBeneficiaire, setPrefBeneficiaire] = useState<any>(null);
@@ -37,18 +40,23 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
   const defaultTaux = ligne?.prospectionLigne?.tauxEchange || 4900;
   // const nombrePassagersMax = ligne.prospectionLigne?.nombre || 0;
 
+  // Ligne déjà réservée (FAIT) : on modifie sa réservation, la modal part des valeurs enregistrées.
+  // Après un envoi à Odoo, le back remet alors le billet en CREER (à soumettre de nouveau).
+  // La modal est remontée à chaque ouverture (key dans Billet.tsx) : initialisation directe.
+  const estModification = ligne?.statut === 'FAIT';
+
   // ─── États ───────────────────────────────────────────────
-  const [formData, setFormData] = useState({
-    reservation: '',
-    devise: defaultDevise,
-    resaTauxEchange: defaultTaux,
-    puResaBilletCompagnieDevise: 0,
-    puResaServiceCompagnieDevise: 0,
-    puResaPenaliteCompagnieDevise: 0,
+  const [formData, setFormData] = useState(() => ({
+    reservation: estModification ? ligne?.reservation || '' : '',
+    devise: (estModification && ligne?.devise) || defaultDevise,
+    resaTauxEchange: (estModification && Number(ligne?.resaTauxEchange)) || defaultTaux,
+    puResaBilletCompagnieDevise: estModification ? Number(ligne?.puResaBilletCompagnieDevise) || 0 : 0,
+    puResaServiceCompagnieDevise: estModification ? Number(ligne?.puResaServiceCompagnieDevise) || 0 : 0,
+    puResaPenaliteCompagnieDevise: estModification ? Number(ligne?.puResaPenaliteCompagnieDevise) || 0 : 0,
     puResaMontantBilletCompagnieDevise: 0,
     puResaMontantServiceCompagnieDevise: 0,
     puResaMontantPenaliteCompagnieDevise: 0,
-  });
+  }));
 
   // Remplacer le useState selectedPassagers existant :
   const [selectedPassagers, setSelectedPassagers] = useState<
@@ -58,7 +66,19 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
       nomComplet: string;
       servicePreferenceIds: string[]; // ← nouveau
     }>
-  >([]);
+  >(() =>
+    estModification
+      ? (ligne?.billet || []).map((b: any) => {
+          const info = b.clientbeneficiaireInfo;
+          return {
+            beneficiaireId: info?.clientbeneficiaireId ?? b.clientBeneficiaireId,
+            infoId: info?.id ?? b.clientbeneficiaireInfoId,
+            nomComplet: `${info?.prenom || ''} ${info?.nom || ''}`.trim() || 'Passager inconnu',
+            servicePreferenceIds: [],
+          };
+        })
+      : []
+  );
 
   const [currentBeneficiaireId, setCurrentBeneficiaireId] = useState('');
   const [currentInfoId, setCurrentInfoId] = useState('');
@@ -108,6 +128,21 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
   // Préférences dispo : on récupère depuis le store pour les services actifs
   const servicesStore = useSelector(selectServicesByType('TICKET'));
 
+  // En modification, un passager absent de prefParPassager garde les préférences de son billet.
+  // Le billet les stocke en libellés ("Chien") alors que l'API attend des ids : on les retrouve
+  // parmi les préférences des services actifs (calculé à l'affichage, les services pouvant arriver après).
+  const prefsInitiales = (infoId: string): string[] => {
+    if (!estModification) return [];
+    const libelles: string[] =
+      ligne?.billet?.find((b: any) => b.clientbeneficiaireInfoId === infoId)?.servicePreference || [];
+    if (libelles.length === 0) return [];
+    return servicesActifs
+      .flatMap((sa: any) => servicesStore.find((s) => s.id === sa.serviceSpecifiqueId)?.servicePreference || [])
+      .filter((pref: ServicePreference) => libelles.includes(pref.preference))
+      .map((pref: ServicePreference) => pref.id);
+  };
+  const getPrefs = (infoId: string) => prefParPassager[infoId] ?? prefsInitiales(infoId);
+
   const handlePreuveResaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
     setPreuveResa(file);
@@ -140,9 +175,9 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
     }
   }, [nombrePassagers, formData.puResaBilletCompagnieDevise, formData.puResaServiceCompagnieDevise, formData.puResaPenaliteCompagnieDevise, totalBillet, totalService, totalPenalite]);
 
-  // ─── Initialisation des tarifs compagnie depuis prospectionLigne ───
+  // ─── Initialisation des tarifs compagnie depuis prospectionLigne (nouvelle réservation seulement) ───
   useEffect(() => {
-    if (isOpen && ligne?.prospectionLigne) {
+    if (isOpen && ligne?.prospectionLigne && !estModification) {
       setFormData((prev) => ({
         ...prev,
         puResaBilletCompagnieDevise: ligne.prospectionLigne.puBilletCompagnieDevise || 0,
@@ -150,7 +185,7 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
         puResaPenaliteCompagnieDevise: ligne.prospectionLigne.puPenaliteCompagnieDevise || 0,
       }));
     }
-  }, [isOpen, ligne]);
+  }, [isOpen, ligne, estModification]);
 
   useEffect(() => {
     if (!dropdownOpen) return;
@@ -252,11 +287,12 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
   };
 
   const handleConfirmAndSubmit = () => {
+    if (loading) return;
     const payload = {
       passagers: selectedPassagers.map((p) => ({
         clientbeneficiaireInfoId: p.infoId,
         clientBeneficiaireId: p.beneficiaireId,
-        servicePreferenceIds: prefParPassager[p.infoId] || [],
+        servicePreferenceIds: getPrefs(p.infoId),
       })),
       nombre: nombrePassagers,
       reservation: formData.reservation,
@@ -289,7 +325,9 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
               {/* Header - Fixed */}
               <div className="bg-gray-50 border-b border-gray-200 px-6 py-4 flex justify-between items-center ">
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900">Nouvelle Réservation</h2>
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    {estModification ? 'Modifier la réservation' : 'Nouvelle Réservation'}
+                  </h2>
                   <div className="flex items-center gap-2 mt-1 text-sm text-gray-600">
                     {ligne.prospectionLigne?.numeroVol && (
                       <span className="bg-gray-200 px-2 py-0.5 rounded text-xs font-medium">
@@ -633,7 +671,11 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
                         </div>
                         <div className="flex-1">
                           <h3 className="text-sm font-semibold text-gray-900">Preuve de réservation</h3>
-                          <p className="text-xs text-gray-500 mt-0.5">Image optionnelle (capture, confirmation…)</p>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {estModification && ligne?.preuveResa
+                              ? 'Une preuve est déjà enregistrée — ajoutez un fichier seulement pour la remplacer'
+                              : 'Image optionnelle (capture, confirmation…)'}
+                          </p>
                         </div>
                         {preuveResa && (
                           <span className="text-xs text-green-700 bg-green-100 border border-green-200 px-2 py-0.5 rounded-full font-medium">
@@ -1075,7 +1117,7 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
 
                       <div className="p-5 space-y-5">
                         {selectedPassagers.map((passager) => {
-                          const prefsPassager = prefParPassager[passager.infoId] || [];
+                          const prefsPassager = getPrefs(passager.infoId);
 
                           return (
                             <div key={passager.infoId} className="border border-gray-200 rounded-lg overflow-hidden">
@@ -1099,7 +1141,7 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
                                       (s) => s.id === serviceActif.serviceSpecifiqueId
                                     );
                                     const prefsDisponibles: ServicePreference[] = serviceStore?.servicePreference || [];
-                                    const prefsPassager = prefParPassager[passager.infoId] || [];
+                                    const prefsPassager = getPrefs(passager.infoId);
 
                                     return (
                                       <div
@@ -1142,7 +1184,7 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
                                                     type="button"
                                                     onClick={() => {
                                                       setPrefParPassager((prev) => {
-                                                        const current = prev[passager.infoId] || [];
+                                                        const current = prev[passager.infoId] ?? getPrefs(passager.infoId);
                                                         return {
                                                           ...prev,
                                                           [passager.infoId]: isSelected
@@ -1263,15 +1305,15 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
 
                   <button
                     onClick={handleShowConfirmation}
-                    disabled={!isFormValid}
+                    disabled={!isFormValid || loading}
                     className={`px-5 py-2 rounded text-sm font-medium transition-colors flex items-center gap-2 ${
-                      isFormValid 
+                      isFormValid && !loading 
                         ? 'bg-gray-900 text-white hover:bg-gray-800' 
                         : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                     }`}
                   >
                     <FiCheck size={16} />
-                    Vérifier & Confirmer
+                    {loading ? 'Envoi en cours…' : 'Vérifier & Confirmer'}
                   </button>
                 </div>
               </div>
@@ -1319,7 +1361,7 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
                               passagers: selectedPassagers.map((p) => ({
                                 clientbeneficiaireInfoId: p.infoId,
                                 clientBeneficiaireId: p.beneficiaireId,
-                                servicePreferenceIds: prefParPassager[p.infoId] || [],
+                                servicePreferenceIds: getPrefs(p.infoId),
                               })),
                               reservation: formData.reservation,
                               puResaBilletCompagnieDevise: formData.puResaBilletCompagnieDevise,
@@ -1355,7 +1397,8 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
                       </button>
                       <button
                         onClick={handleConfirmAndSubmit}
-                        className="px-5 py-2 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 transition-colors flex items-center gap-2"
+                        disabled={loading}
+                        className="px-5 py-2 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <FiCheck size={16} />
                         Confirmer et envoyer →

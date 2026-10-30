@@ -1,17 +1,22 @@
 import { useEffect, useState } from 'react';
 import { FiX, FiAlertTriangle, FiCheckCircle } from 'react-icons/fi';
-import type { BilletLigne } from '../../app/front_office/billetSlice';
+import type { AnnulationBilletPayload, BilletLigne, TypeAnnulation } from '../../app/front_office/billetSlice';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../app/store';
 import { fetchRaisonsAnnulation } from '../../app/front_office/parametre_ticketing/raisonAnnulationSlice';
 import { toast } from '../Toast/toast';
 
-type AnnulType = 'SIMPLE' | 'COM' | 'PEN' | 'COM_PEN';
+type AnnulType = TypeAnnulation;
+
+// Annulation possible à tout statut (le billet repasse en CREER), sauf lignes déjà annulées,
+// remplacées par une reprogrammation, ou lignes de frais d'annulation (refus 409 du back)
+const estAnnulable = (l: BilletLigne) =>
+  !['ANNULER', 'MODIFIER'].includes(l.statut) && l.statusLigne !== 'ANNULATION';
 
 interface Props {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (payload: any) => void;
+  onSubmit: (payload: AnnulationBilletPayload) => void;
   lignes: BilletLigne[];
   type: 'reservation' | 'emission';
   loading?: boolean;
@@ -35,29 +40,36 @@ export default function AnnulationBilletModal({
   const [typeAnnul, setTypeAnnul] = useState<AnnulType>('SIMPLE');
   
   const [raison, setRaison] = useState('');
-  const [tauxChange, setTauxChange] = useState<number | ''>(4500); // valeur par défaut réaliste
   const [resaCommDevise, setResaCommDevise] = useState(0);
-  const [resaCommAriary, setResaCommAriary] = useState(0);
   const [penalitePu, setPenalitePu] = useState(0);
   const [penaliteMontant, setPenaliteMontant] = useState(0);
   const [showPreview, setShowPreview] = useState(false);
 
-  // Charger les raisons au montage si pas encore chargées
+  // Charger les raisons une seule fois à l'ouverture : ne pas dépendre de
+  // raisons.length / raisonsLoading, sinon une liste vide relance le GET en boucle
   useEffect(() => {
-    if (isOpen && raisons.length === 0 && !raisonsLoading) {
-      dispatch(fetchRaisonsAnnulation());
-    }
-  }, [isOpen, raisons.length, raisonsLoading, dispatch]);
-  
-  const [selectedLigneId, setSelectedLigneId] = useState<string>('');
+    if (isOpen) dispatch(fetchRaisonsAnnulation());
+  }, [isOpen, dispatch]);
+
+  // La modal est montée à chaque ouverture (Billet.tsx) : initialisation directe, sans effet.
+  // Un effet sur `lignes` (nouveau tableau à chaque rendu du parent) réinitialisait la sélection en boucle.
+  const tauxResaDe = (ligneId: string) => {
+    const taux = Number(lignes?.find((l) => l.id === ligneId)?.resaTauxEchange);
+    return taux > 0 ? taux : '';
+  };
+  const [selectedLigneId, setSelectedLigneId] = useState<string>(
+    () => lignes?.find(estAnnulable)?.id || ''
+  );
   const [rasionAnnulationId, setRaisonAnnulationId] = useState<string>('');
+  // Taux de change initialisé avec le taux de réservation de la ligne sélectionnée
+  const [tauxChange, setTauxChange] = useState<number | ''>(() => tauxResaDe(selectedLigneId));
 
-  useEffect(() => {
-    if (!isOpen) return; // on ne fait rien quand on ferme
-
-    setRaisonAnnulationId('');
-    setSelectedLigneId(lignes?.[0]?.id || '');
-  }, [isOpen, lignes]);
+  // Montants Ariary calculés automatiquement : montant devise × taux de change
+  const toAriary = (montantDevise: number) =>
+    tauxChange === '' ? 0 : Math.round((Number(montantDevise) || 0) * Number(tauxChange));
+  const fmtAr = (n: number) => `${n.toLocaleString('fr-FR')} Ar`;
+  const resaCommAriary = toAriary(resaCommDevise);
+  const penaliteAriary = toAriary(penaliteMontant);
 
   // Garde très tôt
   if (!isOpen) return null;
@@ -82,13 +94,13 @@ export default function AnnulationBilletModal({
   }
 
   const buildPayload = () => {
-    const payload: any = {
+    const payload: AnnulationBilletPayload = {
       id: selectedLigneId,
-      rasionAnnulationId: rasionAnnulationId,     // essaie ça
-      // rasionAnnulationId: raisonAnnulationId,  // ou ça
+      rasionAnnulationId: rasionAnnulationId,
       type: typeAnnul,
       tauxChange: Number(tauxChange),
-      conditionAnnul: raisons.find(r => r.id === rasionAnnulationId)?.libelle || '',
+      // Texte saisi par l'agent ; la raison choisie dans la liste part dans rasionAnnulationId
+      conditionAnnul: raison.trim(),
     };
 
     if (typeAnnul === 'COM' || typeAnnul === 'COM_PEN') {
@@ -220,7 +232,10 @@ export default function AnnulationBilletModal({
             </label>
             <select
               value={selectedLigneId}
-              onChange={(e) => setSelectedLigneId(e.target.value)}
+              onChange={(e) => {
+                setSelectedLigneId(e.target.value);
+                setTauxChange(tauxResaDe(e.target.value));
+              }}
               disabled={lignes.length === 0}
               className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
             >
@@ -230,7 +245,7 @@ export default function AnnulationBilletModal({
                 <>
                   <option value="">-- Choisir une ligne --</option>
                   {lignes
-                    .filter((l) => l.statut === 'FAIT')
+                    .filter(estAnnulable)
                     .map((l) => (
                       <option key={l.id} value={l.id}>
                         {l.reservation ? l.reservation : 'N°'} - {l.statut}
@@ -256,6 +271,9 @@ export default function AnnulationBilletModal({
               placeholder="Ex: 4500"
               required
             />
+            <p className="mt-1 text-xs text-gray-500">
+              Initialisé avec le taux de réservation de la ligne — sert au calcul des montants en Ariary.
+            </p>
           </div>
           
           {/* Raison Annulation */}
@@ -316,14 +334,12 @@ export default function AnnulationBilletModal({
                 </div>
                 <div>
                   <label className="block text-sm text-gray-600 mb-2">
-                    Commission (Ariary)
+                    Commission (Ariary) <span className="text-xs text-gray-400">— calculé</span>
                   </label>
-                  <input
-                    type="number"
-                    value={resaCommAriary}
-                    onChange={(e) => setResaCommAriary(Number(e.target.value))}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
+                  <div className="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-gray-100 text-gray-700 font-medium tabular-nums">
+                    {fmtAr(resaCommAriary)}
+                  </div>
+                  <p className="mt-1 text-xs text-gray-400">Commission devise × taux de change</p>
                 </div>
               </div>
             </div>
@@ -360,6 +376,15 @@ export default function AnnulationBilletModal({
                     onChange={(e) => setPenaliteMontant(Number(e.target.value))}
                     className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
                   />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm text-gray-600 mb-2">
+                    Montant total (Ariary) <span className="text-xs text-gray-400">— calculé</span>
+                  </label>
+                  <div className="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-gray-100 text-gray-700 font-medium tabular-nums">
+                    {fmtAr(penaliteAriary)}
+                  </div>
+                  <p className="mt-1 text-xs text-gray-400">Montant total devise × taux de change</p>
                 </div>
               </div>
             </div>
