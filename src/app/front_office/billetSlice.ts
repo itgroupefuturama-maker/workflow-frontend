@@ -44,12 +44,16 @@ export interface ReservationPayload {
   puResaPenaliteCompagnieDevise: number;
   devise: string;
   resaTauxEchange: number;
-  puResaMontantBilletCompagnieDevise: number;
-  puResaMontantServiceCompagnieDevise: number;
-  puResaMontantPenaliteCompagnieDevise: number;
+  // Calculés par le backend (FRONTEND_PROMPT_CALCUL_PRIX_BACKEND.md) : ignorés s'ils sont envoyés
+  puResaMontantBilletCompagnieDevise?: number;
+  puResaMontantServiceCompagnieDevise?: number;
+  puResaMontantPenaliteCompagnieDevise?: number;
   conditionModif?: string | null;
   conditionAnnul?: string | null;
+  /** Capture du n° de réservation sur la plateforme de la compagnie */
   preuveResa?: File | null;
+  /** Preuve que le client a accepté la réservation */
+  preuveAcceptationClient?: File | null;
 }
 
 export interface Fournisseur {
@@ -200,6 +204,8 @@ export interface BilletLigne {
   odooSaleId?: string | null;
   odooPurchaseId?: string | null;
   referenceLine: string;
+  /** N° Dos Ref de la ligne de prospection (à plat, renvoyé par le backend) */
+  numeroDosRef?: string | null;
   prospectionLigneId: string;
   billetEnteteId: string;
   nombre: number;
@@ -251,6 +257,10 @@ export interface BilletLigne {
   emissionCommissionEnDevise?: number;
   emissionCommissionEnAriary?: number;
   preuveResa: string;
+  /** Preuve d'acceptation de la réservation par le client (null sur les anciennes lignes) */
+  preuveAcceptationClient?: string | null;
+  /** Justificatif du paiement à la compagnie, joint à l'achat (null tant que la ligne n'est pas achetée) */
+  preuveAchat?: string | null;
   prospectionLigne: ProspectionLigne;
   createdAt: string;
   updatedAt: string;
@@ -352,8 +362,9 @@ export interface ReprogrammationPayload {
   services: Array<{ serviceSpecifiqueId: string; valeur: string }>;
   puResaBilletCompagnieDevise: number;
   puResaServiceCompagnieDevise: number;
-  puResaMontantBilletCompagnieDevise: number;
-  puResaMontantServiceCompagnieDevise: number;
+  // Calculés par le backend : ignorés s'ils sont envoyés
+  puResaMontantBilletCompagnieDevise?: number;
+  puResaMontantServiceCompagnieDevise?: number;
   frais: FraisReprogrammationPayload[];
 }
 
@@ -380,6 +391,8 @@ export interface BilletEntete {
   odooEnvois?: OdooEnvoi[];
   etatOdoo?: EtatOdoo;
   resumeLignes?: ResumeLignes;
+  /** N° Dos Ref des lignes du billet (GET /billet/dossier-commun/:id), sans doublon */
+  numerosDosRef?: string[];
 }
 
 export interface EmissionPayload {
@@ -473,13 +486,14 @@ export const addReservationToLigne = createAsyncThunk(
       formData.append('puResaPenaliteCompagnieDevise', payload.puResaPenaliteCompagnieDevise.toString());
       formData.append('devise', payload.devise);
       formData.append('resaTauxEchange', payload.resaTauxEchange.toString());
-      formData.append('puResaMontantBilletCompagnieDevise', payload.puResaMontantBilletCompagnieDevise.toString());
-      formData.append('puResaMontantServiceCompagnieDevise', payload.puResaMontantServiceCompagnieDevise.toString());
-      formData.append('puResaMontantPenaliteCompagnieDevise', payload.puResaMontantPenaliteCompagnieDevise.toString());
+      // puResaMontant… : calculés par le backend, plus envoyés
       if (payload.conditionModif != null) formData.append('conditionModif', payload.conditionModif);
       if (payload.conditionAnnul != null) formData.append('conditionAnnul', payload.conditionAnnul);
 
       // Fichier image optionnel
+      if (payload.preuveAcceptationClient) {
+        formData.append('preuveAcceptationClient', payload.preuveAcceptationClient);
+      }
       if (payload.preuveResa) {
         formData.append('preuveResa', payload.preuveResa);
       }
@@ -491,12 +505,13 @@ export const addReservationToLigne = createAsyncThunk(
       );
 
       if (!response.data?.success) {
-        throw new Error('Échec de la réservation');
+        // Ex. « La preuve d'acceptation du client est obligatoire » : message à afficher tel quel
+        throw new Error(response.data?.message || 'Échec de la réservation');
       }
       return response.data;
     } catch (err: any) {
       return rejectWithValue(
-        err.response?.data?.message || "Erreur lors de l'ajout de la réservation"
+        err.response?.data?.message || err.message || "Erreur lors de l'ajout de la réservation"
       );
     }
   }
@@ -585,6 +600,12 @@ export const emitBilletLigne = createAsyncThunk<
       formData.append('billets', JSON.stringify(payload.billets));
 
       // Tous les fichiers PDF (un par passager)
+      // Preuve d'achat de la ligne (obligatoire à la 1re émission, facultative en correction)
+      if (payload.preuveAchat) {
+        formData.append('preuveAchat', payload.preuveAchat);
+      }
+
+      // E-billets : un fichier par passager marqué nouveauPjBillet, dans le même ordre que `billets`
       payload.pjBillets.forEach((file: File) => {
         if (file) {
           formData.append('pjBillets', file);
@@ -598,13 +619,14 @@ export const emitBilletLigne = createAsyncThunk<
       });
 
       if (!response.data?.success) {
-        throw new Error('Échec de l\'émission');
+        throw new Error(response.data?.message || 'Échec de l\'émission');
       }
 
       return response.data;
     } catch (err: any) {
+      // Messages du backend affichés tels quels (ex. « La preuve d'achat est obligatoire »)
       return rejectWithValue(
-        err.response?.data?.message || 'Erreur lors de l\'émission du billet'
+        err.response?.data?.message || err.message || 'Erreur lors de l\'émission du billet'
       );
     }
   }

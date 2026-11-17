@@ -27,8 +27,8 @@ La devise est `billetLigne.devise`.
 
 ## 3. Taxe
 
-La taxe est déjà comprise dans le prix compagnie saisi à la résa : il n'y a pas de champ taxe à la résa ni à l'émission.
-(Règle encore en cours de validation côté métier.)
+Remplacé par `FRONTEND_PROMPT_CALCUL_PRIX_BACKEND.md` : la taxe s'applique au billet et au service, uniquement dans
+le prix client, à chaque étape.
 
 ## 4. Ville de départ
 

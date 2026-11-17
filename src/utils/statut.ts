@@ -22,6 +22,7 @@ const STATUT_LABELS: Record<string, string> = {
   ECHEC: 'Échec',
   ECHOUE: 'Échoué',
   PLANIFIE: 'Planifié',
+  REPORTE: 'Reporté',
   CONFORME: 'Conforme',
   BIENTOT: 'Bientôt',
   OUVERT: 'Ouvert',

@@ -27,6 +27,8 @@ import { formatStatut } from '../../../../../utils/statut';
 import { fmtAriary, fmtDevise, fmtNombre } from '../../../../../utils/format';
 import { calculerPrixLigne } from './calculPrixLigne';
 import SelecteurVuesPrix from './SelecteurVuesPrix';
+import BarreGroupes from './BarreGroupes';
+import { useGroupesMasques } from './groupesMasques';
 import { CellulesBillet, EnTeteGroupeBillet, SousEnTetesBillet } from './ColonnesPrixBillet';
 import { aEmission, aResa, useBilletLignesParProspection, useVuesPrix } from './vuesPrix';
 
@@ -101,14 +103,15 @@ export default function ProspectionDetail() {
   }, [cascade.villeDepartId, cascade.selectedItineraire]);
 
 
-  const [collapsedGroups, setCollapsedGroups] = useState({
+  // Groupes de colonnes MASQUÉS (0 colonne), mémorisés — voir BarreGroupes.tsx
+  const [collapsedGroups, setCollapsedGroups] = useGroupesMasques('prospection.groupesMasques', {
     infosVol: false,
     tarifsCieDevise: false,
-    tarifsCieAriary: false,   // replié par défaut
+    tarifsCieAriary: false,
     tarifsClientDevise: false,
-    tarifsClientAriary: false, // replié par défaut
+    tarifsClientAriary: false,
     commissions: false,
-    services: true,
+    services: false,
   });
 
   const toggleGroup = (group: keyof typeof collapsedGroups) => {
@@ -117,10 +120,17 @@ export default function ProspectionDetail() {
 
   // ── Prix affichés : Prospection / Résa / Émission (choix libre, mémorisé) ──
   const { vues, setVues, afficher } = useVuesPrix();
+  // Lignes billet incluses dans GET /prospections/entetes/:id (sinon : appels de secours par devis)
+  const lignesBilletIncluses = useMemo(
+    () => (lignes.length > 0 && lignes.every((l) => Array.isArray(l.billetLignes))
+      ? lignes.flatMap((l) => l.billetLignes ?? [])
+      : null),
+    [lignes]
+  );
   const { parLigne: billetParLigne, loading: loadingBillets } = useBilletLignesParProspection(lignes, {
     actif: afficher.RESA || afficher.EMISSION, // aucun appel tant qu'on n'affiche que la prospection
+    lignesDejaChargees: lignesBilletIncluses,
   });
-  const [collapsedBillet, setCollapsedBillet] = useState({ RESA: false, EMISSION: false });
   const compteursVues = useMemo(() => {
     let resa = 0;
     let emission = 0;
@@ -196,14 +206,10 @@ export default function ProspectionDetail() {
     const nombre = Number(formData.nombre) || 1;
     const commissionPct = Number(entete?.commissionAppliquer) || 0;
 
-    // ── Calcul unique (aperçu / envoi) — voir calculPrixLigne.ts ──
+    // Taux de taxe en % : un montant saisi pour 1 billet est converti en taux (calculPrixLigne.ts).
+    // Tous les montants sont calculés par le backend (FRONTEND_PROMPT_CALCUL_PRIX_BACKEND.md).
     const {
-      puBilletCieDevise, puServiceCieDevise, puPenaliteCieDevise, mtBilletCieDevise,
-      mtServiceCieDevise, mtPenaliteCieDevise, puBilletCieAriary, puServiceCieAriary,
-      puPenaliteCieAriary, mtBilletCieAriary, mtServiceCieAriary, mtPenaliteCieAriary,
-      tauxTaxe, montantTaxeDevise, montantTaxeAriary, mtBilletClientDevise,
-      mtServiceClientDevise, mtPenaliteClientDevise, mtBilletClientAriary, mtServiceClientAriary,
-      mtPenaliteClientAriary, commissionEnDevise, commissionEnAriary,
+      puBilletCieDevise, puServiceCieDevise, puPenaliteCieDevise, tauxTaxe,
     } = calculerPrixLigne({
       nombre, tauxEchange: taux, commissionPct,
       puBilletCieDevise:   Number(formData.puBilletCompagnieDevise)   || 0,
@@ -234,32 +240,7 @@ export default function ProspectionDetail() {
       puServiceCompagnieDevise:  puServiceCieDevise,
       puPenaliteCompagnieDevise: puPenaliteCieDevise,
 
-      montantBilletCompagnieDevise:   mtBilletCieDevise,
-      montantServiceCompagnieDevise:  mtServiceCieDevise,
-      montantPenaliteCompagnieDevise: mtPenaliteCieDevise,
-
-      puBilletCompagnieAriary:   puBilletCieAriary,
-      puServiceCompagnieAriary:  puServiceCieAriary,
-      puPenaliteCompagnieAriary: puPenaliteCieAriary,
-
-      montantBilletCompagnieAriary:   mtBilletCieAriary,
-      montantServiceCompagnieAriary:  mtServiceCieAriary,
-      montantPenaliteCompagnieAriary: mtPenaliteCieAriary,
-
-      montantBilletClientDevise:   mtBilletClientDevise,
-      montantServiceClientDevise:  mtServiceClientDevise,
-      montantPenaliteClientDevise: mtPenaliteClientDevise,
-
-      montantBilletClientAriary:   mtBilletClientAriary,
-      montantServiceClientAriary:  mtServiceClientAriary,
-      montantPenaliteClientAriary: mtPenaliteClientAriary,
-
-      commissionEnDevise,
-      commissionEnAriary,
-
       tauxTaxe,
-      montantTaxeDevise,
-      montantTaxeAriary,
       aeroportDepart:     formData.aeroportDepart || null,
       aeroportArrivee:    formData.aeroportArrivee || null,
 
@@ -979,74 +960,42 @@ export default function ProspectionDetail() {
                     </div>
                   )}
 
-                  {/* Barre de contrôle des groupes */}
-                  <div className="px-6 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-2 flex-wrap">
-                    <span className="text-xs font-semibold text-slate-500 uppercase mr-2">Groupes :</span>
-                    {[
+                  {/* Barre de contrôle des groupes : vues rapides + masquer / afficher */}
+                  <BarreGroupes
+                    groupes={[
                       { key: 'infosVol', label: 'Infos vol', icon: Plane },
                       { key: 'tarifsCieDevise', label: 'Cie devise', icon: Building2 },
                       { key: 'tarifsCieAriary', label: 'Cie ariary', icon: Building2 },
                       { key: 'tarifsClientDevise', label: 'Client devise', icon: User },
                       { key: 'tarifsClientAriary', label: 'Client ariary', icon: User },
                       { key: 'commissions', label: 'Commissions', icon: Coins },
-                    ].filter(({ key }) => key === 'infosVol' || afficher.PROSPECTION).map(({ key, label, icon: Icon }) => (
-                      <button
-                        key={key}
-                        onClick={() => toggleGroup(key as keyof typeof collapsedGroups)}
-                        disabled={!!newLine}
-                        className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
-                          newLine
-                            ? 'opacity-40 cursor-not-allowed'
-                            : collapsedGroups[key as keyof typeof collapsedGroups]
-                              ? 'bg-white text-slate-400 border-slate-200 line-through'
-                              : 'bg-white text-slate-700 border-slate-300 hover:border-slate-400'
-                        }`}
-                      >
-                        <Icon size={12} aria-hidden="true" />
-                        {label}
-                      </button>
-                    ))}
+                    ].filter(({ key }) => key === 'infosVol' || afficher.PROSPECTION)}
+                    masques={collapsedGroups}
+                    onChange={(m) => setCollapsedGroups(m as typeof collapsedGroups)}
+                    vues={[
+                      { id: 'essentiel', label: 'Essentiel', masques: ['tarifsCieDevise', 'tarifsCieAriary', 'tarifsClientDevise'], title: 'Infos vol, prix client en ariary, commissions' },
+                      { id: 'compagnie', label: 'Compagnie', masques: ['tarifsClientDevise', 'tarifsClientAriary'], title: 'Prix compagnie uniquement' },
+                      { id: 'client', label: 'Client', masques: ['tarifsCieDevise', 'tarifsCieAriary'], title: 'Prix client uniquement' },
+                      { id: 'tout', label: 'Tout', masques: [], title: 'Tous les groupes' },
+                    ]}
+                    disabled={!!newLine}
+                  >
                     {/* Bouton pénalités — s'applique à tous les groupes */}
-                    <div className="w-px h-4 bg-slate-300 mx-1" />
-                      <button
-                        onClick={() => setShowPenalite(p => !p)}
-                        disabled={!!newLine}
-                        className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
-                          newLine
-                            ? 'opacity-40 cursor-not-allowed'
-                            : showPenalite
-                              ? 'bg-orange-100 text-orange-700 border-orange-300'
-                              : 'bg-white text-slate-400 border-slate-200 line-through'
-                        }`}
-                      >
-                        <Ban size={13} aria-hidden="true" className="inline shrink-0" /> Pénalités
-                      </button>
-                      {/* Tout replier — désactivé si tout est déjà replié */}
-                      <button
-                        disabled={!!newLine || Object.values(collapsedGroups).every(v => v === true)}
-                        onClick={() => { setCollapsedGroups({ infosVol: true, tarifsCieDevise: true, tarifsCieAriary: true, tarifsClientDevise: true, tarifsClientAriary: true, commissions: true, services: true }); setCollapsedBillet({ RESA: true, EMISSION: true }); }}
-                        className={`ml-auto text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
-                          !!newLine || Object.values(collapsedGroups).every(v => v === true)
-                            ? 'opacity-40 cursor-not-allowed border-slate-200 text-slate-400'
-                            : 'border-red-200 text-red-600 hover:bg-red-50'
-                        }`}
-                      >
-                        Tout replier
-                      </button>
-
-                      {/* Tout déplier — désactivé si tout est déjà déplié */}
-                      <button
-                        disabled={!!newLine || Object.values(collapsedGroups).every(v => v === false)}
-                        onClick={() => { setCollapsedGroups({ infosVol: false, tarifsCieDevise: false, tarifsCieAriary: false, tarifsClientDevise: false, tarifsClientAriary: false, commissions: false, services: false }); setCollapsedBillet({ RESA: false, EMISSION: false }); }}
-                        className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
-                          !!newLine || Object.values(collapsedGroups).every(v => v === false)
-                            ? 'opacity-40 cursor-not-allowed border-slate-200 text-slate-400'
-                            : 'border-blue-200 text-blue-600 hover:bg-blue-50'
-                        }`}
-                      >
-                        Tout déplier
-                      </button>
-                    </div>
+                    <span className="mx-1 h-4 w-px bg-slate-300" />
+                    <button
+                      onClick={() => setShowPenalite(p => !p)}
+                      disabled={!!newLine}
+                      className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border font-medium transition-all ${
+                        newLine
+                          ? 'opacity-40 cursor-not-allowed'
+                          : showPenalite
+                            ? 'bg-orange-100 text-orange-700 border-orange-300'
+                            : 'bg-white text-slate-400 border-slate-200 line-through'
+                      }`}
+                    >
+                      <Ban size={13} aria-hidden="true" className="inline shrink-0" /> Pénalités
+                    </button>
+                  </BarreGroupes>
 
                     <div className="overflow-x-auto">
                       <table className="min-w-full divide-y divide-slate-200">
@@ -1061,95 +1010,109 @@ export default function ProspectionDetail() {
                             <th rowSpan={2} className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase bg-slate-100 min-w-[80px]">Nb pax</th>
 
                             {/* Groupe : Infos Vol */}
+                            {!collapsedGroups.infosVol && (
                             <th
-                              colSpan={collapsedGroups.infosVol ? 1 : 13}
+                              title="Masquer ce groupe (réaffichable avec les puces « Groupes »)"
+                              colSpan={13}
                               className="px-4 py-2 text-center text-xs font-bold text-white uppercase bg-slate-700 border-x border-slate-500 cursor-pointer hover:bg-slate-600 transition-colors select-none"
                               onClick={() => toggleGroup('infosVol')}
                             >
                               <div className="flex items-center justify-center gap-2">
                                 <Plane size={13} aria-hidden="true" className="inline shrink-0" /> Infos Vol
-                                <span className="text-slate-300 text-xs">{collapsedGroups.infosVol ? '▶' : '▼'}</span>
+                                <span className="text-slate-300 text-xs">✕</span>
                               </div>
                             </th>
+                            )}
 
                             {afficher.PROSPECTION && (<>
                             {/* Groupe : Devise + Taux */}
-                            <th colSpan={2} className="px-4 py-2 text-center text-xs font-bold text-white uppercase bg-gray-600 border-x border-gray-400">
+                            <th colSpan={2} className="px-4 py-2 text-center text-xs font-bold text-white uppercase bg-emerald-700 border-x border-emerald-500">
                               <ArrowLeftRight size={13} aria-hidden="true" className="inline shrink-0" /> Devise
                             </th>
 
                             {/* Groupe : Tarifs Cie Devise */}
+                            {!collapsedGroups.tarifsCieDevise && (
                             <th
-                              colSpan={collapsedGroups.tarifsCieDevise ? 1 : (showPenalite ? 9 : 7)}
+                              title="Masquer ce groupe (réaffichable avec les puces « Groupes »)"
+                              colSpan={(showPenalite ? 9 : 7)}
                               className="px-4 py-2 text-center text-xs font-bold text-white uppercase bg-emerald-700 border-x border-emerald-500 cursor-pointer hover:bg-emerald-600 transition-colors select-none"
                               onClick={() => toggleGroup('tarifsCieDevise')}
                             >
                               <div className="flex items-center justify-center gap-2">
                                 <Building2 size={13} aria-hidden="true" className="inline shrink-0" /> Tarifs Cie Devise
-                                <span className="text-emerald-300 text-xs">{collapsedGroups.tarifsCieDevise ? '▶' : '▼'}</span>
+                                <span className="text-emerald-300 text-xs">✕</span>
                               </div>
                             </th>
+                            )}
 
                             {/* Groupe : Tarifs Cie Ariary */}
+                            {!collapsedGroups.tarifsCieAriary && (
                             <th
-                              colSpan={collapsedGroups.tarifsCieAriary ? 1 : (showPenalite ? 6 : 4)}
-                              className="px-4 py-2 text-center text-xs font-bold text-white uppercase bg-emerald-800 border-x border-emerald-600 cursor-pointer hover:bg-emerald-700 transition-colors select-none"
+                              title="Masquer ce groupe (réaffichable avec les puces « Groupes »)"
+                              colSpan={(showPenalite ? 6 : 4)}
+                              className="px-4 py-2 text-center text-xs font-bold text-white uppercase bg-emerald-700 border-x border-emerald-500 cursor-pointer hover:bg-emerald-600 transition-colors select-none"
                               onClick={() => toggleGroup('tarifsCieAriary')}
                             >
                               <div className="flex items-center justify-center gap-2">
                                 <Building2 size={13} aria-hidden="true" className="inline shrink-0" /> Tarifs Cie Ariary
-                                <span className="text-emerald-300 text-xs">{collapsedGroups.tarifsCieAriary ? '▶' : '▼'}</span>
+                                <span className="text-emerald-300 text-xs">✕</span>
                               </div>
                             </th>
+                            )}
 
                             {/* Groupe : Tarifs Client Devise */}
+                            {!collapsedGroups.tarifsClientDevise && (
                             <th
-                              colSpan={collapsedGroups.tarifsClientDevise ? 1 : (showPenalite ? 3 : 2)}
-                              className="px-4 py-2 text-center text-xs font-bold text-white uppercase bg-blue-700 border-x border-blue-500 cursor-pointer hover:bg-blue-600 transition-colors select-none"
+                              title="Masquer ce groupe (réaffichable avec les puces « Groupes »)"
+                              colSpan={(showPenalite ? 3 : 2)}
+                              className="px-4 py-2 text-center text-xs font-bold text-white uppercase bg-emerald-700 border-x border-emerald-500 cursor-pointer hover:bg-emerald-600 transition-colors select-none"
                               onClick={() => toggleGroup('tarifsClientDevise')}
                             >
                               <div className="flex items-center justify-center gap-2">
                                 <User size={13} aria-hidden="true" className="inline shrink-0" /> Tarifs Client Devise
-                                <span className="text-blue-300 text-xs">{collapsedGroups.tarifsClientDevise ? '▶' : '▼'}</span>
+                                <span className="text-emerald-300 text-xs">✕</span>
                               </div>
                             </th>
+                            )}
 
                             {/* Groupe : Tarifs Client Ariary */}
+                            {!collapsedGroups.tarifsClientAriary && (
                             <th
-                              colSpan={collapsedGroups.tarifsClientAriary ? 1 : (showPenalite ? 3 : 2)}
-                              className="px-4 py-2 text-center text-xs font-bold text-white uppercase bg-blue-800 border-x border-blue-600 cursor-pointer hover:bg-blue-700 transition-colors select-none"
+                              title="Masquer ce groupe (réaffichable avec les puces « Groupes »)"
+                              colSpan={(showPenalite ? 3 : 2)}
+                              className="px-4 py-2 text-center text-xs font-bold text-white uppercase bg-emerald-700 border-x border-emerald-500 cursor-pointer hover:bg-emerald-600 transition-colors select-none"
                               onClick={() => toggleGroup('tarifsClientAriary')}
                             >
                               <div className="flex items-center justify-center gap-2">
                                 <User size={13} aria-hidden="true" className="inline shrink-0" /> Tarifs Client Ariary
-                                <span className="text-blue-300 text-xs">{collapsedGroups.tarifsClientAriary ? '▶' : '▼'}</span>
+                                <span className="text-emerald-300 text-xs">✕</span>
                               </div>
                             </th>
+                            )}
 
                             {/* Groupe : Commissions */}
+                            {!collapsedGroups.commissions && (
                             <th
-                              colSpan={collapsedGroups.commissions ? 1 : 2}
-                              className="px-4 py-2 text-center text-xs font-bold text-white uppercase bg-green-700 border-x border-green-500 cursor-pointer hover:bg-green-600 transition-colors select-none"
+                              title="Masquer ce groupe (réaffichable avec les puces « Groupes »)"
+                              colSpan={2}
+                              className="px-4 py-2 text-center text-xs font-bold text-white uppercase bg-emerald-700 border-x border-emerald-500 cursor-pointer hover:bg-emerald-600 transition-colors select-none"
                               onClick={() => toggleGroup('commissions')}
                             >
                               <div className="flex items-center justify-center gap-2">
                                 <Coins size={13} aria-hidden="true" className="inline shrink-0" /> Commissions
-                                <span className="text-green-300 text-xs">{collapsedGroups.commissions ? '▶' : '▼'}</span>
+                                <span className="text-emerald-300 text-xs">✕</span>
                               </div>
                             </th>
+                            )}
 
                             </>)}
 
                             {/* Groupes Résa / Émission */}
                             {afficher.RESA && (
-                              <EnTeteGroupeBillet vue="RESA" showPenalite={showPenalite}
-                                collapsed={collapsedBillet.RESA}
-                                onToggle={() => setCollapsedBillet((p) => ({ ...p, RESA: !p.RESA }))} />
+                              <EnTeteGroupeBillet vue="RESA" showPenalite={showPenalite} collapsed={false} />
                             )}
                             {afficher.EMISSION && (
-                              <EnTeteGroupeBillet vue="EMISSION" showPenalite={showPenalite}
-                                collapsed={collapsedBillet.EMISSION}
-                                onToggle={() => setCollapsedBillet((p) => ({ ...p, EMISSION: !p.EMISSION }))} />
+                              <EnTeteGroupeBillet vue="EMISSION" showPenalite={showPenalite} collapsed={false} />
                             )}
 
                             {/* Services + Actions */}
@@ -1163,7 +1126,7 @@ export default function ProspectionDetail() {
                           {/* Ligne 2 : sous-en-têtes */}
                           <tr>
                             {/* Infos Vol */}
-                            {!collapsedGroups.infosVol ? (
+                            {!collapsedGroups.infosVol && (
                               <>
                                 <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[120px]">N° Vol</th>
                                 <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[150px]">Date Départ Pays</th>
@@ -1179,81 +1142,69 @@ export default function ProspectionDetail() {
                                 <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[130px]">Aéroport Départ</th>
                                 <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10 min-w-[130px]">Aéroport Arrivée</th>
                               </>
-                            ) : (
-                              <th className="px-4 py-2 text-center text-xs text-slate-400 italic bg-slate-800/10">— replié —</th>
                             )}
 
                             {afficher.PROSPECTION && (<>
                             {/* Devise + Taux */}
-                            <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-gray-100 min-w-[80px]">Devise</th>
-                            <th className="px-4 py-2 text-right text-xs font-semibold text-slate-500 bg-gray-100 min-w-[120px]">Taux</th>
+                            <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-emerald-50 min-w-[80px]">Devise</th>
+                            <th className="px-4 py-2 text-right text-xs font-semibold text-slate-500 bg-emerald-50 min-w-[120px]">Taux</th>
 
                             {/* Tarifs Cie Devise */}
-                            {!collapsedGroups.tarifsCieDevise ? (
+                            {!collapsedGroups.tarifsCieDevise && (
                               <>
-                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[130px]">PU Billet</th>
-                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[130px]">PU Service</th>
-                                {showPenalite && <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[130px]">PU Pénalité</th>}
-                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[140px]">Mt Billet</th>
-                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[140px]">Mt Service</th>
-                                {showPenalite && <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[140px]">Mt Pénalité</th>}
-                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[110px]">Taux Taxe</th>
-                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[130px]">Mt Taxe Devise</th>
-                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50 min-w-[130px]">Mt Taxe Ariary</th>
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50 min-w-[130px]">PU Billet</th>
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50 min-w-[130px]">PU Service</th>
+                                {showPenalite && <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50 min-w-[130px]">PU Pénalité</th>}
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50 min-w-[140px]">Mt Billet</th>
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50 min-w-[140px]">Mt Service</th>
+                                {showPenalite && <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50 min-w-[140px]">Mt Pénalité</th>}
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50 min-w-[110px]">Taux Taxe</th>
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50 min-w-[130px]">Mt Taxe Devise</th>
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50 min-w-[130px]">Mt Taxe Ariary</th>
                               </>
-                            ) : (
-                              <th className="px-4 py-2 text-center text-xs text-emerald-400 italic bg-emerald-50">— replié —</th>
                             )}
 
                             {/* Tarifs Cie Ariary */}
-                            {!collapsedGroups.tarifsCieAriary ? (
+                            {!collapsedGroups.tarifsCieAriary && (
                               <>
-                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100 min-w-[130px]">PU Billet Ar</th>
-                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100 min-w-[130px]">PU Service Ar</th>
-                                {showPenalite && <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100 min-w-[130px]">PU Pénalité Ar</th>}
-                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100 min-w-[140px]">Mt Billet Ar</th>
-                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100 min-w-[140px]">Mt Service Ar</th>
-                                {showPenalite && <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100 min-w-[140px]">Mt Pénalité Ar</th>}
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50 min-w-[130px]">PU Billet Ar</th>
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50 min-w-[130px]">PU Service Ar</th>
+                                {showPenalite && <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50 min-w-[130px]">PU Pénalité Ar</th>}
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50 min-w-[140px]">Mt Billet Ar</th>
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50 min-w-[140px]">Mt Service Ar</th>
+                                {showPenalite && <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50 min-w-[140px]">Mt Pénalité Ar</th>}
                               </>
-                            ) : (
-                              <th className="px-4 py-2 text-center text-xs text-emerald-500 italic bg-emerald-100">— replié —</th>
                             )}
 
                             {/* Tarifs Client Devise */}
-                            {!collapsedGroups.tarifsClientDevise ? (
+                            {!collapsedGroups.tarifsClientDevise && (
                               <>
-                                <th className="px-4 py-2 text-right text-xs font-semibold text-blue-700 bg-blue-50 min-w-[140px]">Mt Billet</th>
-                                <th className="px-4 py-2 text-right text-xs font-semibold text-blue-700 bg-blue-50 min-w-[140px]">Mt Service</th>
-                                {showPenalite && <th className="px-4 py-2 text-right text-xs font-semibold text-blue-700 bg-blue-50 min-w-[140px]">Mt Pénalité</th>}
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50 min-w-[140px]">Mt Billet</th>
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50 min-w-[140px]">Mt Service</th>
+                                {showPenalite && <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50 min-w-[140px]">Mt Pénalité</th>}
                               </>
-                            ) : (
-                              <th className="px-4 py-2 text-center text-xs text-blue-400 italic bg-blue-50">— replié —</th>
                             )}
 
                             {/* Tarifs Client Ariary */}
-                            {!collapsedGroups.tarifsClientAriary ? (
+                            {!collapsedGroups.tarifsClientAriary && (
                               <>
-                                <th className="px-4 py-2 text-right text-xs font-semibold text-blue-800 bg-blue-100 min-w-[140px]">Mt Billet Ar</th>
-                                <th className="px-4 py-2 text-right text-xs font-semibold text-blue-800 bg-blue-100 min-w-[140px]">Mt Service Ar</th>
-                                {showPenalite && <th className="px-4 py-2 text-right text-xs font-semibold text-blue-800 bg-blue-100 min-w-[140px]">Mt Pénalité Ar</th>}
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50 min-w-[140px]">Mt Billet Ar</th>
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50 min-w-[140px]">Mt Service Ar</th>
+                                {showPenalite && <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50 min-w-[140px]">Mt Pénalité Ar</th>}
                               </>
-                            ) : (
-                              <th className="px-4 py-2 text-center text-xs text-blue-500 italic bg-blue-100">— replié —</th>
                             )}
 
                             {/* Commissions */}
-                            {!collapsedGroups.commissions ? (
+                            {!collapsedGroups.commissions && (
                               <>
-                                <th className="px-4 py-2 text-right text-xs font-semibold text-green-700 bg-green-50 min-w-[150px]">Devise</th>
-                                <th className="px-4 py-2 text-right text-xs font-semibold text-green-700 bg-green-50 min-w-[150px]">Ariary</th>
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50 min-w-[150px]">Devise</th>
+                                <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50 min-w-[150px]">Ariary</th>
                               </>
-                            ) : (
-                              <th className="px-4 py-2 text-center text-xs text-green-400 italic bg-green-50">— replié —</th>
                             )}
                             </>)}
 
-                            {afficher.RESA && <SousEnTetesBillet vue="RESA" collapsed={collapsedBillet.RESA} showPenalite={showPenalite} />}
-                            {afficher.EMISSION && <SousEnTetesBillet vue="EMISSION" collapsed={collapsedBillet.EMISSION} showPenalite={showPenalite} />}
+                            {afficher.RESA && <SousEnTetesBillet vue="RESA" collapsed={false} showPenalite={showPenalite} />}
+                            {afficher.EMISSION && <SousEnTetesBillet vue="EMISSION" collapsed={false} showPenalite={showPenalite} />}
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100 bg-white">
@@ -1286,7 +1237,7 @@ export default function ProspectionDetail() {
                                 <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-700">{ligne.nombre || '—'}</td>
 
                                 {/* Infos Vol */}
-                                {!collapsedGroups.infosVol ? (
+                                {!collapsedGroups.infosVol && (
                                   <>
                                     <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-slate-700">{ligne.numeroVol || '—'}</td>
                                     <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">
@@ -1300,8 +1251,8 @@ export default function ProspectionDetail() {
                                     </td>
                                     <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">{ligne.typePassager || '—'}</td>
                                     <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">{ligne.avion || '—'}</td>
-                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">{(ligne as any).departVoyage?.ville || '—'}</td>
-                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">{(ligne as any).destinationVoyage?.ville || '—'}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">{ligne.departVoyage?.ville || '—'}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">{ligne.destinationVoyage?.ville || '—'}</td>
                                     <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">{ligne.itineraire || '—'}</td>
                                     
                                   <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">{ligne.dureeVol || '—'}</td>
@@ -1309,10 +1260,6 @@ export default function ProspectionDetail() {
                                   <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">{ligne.aeroportDepart || '—'}</td>
                                   <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-600">{ligne.aeroportArrivee || '—'}</td>
                                 </>
-                                ) : (
-                                  <td className="px-4 py-4 text-center text-xs text-slate-400 bg-slate-50 italic">
-                                    {ligne.numeroVol} · {ligne.itineraire}
-                                  </td>
                                 )}
 
                                 {afficher.PROSPECTION && (<>
@@ -1321,26 +1268,22 @@ export default function ProspectionDetail() {
                                 <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium">{fmtNombre(ligne.tauxEchange)}</td>
 
                                 {/* Tarifs Cie Devise */}
-                                {!collapsedGroups.tarifsCieDevise ? (
+                                {!collapsedGroups.tarifsCieDevise && (
                                   <>
-                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{fmtDevise(ligne.puBilletCompagnieDevise)}</td>
-                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{fmtDevise(ligne.puServiceCompagnieDevise)}</td>
-                                    {showPenalite && <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{fmtDevise(ligne.puPenaliteCompagnieDevise)}</td>}
-                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{fmtDevise(ligne.montantBilletCompagnieDevise)}</td>
-                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{fmtDevise(ligne.montantServiceCompagnieDevise)}</td>
-                                    {showPenalite && <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{fmtDevise(ligne.montantPenaliteCompagnieDevise)}</td>}
-                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{fmtNombre(ligne.tauxTaxe)}</td>
-                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{fmtDevise(ligne.montantTaxeDevise)}</td>
-                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-700">{fmtAriary(ligne.montantTaxeAriary)}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{fmtDevise(ligne.puBilletCompagnieDevise)}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{fmtDevise(ligne.puServiceCompagnieDevise)}</td>
+                                    {showPenalite && <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{fmtDevise(ligne.puPenaliteCompagnieDevise)}</td>}
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{fmtDevise(ligne.montantBilletCompagnieDevise)}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{fmtDevise(ligne.montantServiceCompagnieDevise)}</td>
+                                    {showPenalite && <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{fmtDevise(ligne.montantPenaliteCompagnieDevise)}</td>}
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{fmtNombre(ligne.tauxTaxe)}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{fmtDevise(ligne.montantTaxeDevise)}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{fmtAriary(ligne.montantTaxeAriary)}</td>
                                   </>
-                                ) : (
-                                  <td className="px-4 py-4 text-center text-xs text-emerald-600 bg-emerald-50 font-semibold">
-                                    {fmtDevise(ligne.montantBilletCompagnieDevise)} {ligne.devise}
-                                  </td>
                                 )}
 
                                 {/* Tarifs Cie Ariary */}
-                                {!collapsedGroups.tarifsCieAriary ? (
+                                {!collapsedGroups.tarifsCieAriary && (
                                   <>
                                     <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{fmtAriary(ligne.puBilletCompagnieAriary)}</td>
                                     <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{fmtAriary(ligne.puServiceCompagnieAriary)}</td>
@@ -1349,48 +1292,32 @@ export default function ProspectionDetail() {
                                     <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{fmtAriary(ligne.montantServiceCompagnieAriary)}</td>
                                     {showPenalite && <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{fmtAriary(ligne.montantPenaliteCompagnieAriary)}</td>}
                                   </>
-                                ) : (
-                                  <td className="px-4 py-4 text-center text-xs text-emerald-700 bg-emerald-100 font-semibold">
-                                    {fmtAriary(ligne.montantBilletCompagnieAriary)} Ar
-                                  </td>
                                 )}
 
                                 {/* Tarifs Client Devise */}
-                                {!collapsedGroups.tarifsClientDevise ? (
+                                {!collapsedGroups.tarifsClientDevise && (
                                   <>
-                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-blue-700">{fmtDevise(ligne.montantBilletClientDevise)}</td>
-                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-blue-700">{fmtDevise(ligne.montantServiceClientDevise)}</td>
-                                    {showPenalite && <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-blue-700">{fmtDevise(ligne.montantPenaliteClientDevise)}</td>}
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{fmtDevise(ligne.montantBilletClientDevise)}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{fmtDevise(ligne.montantServiceClientDevise)}</td>
+                                    {showPenalite && <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{fmtDevise(ligne.montantPenaliteClientDevise)}</td>}
                                   </>
-                                ) : (
-                                  <td className="px-4 py-4 text-center text-xs text-blue-600 bg-blue-50 font-semibold">
-                                    {fmtDevise(ligne.montantBilletClientDevise)} {ligne.devise}
-                                  </td>
                                 )}
 
                                 {/* Tarifs Client Ariary */}
-                                {!collapsedGroups.tarifsClientAriary ? (
+                                {!collapsedGroups.tarifsClientAriary && (
                                   <>
-                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-blue-800">{fmtAriary(ligne.montantBilletClientAriary)}</td>
-                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-blue-800">{fmtAriary(ligne.montantServiceClientAriary)}</td>
-                                    {showPenalite && <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-blue-800">{fmtAriary(ligne.montantPenaliteClientAriary)}</td>}
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{fmtAriary(ligne.montantBilletClientAriary)}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{fmtAriary(ligne.montantServiceClientAriary)}</td>
+                                    {showPenalite && <td className="px-4 py-4 whitespace-nowrap text-sm text-right font-medium text-emerald-800">{fmtAriary(ligne.montantPenaliteClientAriary)}</td>}
                                   </>
-                                ) : (
-                                  <td className="px-4 py-4 text-center text-xs text-blue-700 bg-blue-100 font-semibold">
-                                    {fmtAriary(ligne.montantBilletClientAriary)} Ar
-                                  </td>
                                 )}
 
                                 {/* Commissions */}
-                                {!collapsedGroups.commissions ? (
+                                {!collapsedGroups.commissions && (
                                   <>
-                                    <td className="px-4 py-4 whitespace-nowrap text-sm font-bold text-green-700 text-right">{fmtDevise(ligne.commissionEnDevise)}</td>
-                                    <td className="px-4 py-4 whitespace-nowrap text-sm font-bold text-green-600 text-right">{fmtAriary(ligne.commissionEnAriary)}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm font-bold text-emerald-800 text-right">{fmtDevise(ligne.commissionEnDevise)}</td>
+                                    <td className="px-4 py-4 whitespace-nowrap text-sm font-bold text-emerald-800 text-right">{fmtAriary(ligne.commissionEnAriary)}</td>
                                   </>
-                                ) : (
-                                  <td className="px-4 py-4 text-center text-xs text-green-700 bg-green-50 font-bold">
-                                    {fmtDevise(ligne.commissionEnDevise)} {ligne.devise}
-                                  </td>
                                 )}
 
                                 {/* <td className="px-4 py-4 whitespace-nowrap text-sm text-slate-700">
@@ -1403,12 +1330,12 @@ export default function ProspectionDetail() {
 
                                 {/* Prix Résa / Émission */}
                                 {afficher.RESA && (
-                                  <CellulesBillet vue="RESA" liee={billetParLigne.get(ligne.id)}
-                                    collapsed={collapsedBillet.RESA} showPenalite={showPenalite} loading={loadingBillets} />
+                                  <CellulesBillet vue="RESA" liee={billetParLigne.get(ligne.id)} tauxTaxe={ligne.tauxTaxe}
+                                    collapsed={false} showPenalite={showPenalite} loading={loadingBillets} />
                                 )}
                                 {afficher.EMISSION && (
-                                  <CellulesBillet vue="EMISSION" liee={billetParLigne.get(ligne.id)}
-                                    collapsed={collapsedBillet.EMISSION} showPenalite={showPenalite} loading={loadingBillets} />
+                                  <CellulesBillet vue="EMISSION" liee={billetParLigne.get(ligne.id)} tauxTaxe={ligne.tauxTaxe}
+                                    collapsed={false} showPenalite={showPenalite} loading={loadingBillets} />
                                 )}
 
                                 {/* Services */}

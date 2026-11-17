@@ -633,6 +633,7 @@ const Billet = () => {
                 onSubmit={handleSubmitEmission}
                 ligne={selectedLigneForEmission}
                 numeroBillet={billet?.numeroBillet || ''}
+                billetEntete={billet}
                 loading={ligneSubmitting === 'EMISSION'}
               />
             )}

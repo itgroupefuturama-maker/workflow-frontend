@@ -20,7 +20,14 @@ interface Colonne {
   penalite?: boolean;
   align?: 'left' | 'right' | 'center';
   minW?: string;
-  render: (b: BilletLigne) => ReactNode;
+  render: (b: BilletLigne, ctx: Contexte) => ReactNode;
+  /** Info-bulle de l'en-tête */
+  title?: string;
+}
+
+/** Données venant de la ligne de prospection (le taux de taxe n'existe pas sur la ligne billet) */
+interface Contexte {
+  tauxTaxe?: number;
 }
 
 const statutCell = (b: BilletLigne) => {
@@ -34,6 +41,24 @@ const statutCell = (b: BilletLigne) => {
 
 const n = (v: unknown) => (v === null || v === undefined || v === '' ? undefined : Number(v));
 
+/**
+ * Taxe de la ligne en devise (billet + service, sur les montants compagnie de la résa).
+ * Le backend ne stocke pas la taxe sur la ligne billet : elle est recalculée ici pour l'affichage
+ * (FRONTEND_PROMPT_CALCUL_PRIX_BACKEND.md). Les prix client renvoyés par l'API l'incluent déjà.
+ */
+const taxeDevise = (b: BilletLigne, ctx: Contexte) => {
+  const t = n(ctx.tauxTaxe);
+  if (t === undefined) return undefined;
+  return ((n(b.puResaMontantBilletCompagnieDevise) ?? 0) + (n(b.puResaMontantServiceCompagnieDevise) ?? 0)) * t / 100;
+};
+const taxeAriary = (b: BilletLigne, ctx: Contexte, taux: unknown) => {
+  const d = taxeDevise(b, ctx);
+  const tx = n(taux);
+  return d === undefined || !tx ? undefined : Math.round(d * tx);
+};
+const TITRE_TAXE = 'Taux de taxe de la prospection × (billet + service compagnie). Déjà inclus dans les prix client.';
+const TITRE_DEVISE_EMISSION = "À l'émission, seul le taux change : prix en devise repris de la résa.";
+
 // ─── Colonnes RÉSA ───────────────────────────────────────────
 const COLONNES_RESA: Colonne[] = [
   { key: 'statut', label: 'Statut billet', align: 'left', minW: 'min-w-[160px]', render: statutCell },
@@ -45,6 +70,8 @@ const COLONNES_RESA: Colonne[] = [
   { key: 'mtBilletCieAr', label: 'Mt Billet Cie Ar', render: (b) => fmtAriary(n(b.puResaMontantBilletCompagnieAriary) as number) },
   { key: 'mtServiceCieAr', label: 'Mt Service Cie Ar', render: (b) => fmtAriary(n(b.puResaMontantServiceCompagnieAriary) as number) },
   { key: 'mtPenCieAr', label: 'Mt Pénalité Cie Ar', penalite: true, render: (b) => fmtAriary(n(b.puResaMontantPenaliteCompagnieAriary) as number) },
+  { key: 'taxe', label: 'Taxe', title: TITRE_TAXE, render: (b, ctx) => { const v = taxeDevise(b, ctx); return v === undefined ? '—' : fmtDevise(v); } },
+  { key: 'taxeAr', label: 'Taxe Ar', title: TITRE_TAXE, render: (b, ctx) => { const v = taxeAriary(b, ctx, b.resaTauxEchange); return v === undefined ? '—' : fmtAriary(v); } },
   { key: 'mtBilletCli', label: 'Mt Billet Client', render: (b) => fmtDevise(n(b.puResaMontantBilletClientDevise) as number) },
   { key: 'mtServiceCli', label: 'Mt Service Client', render: (b) => fmtDevise(n(b.puResaMontantServiceClientDevise) as number) },
   { key: 'mtBilletCliAr', label: 'Mt Billet Client Ar', render: (b) => fmtAriary(n(b.puResaMontantBilletClientAriary) as number) },
@@ -76,12 +103,18 @@ const COLONNES_EMISSION: Colonne[] = [
   },
   { key: 'taux', label: 'Taux Émission', render: (b) => fmtNombre(n(b.emissionTauxChange) as number) },
   { key: 'ecart', label: 'Écart / Résa', render: ecartTaux },
+  { key: 'puBilletCie', label: 'PU Billet Cie', title: TITRE_DEVISE_EMISSION, render: (b) => fmtDevise(n(b.puResaBilletCompagnieDevise) as number) },
+  { key: 'puServiceCie', label: 'PU Service Cie', title: TITRE_DEVISE_EMISSION, render: (b) => fmtDevise(n(b.puResaServiceCompagnieDevise) as number) },
+  { key: 'puPenCie', label: 'PU Pénalité Cie', penalite: true, title: TITRE_DEVISE_EMISSION, render: (b) => fmtDevise(n(b.puResaPenaliteCompagnieDevise) as number) },
   { key: 'puBilletCieAr', label: 'PU Billet Cie Ar', render: (b) => fmtAriary(n(b.puEmissionBilletCompagnieAriary) as number) },
   { key: 'puServiceCieAr', label: 'PU Service Cie Ar', render: (b) => fmtAriary(n(b.puEmissionServiceCompagnieAriary) as number) },
   { key: 'puPenCieAr', label: 'PU Pénalité Cie Ar', penalite: true, render: (b) => fmtAriary(n(b.puEmissionPenaliteCompagnieAriary) as number) },
   { key: 'mtBilletCieAr', label: 'Mt Billet Cie Ar', render: (b) => fmtAriary(n(b.emissionMontantBilletCompagnieAriary) as number) },
   { key: 'mtServiceCieAr', label: 'Mt Service Cie Ar', render: (b) => fmtAriary(n(b.emissionMontantServiceCompagnieAriary) as number) },
   { key: 'mtPenCieAr', label: 'Mt Pénalité Cie Ar', penalite: true, render: (b) => fmtAriary(n(b.emissionMontantPenaliteCompagnieAriary) as number) },
+  { key: 'taxeAr', label: 'Taxe Ar', title: TITRE_TAXE, render: (b, ctx) => { const v = taxeAriary(b, ctx, b.emissionTauxChange); return v === undefined ? '—' : fmtAriary(v); } },
+  { key: 'mtBilletCli', label: 'Mt Billet Client', title: TITRE_DEVISE_EMISSION, render: (b) => fmtDevise(n(b.puResaMontantBilletClientDevise) as number) },
+  { key: 'mtServiceCli', label: 'Mt Service Client', title: TITRE_DEVISE_EMISSION, render: (b) => fmtDevise(n(b.puResaMontantServiceClientDevise) as number) },
   { key: 'mtBilletCliAr', label: 'Mt Billet Client Ar', render: (b) => fmtAriary(n(b.emissionMontantBilletClientAriary) as number) },
   { key: 'mtServiceCliAr', label: 'Mt Service Client Ar', render: (b) => fmtAriary(n(b.emissionMontantServiceClientAriary) as number) },
   { key: 'mtPenCliAr', label: 'Mt Pénalité Client Ar', penalite: true, render: (b) => fmtAriary(n(b.emissionMontantPenaliteClientAriary) as number) },
@@ -113,18 +146,18 @@ const alignCls = (a: Colonne['align'] = 'right') => (a === 'left' ? 'text-left' 
 // ─── En-tête ligne 1 (groupe) ────────────────────────────────
 export function EnTeteGroupeBillet({
   vue, collapsed, onToggle, showPenalite,
-}: { vue: VueBillet; collapsed: boolean; onToggle: () => void; showPenalite: boolean }) {
+}: { vue: VueBillet; collapsed: boolean; onToggle?: () => void; showPenalite: boolean }) {
   const s = STYLE[vue];
   const Icon = s.icon;
   return (
     <th
       colSpan={collapsed ? 1 : colonnesVisibles(vue, showPenalite).length}
       onClick={onToggle}
-      className={`px-4 py-2 text-center text-xs font-bold uppercase text-white border-x cursor-pointer transition-colors select-none ${s.group}`}
+      className={`px-4 py-2 text-center text-xs font-bold uppercase text-white border-x transition-colors select-none ${onToggle ? 'cursor-pointer' : ''} ${s.group}`}
     >
       <div className="flex items-center justify-center gap-2">
         <Icon size={13} aria-hidden="true" className="inline shrink-0" /> {s.titre}
-        <span className={`text-xs ${s.chevron}`}>{collapsed ? '▶' : '▼'}</span>
+        {onToggle && <span className={`text-xs ${s.chevron}`}>{collapsed ? '▶' : '▼'}</span>}
       </div>
     </th>
   );
@@ -141,7 +174,7 @@ export function SousEnTetesBillet({
   return (
     <>
       {colonnesVisibles(vue, showPenalite).map((c) => (
-        <th key={c.key} className={`px-4 py-2 text-xs font-semibold ${alignCls(c.align)} ${c.minW ?? 'min-w-[130px]'} ${s.sub}`}>
+        <th key={c.key} title={c.title} className={`px-4 py-2 text-xs font-semibold ${alignCls(c.align)} ${c.minW ?? 'min-w-[130px]'} ${s.sub}`}>
           {c.label}
         </th>
       ))}
@@ -151,13 +184,15 @@ export function SousEnTetesBillet({
 
 // ─── Cellules d'une ligne de prospection ─────────────────────
 export function CellulesBillet({
-  vue, liee, collapsed, showPenalite, loading,
+  vue, liee, collapsed, showPenalite, loading, tauxTaxe,
 }: {
   vue: VueBillet;
   liee?: BilletLigneLiee;
   collapsed: boolean;
   showPenalite: boolean;
   loading?: boolean;
+  /** Taux de taxe de la ligne de prospection (en %) */
+  tauxTaxe?: number;
 }) {
   const s = STYLE[vue];
   const cols = colonnesVisibles(vue, showPenalite);
@@ -190,7 +225,7 @@ export function CellulesBillet({
     <>
       {cols.map((c, i) => (
         <td key={c.key} className={`px-4 py-4 whitespace-nowrap text-sm font-medium ${alignCls(c.align)} ${s.cell}`}>
-          {c.render(b)}
+          {c.render(b, { tauxTaxe })}
           {i === 0 && autres > 0 && (
             <span
               className="ml-1.5 rounded bg-slate-100 px-1 text-[10px] font-semibold text-slate-500"

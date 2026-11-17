@@ -328,5 +328,22 @@ export const useBilletPassagerPdf = () => {
     }
   };
 
-  return { generate, preview, loading };
+  /** Génère le PDF en mémoire et le renvoie comme fichier (ex. pour le joindre comme e-billet) */
+  const generateFile = (
+    data: BilletPassagerData,
+    styleId: BilletStyleId = 'elegant',
+    nomFichier = 'billet.pdf',
+  ): File | null => {
+    setLoading(true);
+    try {
+      const style = BILLET_STYLES[styleId];
+      const doc = generateBilletPassagerPdf(data, style, config.getLogo(), undefined, { returnDoc: true });
+      if (!doc) return null;
+      return new File([doc.output('blob')], nomFichier, { type: 'application/pdf' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return { generate, preview, generateFile, loading };
 };

@@ -309,9 +309,7 @@ export default function ReprogrammationModal({
     services: services.map((s) => ({ serviceSpecifiqueId: s.serviceSpecifiqueId, valeur: s.valeur })),
     puResaBilletCompagnieDevise: parseMontant(puBillet),
     puResaServiceCompagnieDevise: parseMontant(puService),
-    // Même convention que ReservationModal : montant = PU × nombre de passagers, en devise
-    puResaMontantBilletCompagnieDevise: parseMontant(puBillet) * nbPassagers,
-    puResaMontantServiceCompagnieDevise: parseMontant(puService) * nbPassagers,
+    // puResaMontant… : calculés par le backend (FRONTEND_PROMPT_CALCUL_PRIX_BACKEND.md)
     frais: fraisPayload,
   });
 

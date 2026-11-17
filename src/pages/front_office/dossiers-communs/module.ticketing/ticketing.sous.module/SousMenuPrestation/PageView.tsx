@@ -408,7 +408,7 @@ export default function PageView() {
                           <table className="min-w-full divide-y divide-slate-100">
                             <thead>
                               <tr className="bg-slate-200">
-                                {['N° Billet', 'N° Devis', 'N° En-tête', 'Statut', 'Comm. appl.', 'Nb lignes', 'Créé le', 'Actions'].map(h => (
+                                {['N° Billet', 'N° Devis', 'N° En-tête', 'N° Dos Ref', 'Statut', 'Comm. appl.', 'Nb lignes', 'Créé le', 'Actions'].map(h => (
                                   <th key={h} className="px-5 py-3.5 text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">
                                     {h}
                                   </th>
@@ -416,7 +416,7 @@ export default function PageView() {
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-50">
-                              <SkeletonTableRows columns={8} />
+                              <SkeletonTableRows columns={9} />
                             </tbody>
                           </table>
                         </div>
@@ -440,7 +440,7 @@ export default function PageView() {
                           <table className="min-w-full divide-y divide-slate-100">
                             <thead>
                               <tr className="bg-slate-200">
-                                {['N° Billet', 'N° Devis', 'N° En-tête', 'Statut', 'Comm. appl.', 'Nb lignes', 'Créé le', 'Actions'].map(h => (
+                                {['N° Billet', 'N° Devis', 'N° En-tête', 'N° Dos Ref', 'Statut', 'Comm. appl.', 'Nb lignes', 'Créé le', 'Actions'].map(h => (
                                   <th key={h} className="px-5 py-3.5 text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">
                                     {h}
                                   </th>
@@ -471,6 +471,15 @@ export default function PageView() {
                                   </td>
                                   <td className="px-5 py-3.5 whitespace-nowrap text-sm text-slate-500">
                                     {billet.prospectionEntete?.numeroEntete || '—'}
+                                  </td>
+                                  <td className="px-5 py-3.5 text-xs font-mono text-slate-600">
+                                    {billet.numerosDosRef?.length ? (
+                                      <div className="flex max-w-[260px] flex-wrap gap-1" title={billet.numerosDosRef.join(', ')}>
+                                        {billet.numerosDosRef.map((ref) => (
+                                          <span key={ref} className="rounded bg-slate-100 px-1.5 py-0.5 font-semibold">{ref}</span>
+                                        ))}
+                                      </div>
+                                    ) : '—'}
                                   </td>
                                   <td className="px-5 py-3.5 whitespace-nowrap uppercase">
                                     <span className={`inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-full border ${statutBadge(billet.statut)}`}>

@@ -1,0 +1,828 @@
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import axios from '../../service/Axios';
+import type { ModePaiement } from './prospectionsLignesSlice';
+import type { Devis } from './devisSlice';
+
+// Payload de POST /billet/:id/annuler : une ligne par appel, avant comme après émission
+export type TypeAnnulation = 'SIMPLE' | 'COM' | 'PEN' | 'COM_PEN';
+
+export interface AnnulationBilletPayload {
+  id: string;                          // billetLigneId à annuler
+  rasionAnnulationId: string;          // (sic) nom attendu par le back
+  conditionAnnul: string;              // texte saisi par l'agent
+  type: TypeAnnulation;
+  tauxChange: number;
+  resaCommissionEnDevise?: number;     // COM / COM_PEN
+  resaCommissionEnAriary?: number;
+  puResaPenaliteCompagnieDevise?: number;        // PEN / COM_PEN
+  puResaMontantPenaliteCompagnieDevise?: number;
+}
+
+export interface ServiceSpecifique {
+  id: string;
+  code: string;
+  libelle: string;
+  type: 'SERVICE' | 'SPECIFIQUE' | null;  // ← null possible (ex: SP-12)
+  typeService: string;                     // ← champ manquant !
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ────────────────────────────────────────────────
+// Interfaces
+// ────────────────────────────────────────────────
+export interface ReservationPayload {
+  passagers: Array<{
+    clientbeneficiaireInfoId: string;
+    clientBeneficiaireId: string;
+    servicePreferenceIds: string[];
+  }>;
+  nombre: number;
+  reservation: string;
+  puResaBilletCompagnieDevise: number;
+  puResaServiceCompagnieDevise: number;
+  puResaPenaliteCompagnieDevise: number;
+  devise: string;
+  resaTauxEchange: number;
+  // Calculés par le backend (FRONTEND_PROMPT_CALCUL_PRIX_BACKEND.md) : ignorés s'ils sont envoyés
+  puResaMontantBilletCompagnieDevise?: number;
+  puResaMontantServiceCompagnieDevise?: number;
+  puResaMontantPenaliteCompagnieDevise?: number;
+  conditionModif?: string | null;
+  conditionAnnul?: string | null;
+  /** Capture du n° de réservation sur la plateforme de la compagnie */
+  preuveResa?: File | null;
+  /** Preuve que le client a accepté la réservation */
+  preuveAcceptationClient?: File | null;
+}
+
+export interface Fournisseur {
+  id: string;
+  code: string;
+  libelle: string;
+  dateApplication: string;
+  status: string;
+  dateActivation: string;
+  dateDesactivation: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Prestation {
+  id: string;
+  numeroDos: string;
+  status: string;
+  dossierCommunColabId: string;
+  dossierId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProspectionEntete {
+  id: string;
+  prestationId: string;
+  numeroEntete: string;
+  fournisseurId: string;
+  credit: string;
+  typeVol: string;
+  commissionPropose: number;
+  commissionAppliquer: number;
+  preuveClient: string | null;
+  createdAt: string;
+  updatedAt: string;
+  prestation: Prestation;
+  fournisseur: Fournisseur;
+}
+
+export interface ProspectionLigne {
+  id: string;
+  numeroDosRef: string;
+  numeroVol: string | null;
+  prospectionEnteteId: string;
+  status: string;
+  avion: string;
+  itineraire: string;
+  departId: string;
+  nombre: number;
+  destinationId: string;
+  classe: string;
+  typePassager: string;
+  dateHeureDepart: string;
+  dateHeureArrive: string;
+  aeroportDepart: string;
+  aeroportArrivee: string;
+  dureeVol: string;
+  dureeEscale: string;
+  conditionModif: string | null;
+  conditionAnnul: string | null;
+  puBilletCompagnieDevise: number;
+  puServiceCompagnieDevise: number;
+  puPenaliteCompagnieDevise: number;
+  devise: string;
+  tauxEchange: number;
+  puBilletCompagnieAriary: number;
+  puServiceCompagnieAriary: number;
+  puPenaliteCompagnieAriary: number;
+  montantBilletCompagnieDevise: number;
+  montantServiceCompagnieDevise: number;
+  montantPenaliteCompagnieDevise: number;
+  montantBilletCompagnieAriary: number;
+  montantServiceCompagnieAriary: number;
+  montantPenaliteCompagnieAriary: number;
+  montantBilletClientDevise: number;
+  montantServiceClientDevise: number;
+  montantPenaliteClientDevise: number;
+  montantBilletClientAriary: number;
+  montantServiceClientAriary: number;
+  montantPenaliteClientAriary: number;
+  commissionEnDevise: number;
+  commissionEnAriary: number;
+  dateDevis: string;
+  devisId: string;
+  createdAt: string;
+  updatedAt: string;
+  modePaiement: ModePaiement;
+  tauxTaxe: number;
+  montantTaxeDevise: number;
+  montantTaxeAriary: number;
+  serviceProspectionLigne: ServiceProspectionLigne[];
+  // Relation incluse par l'API (même shape que côté module Devis/Attestation)
+  destinationVoyage?: {
+    ville: string;
+    pays: {
+      pays: string;
+      paysVoyage?: {
+        exigenceVoyage: {
+          id: string;
+          type: string;
+          description: string;
+          perimetre: string;
+        };
+      }[];
+    };
+  };
+}
+
+export interface ServiceProspectionLigne {
+  id: string;
+  prospectionLigneId: string;
+  serviceSpecifiqueId: string;
+  valeur: string;
+  createdAt: string;
+  updatedAt: string;
+  serviceSpecifique: ServiceSpecifique;   // ← plus optionnel, toujours présent
+}
+
+// Réponse d'Odoo à l'étape en cours de la ligne (vente si FAIT, achat si CLOTURER) ; repart à AUCUN
+// quand le statut change. Sur l'entête : agrégat des lignes. Calculé par le backend, jamais écrit par le front.
+export type EtatOdoo = 'AUCUN' | 'ENVOYE' | 'VALIDE' | 'REJETE';
+
+// Compteurs par état de ligne (statut × etatOdoo), renvoyés avec l'entête
+export interface ResumeLignes {
+  total: number;
+  aReserver: number;
+  aApprouver: number;
+  venteEnAttente: number;
+  venteRejetee: number;
+  aSaisir: number;
+  aEmettre: number;
+  achatEnAttente: number;
+  achatRejete: number;
+  emises: number;
+  annulees: number;
+}
+
+export interface BilletLigne {
+  id: string;
+  statut: string;
+  statusLigne: string;
+  origineLine: string | null;
+  etatOdoo?: EtatOdoo;
+  // Dernier rejet d'Odoo
+  motifRejet?: string | null;
+  rejeteAt?: string | null;
+  odooSaleId?: string | null;
+  odooPurchaseId?: string | null;
+  referenceLine: string;
+  /** N° Dos Ref de la ligne de prospection (à plat, renvoyé par le backend) */
+  numeroDosRef?: string | null;
+  prospectionLigneId: string;
+  billetEnteteId: string;
+  nombre: number;
+  reservation: string | null;
+  puResaBilletCompagnieDevise?: number;
+  puResaServiceCompagnieDevise?: number;
+  puResaPenaliteCompagnieDevise?: number;
+  devise?: string;
+  resaTauxEchange?: number;
+  puResaBilletCompagnieAriary?: number;
+  puResaServiceCompagnieAriary?: number;
+  puResaPenaliteCompagnieAriary?: number;
+  puResaBilletClientDevise?: number;
+  puResaServiceClientDevise?: number;
+  puResaPenaliteClientDevise?: number;
+  puResaBilletClientAriary?: number;
+  puResaServiceClientAriary?: number;
+  puResaPenaliteClientAriary?: number;
+  conditionModif?: string | null;
+  conditionAnnul?: string | null;
+  raisonAnnul?: string | null;
+  puResaMontantBilletCompagnieDevise?: number;
+  puResaMontantServiceCompagnieDevise?: number;
+  puResaMontantPenaliteCompagnieDevise?: number;
+  puResaMontantBilletCompagnieAriary?: number;
+  puResaMontantServiceCompagnieAriary?: number;
+  puResaMontantPenaliteCompagnieAriary?: number;
+  puResaMontantBilletClientDevise?: number;
+  puResaMontantServiceClientDevise?: number;
+  puResaMontantPenaliteClientDevise?: number;
+  puResaMontantBilletClientAriary?: number;
+  puResaMontantServiceClientAriary?: number;
+  puResaMontantPenaliteClientAriary?: number;
+  resaCommissionEnDevise?: number;
+  resaCommissionEnAriary?: number;
+  emissionTauxChange?: number;
+  puEmissionBilletCompagnieAriary?: number;
+  puEmissionServiceCompagnieAriary?: number;
+  puEmissionPenaliteCompagnieAriary?: number;
+  puEmissionBilletClientAriary?: number;
+  puEmissionServiceClientAriary?: number;
+  puEmissionPenaliteClientAriary?: number;
+  emissionMontantBilletCompagnieAriary?: number;
+  emissionMontantServiceCompagnieAriary?: number;
+  emissionMontantPenaliteCompagnieAriary?: number;
+  emissionMontantBilletClientAriary?: number;
+  emissionMontantServiceClientAriary?: number;
+  emissionMontantPenaliteClientAriary?: number;
+  emissionCommissionEnDevise?: number;
+  emissionCommissionEnAriary?: number;
+  preuveResa: string;
+  /** Preuve d'acceptation de la réservation par le client (null sur les anciennes lignes) */
+  preuveAcceptationClient?: string | null;
+  prospectionLigne: ProspectionLigne;
+  createdAt: string;
+  updatedAt: string;
+  billet: Array<{
+    id: string;
+    clientbeneficiaireInfoId: string;
+    billetLigneId: string;
+    pjBillet: string | null;
+    servicePreference: string[];
+    statut: string;
+    numeroBillet: string | null;
+    createdAt: string;
+    updatedAt: string;
+    clientbeneficiaireInfo: {
+      id: string;
+      nom: string;
+      prenom: string;
+      nationalite: string;
+      document: string;
+      referenceDoc: string;
+      typeDoc: string;
+      dateDelivranceDoc: string;
+      dateValiditeDoc: string | null;
+      referenceCin: string;
+      cin: string | null;
+      dateDelivranceCin: string | null;
+      dateValiditeCin: string | null;
+      clientType: string;
+      whatsapp: string;
+      tel: string;
+      clientbeneficiaireId: string;
+      statut: string;
+      createdAt: string;
+      updatedAt: string;
+    };
+  }> | [];
+  // Historique des reprogrammations ayant produit cette ligne (plus récentes d'abord)
+  reprogrammations?: BilletLigneReprogrammation[];
+}
+
+// ─── Reprogrammation : frais et prise en charge ───────────────
+// Voir FRONTEND_PROMPT_REPROGRAMMATION_FRAIS.md. Les Decimal sont renvoyés en chaîne par l'API :
+// toujours passer par Number(...) avant affichage ou calcul.
+export type TypeFraisReprogrammation = 'COMMISSION' | 'SERVICE' | 'PENALITE' | 'SURCLASSEMENT';
+export type ALaChargeDe = 'CLIENT' | 'AGENCE';
+
+export interface FraisReprogrammationPayload {
+  typeFrais: TypeFraisReprogrammation;
+  montantDevise: number;
+  montantAriary: number;
+  aLaChargeDe: ALaChargeDe;
+}
+
+export interface BilletLigneReprogrammationFrais {
+  id: string;
+  typeFrais: TypeFraisReprogrammation;
+  montantDevise: string;
+  montantAriary: string;
+  aLaChargeDe: ALaChargeDe;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface BilletLigneReprogrammation {
+  id: string;
+  billetLigneId: string;
+  ancienneBilletLigneId: string;
+  raisonAnnulationId: string | null;
+  raisonAnnulation?: { id: string; libelle: string } | null;
+  tauxEchange: string;
+  devise: string;
+  ancienneClasse: string;
+  nouvelleClasse: string;
+  ancienneDateHeureDepart: string | null;
+  nouvelleDateHeureDepart: string | null;
+  ancienneDateHeureArrive: string | null;
+  nouvelleDateHeureArrive: string | null;
+  createdById: string;
+  createdBy?: { id: string; nom: string; prenom: string; email: string };
+  createdAt: string;
+  updatedAt: string;
+  frais: BilletLigneReprogrammationFrais[];
+}
+
+export interface ReprogrammationPayload {
+  id: string;
+  conditionModif: string;
+  raisonAnnulationId: string | null;
+  resaTauxEchange: number;
+  devise: string;
+  classe: string;
+  dateHeureDepart?: string;
+  dateHeureArrive?: string;
+  passagers: Array<{
+    clientbeneficiaireInfoId: string;
+    clientBeneficiaireId: string;
+    servicePreferenceIds: string[];
+  }>;
+  services: Array<{ serviceSpecifiqueId: string; valeur: string }>;
+  puResaBilletCompagnieDevise: number;
+  puResaServiceCompagnieDevise: number;
+  // Calculés par le backend : ignorés s'ils sont envoyés
+  puResaMontantBilletCompagnieDevise?: number;
+  puResaMontantServiceCompagnieDevise?: number;
+  frais: FraisReprogrammationPayload[];
+}
+
+export interface BilletEntete {
+  id: string;
+  numeroBillet: string;
+  devisId: string;
+  prospectionEnteteId: string;
+  statut: string;
+  // Le total de la compagnie peut être 0
+  totalCompagnie: number;
+  commissionPropose: number;
+  commissionAppliquer: number;
+  totalCommission: number;
+  raisonAnnul: string | null;
+  createdAt: string;
+  updatedAt: string;
+  prospectionEntete: ProspectionEntete;
+  billetLigne: BilletLigne[];
+  passager: any[]; // à typer plus tard si besoin
+  // Relation devis incluse par l'API (même pattern que prospectionEntete ci-dessus)
+  devis?: Devis;
+  // 10 derniers envois à Odoo, du plus récent au plus ancien
+  odooEnvois?: OdooEnvoi[];
+  etatOdoo?: EtatOdoo;
+  resumeLignes?: ResumeLignes;
+  /** N° Dos Ref des lignes du billet (GET /billet/dossier-commun/:id), sans doublon */
+  numerosDosRef?: string[];
+}
+
+export interface EmissionPayload {
+  emissionTauxChange: number;
+  numeroBillet: string;                  // ← NOUVEAU
+  pjBillet?: File;                       // ← Fichier PDF optionnel (selon besoin)
+  puEmissionBilletCompagnieAriary?: number;
+  puEmissionServiceCompagnieAriary?: number;
+  puEmissionPenaliteCompagnieAriary?: number;
+  puEmissionBilletClientAriary?: number;
+  puEmissionServiceClientAriary?: number;
+  puEmissionPenaliteClientAriary?: number;
+  emissionMontantBilletCompagnieAriary?: number;
+  emissionMontantServiceCompagnieAriary?: number;
+  emissionMontantPenaliteCompagnieAriary?: number;
+  emissionMontantBilletClientAriary?: number;
+  emissionMontantServiceClientAriary?: number;
+  emissionMontantPenaliteClientAriary?: number;
+}
+
+interface BilletState {
+  current: BilletEntete | null;
+  list: BilletEntete[];               // ← NOUVEAU : liste des billets du dossier
+  loadingList: boolean;               // ← séparé du loading du current
+  errorList: string | null;
+  /** Dossier auquel appartient `list` (évite d'afficher les billets d'un autre dossier). */
+  listDossierId: string | null;
+  /** Horodatage (ms) du dernier chargement réussi de `list`, pour savoir si elle est récente. */
+  listFetchedAt: number | null;
+  loading: boolean;
+  error: string | null;
+}
+
+const initialState: BilletState = {
+  current: null,
+  list: [],
+  loadingList: false,
+  errorList: null,
+  listDossierId: null,
+  listFetchedAt: null,
+  loading: false,
+  error: null,
+};
+
+// ────────────────────────────────────────────────
+// Thunk : Récupérer un billet par ID
+// ────────────────────────────────────────────────
+
+// billetSlice.ts
+
+export const fetchBilletById = createAsyncThunk(
+  'billet/fetchById',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`/billet/entete/${id}/devis`);
+
+      // Extraction ultra-sécurisée
+      // On cherche l'ID soit dans response.data.data.id, soit dans response.data.id
+      const billetData = response.data?.data?.id ? response.data.data :
+                         response.data?.id ? response.data : null;
+
+      if (!billetData || !billetData.id) {
+        console.error("Format de données invalide. Contenu de response.data:", response.data);
+        throw new Error('Aucun billet trouvé dans la réponse du serveur');
+      }
+
+      return billetData as BilletEntete;
+    } catch (err: any) {
+      console.error('Erreur capturée dans fetchBilletById:', err);
+      return rejectWithValue(err.response?.data?.message || err.message);
+    }
+  }
+);
+
+// Thunk : Ajouter/réserver une ligne
+export const addReservationToLigne = createAsyncThunk(
+  'billet/addReservationToLigne',
+  async (
+    { ligneId, payload }: { ligneId: string; payload: ReservationPayload },
+    { rejectWithValue }
+  ) => {
+    try {
+      const formData = new FormData();
+
+      // Champs JSON sérialisés
+      formData.append('passagers', JSON.stringify(payload.passagers));
+      formData.append('nombre', payload.nombre.toString());
+      formData.append('reservation', payload.reservation);
+      formData.append('puResaBilletCompagnieDevise', payload.puResaBilletCompagnieDevise.toString());
+      formData.append('puResaServiceCompagnieDevise', payload.puResaServiceCompagnieDevise.toString());
+      formData.append('puResaPenaliteCompagnieDevise', payload.puResaPenaliteCompagnieDevise.toString());
+      formData.append('devise', payload.devise);
+      formData.append('resaTauxEchange', payload.resaTauxEchange.toString());
+      // puResaMontant… : calculés par le backend, plus envoyés
+      if (payload.conditionModif != null) formData.append('conditionModif', payload.conditionModif);
+      if (payload.conditionAnnul != null) formData.append('conditionAnnul', payload.conditionAnnul);
+
+      // Fichier image optionnel
+      if (payload.preuveAcceptationClient) {
+        formData.append('preuveAcceptationClient', payload.preuveAcceptationClient);
+      }
+      if (payload.preuveResa) {
+        formData.append('preuveResa', payload.preuveResa);
+      }
+
+      const response = await axios.put(
+        `/billet/ligne/${ligneId}/addreservation`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+      );
+
+      if (!response.data?.success) {
+        // Ex. « La preuve d'acceptation du client est obligatoire » : message à afficher tel quel
+        throw new Error(response.data?.message || 'Échec de la réservation');
+      }
+      return response.data;
+    } catch (err: any) {
+      return rejectWithValue(
+        err.response?.data?.message || err.message || "Erreur lors de l'ajout de la réservation"
+      );
+    }
+  }
+);
+
+// ────────────────────────────────────────────────
+// Envois à Odoo : le front ne change plus le statut du billet, il soumet le dossier
+// et Odoo fait avancer le statut plus tard (voir FRONTEND_PROMPT_ODOO_BILLET_V2.md).
+// Le backend n'attend que l'accusé de réception d'Odoo (≈ 10 s max) ; 502 = non reçu, à renvoyer.
+// ────────────────────────────────────────────────
+export type OdooEventType = 'TICKET_SALE_ORDER_SUBMITTED' | 'TICKET_PURCHASE_ORDER_SUBMITTED';
+export type OdooEnvoiStatut = 'EN_COURS' | 'RECU' | 'ECHEC';
+
+export interface OdooEnvoi {
+  id: string;
+  eventType: OdooEventType;
+  eventId?: string;
+  sequence: number;
+  statut: OdooEnvoiStatut;
+  httpStatus: number | null;
+  erreur: string | null;
+  nombreTentatives: number;
+  referenceBcClient?: string | null;
+  valideAt?: string | null;
+  odooReference?: string | null;
+  commentaireOdoo?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OdooSoumissionResponse {
+  envoi: OdooEnvoi;
+  // Un clic peut produire plusieurs envois (création, modification, annulation de lignes)
+  envois?: OdooEnvoi[];
+  billet: BilletEntete;
+}
+
+const odooErrorMessage = (err: any, fallback: string): string =>
+  err.response?.data?.message || err.message || fallback;
+
+// « Approuver » : envoie la vente à Odoo (PUT /billet/:id/a-approuver), le statut reste CREER
+export const soumettreVenteOdoo = createAsyncThunk<
+  OdooSoumissionResponse,
+  { enteteId: string },
+  { rejectValue: string }
+>('billet/soumettreVenteOdoo', async ({ enteteId }, { rejectWithValue }) => {
+  try {
+    const response = await axios.put(`/billet/${enteteId}/a-approuver`);
+    if (response.data?.success === false) throw new Error(response.data?.message || 'Échec de l\'envoi à Odoo');
+    return (response.data?.data ?? response.data) as OdooSoumissionResponse;
+  } catch (err: any) {
+    return rejectWithValue(odooErrorMessage(err, 'Erreur lors de l\'envoi de la vente à Odoo'));
+  }
+});
+
+// « Émettre » : envoie l'achat à Odoo (PUT /billet/:id/emettre), le statut reste BC_CLIENT_A_APPROUVER
+export const soumettreAchatOdoo = createAsyncThunk<
+  OdooSoumissionResponse,
+  { billetId: string; referenceBcClient: string },
+  { rejectValue: string }
+>('billet/soumettreAchatOdoo', async ({ billetId, referenceBcClient }, { rejectWithValue }) => {
+  try {
+    const response = await axios.put(`/billet/${billetId}/emettre`, { referenceBcClient });
+    if (response.data?.success === false) throw new Error(response.data?.message || 'Échec de l\'envoi à Odoo');
+    return (response.data?.data ?? response.data) as OdooSoumissionResponse;
+  } catch (err: any) {
+    return rejectWithValue(odooErrorMessage(err, 'Erreur lors de l\'envoi de l\'achat à Odoo'));
+  }
+});
+
+// Thunk pour émettre une ligne
+export const emitBilletLigne = createAsyncThunk<
+  any,
+  { ligneId: string; payload: any },
+  { rejectValue: string }
+>(
+  'billet/emitLigne',
+  async ({ ligneId, payload }, { rejectWithValue }) => {
+    try {
+      const formData = new FormData();
+
+      // Taux commun
+      formData.append('emissionTauxChange', payload.emissionTauxChange.toString());
+
+      // Tableau JSON des billets
+      formData.append('billets', JSON.stringify(payload.billets));
+
+      // Tous les fichiers PDF (un par passager)
+      payload.pjBillets.forEach((file: File) => {
+        if (file) {
+          formData.append('pjBillets', file);
+        }
+      });
+
+      const response = await axios.put(`/billet/ligne/${ligneId}/achat`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (!response.data?.success) {
+        throw new Error('Échec de l\'émission');
+      }
+
+      return response.data;
+    } catch (err: any) {
+      return rejectWithValue(
+        err.response?.data?.message || 'Erreur lors de l\'émission du billet'
+      );
+    }
+  }
+);
+
+// THUNK : Récupérer tous les billets d'un dossier commun
+export const fetchBilletsByDossierCommun = createAsyncThunk<
+  BilletEntete[],
+  string,  // dossierCommunId
+  { rejectValue: string }
+>(
+  'billet/fetchByDossierCommun',
+  async (dossierCommunId, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`/billet/dossier-commun/${dossierCommunId}`);
+      
+      if (!response.data?.success || !Array.isArray(response.data?.data)) {
+        throw new Error('Format de réponse invalide pour les billets');
+      }
+
+      return response.data.data as BilletEntete[];
+    } catch (err: any) {
+      console.error('Erreur fetchBilletsByDossierCommun:', err);
+      return rejectWithValue(
+        err.response?.data?.message || 'Erreur lors du chargement des billets'
+      );
+    }
+  }
+);
+
+// Thunk annulation d'une ligne, avant ou après émission (même route : POST /billet/:id/annuler)
+export const annulerBillet = createAsyncThunk(
+  'billet/annuler',
+  async (
+    { billetId, payload }: { billetId: string; payload: AnnulationBilletPayload },
+    { rejectWithValue }
+  ) => {
+    try {
+      // On renomme le champ pour matcher l'API
+      // const apiPayload = {
+      //   ...payload,
+      //   rasionAnnulationId: payload.raisonAnnulationId,   // ← le nom attendu par le back
+      // };
+
+      const res = await axios.post(`/billet/${billetId}/annuler`, payload);
+      
+      if (!res.data?.success) {
+        throw new Error(res.data?.message || 'Échec annulation billet');
+      }
+      
+      return res.data;
+    } catch (err: any) {
+      return rejectWithValue(
+        err.response?.data?.message || 'Erreur lors de l\'annulation du billet'
+      );
+    }
+  }
+);
+
+export const reprogrammerLigne = createAsyncThunk(
+  'billet/reprogrammer',
+  async ({ billetId, payload }: { billetId: string; payload: ReprogrammationPayload }, { rejectWithValue }) => {
+    try {
+      const res = await axios.patch(`/billet/${billetId}/reprogrammer`, payload);
+      if (!res.data?.success) throw new Error('Échec reprogrammation');
+      return res.data;
+    } catch (err: any) {
+      return rejectWithValue(err.response?.data?.message || 'Erreur reprogrammation');
+    }
+  }
+);
+
+export const reporterLigne = createAsyncThunk(
+  'billet/reporter',
+  async (billetId: string, { rejectWithValue }) => {
+    try {
+      const res = await axios.patch(`/billet/${billetId}/reporter`);
+      if (!res.data?.success) throw new Error('Échec report');
+      return res.data;
+    } catch (err: any) {
+      return rejectWithValue(err.response?.data?.message || 'Erreur report');
+    }
+  }
+);
+
+const billetSlice = createSlice({
+  name: 'billet',
+  initialState,
+  reducers: {
+    // Tu pourras ajouter des reducers synchrones plus tard (ex: clearCurrent)
+    clearCurrent: (state) => {
+      state.current = null;
+      state.error = null;
+    },
+    // Événement temps réel (socket 'billet:statut') : on met à jour la ligne concernée sans recharger.
+    majStatutBilletListe: (state, action: { payload: { billetEnteteId: string; nouveauStatut: string } }) => {
+      const b = state.list.find((x) => x.id === action.payload.billetEnteteId);
+      if (b) b.statut = action.payload.nouveauStatut;
+    },
+  },
+  extraReducers: (builder) => {
+    builder
+      .addCase(fetchBilletById.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchBilletById.fulfilled, (state, action) => {
+        state.loading = false;
+        state.current = action.payload;
+        // Garde la liste cohérente avec le détail (ex. après une émission ou une approbation)
+        const enListe = state.list.find((x) => x.id === action.payload?.id);
+        if (enListe && action.payload?.statut) enListe.statut = action.payload.statut;
+      })
+      .addCase(fetchBilletById.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      .addCase(addReservationToLigne.pending, (state) => {
+      state.loading = true;
+      state.error = null;
+    })
+    .addCase(addReservationToLigne.fulfilled, (state) => {
+      state.loading = false;
+      // On ne met pas à jour manuellement → on re-fetch après
+    })
+    .addCase(addReservationToLigne.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.payload as string;
+    })
+
+    .addCase(emitBilletLigne.pending, (state) => {
+      state.loading = true;
+      state.error = null;
+    })
+    .addCase(emitBilletLigne.fulfilled, (state, action) => {
+      state.loading = false;
+      // Option 1 : mise à jour manuelle (si tu préfères éviter re-fetch)
+      if (state.current && action.payload) {
+        const ligneIndex = state.current.billetLigne.findIndex(l => l.id === action.payload.ligneId);
+        if (ligneIndex !== -1) {
+          state.current.billetLigne[ligneIndex] = {
+            ...state.current.billetLigne[ligneIndex],
+            ...action.payload.updatedData,
+          };
+        }
+      }
+    })
+    .addCase(emitBilletLigne.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.payload as string;
+    })
+    // fetchBilletsByDossierCommun
+    .addCase(fetchBilletsByDossierCommun.pending, (state, action) => {
+      state.loadingList = true;
+      state.errorList = null;
+      // Autre dossier : on vide pour ne pas montrer les billets du précédent
+      if (state.listDossierId !== action.meta.arg) {
+        state.list = [];
+        state.listDossierId = null;
+        state.listFetchedAt = null;
+      }
+    })
+    .addCase(fetchBilletsByDossierCommun.fulfilled, (state, action) => {
+      state.loadingList = false;
+      state.list = action.payload;
+      state.listDossierId = action.meta.arg;
+      state.listFetchedAt = Date.now();
+    })
+    .addCase(fetchBilletsByDossierCommun.rejected, (state, action) => {
+      state.loadingList = false;
+      state.errorList = action.payload as string;
+      // Échec d'une mise à jour en arrière-plan : on garde la liste déjà affichée
+      if (state.listDossierId !== action.meta.arg) state.list = [];
+    })
+    // ────────────────────────────────────────────────
+    // Annulation de la réservation (avant émission)
+    // ────────────────────────────────────────────────
+    .addCase(annulerBillet.pending, (state) => {
+      state.loading = true;
+      state.error = null;
+    })
+    .addCase(annulerBillet.fulfilled, (state) => {
+      state.loading = false;
+      state.error = null;
+
+      // Pas de mise à jour manuelle ici → on recharge via fetchBilletById
+    })
+    .addCase(annulerBillet.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.payload as string;
+    })
+
+    .addCase(reporterLigne.pending, (state) => {
+      state.loading = true;
+      state.error = null;
+    })
+    .addCase(reporterLigne.fulfilled, (state) => {
+      state.loading = false;
+    })
+    .addCase(reporterLigne.rejected, (state, action) => {
+      state.loading = false;
+      state.error = action.payload as string;
+    });
+  },
+});
+
+export const { clearCurrent, majStatutBilletListe } = billetSlice.actions;
+export default billetSlice.reducer;

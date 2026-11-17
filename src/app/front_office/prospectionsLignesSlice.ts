@@ -2,6 +2,7 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import type { PayloadAction } from '@reduxjs/toolkit';
 import axios from '../../service/Axios';
 import { toast } from '../../components/Toast/toast';
+import type { BilletLigne } from './billetSlice';
 export interface ServiceSpecifique {
   id: string;
   code: string;                    // ex: "SP-1", "SP-2"
@@ -101,6 +102,16 @@ export interface ProspectionLigne {
 
   // Le plus important : les services spécifiques attachés
   serviceProspectionLigne: ServiceProspectionLigne[];
+
+  /** Ville de départ / d'arrivée (incluses par GET /prospections/entetes/:id) */
+  departVoyage?: { ville: string; pays?: { pays: string } } | null;
+  destinationVoyage?: { ville: string; pays?: { pays: string } } | null;
+
+  /**
+   * Lignes billet issues de cette ligne (GET /prospections/entetes/:id → billetEntete[].billetLigne[]).
+   * Rempli par fetchProspectionLignes ; undefined si le backend ne renvoie pas encore les lignes billet.
+   */
+  billetLignes?: BilletLigne[];
 }
 
 // Pour le state Redux (inchangé, mais typé plus strictement)
@@ -117,6 +128,8 @@ export const initialState: ProspectionLignesState = {
 };
 
 export interface CreateProspectionLignePayload {
+  // Seules les saisies sont utilisées : les montants calculés (…?) sont recalculés par le backend
+  // (FRONTEND_PROMPT_CALCUL_PRIX_BACKEND.md) et ignorés s'ils sont envoyés.
   prospectionEnteteId: string;
   departId: string;
   destinationId: string;
@@ -136,32 +149,32 @@ export interface CreateProspectionLignePayload {
   puServiceCompagnieDevise: number;
   puPenaliteCompagnieDevise: number;
   // Montants Devise Compagnie
-  montantBilletCompagnieDevise: number;
-  montantServiceCompagnieDevise: number;
-  montantPenaliteCompagnieDevise: number;
+  montantBilletCompagnieDevise?: number;
+  montantServiceCompagnieDevise?: number;
+  montantPenaliteCompagnieDevise?: number;
   // Montants Devise Client
-  montantBilletClientDevise: number;
-  montantServiceClientDevise: number;
-  montantPenaliteClientDevise: number;
+  montantBilletClientDevise?: number;
+  montantServiceClientDevise?: number;
+  montantPenaliteClientDevise?: number;
   // PU Ariary
-  puBilletCompagnieAriary: number;
-  puServiceCompagnieAriary: number;
-  puPenaliteCompagnieAriary: number;
+  puBilletCompagnieAriary?: number;
+  puServiceCompagnieAriary?: number;
+  puPenaliteCompagnieAriary?: number;
   // Montants Ariary Compagnie
-  montantBilletCompagnieAriary: number;
-  montantServiceCompagnieAriary: number;
-  montantPenaliteCompagnieAriary: number;
+  montantBilletCompagnieAriary?: number;
+  montantServiceCompagnieAriary?: number;
+  montantPenaliteCompagnieAriary?: number;
   // Montants Ariary Client
-  montantBilletClientAriary: number;
-  montantServiceClientAriary: number;
-  montantPenaliteClientAriary: number;
+  montantBilletClientAriary?: number;
+  montantServiceClientAriary?: number;
+  montantPenaliteClientAriary?: number;
   // Commission
-  commissionEnDevise: number;
-  commissionEnAriary: number;
+  commissionEnDevise?: number;
+  commissionEnAriary?: number;
   // Taxe
   tauxTaxe: number;
-  montantTaxeDevise: number;
-  montantTaxeAriary: number;
+  montantTaxeDevise?: number;
+  montantTaxeAriary?: number;
   aeroportDepart: string | null;
   aeroportArrivee: string | null;
   
@@ -184,11 +197,21 @@ export const fetchProspectionLignes = createAsyncThunk(
       const enteteData = response.data.data;
 
       // Protection : on s'assure d'avoir un tableau (même vide)
-      const lignes = Array.isArray(enteteData?.prospectionLigne)
+      const lignes: ProspectionLigne[] = Array.isArray(enteteData?.prospectionLigne)
         ? enteteData.prospectionLigne
         : [];
 
-      return lignes as ProspectionLigne[];
+      // Lignes billet incluses par le backend (billetEntete[].billetLigne[]) : rattachées à leur ligne de prospection
+      const entetesBillet: any[] = Array.isArray(enteteData?.billetEntete) ? enteteData.billetEntete : [];
+      const avecLignesBillet = entetesBillet.length > 0 && entetesBillet.every((b) => Array.isArray(b?.billetLigne));
+      if (avecLignesBillet || entetesBillet.length === 0) {
+        const toutes: BilletLigne[] = entetesBillet.flatMap((b) => b.billetLigne);
+        return lignes.map((l) => ({
+          ...l,
+          billetLignes: toutes.filter((bl) => bl.prospectionLigneId === l.id),
+        }));
+      }
+      return lignes;
     } catch (err: any) {
       console.error('Erreur fetch lignes:', err);
       toast.error('Erreur lors du chargement des lignes de prospection');

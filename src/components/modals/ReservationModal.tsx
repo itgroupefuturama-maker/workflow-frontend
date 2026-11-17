@@ -6,7 +6,6 @@ import {
   FiTrash2,
   FiCheck,
   FiChevronDown,
-  FiUploadCloud,
   FiAlertTriangle,
   FiUserPlus,
   FiPaperclip,
@@ -23,6 +22,7 @@ import PreferencesInlinePanel from './Hotel/PreferencesInlinePanel';
 import { toast } from '../Toast/toast';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { API_URL } from '../../service/env';
+import { ChampPreuve } from '../ui/Preuve';
 
 interface ReservationModalProps {
   isOpen: boolean;
@@ -182,8 +182,10 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
   const [currentBeneficiaireId, setCurrentBeneficiaireId] = useState('');
   const [currentInfoId, setCurrentInfoId] = useState('');
   const [showConfirmation, setShowConfirmation] = useState(false);
+  // Deux preuves (FRONTEND_PROMPT_DEUX_PREUVES_RESERVATION.md) : obligatoires à la première réservation
+  const [preuveAcceptationClient, setPreuveAcceptationClient] = useState<File | null>(null);
   const [preuveResa, setPreuveResa] = useState<File | null>(null);
-  const [preuveResaPreview, setPreuveResaPreview] = useState<string | null>(null);
+  const [preuvesManquantes, setPreuvesManquantes] = useState(false);
   const [prefParPassager, setPrefParPassager] = useState<Record<string, string[]>>({});
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -304,12 +306,6 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
     }
   }, [isOpen, ligne, estModification]);
 
-  // Libère l'URL d'aperçu précédente
-  useEffect(() => {
-    return () => {
-      if (preuveResaPreview) URL.revokeObjectURL(preuveResaPreview);
-    };
-  }, [preuveResaPreview]);
 
   useEffect(() => {
     if (!dropdownOpen) return;
@@ -360,15 +356,13 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
     }));
   };
 
-  const handlePreuveResaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
-    setPreuveResa(file);
-    setPreuveResaPreview(file ? URL.createObjectURL(file) : null);
-  };
-
-  const retirerPreuve = () => {
-    setPreuveResa(null);
-    setPreuveResaPreview(null);
+  // Première réservation : les deux preuves sont obligatoires ; en modification, l'existant est gardé
+  const preuvesObligatoires = !estModification;
+  const messagePreuvesManquantes = (): string | null => {
+    if (!preuvesObligatoires) return null;
+    if (!preuveAcceptationClient) return "La preuve d'acceptation du client est obligatoire";
+    if (!preuveResa) return 'La capture du n° de réservation est obligatoire';
+    return null;
   };
 
   const toggleDropdown = () => {
@@ -448,6 +442,12 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
       toast.warning('Veuillez compléter tous les champs obligatoires.');
       return;
     }
+    const manque = messagePreuvesManquantes();
+    if (manque) {
+      setPreuvesManquantes(true);
+      toast.warning(manque);
+      return;
+    }
     setShowConfirmation(true);
   };
 
@@ -466,9 +466,8 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
       puResaPenaliteCompagnieDevise: formData.puResaPenaliteCompagnieDevise,
       devise: formData.devise,
       resaTauxEchange: formData.resaTauxEchange,
-      puResaMontantBilletCompagnieDevise: formData.puResaMontantBilletCompagnieDevise,
-      puResaMontantServiceCompagnieDevise: formData.puResaMontantServiceCompagnieDevise,
-      puResaMontantPenaliteCompagnieDevise: formData.puResaMontantPenaliteCompagnieDevise,
+      // puResaMontant… : calculés par le backend (FRONTEND_PROMPT_CALCUL_PRIX_BACKEND.md)
+      preuveAcceptationClient,
       preuveResa,
     };
 
@@ -795,48 +794,37 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
                   </div>
                 </div>
 
-                <div className="mt-5 border-t border-slate-100 pt-5">
-                  <Label hint="optionnel">Preuve de réservation</Label>
-                  {estModification && ligne?.preuveResa && !preuveResa && (
-                    <p className="mb-2 text-xs text-slate-500">
-                      Une preuve est déjà enregistrée. Ajoutez un fichier uniquement pour la remplacer.
-                    </p>
-                  )}
-
-                  {preuveResa ? (
-                    <div className="flex items-center gap-3 rounded-md border border-slate-200 bg-white p-2.5">
-                      {preuveResaPreview && (
-                        <img
-                          src={preuveResaPreview}
-                          alt="Aperçu de la preuve"
-                          className="h-14 w-14 shrink-0 rounded border border-slate-200 object-cover"
-                        />
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-slate-900">{preuveResa.name}</p>
-                        <p className="text-xs text-slate-500">{Math.round(preuveResa.size / 1024)} Ko</p>
-                      </div>
-                      <label className="cursor-pointer rounded-md px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900">
-                        Remplacer
-                        <input type="file" accept="image/*" className="hidden" onChange={handlePreuveResaChange} />
-                      </label>
-                      <button
-                        type="button"
-                        onClick={retirerPreuve}
-                        aria-label="Retirer le fichier"
-                        className="rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
-                      >
-                        <FiX size={15} />
-                      </button>
-                    </div>
-                  ) : (
-                    <label className="flex cursor-pointer items-center gap-3 rounded-md border border-dashed border-slate-300 bg-white px-4 py-3 transition-colors hover:border-slate-400 hover:bg-slate-50">
-                      <FiUploadCloud className="shrink-0 text-slate-400" size={20} />
-                      <span className="text-sm text-slate-700">Choisir une image (capture, confirmation…)</span>
-                      <span className="ml-auto hidden text-xs text-slate-400 sm:inline">PNG, JPG, WEBP – 5 Mo max</span>
-                      <input type="file" accept="image/*" className="hidden" onChange={handlePreuveResaChange} />
-                    </label>
-                  )}
+                <div className="mt-5 grid gap-5 border-t border-slate-100 pt-5 md:grid-cols-2">
+                  <div>
+                    <Label required={preuvesObligatoires} hint={preuvesObligatoires ? undefined : 'optionnel'}>
+                      Preuve d'acceptation du client
+                    </Label>
+                    <p className="mb-2 text-xs text-slate-500">WhatsApp, e-mail, bon signé…</p>
+                    <ChampPreuve
+                      libelleErreur="La preuve d'acceptation du client"
+                      placeholder="Choisir la preuve du client"
+                      file={preuveAcceptationClient}
+                      onChange={(f) => { setPreuveAcceptationClient(f); setPreuvesManquantes(false); }}
+                      existant={estModification ? ligne?.preuveAcceptationClient : null}
+                      onErreur={(m) => toast.error(m)}
+                      enErreur={preuvesManquantes && preuvesObligatoires && !preuveAcceptationClient}
+                    />
+                  </div>
+                  <div>
+                    <Label required={preuvesObligatoires} hint={preuvesObligatoires ? undefined : 'optionnel'}>
+                      Capture du n° de réservation
+                    </Label>
+                    <p className="mb-2 text-xs text-slate-500">Écran de la plateforme de la compagnie</p>
+                    <ChampPreuve
+                      libelleErreur="La capture du n° de réservation"
+                      placeholder="Choisir la capture"
+                      file={preuveResa}
+                      onChange={(f) => { setPreuveResa(f); setPreuvesManquantes(false); }}
+                      existant={estModification ? ligne?.preuveResa : null}
+                      onErreur={(m) => toast.error(m)}
+                      enErreur={preuvesManquantes && preuvesObligatoires && !preuveResa}
+                    />
+                  </div>
                 </div>
               </Section>
 
@@ -1121,10 +1109,15 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
                 </table>
               </div>
 
-              {preuveResa && (
-                <p className="text-sm text-slate-600">
-                  Preuve jointe : <span className="font-medium text-slate-900">{preuveResa.name}</span>
-                </p>
+              {(preuveAcceptationClient || preuveResa) && (
+                <div className="space-y-0.5 text-sm text-slate-600">
+                  {preuveAcceptationClient && (
+                    <p>Acceptation client : <span className="font-medium text-slate-900">{preuveAcceptationClient.name}</span></p>
+                  )}
+                  {preuveResa && (
+                    <p>Capture n° résa : <span className="font-medium text-slate-900">{preuveResa.name}</span></p>
+                  )}
+                </div>
               )}
 
               <div className="flex items-start gap-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">

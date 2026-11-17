@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import type { BilletLigne, ServiceProspectionLigne, ServiceSpecifique } from '../../../../../../app/front_office/billetSlice';
 import { FiFilter, FiX } from 'react-icons/fi';
-import { API_URL } from '../../../../../../service/env';
 import { BilletActions } from './BilletActions';
 import OdooEnvoisStatus from './OdooEnvoisStatus';
 import { PassagersCell } from './PassagersCell';
+import { MiniaturePreuve } from '../../../../../../components/ui/Preuve';
+import HistoriquePiecesJointes from './HistoriquePiecesJointes';
 import {
   CLASSES_TON,
   estEnAttente,
@@ -18,9 +19,11 @@ import {
   peutSaisirNumeros,
 } from './utils/billetStatuts';
 
-import { fmtAriary, fmtDevise, fmtNombre } from '../../../../../../utils/format';
-import { AlertTriangle, Building2, Coins, Plane, Ticket, User } from 'lucide-react';
+import { fmtDevise, fmtNombre } from '../../../../../../utils/format';
+import { AlertTriangle, Building2, Coins, History, Plane, Ticket, User } from 'lucide-react';
 import SelecteurVuesPrix from '../../prospection/SelecteurVuesPrix';
+import BarreGroupes from '../../prospection/BarreGroupes';
+import { useGroupesMasques } from '../../prospection/groupesMasques';
 import { CellulesBillet, EnTeteGroupeBillet, SousEnTetesBillet } from '../../prospection/ColonnesPrixBillet';
 import { aEmission, aResa, useVuesPrix } from '../../prospection/vuesPrix';
 
@@ -106,10 +109,11 @@ const BilletTable: React.FC<BilletTableProps> = ({
   onAnnulerEmission,
 }) => {
   const [sortOriginAsc, setSortOriginAsc] = useState(true);
+  // Ligne dont on affiche l'historique des fichiers
+  const [historiqueLigne, setHistoriqueLigne] = useState<BilletLigne | null>(null);
 
   // ── Prix affichés : Prospection / Résa / Émission (choix libre, mémorisé pour l'écran billet) ──
   const { vues, setVues, afficher } = useVuesPrix('billet.vuesPrix', ['PROSPECTION', 'RESA']);
-  const [emissionReplie, setEmissionReplie] = useState(false);
   const compteursVues = {
     RESA: lignes.filter((l) => aResa(l)).length,
     EMISSION: lignes.filter((l) => aEmission(l)).length,
@@ -129,20 +133,21 @@ const BilletTable: React.FC<BilletTableProps> = ({
     setSortOriginAsc(prev => !prev);
   };
 
-  const [collapsedGroups, setCollapsedGroups] = useState({
-    infosVol:        false,
-    puCieDevise:     false,   // replié par défaut
-    puCieAriary:     false,
-    puClientDevise:  false,
-    puClientAriary:  false,
-    mtCieDevise:     false,
-    mtCieAriary:     false,
-    mtClientDevise:  false,
-    mtClientAriary:  false,
-    mtResa:          false,
-    commissions:     false,
-    annulation:      false,
-    services:        false,
+  // Groupes de colonnes MASQUÉS (0 colonne), mémorisés — voir BarreGroupes.tsx
+  const [collapsedGroups, setCollapsedGroups] = useGroupesMasques('billet.groupesMasques', {
+    infosVol: false,
+    puCieDevise: false,
+    puCieAriary: false,
+    puClientDevise: false,
+    puClientAriary: false,
+    mtCieDevise: false,
+    mtCieAriary: false,
+    mtClientDevise: false,
+    mtClientAriary: false,
+    mtResa: false,
+    commissions: false,
+    annulation: false,
+    services: false,
   });
 
   const toggleGroup = (group: keyof typeof collapsedGroups) => {
@@ -220,63 +225,34 @@ const BilletTable: React.FC<BilletTableProps> = ({
           onActualiser={onActualiser}
         />
 
-        {/* Dans le div header, après le titre */}
-        <div className="px-5 py-2 bg-slate-200 border-b border-slate-300 flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-semibold text-slate-500 uppercase mr-1">Groupes :</span>
-          {([
-            { key: 'infosVol',       label: 'Infos Vol', icon: Plane,       color: 'slate'  },
-            { key: 'puCieDevise',    label: 'PU Cie Devise', icon: Building2,   color: 'emerald'},
-            { key: 'puCieAriary',    label: 'PU Cie Ar', icon: Building2,       color: 'emerald'},
-            { key: 'puClientDevise', label: 'PU Client Devise', icon: User, color: 'blue'   },
-            { key: 'puClientAriary', label: 'PU Client Ar', icon: User,    color: 'blue'   },
-            { key: 'mtCieDevise',    label: 'Mt Cie Devise', icon: Building2,   color: 'teal'   },
-            { key: 'mtCieAriary',    label: 'Mt Cie Ar', icon: Building2,       color: 'teal'   },
-            { key: 'mtClientDevise', label: 'Mt Client Devise', icon: User, color: 'indigo' },
-            { key: 'mtClientAriary', label: 'Mt Client Ar', icon: User,    color: 'indigo' },
-            { key: 'mtResa',         label: 'Mt Résa', icon: Ticket,         color: 'violet' },
-            { key: 'commissions',    label: 'Commissions', icon: Coins,     color: 'green'  },
-            { key: 'annulation',     label: 'Conditions', icon: AlertTriangle,      color: 'orange' },
-          ] as const).map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              onClick={() => toggleGroup(key)}
-              className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border font-medium transition-all ${
-                collapsedGroups[key]
-                  ? 'bg-white text-slate-400 border-slate-200 line-through'
-                  : 'bg-white text-slate-700 border-slate-300 hover:border-slate-400'
-              }`}
-            >
-              <Icon size={12} aria-hidden="true" />
-              {label}
-            </button>
-          ))}
-
-          {/* Tout replier — désactivé si tout est déjà replié */}
-          <button
-            disabled={ Object.values(collapsedGroups).every(v => v === true)}
-            onClick={() => setCollapsedGroups(prev => Object.fromEntries(Object.keys(prev).map(k => [k, true])) as any)}
-            className={`ml-auto text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
-                Object.values(collapsedGroups).every(v => v === true)
-                ? 'opacity-40 cursor-not-allowed border-white text-slate-700'
-                : 'border-red-200 text-red-500 hover:bg-red-50'
-            }`}
-          >
-            Tout replier
-          </button>
-
-          {/* Tout déplier — désactivé si tout est déjà déplié */}
-          <button
-            disabled={ Object.values(collapsedGroups).every(v => v === false)}
-            onClick={() => setCollapsedGroups(prev => Object.fromEntries(Object.keys(prev).map(k => [k, false])) as any)}
-            className={`text-xs px-3 py-1.5 rounded-full border font-medium transition-all ${
-                Object.values(collapsedGroups).every(v => v === false)
-                ? 'opacity-40 cursor-not-allowed border-white text-slate-700'
-                : 'border-blue-200 text-blue-600 hover:bg-blue-50'
-            }`}
-          >
-            Tout déplier
-          </button>
-        </div>
+        {/* Groupes de colonnes : vues rapides + masquer / afficher */}
+        <BarreGroupes
+          groupes={[
+            { key: 'infosVol', label: 'Infos Vol', icon: Plane },
+            { key: 'puCieDevise', label: 'PU Cie Devise', icon: Building2 },
+            { key: 'puCieAriary', label: 'PU Cie Ar', icon: Building2 },
+            { key: 'puClientDevise', label: 'PU Client Devise', icon: User },
+            { key: 'puClientAriary', label: 'PU Client Ar', icon: User },
+            { key: 'mtCieDevise', label: 'Mt Cie Devise', icon: Building2 },
+            { key: 'mtCieAriary', label: 'Mt Cie Ar', icon: Building2 },
+            { key: 'mtClientDevise', label: 'Mt Client Devise', icon: User },
+            { key: 'mtClientAriary', label: 'Mt Client Ar', icon: User },
+            { key: 'mtResa', label: 'Mt Résa', icon: Ticket },
+            { key: 'commissions', label: 'Commissions', icon: Coins },
+            { key: 'annulation', label: 'Conditions', icon: AlertTriangle },
+          ]}
+          masques={collapsedGroups}
+          onChange={(m) => setCollapsedGroups(m as typeof collapsedGroups)}
+          vues={[
+            { id: 'essentiel', label: 'Essentiel', title: 'Infos vol, montants client en ariary, commissions',
+              masques: ['puCieDevise', 'puCieAriary', 'puClientDevise', 'puClientAriary', 'mtCieDevise', 'mtCieAriary', 'mtClientDevise', 'mtResa', 'annulation'] },
+            { id: 'compagnie', label: 'Compagnie', title: 'Prix compagnie uniquement',
+              masques: ['puClientDevise', 'puClientAriary', 'mtClientDevise', 'mtClientAriary'] },
+            { id: 'client', label: 'Client', title: 'Prix client uniquement',
+              masques: ['puCieDevise', 'puCieAriary', 'mtCieDevise', 'mtCieAriary', 'mtResa'] },
+            { id: 'tout', label: 'Tout', masques: [], title: 'Tous les groupes' },
+          ]}
+        />
 
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200">
@@ -295,126 +271,156 @@ const BilletTable: React.FC<BilletTableProps> = ({
                 <th rowSpan={2} className="px-4 py-3 text-center font-semibold text-slate-700 uppercase bg-slate-100">Nb pax</th>
 
                 {/* Groupe Infos Vol */}
+                {!collapsedGroups.infosVol && (
                 <th
-                  colSpan={collapsedGroups.infosVol ? 1 : 12}
+                  title="Masquer ce groupe (réaffichable avec les puces « Groupes »)"
+                  colSpan={12}
                   onClick={() => toggleGroup('infosVol')}
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-slate-700 border-x border-slate-500 cursor-pointer hover:bg-slate-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
                     <Plane size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Infos Vol
-                    <span className="text-slate-300 text-xs">{collapsedGroups.infosVol ? '▶' : '▼'}</span>
+                    <span className="text-slate-300 text-xs">✕</span>
                   </div>
                 </th>
+                )}
 
                 {afficher.PROSPECTION && (<>
                 {/* ********************** Prix Prospection ********************** */}
                 {/* Groupe PU Cie Devise */}
+                {!collapsedGroups.puCieDevise && (
                 <th
-                  colSpan={collapsedGroups.puCieDevise ? 1 : 6}
+                  title="Masquer ce groupe (réaffichable avec les puces « Groupes »)"
+                  colSpan={6}
                   onClick={() => toggleGroup('puCieDevise')}
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-emerald-700 border-x border-emerald-500 cursor-pointer hover:bg-emerald-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
                     <Building2 size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />PU Cie Devise Prospection
-                    <span className="text-xs">{collapsedGroups.puCieDevise ? '▶' : '▼'}</span>
+                    <span className="text-xs">✕</span>
                   </div>
                 </th>
+                )}
 
                 {/* Groupe PU Cie Ariary */}
+                {!collapsedGroups.puCieAriary && (
                 <th
-                  colSpan={collapsedGroups.puCieAriary ? 1 : 3}
+                  title="Masquer ce groupe (réaffichable avec les puces « Groupes »)"
+                  colSpan={3}
                   onClick={() => toggleGroup('puCieAriary')}
-                  className="px-4 py-2 text-center font-bold text-white uppercase bg-emerald-800 border-x border-emerald-600 cursor-pointer hover:bg-emerald-700 transition-colors select-none"
+                  className="px-4 py-2 text-center font-bold text-white uppercase bg-emerald-700 border-x border-emerald-500 cursor-pointer hover:bg-emerald-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
                     <Building2 size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />PU Cie Ariary Prospection
-                    <span className="text-xs">{collapsedGroups.puCieAriary ? '▶' : '▼'}</span>
+                    <span className="text-xs">✕</span>
                   </div>
                 </th>
+                )}
 
                 {/* Groupe PU Client Devise */}
+                {!collapsedGroups.puClientDevise && (
                 <th
-                  colSpan={collapsedGroups.puClientDevise ? 1 : 3}
+                  title="Masquer ce groupe (réaffichable avec les puces « Groupes »)"
+                  colSpan={3}
                   onClick={() => toggleGroup('puClientDevise')}
-                  className="px-4 py-2 text-center font-bold text-white uppercase bg-blue-700 border-x border-blue-500 cursor-pointer hover:bg-blue-600 transition-colors select-none"
+                  className="px-4 py-2 text-center font-bold text-white uppercase bg-emerald-700 border-x border-emerald-500 cursor-pointer hover:bg-emerald-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
                     <User size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />PU Client Devise Prospection
-                    <span className="text-xs">{collapsedGroups.puClientDevise ? '▶' : '▼'}</span>
+                    <span className="text-xs">✕</span>
                   </div>
                 </th>
+                )}
 
                 {/* Groupe PU Client Ariary */}
+                {!collapsedGroups.puClientAriary && (
                 <th
-                  colSpan={collapsedGroups.puClientAriary ? 1 : 3}
+                  title="Masquer ce groupe (réaffichable avec les puces « Groupes »)"
+                  colSpan={3}
                   onClick={() => toggleGroup('puClientAriary')}
-                  className="px-4 py-2 text-center font-bold text-white uppercase bg-blue-800 border-x border-blue-600 cursor-pointer hover:bg-blue-700 transition-colors select-none"
+                  className="px-4 py-2 text-center font-bold text-white uppercase bg-emerald-700 border-x border-emerald-500 cursor-pointer hover:bg-emerald-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
                     <User size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />PU Client Ariary Prospection
-                    <span className="text-xs">{collapsedGroups.puClientAriary ? '▶' : '▼'}</span>
+                    <span className="text-xs">✕</span>
                   </div>
                 </th>
+                )}
 
                 {/* Groupe Mt Cie Devise */}
+                {!collapsedGroups.mtCieDevise && (
                 <th
-                  colSpan={collapsedGroups.mtCieDevise ? 1 : 3}
+                  title="Masquer ce groupe (réaffichable avec les puces « Groupes »)"
+                  colSpan={3}
                   onClick={() => toggleGroup('mtCieDevise')}
-                  className="px-4 py-2 text-center font-bold text-white uppercase bg-teal-700 border-x border-teal-500 cursor-pointer hover:bg-teal-600 transition-colors select-none"
+                  className="px-4 py-2 text-center font-bold text-white uppercase bg-emerald-700 border-x border-emerald-500 cursor-pointer hover:bg-emerald-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
                     <Building2 size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Mt Cie Devise Prospection
-                    <span className="text-xs">{collapsedGroups.mtCieDevise ? '▶' : '▼'}</span>
+                    <span className="text-xs">✕</span>
                   </div>
                 </th>
+                )}
 
                 {/* Groupe Mt Cie Ariary */}
+                {!collapsedGroups.mtCieAriary && (
                 <th
-                  colSpan={collapsedGroups.mtCieAriary ? 1 : 3}
+                  title="Masquer ce groupe (réaffichable avec les puces « Groupes »)"
+                  colSpan={3}
                   onClick={() => toggleGroup('mtCieAriary')}
-                  className="px-4 py-2 text-center font-bold text-white uppercase bg-teal-800 border-x border-teal-600 cursor-pointer hover:bg-teal-700 transition-colors select-none"
+                  className="px-4 py-2 text-center font-bold text-white uppercase bg-emerald-700 border-x border-emerald-500 cursor-pointer hover:bg-emerald-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
                     <Building2 size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Mt Cie Ariary Prospection
-                    <span className="text-xs">{collapsedGroups.mtCieAriary ? '▶' : '▼'}</span>
+                    <span className="text-xs">✕</span>
                   </div>
                 </th>
+                )}
 
                 {/* Groupe Mt Client Devise */}
+                {!collapsedGroups.mtClientDevise && (
                 <th
-                  colSpan={collapsedGroups.mtClientDevise ? 1 : 3}
+                  title="Masquer ce groupe (réaffichable avec les puces « Groupes »)"
+                  colSpan={3}
                   onClick={() => toggleGroup('mtClientDevise')}
-                  className="px-4 py-2 text-center font-bold text-white uppercase bg-indigo-700 border-x border-indigo-500 cursor-pointer hover:bg-indigo-600 transition-colors select-none"
+                  className="px-4 py-2 text-center font-bold text-white uppercase bg-emerald-700 border-x border-emerald-500 cursor-pointer hover:bg-emerald-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
                     <User size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Mt Client Devise Prospection
-                    <span className="text-xs">{collapsedGroups.mtClientDevise ? '▶' : '▼'}</span>
+                    <span className="text-xs">✕</span>
                   </div>
                 </th>
+                )}
 
                 {/* Groupe Mt Client Ariary */}
+                {!collapsedGroups.mtClientAriary && (
                 <th
-                  colSpan={collapsedGroups.mtClientAriary ? 1 : 3}
+                  title="Masquer ce groupe (réaffichable avec les puces « Groupes »)"
+                  colSpan={3}
                   onClick={() => toggleGroup('mtClientAriary')}
-                  className="px-4 py-2 text-center font-bold text-white uppercase bg-indigo-800 border-x border-indigo-600 cursor-pointer hover:bg-indigo-700 transition-colors select-none"
+                  className="px-4 py-2 text-center font-bold text-white uppercase bg-emerald-700 border-x border-emerald-500 cursor-pointer hover:bg-emerald-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
                     <User size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Mt Client Ariary Prospection
-                    <span className="text-xs">{collapsedGroups.mtClientAriary ? '▶' : '▼'}</span>
+                    <span className="text-xs">✕</span>
                   </div>
                 </th>
+                )}
 
                 {/* Groupe Mt Réservation */}
+                {!collapsedGroups.mtResa && (
                 <th
-                  colSpan={collapsedGroups.mtResa ? 1 : 3}
+                  title="Masquer ce groupe (réaffichable avec les puces « Groupes »)"
+                  colSpan={3}
                   onClick={() => toggleGroup('mtResa')}
-                  className="px-4 py-2 text-center font-bold text-white uppercase bg-violet-700 border-x border-violet-500 cursor-pointer hover:bg-violet-600 transition-colors select-none"
+                  className="px-4 py-2 text-center font-bold text-white uppercase bg-emerald-700 border-x border-emerald-500 cursor-pointer hover:bg-emerald-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
                     <Ticket size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Mt Total CIE Prospection
-                    <span className="text-xs">{collapsedGroups.mtResa ? '▶' : '▼'}</span>
+                    <span className="text-xs">✕</span>
                   </div>
                 </th>
+                )}
 
                 </>)}
 
@@ -422,144 +428,176 @@ const BilletTable: React.FC<BilletTableProps> = ({
                 {/* ****************************** Prix Reservation ****************************** */}
 
                 {/* Groupe PU Cie Devise */}
+                {!collapsedGroups.puCieDevise && (
                 <th
-                  colSpan={collapsedGroups.puCieDevise ? 1 : 3}
+                  title="Masquer ce groupe (réaffichable avec les puces « Groupes »)"
+                  colSpan={3}
                   onClick={() => toggleGroup('puCieDevise')}
-                  className="px-4 py-2 text-center font-bold text-white uppercase bg-emerald-700 border-x border-emerald-500 cursor-pointer hover:bg-emerald-600 transition-colors select-none"
+                  className="px-4 py-2 text-center font-bold text-white uppercase bg-violet-700 border-x border-violet-500 cursor-pointer hover:bg-violet-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
                     <Building2 size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />PU Cie Devise Réservation
-                    <span className="text-xs">{collapsedGroups.puCieDevise ? '▶' : '▼'}</span>
+                    <span className="text-xs">✕</span>
                   </div>
                 </th>
+                )}
 
                 {/* Groupe PU Cie Ariary */}
+                {!collapsedGroups.puCieAriary && (
                 <th
-                  colSpan={collapsedGroups.puCieAriary ? 1 : 3}
+                  title="Masquer ce groupe (réaffichable avec les puces « Groupes »)"
+                  colSpan={3}
                   onClick={() => toggleGroup('puCieAriary')}
-                  className="px-4 py-2 text-center font-bold text-white uppercase bg-emerald-800 border-x border-emerald-600 cursor-pointer hover:bg-emerald-700 transition-colors select-none"
+                  className="px-4 py-2 text-center font-bold text-white uppercase bg-violet-700 border-x border-violet-500 cursor-pointer hover:bg-violet-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
                     <Building2 size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />PU Cie Ariary Réservation
-                    <span className="text-xs">{collapsedGroups.puCieAriary ? '▶' : '▼'}</span>
+                    <span className="text-xs">✕</span>
                   </div>
                 </th>
+                )}
 
                 {/* Groupe PU Client Devise */}
+                {!collapsedGroups.puClientDevise && (
                 <th
-                  colSpan={collapsedGroups.puClientDevise ? 1 : 3}
+                  title="Masquer ce groupe (réaffichable avec les puces « Groupes »)"
+                  colSpan={3}
                   onClick={() => toggleGroup('puClientDevise')}
-                  className="px-4 py-2 text-center font-bold text-white uppercase bg-blue-700 border-x border-blue-500 cursor-pointer hover:bg-blue-600 transition-colors select-none"
+                  className="px-4 py-2 text-center font-bold text-white uppercase bg-violet-700 border-x border-violet-500 cursor-pointer hover:bg-violet-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
                     <User size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />PU Client Devise Réservation
-                    <span className="text-xs">{collapsedGroups.puClientDevise ? '▶' : '▼'}</span>
+                    <span className="text-xs">✕</span>
                   </div>
                 </th>
+                )}
 
                 {/* Groupe PU Client Ariary */}
+                {!collapsedGroups.puClientAriary && (
                 <th
-                  colSpan={collapsedGroups.puClientAriary ? 1 : 3}
+                  title="Masquer ce groupe (réaffichable avec les puces « Groupes »)"
+                  colSpan={3}
                   onClick={() => toggleGroup('puClientAriary')}
-                  className="px-4 py-2 text-center font-bold text-white uppercase bg-blue-800 border-x border-blue-600 cursor-pointer hover:bg-blue-700 transition-colors select-none"
+                  className="px-4 py-2 text-center font-bold text-white uppercase bg-violet-700 border-x border-violet-500 cursor-pointer hover:bg-violet-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
                     <User size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />PU Client Ariary Réservation
-                    <span className="text-xs">{collapsedGroups.puClientAriary ? '▶' : '▼'}</span>
+                    <span className="text-xs">✕</span>
                   </div>
                 </th>
+                )}
 
                 {/* Groupe Mt Cie Devise */}
+                {!collapsedGroups.mtCieDevise && (
                 <th
-                  colSpan={collapsedGroups.mtCieDevise ? 1 : 3}
+                  title="Masquer ce groupe (réaffichable avec les puces « Groupes »)"
+                  colSpan={3}
                   onClick={() => toggleGroup('mtCieDevise')}
-                  className="px-4 py-2 text-center font-bold text-white uppercase bg-teal-700 border-x border-teal-500 cursor-pointer hover:bg-teal-600 transition-colors select-none"
+                  className="px-4 py-2 text-center font-bold text-white uppercase bg-violet-700 border-x border-violet-500 cursor-pointer hover:bg-violet-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
                     <Building2 size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Mt Cie Devise Réservation
-                    <span className="text-xs">{collapsedGroups.mtCieDevise ? '▶' : '▼'}</span>
+                    <span className="text-xs">✕</span>
                   </div>
                 </th>
+                )}
 
                 {/* Groupe Mt Cie Ariary */}
+                {!collapsedGroups.mtCieAriary && (
                 <th
-                  colSpan={collapsedGroups.mtCieAriary ? 1 : 3}
+                  title="Masquer ce groupe (réaffichable avec les puces « Groupes »)"
+                  colSpan={3}
                   onClick={() => toggleGroup('mtCieAriary')}
-                  className="px-4 py-2 text-center font-bold text-white uppercase bg-teal-800 border-x border-teal-600 cursor-pointer hover:bg-teal-700 transition-colors select-none"
+                  className="px-4 py-2 text-center font-bold text-white uppercase bg-violet-700 border-x border-violet-500 cursor-pointer hover:bg-violet-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
                     <Building2 size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Mt Cie Ariary Réservation
-                    <span className="text-xs">{collapsedGroups.mtCieAriary ? '▶' : '▼'}</span>
+                    <span className="text-xs">✕</span>
                   </div>
                 </th>
+                )}
 
                 {/* Groupe Mt Client Devise */}
+                {!collapsedGroups.mtClientDevise && (
                 <th
-                  colSpan={collapsedGroups.mtClientDevise ? 1 : 3}
+                  title="Masquer ce groupe (réaffichable avec les puces « Groupes »)"
+                  colSpan={3}
                   onClick={() => toggleGroup('mtClientDevise')}
-                  className="px-4 py-2 text-center font-bold text-white uppercase bg-indigo-700 border-x border-indigo-500 cursor-pointer hover:bg-indigo-600 transition-colors select-none"
+                  className="px-4 py-2 text-center font-bold text-white uppercase bg-violet-700 border-x border-violet-500 cursor-pointer hover:bg-violet-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
                     <User size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Mt Client Devise Réservation
-                    <span className="text-xs">{collapsedGroups.mtClientDevise ? '▶' : '▼'}</span>
+                    <span className="text-xs">✕</span>
                   </div>
                 </th>
+                )}
 
                 {/* Groupe Mt Client Ariary */}
+                {!collapsedGroups.mtClientAriary && (
                 <th
-                  colSpan={collapsedGroups.mtClientAriary ? 1 : 3}
+                  title="Masquer ce groupe (réaffichable avec les puces « Groupes »)"
+                  colSpan={3}
                   onClick={() => toggleGroup('mtClientAriary')}
-                  className="px-4 py-2 text-center font-bold text-white uppercase bg-indigo-800 border-x border-indigo-600 cursor-pointer hover:bg-indigo-700 transition-colors select-none"
+                  className="px-4 py-2 text-center font-bold text-white uppercase bg-violet-700 border-x border-violet-500 cursor-pointer hover:bg-violet-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
                     <User size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Mt Client Ariary Réservation
-                    <span className="text-xs">{collapsedGroups.mtClientAriary ? '▶' : '▼'}</span>
+                    <span className="text-xs">✕</span>
                   </div>
                 </th>
+                )}
 
                 {/* Groupe Mt Réservation */}
+                {!collapsedGroups.mtResa && (
                 <th
-                  colSpan={collapsedGroups.mtResa ? 1 : 3}
+                  title="Masquer ce groupe (réaffichable avec les puces « Groupes »)"
+                  colSpan={3}
                   onClick={() => toggleGroup('mtResa')}
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-violet-700 border-x border-violet-500 cursor-pointer hover:bg-violet-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
                     <Ticket size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Mt Réservation Réservation
-                    <span className="text-xs">{collapsedGroups.mtResa ? '▶' : '▼'}</span>
+                    <span className="text-xs">✕</span>
                   </div>
                 </th>
+                )}
 
                 </>)}
 
                 {/* Prix Émission */}
                 {afficher.EMISSION && (
-                  <EnTeteGroupeBillet vue="EMISSION" showPenalite collapsed={emissionReplie}
-                    onToggle={() => setEmissionReplie((v) => !v)} />
+                  <EnTeteGroupeBillet vue="EMISSION" showPenalite collapsed={false} />
                 )}
 
                 {/* Groupe Commissions */}
+                {!collapsedGroups.commissions && (
                 <th
-                  colSpan={collapsedGroups.commissions ? 1 : 2}
+                  title="Masquer ce groupe (réaffichable avec les puces « Groupes »)"
+                  colSpan={2}
                   onClick={() => toggleGroup('commissions')}
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-green-700 border-x border-green-500 cursor-pointer hover:bg-green-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
                     <Coins size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Commissions
-                    <span className="text-xs">{collapsedGroups.commissions ? '▶' : '▼'}</span>
+                    <span className="text-xs">✕</span>
                   </div>
                 </th>
+                )}
 
                 {/* Groupe Annulation */}
+                {!collapsedGroups.annulation && (
                 <th
-                  colSpan={collapsedGroups.annulation ? 1 : 2}
+                  title="Masquer ce groupe (réaffichable avec les puces « Groupes »)"
+                  colSpan={2}
                   onClick={() => toggleGroup('annulation')}
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-orange-700 border-x border-orange-500 cursor-pointer hover:bg-orange-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
                     <AlertTriangle size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Conditions
-                    <span className="text-xs">{collapsedGroups.annulation ? '▶' : '▼'}</span>
+                    <span className="text-xs">✕</span>
                   </div>
                 </th>
+                )}
 
                 {/* Services + Actions fixes */}
                 <th rowSpan={2} className="px-4 py-3 text-left font-semibold text-slate-700 uppercase bg-slate-100">Mode de paiement</th>
@@ -567,14 +605,14 @@ const BilletTable: React.FC<BilletTableProps> = ({
                 <th rowSpan={2} className="px-4 py-3 text-left font-semibold text-slate-700 uppercase bg-slate-100 min-w-[600px]">
                   Passagers & Billets
                 </th>
-                <th rowSpan={2} className="px-4 py-3 text-center font-semibold text-slate-700 uppercase bg-slate-100 min-w-[220px]">Preuve</th>
+                <th rowSpan={2} className="px-4 py-3 text-center font-semibold text-slate-700 uppercase bg-slate-100 min-w-[380px]">Preuves</th>
                 <th rowSpan={2} className="px-4 py-3 text-center font-semibold text-slate-700 uppercase bg-slate-100 min-w-[220px]">Actions</th>
               </tr>
 
               {/* Ligne 2 — sous-en-têtes */}
               <tr>
                 {/* Infos Vol */}
-                {!collapsedGroups.infosVol ? (
+                {!collapsedGroups.infosVol && (
                   <>
                     <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10">Avion</th>
                     <th className="px-4 py-2 text-left text-xs font-semibold text-slate-500 bg-slate-800/10">N° Vol</th>
@@ -589,111 +627,91 @@ const BilletTable: React.FC<BilletTableProps> = ({
                     <th className="px-4 py-2 text-center text-xs font-semibold text-slate-500 bg-slate-800/10">Durée vol</th>
                     <th className="px-4 py-2 text-center text-xs font-semibold text-slate-500 bg-slate-800/10">Durée escale</th>
                   </>
-                ) : (
-                  <th className="px-4 py-2 text-center text-xs text-slate-400 italic bg-slate-800/10">— replié —</th>
                 )}
 
                 {afficher.PROSPECTION && (<>
                 {/* PU Cie Devise */}
-                {!collapsedGroups.puCieDevise ? (
+                {!collapsedGroups.puCieDevise && (
                   <>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50">Billet</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50">Service</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50">Pénalité</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50">Taux Taxe</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50">Taxe Devise</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50">Taxe Ariary</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50">Billet</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50">Service</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50">Pénalité</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50">Taux Taxe</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50">Taxe Devise</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50">Taxe Ariary</th>
                   </>
-                ) : (
-                  <th className="px-4 py-2 text-center text-xs text-emerald-400 italic bg-emerald-50">— replié —</th>
                 )}
 
                 {/* PU Cie Ariary */}
-                {!collapsedGroups.puCieAriary ? (
+                {!collapsedGroups.puCieAriary && (
                   <>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100">Billet Ar</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100">Service Ar</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100">Pénalité Ar</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50">Billet Ar</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50">Service Ar</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50">Pénalité Ar</th>
                   </>
-                ) : (
-                  <th className="px-4 py-2 text-center text-xs text-emerald-500 italic bg-emerald-100">— replié —</th>
                 )}
 
                 {/* PU Client Devise */}
-                {!collapsedGroups.puClientDevise ? (
+                {!collapsedGroups.puClientDevise && (
                   <>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-blue-700 bg-blue-50">Billet</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-blue-700 bg-blue-50">Service</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-blue-700 bg-blue-50">Pénalité</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50">Billet</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50">Service</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50">Pénalité</th>
                   </>
-                ) : (
-                  <th className="px-4 py-2 text-center text-xs text-blue-400 italic bg-blue-50">— replié —</th>
                 )}
 
                 {/* PU Client Ariary */}
-                {!collapsedGroups.puClientAriary ? (
+                {!collapsedGroups.puClientAriary && (
                   <>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-blue-800 bg-blue-100">Billet Ar</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-blue-800 bg-blue-100">Service Ar</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-blue-800 bg-blue-100">Pénalité Ar</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50">Billet Ar</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50">Service Ar</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50">Pénalité Ar</th>
                   </>
-                ) : (
-                  <th className="px-4 py-2 text-center text-xs text-blue-500 italic bg-blue-100">— replié —</th>
                 )}
 
                 {/* Mt Cie Devise */}
-                {!collapsedGroups.mtCieDevise ? (
+                {!collapsedGroups.mtCieDevise && (
                   <>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-teal-700 bg-teal-50">Billet</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-teal-700 bg-teal-50">Service</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-teal-700 bg-teal-50">Pénalité</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50">Billet</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50">Service</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50">Pénalité</th>
                   </>
-                ) : (
-                  <th className="px-4 py-2 text-center text-xs text-teal-400 italic bg-teal-50">— replié —</th>
                 )}
 
                 {/* Mt Cie Ariary */}
-                {!collapsedGroups.mtCieAriary ? (
+                {!collapsedGroups.mtCieAriary && (
                   <>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-teal-800 bg-teal-100">Billet Ar</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-teal-800 bg-teal-100">Service Ar</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-teal-800 bg-teal-100">Pénalité Ar</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50">Billet Ar</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50">Service Ar</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50">Pénalité Ar</th>
                   </>
-                ) : (
-                  <th className="px-4 py-2 text-center text-xs text-teal-500 italic bg-teal-100">— replié —</th>
                 )}
 
                 {/* Mt Client Devise */}
-                {!collapsedGroups.mtClientDevise ? (
+                {!collapsedGroups.mtClientDevise && (
                   <>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-indigo-700 bg-indigo-50">Billet</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-indigo-700 bg-indigo-50">Service</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-indigo-700 bg-indigo-50">Pénalité</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50">Billet</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50">Service</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50">Pénalité</th>
                   </>
-                ) : (
-                  <th className="px-4 py-2 text-center text-xs text-indigo-400 italic bg-indigo-50">— replié —</th>
                 )}
 
                 {/* Mt Client Ariary */}
-                {!collapsedGroups.mtClientAriary ? (
+                {!collapsedGroups.mtClientAriary && (
                   <>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-indigo-800 bg-indigo-100">Billet Ar</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-indigo-800 bg-indigo-100">Service Ar</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-indigo-800 bg-indigo-100">Pénalité Ar</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50">Billet Ar</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50">Service Ar</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50">Pénalité Ar</th>
                   </>
-                ) : (
-                  <th className="px-4 py-2 text-center text-xs text-indigo-500 italic bg-indigo-100">— replié —</th>
                 )}
 
                 {/* Mt Réservation */}
-                {!collapsedGroups.mtResa ? (
+                {!collapsedGroups.mtResa && (
                   <>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-700 bg-violet-50">Billet</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-700 bg-violet-50">Service</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-700 bg-violet-50">Pénalité</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50">Billet</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50">Service</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-50">Pénalité</th>
                   </>
-                ) : (
-                  <th className="px-4 py-2 text-center text-xs text-violet-400 italic bg-violet-50">— replié —</th>
                 )}
 
 
@@ -703,126 +721,104 @@ const BilletTable: React.FC<BilletTableProps> = ({
                 {/* ********************** Prix resa ******************* */}
 
                 {/* PU Cie Devise */}
-                {!collapsedGroups.puCieDevise ? (
+                {!collapsedGroups.puCieDevise && (
                   <>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50">Billet</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50">Service</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-700 bg-emerald-50">Pénalité</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-800 bg-violet-50">Billet</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-800 bg-violet-50">Service</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-800 bg-violet-50">Pénalité</th>
                   </>
-                ) : (
-                  <th className="px-4 py-2 text-center text-xs text-emerald-400 italic bg-emerald-50">— replié —</th>
                 )}
 
                 {/* PU Cie Ariary */}
-                {!collapsedGroups.puCieAriary ? (
+                {!collapsedGroups.puCieAriary && (
                   <>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100">Billet Ar</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100">Service Ar</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-emerald-800 bg-emerald-100">Pénalité Ar</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-800 bg-violet-50">Billet Ar</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-800 bg-violet-50">Service Ar</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-800 bg-violet-50">Pénalité Ar</th>
                   </>
-                ) : (
-                  <th className="px-4 py-2 text-center text-xs text-emerald-500 italic bg-emerald-100">— replié —</th>
                 )}
 
                 {/* PU Client Devise */}
-                {!collapsedGroups.puClientDevise ? (
+                {!collapsedGroups.puClientDevise && (
                   <>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-blue-700 bg-blue-50">Billet</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-blue-700 bg-blue-50">Service</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-blue-700 bg-blue-50">Pénalité</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-800 bg-violet-50">Billet</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-800 bg-violet-50">Service</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-800 bg-violet-50">Pénalité</th>
                   </>
-                ) : (
-                  <th className="px-4 py-2 text-center text-xs text-blue-400 italic bg-blue-50">— replié —</th>
                 )}
 
                 {/* PU Client Ariary */}
-                {!collapsedGroups.puClientAriary ? (
+                {!collapsedGroups.puClientAriary && (
                   <>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-blue-800 bg-blue-100">Billet Ar</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-blue-800 bg-blue-100">Service Ar</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-blue-800 bg-blue-100">Pénalité Ar</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-800 bg-violet-50">Billet Ar</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-800 bg-violet-50">Service Ar</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-800 bg-violet-50">Pénalité Ar</th>
                   </>
-                ) : (
-                  <th className="px-4 py-2 text-center text-xs text-blue-500 italic bg-blue-100">— replié —</th>
                 )}
 
                 {/* Mt Cie Devise */}
-                {!collapsedGroups.mtCieDevise ? (
+                {!collapsedGroups.mtCieDevise && (
                   <>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-teal-700 bg-teal-50">Billet</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-teal-700 bg-teal-50">Service</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-teal-700 bg-teal-50">Pénalité</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-800 bg-violet-50">Billet</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-800 bg-violet-50">Service</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-800 bg-violet-50">Pénalité</th>
                   </>
-                ) : (
-                  <th className="px-4 py-2 text-center text-xs text-teal-400 italic bg-teal-50">— replié —</th>
                 )}
 
                 {/* Mt Cie Ariary */}
-                {!collapsedGroups.mtCieAriary ? (
+                {!collapsedGroups.mtCieAriary && (
                   <>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-teal-800 bg-teal-100">Billet Ar</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-teal-800 bg-teal-100">Service Ar</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-teal-800 bg-teal-100">Pénalité Ar</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-800 bg-violet-50">Billet Ar</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-800 bg-violet-50">Service Ar</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-800 bg-violet-50">Pénalité Ar</th>
                   </>
-                ) : (
-                  <th className="px-4 py-2 text-center text-xs text-teal-500 italic bg-teal-100">— replié —</th>
                 )}
 
                 {/* Mt Client Devise */}
-                {!collapsedGroups.mtClientDevise ? (
+                {!collapsedGroups.mtClientDevise && (
                   <>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-indigo-700 bg-indigo-50">Billet</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-indigo-700 bg-indigo-50">Service</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-indigo-700 bg-indigo-50">Pénalité</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-800 bg-violet-50">Billet</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-800 bg-violet-50">Service</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-800 bg-violet-50">Pénalité</th>
                   </>
-                ) : (
-                  <th className="px-4 py-2 text-center text-xs text-indigo-400 italic bg-indigo-50">— replié —</th>
                 )}
 
                 {/* Mt Client Ariary */}
-                {!collapsedGroups.mtClientAriary ? (
+                {!collapsedGroups.mtClientAriary && (
                   <>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-indigo-800 bg-indigo-100">Billet Ar</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-indigo-800 bg-indigo-100">Service Ar</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-indigo-800 bg-indigo-100">Pénalité Ar</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-800 bg-violet-50">Billet Ar</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-800 bg-violet-50">Service Ar</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-800 bg-violet-50">Pénalité Ar</th>
                   </>
-                ) : (
-                  <th className="px-4 py-2 text-center text-xs text-indigo-500 italic bg-indigo-100">— replié —</th>
                 )}
 
                 {/* Mt Réservation */}
-                {!collapsedGroups.mtResa ? (
+                {!collapsedGroups.mtResa && (
                   <>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-700 bg-violet-50">Billet</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-700 bg-violet-50">Service</th>
-                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-700 bg-violet-50">Pénalité</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-800 bg-violet-50">Billet</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-800 bg-violet-50">Service</th>
+                    <th className="px-4 py-2 text-right text-xs font-semibold text-violet-800 bg-violet-50">Pénalité</th>
                   </>
-                ) : (
-                  <th className="px-4 py-2 text-center text-xs text-violet-400 italic bg-violet-50">— replié —</th>
                 )}
 
                 </>)}
 
-                {afficher.EMISSION && <SousEnTetesBillet vue="EMISSION" collapsed={emissionReplie} showPenalite />}
+                {afficher.EMISSION && <SousEnTetesBillet vue="EMISSION" collapsed={false} showPenalite />}
 
                 {/* Commissions */}
-                {!collapsedGroups.commissions ? (
+                {!collapsedGroups.commissions && (
                   <>
                     <th className="px-4 py-2 text-right text-xs font-semibold text-green-700 bg-green-50">Devise</th>
                     <th className="px-4 py-2 text-right text-xs font-semibold text-green-700 bg-green-50">Ariary</th>
                   </>
-                ) : (
-                  <th className="px-4 py-2 text-center text-xs text-green-400 italic bg-green-50">— replié —</th>
                 )}
 
                 {/* Conditions */}
-                {!collapsedGroups.annulation ? (
+                {!collapsedGroups.annulation && (
                   <>
                     <th className="px-4 py-2 text-right text-xs font-semibold text-orange-700 bg-orange-50">Modif</th>
                     <th className="px-4 py-2 text-right text-xs font-semibold text-orange-700 bg-orange-50">Annulation</th>
                   </>
-                ) : (
-                  <th className="px-4 py-2 text-center text-xs text-orange-400 italic bg-orange-50">— replié —</th>
                 )}
               </tr>
             </thead>
@@ -848,7 +844,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                       {/* Colonnes fixes */}
                       <td className="px-4 py-3 text-center text-slate-500 font-medium">{index + 1}</td>
                     <td className={`px-4 py-3 whitespace-nowrap font-mono text-xs font-semibold text-slate-800 ${terminee ? 'line-through' : ''}`}>
-                      {p?.numeroDosRef || '—'}
+                      {ligne.numeroDosRef || p?.numeroDosRef || '—'}
                     </td>
                       <td className={`px-4 py-3 text-xs text-slate-600 ${terminee ? 'line-through' : ''}`}>{ligne.referenceLine}</td>
                       <td className="px-4 py-3 font-medium text-slate-800">{fournisseurLibelle}</td>
@@ -872,7 +868,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                       <td className="px-4 py-3 text-center font-medium">{ligne.prospectionLigne.nombre || '—'}</td>
 
                       {/* Infos Vol */}
-                      {!collapsedGroups.infosVol ? (
+                      {!collapsedGroups.infosVol && (
                         <>
                           <td className="px-4 py-3">{p?.avion || '—'}</td>
                           <td className="px-4 py-3 font-medium">{p?.numeroVol || '—'}</td>
@@ -891,10 +887,6 @@ const BilletTable: React.FC<BilletTableProps> = ({
                           <td className="px-4 py-3">{p?.dureeVol || '—'}</td>
                           <td className="px-4 py-3">{p?.dureeEscale || '—'}</td>
                         </>
-                      ) : (
-                        <td className="px-4 py-3 text-center text-xs text-slate-400 bg-slate-50 italic">
-                          {p?.numeroVol} · {p?.itineraire}
-                        </td>
                       )}
 
                       {afficher.PROSPECTION && (<>
@@ -903,125 +895,89 @@ const BilletTable: React.FC<BilletTableProps> = ({
                       {/* ===== SECTION PRIX PROSPECTION (depuis ligne.prospectionLigne) ===== */}
 
                       {/* PU Cie Devise - Prospection */}
-                      {!collapsedGroups.puCieDevise ? (
+                      {!collapsedGroups.puCieDevise && (
                         <>
-                          <PriceCell value={p?.puBilletCompagnieDevise} isCurrency />
-                          <PriceCell value={p?.puServiceCompagnieDevise} isCurrency />
-                          <PriceCell value={p?.puPenaliteCompagnieDevise} isCurrency />
-                          <PriceCell value={p?.tauxTaxe} isCurrency />
-                          <PriceCell value={p?.montantTaxeDevise} isCurrency />
-                          <PriceCell value={p?.montantTaxeAriary} isCurrency />
+                          <PriceCell value={p?.puBilletCompagnieDevise} isCurrency className="font-medium text-emerald-800" />
+                          <PriceCell value={p?.puServiceCompagnieDevise} isCurrency className="font-medium text-emerald-800" />
+                          <PriceCell value={p?.puPenaliteCompagnieDevise} isCurrency className="font-medium text-emerald-800" />
+                          <PriceCell value={p?.tauxTaxe} isCurrency className="font-medium text-emerald-800" />
+                          <PriceCell value={p?.montantTaxeDevise} isCurrency className="font-medium text-emerald-800" />
+                          <PriceCell value={p?.montantTaxeAriary} isCurrency className="font-medium text-emerald-800" />
                         </>
-                      ) : (
-                        <td className="px-4 py-3 text-center text-xs text-emerald-600 bg-emerald-50 font-semibold">
-                          {fmtDevise(p?.puBilletCompagnieDevise)}
-                        </td>
                       )}
 
                       {/* PU Cie Ariary - Prospection */}
-                      {!collapsedGroups.puCieAriary ? (
+                      {!collapsedGroups.puCieAriary && (
                         <>
-                          <PriceCell value={p?.puBilletCompagnieAriary} isCurrency />
-                          <PriceCell value={p?.puServiceCompagnieAriary} isCurrency />
-                          <PriceCell value={p?.puPenaliteCompagnieAriary} isCurrency />
+                          <PriceCell value={p?.puBilletCompagnieAriary} isCurrency className="font-medium text-emerald-800" />
+                          <PriceCell value={p?.puServiceCompagnieAriary} isCurrency className="font-medium text-emerald-800" />
+                          <PriceCell value={p?.puPenaliteCompagnieAriary} isCurrency className="font-medium text-emerald-800" />
                         </>
-                      ) : (
-                        <td className="px-4 py-3 text-center text-xs text-emerald-700 bg-emerald-100 font-semibold">
-                          {fmtAriary(p?.puBilletCompagnieAriary)} Ar
-                        </td>
                       )}
 
                       {/* PU Client Devise - Prospection */}
                       {/* ⚠️ ProspectionLigne n'a PAS de puBilletClientDevise séparé,
                           il a montantBilletClientDevise — à adapter selon votre modèle */}
-                      {!collapsedGroups.puClientDevise ? (
+                      {!collapsedGroups.puClientDevise && (
                         <>
-                          <PriceCell value={p?.montantBilletClientDevise} isCurrency />
-                          <PriceCell value={p?.montantServiceClientDevise} isCurrency />
-                          <PriceCell value={p?.montantPenaliteClientDevise} isCurrency />
+                          <PriceCell value={p?.montantBilletClientDevise} isCurrency className="font-medium text-emerald-800" />
+                          <PriceCell value={p?.montantServiceClientDevise} isCurrency className="font-medium text-emerald-800" />
+                          <PriceCell value={p?.montantPenaliteClientDevise} isCurrency className="font-medium text-emerald-800" />
                         </>
-                      ) : (
-                        <td className="px-4 py-3 text-center text-xs text-blue-600 bg-blue-50 font-semibold">
-                          {fmtDevise(p?.montantBilletClientDevise)}
-                        </td>
                       )}
 
                       {/* PU Client Ariary - Prospection */}
-                      {!collapsedGroups.puClientAriary ? (
+                      {!collapsedGroups.puClientAriary && (
                         <>
-                          <PriceCell value={p?.montantBilletClientAriary} isCurrency />
-                          <PriceCell value={p?.montantServiceClientAriary} isCurrency />
-                          <PriceCell value={p?.montantPenaliteClientAriary} isCurrency />
+                          <PriceCell value={p?.montantBilletClientAriary} isCurrency className="font-medium text-emerald-800" />
+                          <PriceCell value={p?.montantServiceClientAriary} isCurrency className="font-medium text-emerald-800" />
+                          <PriceCell value={p?.montantPenaliteClientAriary} isCurrency className="font-medium text-emerald-800" />
                         </>
-                      ) : (
-                        <td className="px-4 py-3 text-center text-xs text-blue-700 bg-blue-100 font-semibold">
-                          {fmtAriary(p?.montantBilletClientAriary)} Ar
-                        </td>
                       )}
 
                       {/* Mt Cie Devise - Prospection */}
-                      {!collapsedGroups.mtCieDevise ? (
+                      {!collapsedGroups.mtCieDevise && (
                         <>
-                          <PriceCell value={p?.montantBilletCompagnieDevise} isCurrency />
-                          <PriceCell value={p?.montantServiceCompagnieDevise} isCurrency />
-                          <PriceCell value={p?.montantPenaliteCompagnieDevise} isCurrency />
+                          <PriceCell value={p?.montantBilletCompagnieDevise} isCurrency className="font-medium text-emerald-800" />
+                          <PriceCell value={p?.montantServiceCompagnieDevise} isCurrency className="font-medium text-emerald-800" />
+                          <PriceCell value={p?.montantPenaliteCompagnieDevise} isCurrency className="font-medium text-emerald-800" />
                         </>
-                      ) : (
-                        <td className="px-4 py-3 text-center text-xs text-teal-600 bg-teal-50 font-semibold">
-                          {fmtDevise(p?.montantBilletCompagnieDevise)}
-                        </td>
                       )}
 
                       {/* Mt Cie Ariary - Prospection */}
-                      {!collapsedGroups.mtCieAriary ? (
+                      {!collapsedGroups.mtCieAriary && (
                         <>
-                          <PriceCell value={p?.montantBilletCompagnieAriary} className="font-medium text-emerald-700" />
-                          <PriceCell value={p?.montantServiceCompagnieAriary} className="font-medium text-emerald-700" />
-                          <PriceCell value={p?.montantPenaliteCompagnieAriary} className="font-medium text-emerald-700" />
+                          <PriceCell value={p?.montantBilletCompagnieAriary} className="font-medium text-emerald-800" />
+                          <PriceCell value={p?.montantServiceCompagnieAriary} className="font-medium text-emerald-800" />
+                          <PriceCell value={p?.montantPenaliteCompagnieAriary} className="font-medium text-emerald-800" />
                         </>
-                      ) : (
-                        <td className="px-4 py-3 text-center text-xs text-teal-700 bg-teal-100 font-semibold">
-                          {fmtAriary(p?.montantBilletCompagnieAriary)} Ar
-                        </td>
                       )}
 
                       {/* Mt Client Devise - Prospection */}
-                      {!collapsedGroups.mtClientDevise ? (
+                      {!collapsedGroups.mtClientDevise && (
                         <>
-                          <PriceCell value={p?.montantBilletClientDevise} isCurrency />
-                          <PriceCell value={p?.montantServiceClientDevise} isCurrency />
-                          <PriceCell value={p?.montantPenaliteClientDevise} isCurrency />
+                          <PriceCell value={p?.montantBilletClientDevise} isCurrency className="font-medium text-emerald-800" />
+                          <PriceCell value={p?.montantServiceClientDevise} isCurrency className="font-medium text-emerald-800" />
+                          <PriceCell value={p?.montantPenaliteClientDevise} isCurrency className="font-medium text-emerald-800" />
                         </>
-                      ) : (
-                        <td className="px-4 py-3 text-center text-xs text-indigo-600 bg-indigo-50 font-semibold">
-                          {fmtDevise(p?.montantBilletClientDevise)}
-                        </td>
                       )}
 
                       {/* Mt Client Ariary - Prospection */}
-                      {!collapsedGroups.mtClientAriary ? (
+                      {!collapsedGroups.mtClientAriary && (
                         <>
-                          <PriceCell value={p?.montantBilletClientAriary} className="font-medium text-emerald-700" />
-                          <PriceCell value={p?.montantServiceClientAriary} className="font-medium text-emerald-700" />
-                          <PriceCell value={p?.montantPenaliteClientAriary} className="font-medium text-emerald-700" />
+                          <PriceCell value={p?.montantBilletClientAriary} className="font-medium text-emerald-800" />
+                          <PriceCell value={p?.montantServiceClientAriary} className="font-medium text-emerald-800" />
+                          <PriceCell value={p?.montantPenaliteClientAriary} className="font-medium text-emerald-800" />
                         </>
-                      ) : (
-                        <td className="px-4 py-3 text-center text-xs text-indigo-700 bg-indigo-100 font-semibold">
-                          {fmtAriary(p?.montantBilletClientAriary)} Ar
-                        </td>
                       )}
 
                       {/* Mt Réservation - Prospection (commission + total) */}
-                      {!collapsedGroups.mtResa ? (
+                      {!collapsedGroups.mtResa && (
                         <>
-                          <PriceCell value={p?.montantBilletCompagnieAriary} className="font-medium text-violet-700" />
-                          <PriceCell value={p?.montantServiceCompagnieAriary} className="font-medium text-violet-700" />
-                          <PriceCell value={p?.montantPenaliteCompagnieAriary} className="font-medium text-violet-700" />
+                          <PriceCell value={p?.montantBilletCompagnieAriary} className="font-medium text-emerald-800" />
+                          <PriceCell value={p?.montantServiceCompagnieAriary} className="font-medium text-emerald-800" />
+                          <PriceCell value={p?.montantPenaliteCompagnieAriary} className="font-medium text-emerald-800" />
                         </>
-                      ) : (
-                        <td className="px-4 py-3 text-center text-xs text-violet-600 bg-violet-50 font-semibold">
-                          {fmtAriary(p?.montantBilletCompagnieAriary)} Ar
-                        </td>
                       )}
 
                       </>)}
@@ -1029,121 +985,85 @@ const BilletTable: React.FC<BilletTableProps> = ({
                       {afficher.RESA && (<>
                       {/* **************************** Prix Resa **************************** */}
                       {/* PU Cie Devise */}
-                      {!collapsedGroups.puCieDevise ? (
+                      {!collapsedGroups.puCieDevise && (
                         <>
-                          <PriceCell value={ligne.puResaBilletCompagnieDevise} isCurrency />
-                          <PriceCell value={ligne.puResaServiceCompagnieDevise} isCurrency />
-                          <PriceCell value={ligne.puResaPenaliteCompagnieDevise} isCurrency />
+                          <PriceCell value={ligne.puResaBilletCompagnieDevise} isCurrency className="font-medium text-violet-800" />
+                          <PriceCell value={ligne.puResaServiceCompagnieDevise} isCurrency className="font-medium text-violet-800" />
+                          <PriceCell value={ligne.puResaPenaliteCompagnieDevise} isCurrency className="font-medium text-violet-800" />
                         </>
-                      ) : (
-                        <td className="px-4 py-3 text-center text-xs text-emerald-600 bg-emerald-50 font-semibold">
-                          {fmtDevise(ligne.puResaBilletCompagnieDevise)}
-                        </td>
                       )}
 
                       {/* PU Cie Ariary */}
-                      {!collapsedGroups.puCieAriary ? (
+                      {!collapsedGroups.puCieAriary && (
                         <>
-                          <PriceCell value={ligne.puResaBilletCompagnieAriary} isCurrency />
-                          <PriceCell value={ligne.puResaServiceCompagnieAriary} isCurrency />
-                          <PriceCell value={ligne.puResaPenaliteCompagnieAriary} isCurrency />
+                          <PriceCell value={ligne.puResaBilletCompagnieAriary} isCurrency className="font-medium text-violet-800" />
+                          <PriceCell value={ligne.puResaServiceCompagnieAriary} isCurrency className="font-medium text-violet-800" />
+                          <PriceCell value={ligne.puResaPenaliteCompagnieAriary} isCurrency className="font-medium text-violet-800" />
                         </>
-                      ) : (
-                        <td className="px-4 py-3 text-center text-xs text-emerald-700 bg-emerald-100 font-semibold">
-                          {fmtAriary(ligne.puResaBilletCompagnieAriary)} Ar
-                        </td>
                       )}
 
                       {/* PU Client Devise */}
-                      {!collapsedGroups.puClientDevise ? (
+                      {!collapsedGroups.puClientDevise && (
                         <>
-                          <PriceCell value={ligne.puResaBilletClientDevise} isCurrency />
-                          <PriceCell value={ligne.puResaServiceClientDevise} isCurrency />
-                          <PriceCell value={ligne.puResaPenaliteClientDevise} isCurrency />
+                          <PriceCell value={ligne.puResaBilletClientDevise} isCurrency className="font-medium text-violet-800" />
+                          <PriceCell value={ligne.puResaServiceClientDevise} isCurrency className="font-medium text-violet-800" />
+                          <PriceCell value={ligne.puResaPenaliteClientDevise} isCurrency className="font-medium text-violet-800" />
                         </>
-                      ) : (
-                        <td className="px-4 py-3 text-center text-xs text-blue-600 bg-blue-50 font-semibold">
-                          {fmtDevise(ligne.puResaBilletClientDevise)}
-                        </td>
                       )}
 
                       {/* PU Client Ariary */}
-                      {!collapsedGroups.puClientAriary ? (
+                      {!collapsedGroups.puClientAriary && (
                         <>
-                          <PriceCell value={ligne.puResaBilletClientAriary} isCurrency />
-                          <PriceCell value={ligne.puResaServiceClientAriary} isCurrency />
-                          <PriceCell value={ligne.puResaPenaliteClientAriary} isCurrency />
+                          <PriceCell value={ligne.puResaBilletClientAriary} isCurrency className="font-medium text-violet-800" />
+                          <PriceCell value={ligne.puResaServiceClientAriary} isCurrency className="font-medium text-violet-800" />
+                          <PriceCell value={ligne.puResaPenaliteClientAriary} isCurrency className="font-medium text-violet-800" />
                         </>
-                      ) : (
-                        <td className="px-4 py-3 text-center text-xs text-blue-700 bg-blue-100 font-semibold">
-                          {fmtAriary(ligne.puResaBilletClientAriary)} Ar
-                        </td>
                       )}
 
                       {/* Mt Cie Devise */}
-                      {!collapsedGroups.mtCieDevise ? (
+                      {!collapsedGroups.mtCieDevise && (
                         <>
-                          <PriceCell value={ligne.puResaMontantBilletCompagnieDevise} isCurrency />
-                          <PriceCell value={ligne.puResaMontantServiceCompagnieDevise} isCurrency />
-                          <PriceCell value={ligne.puResaMontantPenaliteCompagnieDevise} isCurrency />
+                          <PriceCell value={ligne.puResaMontantBilletCompagnieDevise} isCurrency className="font-medium text-violet-800" />
+                          <PriceCell value={ligne.puResaMontantServiceCompagnieDevise} isCurrency className="font-medium text-violet-800" />
+                          <PriceCell value={ligne.puResaMontantPenaliteCompagnieDevise} isCurrency className="font-medium text-violet-800" />
                         </>
-                      ) : (
-                        <td className="px-4 py-3 text-center text-xs text-teal-600 bg-teal-50 font-semibold">
-                          {fmtDevise(ligne.puResaMontantBilletCompagnieDevise)}
-                        </td>
                       )}
 
                       {/* Mt Cie Ariary */}
-                      {!collapsedGroups.mtCieAriary ? (
+                      {!collapsedGroups.mtCieAriary && (
                         <>
-                          <PriceCell value={ligne.puResaMontantBilletCompagnieAriary} className="font-medium text-emerald-700" />
-                          <PriceCell value={ligne.puResaMontantServiceCompagnieAriary} className="font-medium text-emerald-700" />
-                          <PriceCell value={ligne.puResaMontantPenaliteCompagnieAriary} className="font-medium text-emerald-700" />
+                          <PriceCell value={ligne.puResaMontantBilletCompagnieAriary} className="font-medium text-violet-800" />
+                          <PriceCell value={ligne.puResaMontantServiceCompagnieAriary} className="font-medium text-violet-800" />
+                          <PriceCell value={ligne.puResaMontantPenaliteCompagnieAriary} className="font-medium text-violet-800" />
                         </>
-                      ) : (
-                        <td className="px-4 py-3 text-center text-xs text-teal-700 bg-teal-100 font-semibold">
-                          {fmtAriary(ligne.puResaMontantBilletCompagnieAriary)} Ar
-                        </td>
                       )}
 
                       {/* Mt Client Devise */}
-                      {!collapsedGroups.mtClientDevise ? (
+                      {!collapsedGroups.mtClientDevise && (
                         <>
-                          <PriceCell value={ligne.puResaMontantBilletClientDevise} isCurrency />
-                          <PriceCell value={ligne.puResaMontantServiceClientDevise} isCurrency />
-                          <PriceCell value={ligne.puResaMontantPenaliteClientDevise} isCurrency />
+                          <PriceCell value={ligne.puResaMontantBilletClientDevise} isCurrency className="font-medium text-violet-800" />
+                          <PriceCell value={ligne.puResaMontantServiceClientDevise} isCurrency className="font-medium text-violet-800" />
+                          <PriceCell value={ligne.puResaMontantPenaliteClientDevise} isCurrency className="font-medium text-violet-800" />
                         </>
-                      ) : (
-                        <td className="px-4 py-3 text-center text-xs text-indigo-600 bg-indigo-50 font-semibold">
-                          {fmtDevise(ligne.puResaMontantBilletClientDevise)}
-                        </td>
                       )}
 
                       {/* Mt Client Ariary */}
-                      {!collapsedGroups.mtClientAriary ? (
+                      {!collapsedGroups.mtClientAriary && (
                         <>
-                          <PriceCell value={ligne.puResaMontantBilletClientAriary} className="font-medium text-emerald-700" />
-                          <PriceCell value={ligne.puResaMontantServiceClientAriary} className="font-medium text-emerald-700" />
-                          <PriceCell value={ligne.puResaMontantPenaliteClientAriary} className="font-medium text-emerald-700" />
+                          <PriceCell value={ligne.puResaMontantBilletClientAriary} className="font-medium text-violet-800" />
+                          <PriceCell value={ligne.puResaMontantServiceClientAriary} className="font-medium text-violet-800" />
+                          <PriceCell value={ligne.puResaMontantPenaliteClientAriary} className="font-medium text-violet-800" />
                         </>
-                      ) : (
-                        <td className="px-4 py-3 text-center text-xs text-indigo-700 bg-indigo-100 font-semibold">
-                          {fmtAriary(ligne.puResaMontantBilletClientAriary)} Ar
-                        </td>
                       )}
                       
 
                       {/* Mt Réservation */}
-                      {!collapsedGroups.mtResa ? (
+                      {!collapsedGroups.mtResa && (
                         <>
-                          <PriceCell value={ligne.puResaMontantBilletCompagnieAriary} className="font-medium text-violet-700" />
-                          <PriceCell value={ligne.puResaMontantServiceCompagnieAriary} className="font-medium text-violet-700" />
-                          <PriceCell value={ligne.puResaMontantPenaliteCompagnieAriary} className="font-medium text-violet-700" />
+                          <PriceCell value={ligne.puResaMontantBilletCompagnieAriary} className="font-medium text-violet-800" />
+                          <PriceCell value={ligne.puResaMontantServiceCompagnieAriary} className="font-medium text-violet-800" />
+                          <PriceCell value={ligne.puResaMontantPenaliteCompagnieAriary} className="font-medium text-violet-800" />
                         </>
-                      ) : (
-                        <td className="px-4 py-3 text-center text-xs text-violet-600 bg-violet-50 font-semibold">
-                          {fmtAriary(ligne.puResaMontantBilletCompagnieAriary)} Ar
-                        </td>
                       )}
 
                       </>)}
@@ -1151,32 +1071,24 @@ const BilletTable: React.FC<BilletTableProps> = ({
                       {/* Prix Émission */}
                       {afficher.EMISSION && (
                         <CellulesBillet vue="EMISSION" liee={{ principale: ligne, toutes: [ligne] }}
-                          collapsed={emissionReplie} showPenalite />
+                          collapsed={false} showPenalite tauxTaxe={p?.tauxTaxe} />
                       )}
 
                       {/* Commissions */}
-                      {!collapsedGroups.commissions ? (
+                      {!collapsedGroups.commissions && (
                         <>
                           <PriceCell value={ligne.resaCommissionEnDevise} className="font-medium text-green-700" />
                           <PriceCell value={ligne.resaCommissionEnAriary} className="font-medium text-green-700" />
                         </>
-                      ) : (
-                        <td className="px-4 py-3 text-center text-xs text-green-700 bg-green-50 font-bold">
-                          {fmtDevise(ligne.resaCommissionEnDevise)}
-                        </td>
                       )}
 
                       {/* Conditions */}
-                      {!collapsedGroups.annulation ? (
+                      {!collapsedGroups.annulation && (
                         <>
                           {/* Conditions enregistrées sur la ligne billet (repli sur la prospection pour la modif) */}
                           <td className="px-4 py-3">{ligne.conditionModif || p?.conditionModif || '—'}</td>
                           <td className="px-4 py-3">{ligne.conditionAnnul || '—'}</td>
                         </>
-                      ) : (
-                        <td className="px-4 py-3 text-center text-xs text-orange-600 bg-orange-50 italic">
-                          {ligne.conditionModif || ligne.conditionAnnul ? '⚠️' : '—'}
-                        </td>
                       )}
 
                       <td className="px-4 py-3">
@@ -1193,46 +1105,34 @@ const BilletTable: React.FC<BilletTableProps> = ({
                         <PassagersCell billets={ligne.billet} handleReporter={handleReporter} ligne={ligne} billetEntete={billet} />
                       </td>
 
-                      {/* Preuve client — image séparée car pas un simple texte */}
-                      <td className='flex flex-row gap-2 '>
-                        <div>
-                          <p className="text-[10px] uppercase tracking-wide text-slate-400 font-medium mb-1">Preuve client</p>
-                          {prospectionEntete?.preuveClient ? (
-                            <a
-                              href={`${API_URL}/${prospectionEntete.preuveClient}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-block"
-                            >
-                              <img
-                                src={`${API_URL}/${prospectionEntete.preuveClient}`}
-                                alt="Preuve client"
-                                className="h-10 w-16 object-cover rounded border border-slate-200 hover:opacity-80 transition-opacity cursor-pointer"
-                              />
-                            </a>
-                          ) : (
-                            <p className="text-sm text-slate-400 italic">—</p>
-                          )}
+                      {/* Preuves : devis (en-tête), acceptation de la résa par le client, capture du n° de résa */}
+                      <td className="px-4 py-3">
+                        <div className="flex flex-row gap-3">
+                          <div>
+                            <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-slate-400">Devis client</p>
+                            <MiniaturePreuve chemin={prospectionEntete?.preuveClient} libelle="Preuve d'acceptation du devis" />
+                          </div>
+                          <div>
+                            <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-slate-400">Accept. client</p>
+                            <MiniaturePreuve chemin={ligne.preuveAcceptationClient} libelle="Preuve d'acceptation de la réservation" />
+                          </div>
+                          <div>
+                            <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-slate-400">N° résa</p>
+                            <MiniaturePreuve chemin={ligne.preuveResa} libelle="Capture du n° de réservation" />
+                          </div>
+                          <div>
+                            <p className="mb-1 text-[10px] font-medium uppercase tracking-wide text-slate-400">Achat</p>
+                            <MiniaturePreuve chemin={ligne.preuveAchat} libelle="Preuve d'achat (paiement à la compagnie)" />
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-[10px] uppercase tracking-wide text-slate-400 font-medium mb-1">Preuve Resa</p>
-                          {ligne.preuveResa ? (
-                            <a
-                              href={`${API_URL}/${ligne.preuveResa}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-block"
-                            >
-                              <img
-                                src={`${API_URL}/${ligne.preuveResa}`}
-                                alt="Preuve resa"
-                                className="h-10 w-16 object-cover rounded border border-slate-200 hover:opacity-80 transition-opacity cursor-pointer"
-                              />
-                            </a>
-                          ) : (
-                            <p className="text-sm text-slate-400 italic">—</p>
-                          )}
-                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setHistoriqueLigne(ligne)}
+                          className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-medium text-slate-500 hover:text-slate-800 hover:underline"
+                          title="Tous les fichiers de la ligne, y compris ceux qui ont été remplacés"
+                        >
+                          <History size={11} /> Historique des fichiers
+                        </button>
                       </td>
 
                       <td className="px-4 py-3 text-center min-w-[220px]">
@@ -1316,6 +1216,19 @@ const BilletTable: React.FC<BilletTableProps> = ({
           </table>
         </div>
       </div>
+      {historiqueLigne && (
+        <HistoriquePiecesJointes
+          ligneId={historiqueLigne.id}
+          referenceLine={historiqueLigne.referenceLine}
+          nomsPassagers={Object.fromEntries(
+            (historiqueLigne.billet ?? []).map((b) => [
+              b.id,
+              `${b.clientbeneficiaireInfo?.prenom ?? ''} ${b.clientbeneficiaireInfo?.nom ?? ''}`.trim(),
+            ])
+          )}
+          onClose={() => setHistoriqueLigne(null)}
+        />
+      )}
     </div>
   );
 };

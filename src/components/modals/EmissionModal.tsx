@@ -1,17 +1,23 @@
 // src/components/modals/EmissionModal.tsx
 import React, { useState, useEffect } from 'react';
-import { FiX, FiUpload, FiFileText, FiTrash2 } from 'react-icons/fi';
+import { FiX } from 'react-icons/fi';
 import { toast } from '../Toast/toast';
 import { useEscapeKey } from '../../hooks/useEscapeKey';
-import { API_URL } from '../../service/env';
+import { ChampPreuve } from '../ui/Preuve';
+import { Download } from 'lucide-react';
+import type { BilletEntete } from '../../app/front_office/billetSlice';
+import { useBilletPassagerPdf } from '../../pages/front_office/dossiers-communs/module.pdf/pdf.generation/hooks/usePdfGenerator';
+import FenetreBilletPdf from '../../pages/front_office/dossiers-communs/module.ticketing/ticketing.sous.module/components.billet/FenetreBilletPdf';
+import { buildBilletData, collectExigences } from '../../pages/front_office/dossiers-communs/module.ticketing/ticketing.sous.module/components.billet/utils/billetPassagerPdf';
 
 interface PassagerEmission {
   billetId: string;           // ID du billet (de la table billet)
   infoId: string;             // clientbeneficiaireInfoId
   nomComplet: string;
   numeroBillet: string;
+  /** Nouvel e-billet choisi par l'agent (envoyé avec nouveauPjBillet: true) */
   pjBillet: File | null;
-  // PDF déjà envoyé (chemin serveur) : affiché pendant son rechargement, ou en lien s'il n'a pas pu être rechargé
+  /** E-billet déjà enregistré (chemin serveur) : gardé tel quel s'il n'est pas remplacé */
   pjExistant: string | null;
 }
 
@@ -23,6 +29,8 @@ interface EmissionModalProps {
   numeroBillet?: string;      // plus vraiment utilisé car multi
   // Requête en cours : bouton d'envoi bloqué (évite le double envoi)
   loading?: boolean;
+  /** Billet (en-tête) : nécessaire pour générer le billet agence (PDF) */
+  billetEntete?: BilletEntete | null;
 }
 
 // Formatage des montants (séparateur de milliers, "—" si vide)
@@ -39,17 +47,25 @@ const EmissionModal: React.FC<EmissionModalProps> = ({
   onSubmit,
   ligne,
   loading = false,
+  billetEntete,
 }) => {
+  // Billet agence (PDF) : aperçu, ou génération jointe comme e-billet du passager
+  const { preview: apercuPdf, generateFile, loading: pdfLoading } = useBilletPassagerPdf();
+  const [pdfPassager, setPdfPassager] = useState<number | null>(null);
   // Correction (ligne déjà CLOTURER) : on repart de la saisie précédente (taux, numéros, PDF)
   const tauxInitial = (l: any) => l?.emissionTauxChange || l?.resaTauxEchange || 4850;
   const [tauxChange, setTauxChange] = useState<number | ''>(tauxInitial(ligne));
   const [passagers, setPassagers] = useState<PassagerEmission[]>([]);
+  // Justificatif du paiement à la compagnie (un par ligne)
+  const [preuveAchat, setPreuveAchat] = useState<File | null>(null);
+  // Correction : ligne déjà émise → tous les fichiers sont facultatifs (l'existant est gardé)
+  const estCorrection = ligne?.statut === 'CLOTURER';
 
   useEffect(() => {
     if (!isOpen || !ligne?.billet?.length) return;
-    let active = true;
 
     setTauxChange(tauxInitial(ligne));
+    setPreuveAchat(null);
     setPassagers(
       ligne.billet.map((b: any) => {
         const info = b.clientbeneficiaireInfo;
@@ -64,28 +80,8 @@ const EmissionModal: React.FC<EmissionModalProps> = ({
         };
       })
     );
-
-    // Les PDF déjà envoyés sont rechargés en File : la route attend un fichier par passager, ils repartent
-    // tels quels si l'agent ne les remplace pas
-    ligne.billet.forEach(async (b: any) => {
-      if (!b.pjBillet) return;
-      try {
-        const res = await fetch(`${API_URL}/${b.pjBillet}`, { credentials: 'include' });
-        if (!res.ok) return;
-        const blob = await res.blob();
-        const nomFichier = String(b.pjBillet).split('/').pop() || `billet-${b.id}.pdf`;
-        const file = new File([blob], nomFichier, { type: blob.type || 'application/pdf' });
-        if (!active) return;
-        // Ne remplace pas un fichier choisi entre-temps par l'agent
-        setPassagers(prev => prev.map(p => (p.billetId === b.id && !p.pjBillet ? { ...p, pjBillet: file } : p)));
-      } catch {
-        // Fichier introuvable : l'agent devra le joindre à nouveau (le lien reste affiché)
-      }
-    });
-
-    return () => {
-      active = false;
-    };
+    // Plus de retéléchargement des anciens e-billets : grâce à nouveauPjBillet, seuls les fichiers
+    // remplacés sont envoyés (FRONTEND_PROMPT_PJ_BILLET_ET_PREUVE_ACHAT.md)
   }, [isOpen, ligne]);
 
   // Fermeture avec la touche Échap
@@ -120,10 +116,22 @@ const EmissionModal: React.FC<EmissionModalProps> = ({
       return;
     }
 
-    const hasMissing = passagers.some(p => !p.numeroBillet.trim() || !p.pjBillet);
-    if (hasMissing) {
-      toast.warning('Chaque passager doit avoir un numéro de billet ET un fichier PDF');
+    const sansNumero = passagers.find(p => !p.numeroBillet.trim());
+    if (sansNumero) {
+      toast.warning(`Le numéro de billet de ${sansNumero.nomComplet} est obligatoire`);
       return;
+    }
+    // 1re émission : un e-billet par passager et la preuve d'achat sont obligatoires (mêmes messages que le backend)
+    if (!estCorrection) {
+      const sansEbillet = passagers.find(p => !p.pjBillet && !p.pjExistant);
+      if (sansEbillet) {
+        toast.warning(`L'e-billet de ${sansEbillet.nomComplet} est obligatoire`);
+        return;
+      }
+      if (!preuveAchat && !ligne?.preuveAchat) {
+        toast.warning("La preuve d'achat est obligatoire");
+        return;
+      }
     }
 
     const data = {
@@ -131,8 +139,11 @@ const EmissionModal: React.FC<EmissionModalProps> = ({
       billets: passagers.map(p => ({
         billetId: p.billetId,
         numeroBillet: p.numeroBillet.trim(),
+        nouveauPjBillet: !!p.pjBillet,
       })),
-      pjBillets: passagers.map(p => p.pjBillet),
+      // Uniquement les nouveaux e-billets, dans l'ordre des passagers marqués nouveauPjBillet
+      pjBillets: passagers.filter(p => p.pjBillet).map(p => p.pjBillet as File),
+      preuveAchat,
     };
 
     onSubmit(data);
@@ -140,10 +151,32 @@ const EmissionModal: React.FC<EmissionModalProps> = ({
 
   useEscapeKey(isOpen, onClose);
 
+  const donneesPdf = (index: number, choix: { exigencesImportantesIds: string[] }) => {
+    const p = passagers[index];
+    const b = ligne?.billet?.find((x: any) => x.id === p.billetId);
+    if (!b || !billetEntete) return null;
+    const data = buildBilletData(
+      { ...b, numeroBillet: p.numeroBillet.trim() },
+      { ...ligne, emissionTauxChange: Number(tauxChange) || ligne.emissionTauxChange },
+      billetEntete,
+    );
+    if (choix.exigencesImportantesIds.length > 0) data.exigencesImportantesIds = choix.exigencesImportantesIds;
+    return data;
+  };
+
+  const ouvrirPdf = (index: number) => {
+    const p = passagers[index];
+    if (!p.numeroBillet.trim()) {
+      toast.warning(`Saisissez d'abord le numéro de billet de ${p.nomComplet}`);
+      return;
+    }
+    setPdfPassager(index);
+  };
+
   if (!isOpen) return null;
 
   const pl = ligne?.prospectionLigne || {};
-  const completed = passagers.filter(p => p.numeroBillet.trim() && p.pjBillet).length;
+  const completed = passagers.filter(p => p.numeroBillet.trim() && (p.pjBillet || p.pjExistant)).length;
 
   const tarifRows = [
     {
@@ -283,6 +316,24 @@ const EmissionModal: React.FC<EmissionModalProps> = ({
             <p className="mt-1.5 text-xs text-slate-500">Valeur d'une unité de devise en Ariary.</p>
           </section>
 
+          {/* Preuve d'achat (une pour la ligne) */}
+          <section>
+            <h3 className="mb-1 text-sm font-semibold text-slate-900">
+              Preuve d'achat {!estCorrection && <span className="text-red-500">*</span>}
+            </h3>
+            <p className="mb-2 text-xs text-slate-500">
+              Justificatif du paiement à la compagnie pour cette ligne : reçu, facture, capture du paiement.
+            </p>
+            <ChampPreuve
+              libelleErreur="La preuve d'achat"
+              placeholder="Choisir la preuve d'achat"
+              file={preuveAchat}
+              onChange={setPreuveAchat}
+              existant={ligne?.preuveAchat ?? null}
+              onErreur={(m) => toast.error(m)}
+            />
+          </section>
+
           {/* Passagers */}
           <section>
             <div className="mb-3 flex items-center justify-between">
@@ -348,69 +399,36 @@ const EmissionModal: React.FC<EmissionModalProps> = ({
 
                       <div>
                         <span className="mb-1.5 block text-xs font-medium text-slate-600">
-                          Billet PDF <span className="text-red-500">*</span>
+                          E-billet compagnie {!estCorrection && <span className="text-red-500">*</span>}
                         </span>
-
-                        {p.pjBillet ? (
-                          <div className="flex h-10 items-center gap-2 rounded-md border border-slate-300 bg-slate-50 px-3">
-                            <FiFileText className="shrink-0 text-slate-500" size={16} />
-                            <span className="flex-1 truncate text-sm text-slate-700" title={p.pjBillet.name}>
-                              {p.pjBillet.name}
-                            </span>
-                            <span className="shrink-0 text-xs text-slate-400">
-                              {(p.pjBillet.size / 1024).toFixed(0)} Ko
-                            </span>
+                        <span className="-mt-1 mb-1.5 block text-[11px] text-slate-400">
+                          Le billet électronique émis par la compagnie pour ce passager
+                        </span>
+                        <ChampPreuve
+                          libelleErreur="L'e-billet"
+                          placeholder="Choisir un fichier"
+                          file={p.pjBillet}
+                          onChange={(f) => updatePassager(index, { pjBillet: f })}
+                          existant={p.pjExistant}
+                          onErreur={(m) => toast.error(m)}
+                        />
+                        {/* … ou générer le billet agence et le joindre directement */}
+                        {billetEntete && (() => {
+                          const info = ligne?.billet?.find((x: any) => x.id === p.billetId)?.clientbeneficiaireInfo;
+                          const sansDocument = !info?.document;
+                          return (
                             <button
                               type="button"
-                              onClick={() => updatePassager(index, { pjBillet: null, pjExistant: null })}
-                              className="shrink-0 rounded p-1 text-slate-400 transition hover:bg-red-50 hover:text-red-600"
-                              aria-label="Supprimer le fichier"
+                              disabled={pdfLoading || sansDocument}
+                              onClick={() => ouvrirPdf(index)}
+                              title={sansDocument ? 'Fichier du document du passager (ex. passeport) manquant' : 'Choisir les exigences, prévisualiser puis joindre le billet généré'}
+                              className="mt-1.5 inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-violet-700 transition hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-40"
                             >
-                              <FiTrash2 size={14} />
+                              <Download size={13} /> Générer le billet agence et le joindre
+                              {sansDocument && <span className="text-amber-700">(document manquant)</span>}
                             </button>
-                          </div>
-                        ) : p.pjExistant ? (
-                          <div className="flex h-10 items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3">
-                            <FiFileText className="shrink-0 text-amber-600" size={16} />
-                            <a
-                              href={`${API_URL}/${p.pjExistant}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="flex-1 truncate text-sm text-amber-800 underline"
-                              title="PDF déjà envoyé : à joindre à nouveau s'il ne se recharge pas"
-                            >
-                              {p.pjExistant.split('/').pop()}
-                            </a>
-                            <label className="shrink-0 cursor-pointer rounded px-2 py-1 text-xs font-medium text-amber-700 hover:bg-amber-100">
-                              Remplacer
-                              <input
-                                type="file"
-                                accept="application/pdf"
-                                className="hidden"
-                                onChange={e => {
-                                  const file = e.target.files?.[0];
-                                  if (file) updatePassager(index, { pjBillet: file });
-                                  e.target.value = '';
-                                }}
-                              />
-                            </label>
-                          </div>
-                        ) : (
-                          <label className="flex h-10 cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-slate-300 text-sm text-slate-500 transition hover:border-blue-400 hover:bg-blue-50/50 hover:text-blue-600">
-                            <FiUpload size={15} />
-                            Choisir un fichier PDF
-                            <input
-                              type="file"
-                              accept="application/pdf"
-                              className="hidden"
-                              onChange={e => {
-                                const file = e.target.files?.[0];
-                                if (file) updatePassager(index, { pjBillet: file });
-                                e.target.value = '';
-                              }}
-                            />
-                          </label>
-                        )}
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>
@@ -447,6 +465,35 @@ const EmissionModal: React.FC<EmissionModalProps> = ({
           </div>
         </div>
       </form>
+
+      {pdfPassager !== null && passagers[pdfPassager] && (
+        <FenetreBilletPdf
+          nomPassager={passagers[pdfPassager].nomComplet}
+          exigences={collectExigences(ligne)}
+          loading={pdfLoading}
+          actions={[
+            { id: 'apercu', label: 'Aperçu' },
+            { id: 'joindre', label: 'Générer et joindre', principal: true },
+          ]}
+          onConfirm={(action, choix) => {
+            const data = donneesPdf(pdfPassager, choix);
+            if (!data) return;
+            if (action === 'apercu') {
+              apercuPdf(data, choix.styleId); // la fenêtre reste ouverte pour joindre ensuite
+              return;
+            }
+            const p = passagers[pdfPassager];
+            const nom = `billet-${p.numeroBillet.trim()}-${p.nomComplet}`.replace(/[^\w.-]+/g, '_');
+            const fichier = generateFile(data, choix.styleId, `${nom}.pdf`);
+            if (fichier) {
+              updatePassager(pdfPassager, { pjBillet: fichier });
+              toast.success(`Billet généré et joint pour ${p.nomComplet}`);
+            }
+            setPdfPassager(null);
+          }}
+          onClose={() => setPdfPassager(null)}
+        />
+      )}
     </div>
   );
 };
