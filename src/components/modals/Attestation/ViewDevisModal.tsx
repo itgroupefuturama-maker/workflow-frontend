@@ -1,6 +1,7 @@
 // ViewDevisModal.tsx
 import React from 'react';
 import { API_URL } from '../../../service/env';
+import { useEscapeKey } from '../../../hooks/useEscapeKey';
 
 interface ViewDevisModalProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ const ViewDevisModal: React.FC<ViewDevisModalProps> = ({
   devisData,
   loading,
 }) => {
+  useEscapeKey(isOpen, onClose);
   if (!isOpen) return null;
 
   const handleOpenPdfPerson = () => {

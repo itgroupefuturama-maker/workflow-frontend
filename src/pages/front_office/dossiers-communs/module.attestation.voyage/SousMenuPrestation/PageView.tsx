@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useLocation, useNavigate } from 'react-router-dom';           // ← AJOUT
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';           // ← AJOUT
 import type { AppDispatch, RootState } from '../../../../../app/store';
 import { createAttestationEntete, fetchAttestationEntetes, setSelectedEntete } from '../../../../../app/front_office/parametre_attestation/attestationEnteteSlice';
 import { AttestationHeader } from './components.attestation/AttestationHeader';
@@ -19,6 +19,7 @@ import { useAuthorization } from '../../../../../hooks/useAuthorization';
 import SkeletonTableRows from '../../../../../components/ui/SkeletonTableRows';
 import Button from '../../../../../components/ui/Button';
 import CreateEnteteModal from '../../../../../components/modals/CreateEnteteModal';
+import { formatStatut } from '../../../../../utils/statut';
 
 const MODULE = 'attestation';
 
@@ -77,12 +78,35 @@ const PageViewAttestation = () => {
 
   const canCreate = !!prestationId && fournisseurs.length > 0;
 
-  const tabs = [
+  const tabs: { id: string; label: string }[] = [
     // { id: 'prospection', label: 'Listes des entête attestation' },
     // { id: 'beneficiaire', label: 'Listes des bénéficiaires' }
   ];
   
-  const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'prospection');
+  // Onglet actif reflété dans l'URL (?onglet=...) pour survivre au rechargement et aux liens partagés
+  
+  const [searchParams, setSearchParams] = useSearchParams();
+  
+  const [activeTab, setActiveTab] = useState<string>(
+  
+    () => location.state?.targetTab || searchParams.get('onglet') || 'prospection'
+  
+  );
+
+  
+  useEffect(() => {
+  
+    if (searchParams.get('onglet') === activeTab) return;
+  
+    const next = new URLSearchParams(searchParams);
+  
+    next.set('onglet', activeTab);
+  
+    setSearchParams(next, { replace: true, state: location.state });
+  
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  
+  }, [activeTab]);
   const [activeTabSousSection, setActiveTabSousSection] = useState('lignes');
   
   const { generate: generateAttestation, preview: previewAttestation, loading: attestationPdfLoading } = useAttestationPdf();
@@ -167,7 +191,7 @@ const PageViewAttestation = () => {
     dispatch(setSelectedEntete(id));
     
     // 2. Naviguer vers le détail
-    navigate(`/dossiers-communs/attestation/details`, { state: { targetTab: 'prospection' } });
+    navigate(`/dossiers-communs/attestation/details?id=${id}`, { state: { targetTab: 'prospection' } });
     
   };
 
@@ -202,6 +226,7 @@ const PageViewAttestation = () => {
                     numeroAttestation={dossierActif?.numero}
                     navigate={navigate}
                   />
+                  <DossierActifCard className="ml-auto mr-3" />
 
                   {items.length > 0 && activeTabSousSection === 'lignes' && (
                     <>
@@ -241,7 +266,6 @@ const PageViewAttestation = () => {
               )}
 
               <div className='px-4 bg-slate-200 rounded-b-xl'>
-                <DossierActifCard gradient="from-rose-400 via-pink-400 to-rose-500" />
                 <div className="flex items-center justify-between">
                   {/* Bouton + formulaire création */}
                   <nav className="flex  mb-2 gap-1" aria-label="Tabs">
@@ -489,7 +513,7 @@ const PageViewAttestation = () => {
                                                             ? 'bg-emerald-100 text-emerald-700'
                                                             : 'bg-slate-100 text-slate-500'
                                                         }`}>
-                                                          {ligne.status}
+                                                          {formatStatut(ligne.status)}
                                                         </span>
                                                       </td>
                                                     </tr>

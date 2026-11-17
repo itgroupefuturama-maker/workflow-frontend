@@ -3,6 +3,7 @@ import { FiX, FiInfo, FiSave, FiPlus, FiTrash2 } from 'react-icons/fi';
 import { useSelector } from 'react-redux';
 import type { RootState } from '../../../../../app/store';
 import { toast } from '../../../../../components/Toast/toast';
+import { useEscapeKey } from '../../../../../hooks/useEscapeKey';
 
 type DeviseLigne = {
   deviseId: string;
@@ -165,6 +166,8 @@ const ModalBenchmarkingLigneForm: React.FC<Props> = ({
       })),
     });
   };
+
+  useEscapeKey(isOpen, onClose);
 
   if (!isOpen) return null;
 

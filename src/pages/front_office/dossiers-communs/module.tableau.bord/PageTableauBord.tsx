@@ -4,7 +4,7 @@ import { fetchEvolutionByYear } from '../../../../app/front_office/parametre_das
 import type { ModuleEvolution, MoisEvolution } from '../../../../app/front_office/parametre_dashboard/dashboardSlice';
 import type { AppDispatch, RootState } from '../../../../app/store';
 import { FiArrowLeft } from 'react-icons/fi';
-import { LayoutDashboard } from 'lucide-react';
+import { Calendar, LayoutDashboard } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import {
   Chart as ChartJS,
@@ -337,7 +337,7 @@ const YearFilter: React.FC<YearFilterProps> = ({
 
         <div className="mt-3 p-3 bg-indigo-50 border border-indigo-200 rounded-lg max-w-md">
           <p className="text-xs text-indigo-700 font-medium">
-            📅 Période retenue : du 1 {MOIS_LABELS[customStart]} au {lastDayEnd} {MOIS_LABELS[customEnd]} (base {referenceYear})
+            <Calendar size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Période retenue : du 1 {MOIS_LABELS[customStart]} au {lastDayEnd} {MOIS_LABELS[customEnd]} (base {referenceYear})
           </p>
         </div>
       </div>
@@ -607,7 +607,7 @@ const PageTableauBord: React.FC = () => {
         <div>
           <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
             <LayoutDashboard className="text-indigo-600" size={20} />
-            Dashboard
+            Tableau de bord
           </h2>
           <p className="text-sm text-gray-400 italic">Vue d'ensemble des performances</p>
         </div>

@@ -4,6 +4,7 @@ import type { RootState, AppDispatch } from "../../../../../app/store";
 import { createClientForm } from "../../../../../app/portail_client/clientFormSlice";
 import type { ClientFormPayload } from "../../../../../app/portail_client/clientFormSlice";
 import { X, Loader2, ChevronRight, ChevronLeft } from "lucide-react";
+import { useEscapeKey } from '../../../../../hooks/useEscapeKey';
 
 // ── Champs par section ──────────────────────────────────
 const SECTIONS = [
@@ -77,6 +78,7 @@ interface Props {
 }
 
 const AddBeneficiaireModal = ({ beneficiaireId, userId, onClose }: Props) => {
+  useEscapeKey(true, onClose);
   const dispatch = useDispatch<AppDispatch>();
   const { loading, error } = useSelector((state: RootState) => state.clientForm);
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import type { AppDispatch, RootState } from '../../../../../app/store';
 import { HotelHeader } from '../components/HotelHeader';
 import { createBenchmarking, createHotelEnteteFromBenchmarking, createHotelProspectionEntete, fetchHotelProspectionEntetes, setSelectedEntete, type HotelProspectionEntete } from '../../../../../app/front_office/parametre_hotel/hotelProspectionEnteteSlice';
@@ -52,7 +52,7 @@ const PageViewHotel = () => {
     creating,
   } = useSelector((state: RootState) => state.hotelProspectionEntete);
 
-  const tabs = [
+  const tabs: { id: string; label: string }[] = [
     // { id: 'prospection', label: 'Listes des entête benchmarking' },
     // { id: 'hotel', label: 'Listes des reservation hotel' },
     // { id: 'beneficiaire', label: 'Listes des bénéficiaires' }
@@ -68,7 +68,19 @@ const PageViewHotel = () => {
     upper === 'TRES_ELEVE' ||           // toujours bloqué
     (upper === 'ELEVE' && !confirmed);  // bloqué tant que pas confirmé
 
-  const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'prospection');
+  // Onglet actif reflété dans l'URL (?onglet=...) pour survivre au rechargement et aux liens partagés
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<string>(
+    () => location.state?.targetTab || searchParams.get('onglet') || 'prospection'
+  );
+
+  useEffect(() => {
+    if (searchParams.get('onglet') === activeTab) return;
+    const next = new URLSearchParams(searchParams);
+    next.set('onglet', activeTab);
+    setSearchParams(next, { replace: true, state: location.state });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   const servicesDisponibles = useSelector(selectServicesByType("HOTEL"));
 
@@ -201,7 +213,7 @@ const PageViewHotel = () => {
     // 1. Marquer comme sélectionné dans Redux
     dispatch(setSelectedEntete(id));
     // 2. Naviguer vers le détail
-    navigate(`/dossiers-communs/hotel/details`, {
+    navigate(`/dossiers-communs/hotel/details?id=${id}`, {
       state: { targetTab: 'prospection' }
     });
   };
@@ -260,6 +272,7 @@ const PageViewHotel = () => {
               <div className="shrink-0 px-4 bg-slate-200 rounded-t-lg">
                 <div className='flex items-center justify-between'>
                   <HotelHeader numerohotel={dossierActif?.numero} navigate={navigate} isBenchmarking={true}/>
+                  <DossierActifCard className="ml-auto mr-3" />
 
                   {activeTabSousSection === 'lignes' && prestationId && fournisseurs.length > 0 && !fournisseursLoading && (
                     <div className="flex items-end gap-4 flex-wrap">
@@ -286,7 +299,6 @@ const PageViewHotel = () => {
                   </div>
                 )}
 
-                <DossierActifCard gradient="from-orange-400 via-red-400 to-orange-500 " />
 
                 <div className="flex items-center justify-between gap-4 mb-2">
                   <nav className="flex p-1 bg-slate-100/80 rounded-lg" aria-label="Tabs">

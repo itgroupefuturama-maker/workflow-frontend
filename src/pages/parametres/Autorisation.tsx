@@ -4,6 +4,7 @@ import { fetchAutorisations } from '../../app/back_office/autorisationsSlice';
 import type { RootState, AppDispatch } from '../../app/store';
 import { FiArrowLeft, FiClock, FiList, FiX, FiLayers, FiLoader} from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
+import { formatStatut } from '../../utils/statut';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -231,7 +232,7 @@ const AutorisationPage = () => {
                       </p>
                     </div>
                     <span className={`px-2 py-1 rounded text-[10px] font-black uppercase ${auth.status === 'CREER' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}>
-                      {auth.status}
+                      {formatStatut(auth.status)}
                     </span>
                   </div>
                   {auth.dateDesactivation && (

@@ -11,6 +11,7 @@ import ModalFormParametre from '../components/ModalFormParametre';
 import RaisonAnnulationListe from '../../module.parametre/RaisonAnnulation/RaisonAnnulationListe';
 import ServiceSpecifiqueListe from '../../module.parametre/ServiceSpecifique/ServiceSpecifiqueListe';
 import DeviseListe from '../../module.parametre/devise/DeviseListe';
+import { formatStatut } from '../../../../../utils/statut';
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
 const ParametreViewHotel = () => {
@@ -120,7 +121,7 @@ const ParametreViewHotel = () => {
                             status === 'CREER' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
                           }`}
                         >
-                          {status}
+                          {formatStatut(status)}
                         </span>
                       ),
                     },

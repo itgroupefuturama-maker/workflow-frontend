@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import type { AppDispatch, RootState } from '../../../../../app/store';
 import TabContainer from '../../../../../layouts/TabContainer';
 import { fetchProspectionEntetes } from '../../../../../app/front_office/parametre_visa/prospectionEnteteVisaSlice';
@@ -14,13 +14,25 @@ const PageViewVisa = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const tabs = [
+  const tabs: { id: string; label: string }[] = [
     // { id: 'prospection', label: 'Listes des prospections' },
     // { id: 'visa',        label: 'Listes des visa' },
     // { id: 'beneficiaire', label: 'Listes des bénéficiaires' }
   ];
 
-  const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'prospection');
+  // Onglet actif reflété dans l'URL (?onglet=...) pour survivre au rechargement et aux liens partagés
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<string>(
+    () => location.state?.targetTab || searchParams.get('onglet') || 'prospection'
+  );
+
+  useEffect(() => {
+    if (searchParams.get('onglet') === activeTab) return;
+    const next = new URLSearchParams(searchParams);
+    next.set('onglet', activeTab);
+    setSearchParams(next, { replace: true, state: location.state });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   // ── Sélecteurs ─────────────────────────────────────────────────────────────
   const dossierActif = useSelector((state: RootState) => state.dossierCommun.currentClientFactureId);

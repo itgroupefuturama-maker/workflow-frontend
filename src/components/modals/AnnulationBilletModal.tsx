@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
-import { FiX, FiAlertTriangle, FiCheckCircle } from 'react-icons/fi';
+import { useEffect, useState, type ReactNode } from 'react';
+import { FiX, FiAlertTriangle, FiCheck, FiChevronLeft } from 'react-icons/fi';
 import type { AnnulationBilletPayload, BilletLigne, TypeAnnulation } from '../../app/front_office/billetSlice';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../app/store';
 import { fetchRaisonsAnnulation } from '../../app/front_office/parametre_ticketing/raisonAnnulationSlice';
 import { toast } from '../Toast/toast';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 type AnnulType = TypeAnnulation;
 
@@ -23,6 +24,34 @@ interface Props {
   enteteId: string;
 }
 
+const TYPES: { value: AnnulType; label: string; desc: string }[] = [
+  { value: 'SIMPLE', label: 'Simple', desc: 'Condition seulement' },
+  { value: 'COM', label: 'Commission', desc: 'Commission uniquement' },
+  { value: 'PEN', label: 'Pénalité', desc: 'Pénalité uniquement' },
+  { value: 'COM_PEN', label: 'Commission + Pénalité', desc: 'Les deux frais' },
+];
+
+// Conditions fréquentes : un clic pré-remplit le texte, modifiable ensuite
+const CONDITIONS_RAPIDES = [
+  'Annulation à la demande du client',
+  'Erreur de saisie / double réservation',
+  "Changement d'itinéraire",
+  'Problème médical / décès',
+  'Vol annulé par la compagnie',
+  'Surbooking / overbooking',
+];
+
+// ─── Styles partagés ────────────────────────────────────────
+const inputCls =
+  'w-full h-10 px-3 text-sm text-slate-900 bg-white border border-slate-300 rounded-md ' +
+  'placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 ' +
+  'disabled:bg-slate-50 disabled:text-slate-500 disabled:cursor-not-allowed transition';
+const labelCls = 'block text-xs font-medium text-slate-600 mb-1.5';
+const hintCls = 'text-xs text-slate-500 mt-1.5';
+const readonlyCls =
+  'flex h-10 items-center px-3 rounded-md bg-slate-50 border border-slate-200 text-sm font-medium text-slate-700 tabular-nums';
+const Required = () => <span className="text-red-500">*</span>;
+
 export default function AnnulationBilletModal({
   isOpen,
   onClose,
@@ -36,13 +65,10 @@ export default function AnnulationBilletModal({
     (state: RootState) => state.raisonAnnulation
   );
 
-  
   const [typeAnnul, setTypeAnnul] = useState<AnnulType>('SIMPLE');
-  
   const [raison, setRaison] = useState('');
   const [resaCommDevise, setResaCommDevise] = useState(0);
   const [penalitePu, setPenalitePu] = useState(0);
-  const [penaliteMontant, setPenaliteMontant] = useState(0);
   const [showPreview, setShowPreview] = useState(false);
 
   // Charger les raisons une seule fois à l'ouverture : ne pas dépendre de
@@ -50,6 +76,16 @@ export default function AnnulationBilletModal({
   useEffect(() => {
     if (isOpen) dispatch(fetchRaisonsAnnulation());
   }, [isOpen, dispatch]);
+
+  // Fermeture avec Échap (bloquée pendant l'envoi)
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !loading) onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, loading, onClose]);
 
   // La modal est montée à chaque ouverture (Billet.tsx) : initialisation directe, sans effet.
   // Un effet sur `lignes` (nouveau tableau à chaque rendu du parent) réinitialisait la sélection en boucle.
@@ -68,23 +104,39 @@ export default function AnnulationBilletModal({
   const toAriary = (montantDevise: number) =>
     tauxChange === '' ? 0 : Math.round((Number(montantDevise) || 0) * Number(tauxChange));
   const fmtAr = (n: number) => `${n.toLocaleString('fr-FR')} Ar`;
+  const fmtDev = (n: number) =>
+    Number(n || 0).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const resaCommAriary = toAriary(resaCommDevise);
+  // Nombre de passagers de la ligne sélectionnée : le montant total de pénalité = PU × nb pax
+  const nbPaxDe = (ligneId: string) => {
+    const n = Number((lignes?.find((l) => l.id === ligneId) as any)?.prospectionLigne?.nombre);
+    return n > 0 ? n : 1;
+  };
+  const nbPax = nbPaxDe(selectedLigneId);
+  const penaliteMontant = Math.round((Number(penalitePu) || 0) * nbPax * 100) / 100;
   const penaliteAriary = toAriary(penaliteMontant);
 
+  const avecCommission = typeAnnul === 'COM' || typeAnnul === 'COM_PEN';
+  const avecPenalite = typeAnnul === 'PEN' || typeAnnul === 'COM_PEN';
+  const conditionObligatoire = typeAnnul !== 'PEN';
+
   // Garde très tôt
+  useEscapeKey(isOpen, onClose);
   if (!isOpen) return null;
 
   if (!lignes || !Array.isArray(lignes)) {
     return (
-      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-        <div className="bg-white p-8 rounded-xl text-center max-w-md">
-          <FiAlertTriangle className="text-red-600 text-5xl mx-auto mb-4" />
-          <p className="text-red-600 font-medium text-lg mb-6">
-            Erreur : aucune ligne disponible pour l'annulation
-          </p>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+        <div className="w-full max-w-sm rounded-lg bg-white p-6 text-center shadow-xl">
+          <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full bg-red-50">
+            <FiAlertTriangle className="text-red-600" size={20} />
+          </div>
+          <p className="text-sm font-semibold text-slate-900">Aucune ligne disponible</p>
+          <p className="mt-1 mb-5 text-sm text-slate-500">Impossible de charger les lignes à annuler.</p>
           <button
+            type="button"
             onClick={onClose}
-            className="px-8 py-3 bg-gray-700 text-white rounded-lg hover:bg-gray-800"
+            className="h-9 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
           >
             Fermer
           </button>
@@ -92,6 +144,15 @@ export default function AnnulationBilletModal({
       </div>
     );
   }
+
+  const lignesAnnulables = lignes.filter(estAnnulable);
+  const ligneSelectionnee = lignes.find((l) => l.id === selectedLigneId);
+  const ligneLabel = (l: BilletLigne) =>
+    [l.reservation || 'Sans n° de réservation', (l as any).prospectionLigne?.itineraire, l.statut]
+      .filter(Boolean)
+      .join(' · ');
+  const raisonLibelle = raisons.find((r) => r.id === rasionAnnulationId)?.libelle;
+  const typeLibelle = TYPES.find((t) => t.value === typeAnnul)?.label;
 
   const buildPayload = () => {
     const payload: AnnulationBilletPayload = {
@@ -103,12 +164,12 @@ export default function AnnulationBilletModal({
       conditionAnnul: raison.trim(),
     };
 
-    if (typeAnnul === 'COM' || typeAnnul === 'COM_PEN') {
+    if (avecCommission) {
       payload.resaCommissionEnDevise = Number(resaCommDevise);
       payload.resaCommissionEnAriary = Number(resaCommAriary);
     }
 
-    if (typeAnnul === 'PEN' || typeAnnul === 'COM_PEN') {
+    if (avecPenalite) {
       payload.puResaPenaliteCompagnieDevise = Number(penalitePu);
       payload.puResaMontantPenaliteCompagnieDevise = Number(penaliteMontant);
     }
@@ -116,346 +177,444 @@ export default function AnnulationBilletModal({
     return payload;
   };
 
+  // Mêmes contrôles avant la vérification et avant l'envoi : l'utilisateur sait tout de suite ce qui manque
+  const erreurs = (): string[] => {
+    const e: string[] = [];
+    if (!selectedLigneId) e.push('Veuillez sélectionner une ligne à annuler.');
+    if (!rasionAnnulationId) e.push("Veuillez choisir une raison d'annulation.");
+    if (tauxChange === '' || isNaN(Number(tauxChange)) || Number(tauxChange) <= 0) {
+      e.push('Le taux de change est obligatoire et doit être un nombre valide.');
+    }
+    if (conditionObligatoire && !raison.trim()) {
+      e.push("La condition d'annulation est obligatoire sauf pour le type Pénalité.");
+    }
+    return e;
+  };
+
+  const handleVerifier = () => {
+    const e = erreurs();
+    if (e.length) {
+      toast.warning(e.join('\n'));
+      return;
+    }
+    setShowPreview(true);
+  };
+
   const handleSubmit = () => {
-    if (!selectedLigneId) {
-      toast.warning('Veuillez sélectionner une ligne à annuler');
-      return;
-    }
-
-    if (tauxChange === '' || isNaN(Number(tauxChange))) {
-      toast.warning('Le taux de change est obligatoire et doit être un nombre valide');
-      return;
-    }
-
-    if (typeAnnul !== 'PEN' && !raison.trim()) {
-      toast.warning('La raison est obligatoire sauf pour le type PÉNALITÉ');
-      return;
-    }
-
-    try {
-      const payload = buildPayload();
-      onSubmit(payload);
+    if (loading) return;
+    const e = erreurs();
+    if (e.length) {
+      toast.warning(e.join('\n'));
       setShowPreview(false);
+      return;
+    }
+    try {
+      onSubmit(buildPayload());
     } catch (err: any) {
       toast.error(err.message || 'Erreur validation');
     }
   };
 
-  const isConfirmDisabled =
-    loading ||
-    !selectedLigneId ||
-    tauxChange === '' ||
-    isNaN(Number(tauxChange)) ||
-    !rasionAnnulationId;
-
-
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[95vh] overflow-hidden flex flex-col">
-        
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget && !loading) onClose();
+      }}
+    >
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="annul-modal-title"
+        className="flex w-full max-w-3xl max-h-[92vh] flex-col overflow-hidden rounded-lg bg-white shadow-xl"
+      >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-gray-200 bg-white">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center">
-                <FiAlertTriangle className="text-red-600" size={20} />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Paramétrage & Annulation
-                </h2>
-                <p className="text-sm text-gray-500 mt-0.5">Billet</p>
-              </div>
+        <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-50">
+              <FiAlertTriangle className="text-red-600" size={18} />
             </div>
-            <button 
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <FiX size={20} />
-            </button>
+            <div className="min-w-0">
+              <h2 id="annul-modal-title" className="text-lg font-semibold text-slate-900">
+                {showPreview ? "Vérifier l'annulation" : 'Annuler un billet'}
+              </h2>
+              <p className="mt-0.5 truncate text-sm text-slate-500">
+                {showPreview
+                  ? 'Contrôlez les informations avant de confirmer.'
+                  : 'Le billet repassera au statut « Créé ».'}
+              </p>
+            </div>
           </div>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            aria-label="Fermer"
+            className="-mr-2 rounded-md p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600 disabled:opacity-50"
+          >
+            <FiX size={20} />
+          </button>
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-gray-50">
+        <div className="flex-1 space-y-4 overflow-y-auto bg-slate-50 px-6 py-5">
+          {!showPreview ? (
+            <>
+              {/* Ligne & raison */}
+              <Card title="Ligne concernée">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div>
+                    <label htmlFor="annul-ligne" className={labelCls}>
+                      Ligne à annuler <Required />
+                    </label>
+                    <select
+                      id="annul-ligne"
+                      value={selectedLigneId}
+                      onChange={(e) => {
+                        setSelectedLigneId(e.target.value);
+                        setTauxChange(tauxResaDe(e.target.value));
+                      }}
+                      disabled={lignesAnnulables.length === 0}
+                      className={inputCls}
+                    >
+                      {lignesAnnulables.length === 0 ? (
+                        <option value="">Aucune ligne annulable</option>
+                      ) : (
+                        <>
+                          <option value="">Choisir une ligne</option>
+                          {lignesAnnulables.map((l) => (
+                            <option key={l.id} value={l.id}>{ligneLabel(l)}</option>
+                          ))}
+                        </>
+                      )}
+                    </select>
+                    {lignesAnnulables.length === 0 && (
+                      <p className={hintCls}>Toutes les lignes sont déjà annulées ou reprogrammées.</p>
+                    )}
+                  </div>
 
-          {/* Type d'annulation */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Type d'annulation <span className="text-red-600">*</span>
-            </label>
-            <select
-              value={typeAnnul}
-              onChange={(e) => setTypeAnnul(e.target.value as AnnulType)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white"
-            >
-              <option value="SIMPLE">Simple (condition seulement)</option>
-              <option value="COM">Commission uniquement</option>
-              <option value="PEN">Pénalité uniquement</option>
-              <option value="COM_PEN">Commission + Pénalité</option>
-            </select>
-          </div>
+                  <div>
+                    <label htmlFor="annul-raison" className={labelCls}>
+                      Raison d'annulation <Required />
+                    </label>
+                    {raisonsLoading ? (
+                      <div className={`${readonlyCls} font-normal text-slate-400`}>Chargement…</div>
+                    ) : raisons.length === 0 ? (
+                      <div className="flex h-10 items-center rounded-md border border-red-200 bg-red-50 px-3 text-sm text-red-700">
+                        Aucune raison paramétrée
+                      </div>
+                    ) : (
+                      <select
+                        id="annul-raison"
+                        value={rasionAnnulationId}
+                        onChange={(e) => setRaisonAnnulationId(e.target.value)}
+                        className={inputCls}
+                      >
+                        <option value="">Choisir une raison</option>
+                        {raisons
+                          .filter((r) => r.statut === 'ACTIF')
+                          .map((r) => (
+                            <option key={r.id} value={r.id}>{r.libelle}</option>
+                          ))}
+                      </select>
+                    )}
+                  </div>
+                </div>
+              </Card>
 
-          {/* Raison d'annulation → NOUVELLE VERSION */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Raison d'annulation <span className="text-red-600">*</span>
-            </label>
+              {/* Type d'annulation */}
+              <Card title="Type d'annulation">
+                <div role="radiogroup" aria-label="Type d'annulation" className="grid grid-cols-2 gap-2 md:grid-cols-4">
+                  {TYPES.map((t) => {
+                    const checked = typeAnnul === t.value;
+                    return (
+                      <button
+                        key={t.value}
+                        type="button"
+                        role="radio"
+                        aria-checked={checked}
+                        onClick={() => setTypeAnnul(t.value)}
+                        className={`relative rounded-md border px-3 py-2.5 text-left transition ${
+                          checked
+                            ? 'border-indigo-500 bg-indigo-50/60 ring-1 ring-indigo-500'
+                            : 'border-slate-200 bg-white hover:border-slate-300'
+                        }`}
+                      >
+                        <span className={`block text-sm font-medium ${checked ? 'text-indigo-700' : 'text-slate-800'}`}>
+                          {t.label}
+                        </span>
+                        <span className="mt-0.5 block text-xs text-slate-500">{t.desc}</span>
+                        {checked && (
+                          <FiCheck className="absolute right-2.5 top-2.5 text-indigo-600" size={14} strokeWidth={3} />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </Card>
 
-            {raisonsLoading ? (
-              <div className="text-sm text-gray-500">Chargement des raisons...</div>
-            ) : raisons.length === 0 ? (
-              <div className="text-sm text-red-600">Aucune raison disponible</div>
-            ) : (
-              <select
-                value={rasionAnnulationId}
-                onChange={(e) => setRaisonAnnulationId(e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white"
-                required
-              >
-                <option value="">-- Choisir une raison --</option>
-                {raisons
-                  .filter(r => r.statut === 'ACTIF') // filtre optionnel
-                  .map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.libelle}
-                    </option>
-                  ))}
-              </select>
-            )}
-          </div>
+              {/* Condition */}
+              <Card title="Condition d'annulation">
+                <label htmlFor="annul-condition" className={labelCls}>
+                  Détail {conditionObligatoire ? <Required /> : <span className="font-normal text-slate-400">(facultatif)</span>}
+                </label>
+                <div className="mb-2 flex flex-wrap gap-1.5">
+                  {CONDITIONS_RAPIDES.map((c) => {
+                    const actif = raison === c;
+                    return (
+                      <button
+                        key={c}
+                        type="button"
+                        onClick={() => setRaison(c)}
+                        className={`rounded-full border px-2.5 py-1 text-xs font-medium transition ${
+                          actif
+                            ? 'border-indigo-200 bg-indigo-50 text-indigo-700'
+                            : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'
+                        }`}
+                      >
+                        {c}
+                      </button>
+                    );
+                  })}
+                </div>
+                <textarea
+                  id="annul-condition"
+                  value={raison}
+                  onChange={(e) => setRaison(e.target.value)}
+                  className={`${inputCls} h-auto min-h-[88px] resize-y py-2`}
+                  placeholder="Précisez la condition d'annulation…"
+                />
+              </Card>
 
-          {/* Sélection de la ligne */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Ligne à annuler <span className="text-red-600">*</span>
-            </label>
-            <select
-              value={selectedLigneId}
-              onChange={(e) => {
-                setSelectedLigneId(e.target.value);
-                setTauxChange(tauxResaDe(e.target.value));
-              }}
-              disabled={lignes.length === 0}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
-            >
-              {lignes.length === 0 ? (
-                <option value="">Aucune ligne disponible</option>
-              ) : (
-                <>
-                  <option value="">-- Choisir une ligne --</option>
-                  {lignes
-                    .filter(estAnnulable)
-                    .map((l) => (
-                      <option key={l.id} value={l.id}>
-                        {l.reservation ? l.reservation : 'N°'} - {l.statut}
-                      </option>
-                    ))}
-                </>
+              {/* Montants */}
+              <Card title="Montants">
+                <div className="md:w-1/2">
+                  <label htmlFor="annul-taux" className={labelCls}>
+                    Taux de change <Required />
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="annul-taux"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={tauxChange}
+                      onChange={(e) => setTauxChange(e.target.value === '' ? '' : Number(e.target.value))}
+                      className={`${inputCls} pr-10 tabular-nums`}
+                      placeholder="Ex : 4500"
+                    />
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">Ar</span>
+                  </div>
+                  <p className={hintCls}>Initialisé avec le taux de réservation de la ligne.</p>
+                </div>
+
+                {avecCommission && (
+                  <SubBlock title="Commission de réservation">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div>
+                        <label htmlFor="annul-comm" className={labelCls}>Commission (devise)</label>
+                        <input
+                          id="annul-comm"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={resaCommDevise}
+                          onChange={(e) => setResaCommDevise(Number(e.target.value))}
+                          className={`${inputCls} tabular-nums`}
+                        />
+                      </div>
+                      <div>
+                        <span className={labelCls}>
+                          Commission (Ariary) <span className="font-normal text-slate-400">· calculé</span>
+                        </span>
+                        <div className={readonlyCls}>{fmtAr(resaCommAriary)}</div>
+                      </div>
+                    </div>
+                  </SubBlock>
+                )}
+
+                {avecPenalite && (
+                  <SubBlock title="Pénalité d'annulation">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                      <div>
+                        <label htmlFor="annul-pen-pu" className={labelCls}>Prix unitaire par pax (devise)</label>
+                        <input
+                          id="annul-pen-pu"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={penalitePu}
+                          onChange={(e) => setPenalitePu(Number(e.target.value))}
+                          className={`${inputCls} tabular-nums`}
+                        />
+                      </div>
+                      <div>
+                        <span className={labelCls}>
+                          Montant total (devise){' '}
+                          <span className="font-normal text-slate-400">· {nbPax} pax × PU</span>
+                        </span>
+                        <div className={readonlyCls}>{fmtDev(penaliteMontant)}</div>
+                      </div>
+                      <div>
+                        <span className={labelCls}>
+                          Montant total (Ariary) <span className="font-normal text-slate-400">· calculé</span>
+                        </span>
+                        <div className={readonlyCls}>{fmtAr(penaliteAriary)}</div>
+                      </div>
+                    </div>
+                  </SubBlock>
+                )}
+
+                {!avecCommission && !avecPenalite && (
+                  <p className="mt-4 rounded-md border border-dashed border-slate-300 px-3 py-2.5 text-xs text-slate-500">
+                    Annulation simple : aucun frais appliqué.
+                  </p>
+                )}
+              </Card>
+            </>
+          ) : (
+            /* ═══ Vérification ═══ */
+            <>
+              <Card title="Récapitulatif">
+                <dl className="divide-y divide-slate-100 text-sm">
+                  <RecapLine label="Ligne">{ligneSelectionnee ? ligneLabel(ligneSelectionnee) : '—'}</RecapLine>
+                  <RecapLine label="Passagers">
+                    <span className="tabular-nums">{nbPax} pax</span>
+                  </RecapLine>
+                  <RecapLine label="Raison">{raisonLibelle || '—'}</RecapLine>
+                  <RecapLine label="Type">{typeLibelle}</RecapLine>
+                  <RecapLine label="Condition">
+                    {raison.trim() || <span className="font-normal text-slate-400">Non renseignée</span>}
+                  </RecapLine>
+                  <RecapLine label="Taux de change">
+                    <span className="tabular-nums">{Number(tauxChange).toLocaleString('fr-FR')} Ar</span>
+                  </RecapLine>
+                </dl>
+              </Card>
+
+              {(avecCommission || avecPenalite) && (
+                <Card title="Frais appliqués">
+                  <div className="overflow-hidden rounded-md border border-slate-200">
+                    <table className="w-full text-sm">
+                      <thead className="bg-slate-50">
+                        <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
+                          <th className="px-3 py-2 font-medium">Frais</th>
+                          <th className="px-3 py-2 text-right font-medium">Devise</th>
+                          <th className="px-3 py-2 text-right font-medium">Ariary</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {avecCommission && (
+                          <tr>
+                            <td className="px-3 py-2.5 text-slate-800">Commission de réservation</td>
+                            <td className="px-3 py-2.5 text-right tabular-nums text-slate-700">{fmtDev(resaCommDevise)}</td>
+                            <td className="px-3 py-2.5 text-right tabular-nums text-slate-900">{fmtAr(resaCommAriary)}</td>
+                          </tr>
+                        )}
+                        {avecPenalite && (
+                          <tr>
+                            <td className="px-3 py-2.5 text-slate-800">
+                              Pénalité
+                              <span className="ml-1 text-xs text-slate-400">(PU {fmtDev(penalitePu)} × {nbPax} pax)</span>
+                            </td>
+                            <td className="px-3 py-2.5 text-right tabular-nums text-slate-700">{fmtDev(penaliteMontant)}</td>
+                            <td className="px-3 py-2.5 text-right tabular-nums text-slate-900">{fmtAr(penaliteAriary)}</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </Card>
               )}
-            </select>
-          </div>
 
-          {/* Taux de change */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Taux de change <span className="text-red-600">*</span>
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={tauxChange}
-              onChange={(e) => setTauxChange(e.target.value === '' ? '' : Number(e.target.value))}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-              placeholder="Ex: 4500"
-              required
-            />
-            <p className="mt-1 text-xs text-gray-500">
-              Initialisé avec le taux de réservation de la ligne — sert au calcul des montants en Ariary.
-            </p>
-          </div>
-          
-          {/* Raison Annulation */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Condition d'annulation <span className="text-red-600">*</span>
-            </label>
-            
-            <select
-              value={raison}
-              onChange={(e) => {
-                const val = e.target.value;
-                setRaison(val);
-                if (val === "Autre") {
-                  setRaison("");
-                }
-              }}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 bg-white mb-3"
-            >
-              <option value="">-- Choisir une raison --</option>
-              <option value="Annulation client">Annulation à la demande du client</option>
-              <option value="Erreur saisie">Erreur de saisie / double réservation</option>
-              <option value="Changement itinéraire">Changement d'itinéraire</option>
-              <option value="Problème médical">Problème médical / décès</option>
-              <option value="Annulation compagnie">Vol annulé par la compagnie</option>
-              <option value="Surbooking">Surbooking / overbooking</option>
-              <option value="Autre">Autre (préciser)</option>
-            </select>
-
-            <textarea
-              value={raison}
-              onChange={(e) => setRaison(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500 min-h-[100px] resize-none"
-              placeholder="Précisez la raison de l'annulation..."
-              required
-            />
-          </div>
-
-          {/* Commission */}
-          {(typeAnnul === 'COM' || typeAnnul === 'COM_PEN') && (
-            <div className="bg-white border border-gray-200 rounded-lg p-5">
-              <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <div className="w-1 h-4 bg-blue-600 rounded-full"></div>
-                Commission de réservation
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-gray-600 mb-2">
-                    Commission (Devise)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={resaCommDevise}
-                    onChange={(e) => setResaCommDevise(Number(e.target.value))}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-600 mb-2">
-                    Commission (Ariary) <span className="text-xs text-gray-400">— calculé</span>
-                  </label>
-                  <div className="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-gray-100 text-gray-700 font-medium tabular-nums">
-                    {fmtAr(resaCommAriary)}
-                  </div>
-                  <p className="mt-1 text-xs text-gray-400">Commission devise × taux de change</p>
-                </div>
+              <div className="flex gap-3 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                <FiAlertTriangle className="mt-0.5 shrink-0" size={16} />
+                <p>Cette action annule la ligne sélectionnée. Vérifiez les informations avant de confirmer.</p>
               </div>
-            </div>
-          )}
-
-          {/* Pénalité */}
-          {(typeAnnul === 'PEN' || typeAnnul === 'COM_PEN') && (
-            <div className="bg-white border border-gray-200 rounded-lg p-5">
-              <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <div className="w-1 h-4 bg-red-600 rounded-full"></div>
-                Pénalité d'annulation
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm text-gray-600 mb-2">
-                    Prix unitaire (Devise)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={penalitePu}
-                    onChange={(e) => setPenalitePu(Number(e.target.value))}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm text-gray-600 mb-2">
-                    Montant total (Devise)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={penaliteMontant}
-                    onChange={(e) => setPenaliteMontant(Number(e.target.value))}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  />
-                </div>
-                <div className="md:col-span-2">
-                  <label className="block text-sm text-gray-600 mb-2">
-                    Montant total (Ariary) <span className="text-xs text-gray-400">— calculé</span>
-                  </label>
-                  <div className="w-full px-4 py-2.5 border border-gray-200 rounded-lg bg-gray-100 text-gray-700 font-medium tabular-nums">
-                    {fmtAr(penaliteAriary)}
-                  </div>
-                  <p className="mt-1 text-xs text-gray-400">Montant total devise × taux de change</p>
-                </div>
-              </div>
-            </div>
+            </>
           )}
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 bg-white border-t border-gray-200">
-          <div className="flex items-center justify-between gap-4">
-            <p className="text-sm text-gray-500">
-              Les champs avec <span className="text-red-600">*</span> sont obligatoires
-            </p>
-            <div className="flex gap-3">
+        <div className="flex items-center justify-between gap-3 border-t border-slate-200 bg-white px-6 py-3">
+          {!showPreview ? (
+            <>
+              <p className="hidden text-xs text-slate-500 sm:block">
+                <Required /> Champs obligatoires
+              </p>
+              <div className="ml-auto flex gap-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="h-9 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                >
+                  Fermer
+                </button>
+                <button
+                  type="button"
+                  onClick={handleVerifier}
+                  disabled={!selectedLigneId}
+                  className="h-9 rounded-md bg-slate-900 px-4 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Vérifier
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
               <button
-                onClick={onClose}
-                className="px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
+                type="button"
+                onClick={() => setShowPreview(false)}
+                disabled={loading}
+                className="inline-flex h-9 items-center gap-1.5 rounded-md border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
               >
-                Annuler
+                <FiChevronLeft size={16} />
+                Modifier
               </button>
               <button
-                onClick={() => setShowPreview(true)}
-                disabled={!selectedLigneId || tauxChange === '' || isNaN(Number(tauxChange))}
-                className="px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center gap-2"
+                type="button"
+                onClick={handleSubmit}
+                disabled={loading}
+                className="inline-flex h-9 items-center gap-2 rounded-md bg-red-600 px-4 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <FiCheckCircle size={16} />
-                Vérifier et confirmer
+                {loading && (
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                )}
+                {loading ? 'Annulation en cours…' : "Confirmer l'annulation"}
               </button>
-            </div>
-          </div>
+            </>
+          )}
         </div>
-
-        {/* Modal Preview */}
-        {showPreview && (
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-60 p-4">
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-              
-              {/* Preview Header */}
-              <div className="px-6 py-4 border-b border-gray-200">
-                <h3 className="text-lg font-semibold text-gray-900">Prévisualisation</h3>
-                <p className="text-sm text-gray-500 mt-1">Vérifiez les données avant confirmation</p>
-              </div>
-
-              {/* Preview Content */}
-              <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
-                <div className="bg-white border border-gray-200 rounded-lg p-4">
-                  <pre className="text-xs font-mono text-gray-700 whitespace-pre-wrap overflow-x-auto">
-                    {JSON.stringify(buildPayload(), null, 2)}
-                  </pre>
-                </div>
-              </div>
-
-              {/* Preview Footer */}
-              <div className="px-6 py-4 bg-white border-t border-gray-200 flex gap-3">
-                <button
-                  onClick={() => setShowPreview(false)}
-                  className="flex-1 px-5 py-2.5 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium transition-colors"
-                >
-                  Retour
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  disabled={isConfirmDisabled}
-                  className="flex-1 px-5 py-2.5 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-                >
-                  {loading ? 'Annulation en cours...' : 'Confirmer l\'annulation'}
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
+    </div>
+  );
+}
+
+// ─── Sous-composants ────────────────────────────────────────
+
+function Card({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white">
+      <h3 className="border-b border-slate-100 px-5 py-3 text-sm font-semibold text-slate-900">{title}</h3>
+      <div className="px-5 py-4">{children}</div>
+    </section>
+  );
+}
+
+function SubBlock({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="mt-5 border-t border-slate-100 pt-4">
+      <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">{title}</p>
+      {children}
+    </div>
+  );
+}
+
+function RecapLine({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="grid grid-cols-[8rem_1fr] gap-3 py-2.5">
+      <dt className="text-slate-500">{label}</dt>
+      <dd className="font-medium text-slate-800">{children}</dd>
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { FiUser, FiGrid, FiShield, FiCalendar, FiArrowLeft, FiSearch } from 'rea
 import { Spinner } from '../module.parametre/components/Spinner';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '../../../../components/Toast/toast';
+import { formatStatut } from '../../../../utils/statut';
 
 
 // ── Helpers UI ───────────────────────────────────────────────
@@ -18,7 +19,7 @@ const statusColors: Record<string, string> = {
 
 const StatusBadge = ({ status }: { status: string }) => (
   <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${statusColors[status] ?? 'bg-gray-100 text-gray-500 border-gray-200'}`}>
-    {status}
+    {formatStatut(status)}
   </span>
 );
 

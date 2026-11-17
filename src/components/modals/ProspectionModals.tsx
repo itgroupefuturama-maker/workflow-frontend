@@ -1,4 +1,4 @@
-import { FiX, FiEdit3, FiSave, FiPercent, FiAlertCircle } from 'react-icons/fi';
+import { FiX, FiEdit3, FiSave, FiPercent, FiAlertCircle, FiBriefcase } from 'react-icons/fi';
 import type { ProspectionEntete } from '../../app/front_office/prospectionsEntetesSlice';
 import type { AppDispatch, RootState } from '../../app/store';
 import { useDispatch, useSelector } from 'react-redux';
@@ -6,6 +6,18 @@ import { clearCommentaireFournisseur, fetchLastCommentaireFournisseur } from '..
 import FournisseurAlerteBadge from '../fournisseurAlerteBadget/FournisseurAlerteBadge';
 import Button from '../ui/Button';
 import CreateEnteteModal from './CreateEnteteModal';
+import { TERMES_FOURNISSEUR, type TermeFournisseur } from '../../constants/termes';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
+
+// « CREDIT_60 » → « 60 jours », « CREDIT_0 » → « Au comptant »
+const formatCredit = (credit?: string | null) => {
+  if (!credit) return '—';
+  const jours = Number(String(credit).replace(/\D/g, ''));
+  if (Number.isNaN(jours)) return credit;
+  return jours === 0 ? 'Au comptant' : `${jours} jours`;
+};
+
+const CREDIT_OPTIONS = ['CREDIT_0', 'CREDIT_15', 'CREDIT_30', 'CREDIT_60', 'CREDIT_90'];
 
 interface ProspectionModalsProps {
   selectedEntete: ProspectionEntete | null;
@@ -23,6 +35,8 @@ interface ProspectionModalsProps {
   fournisseursLoading: boolean;
   onCloseCreate: () => void;
   onConfirmCreate: () => void;
+  /** « compagnie » en ticketing, « fournisseur » ailleurs (hôtel, attestation…) */
+  terme?: TermeFournisseur;
 }
 
 // ── Petit composant label/valeur en lecture seule ─────────────────────────────
@@ -36,25 +50,29 @@ const ReadField = ({ label, value }: { label: string; value?: string | null }) =
 // ── Composant pour mettre en évidence le client et le crédit ──────────────────
 const ClientHighlight = ({ clientFacture }: { clientFacture?: any }) => {
   if (!clientFacture) return null;
-  
+
+  // Rappel discret du contexte : une seule ligne, sans fond coloré.
+  // Le crédit recommandé est déjà pré-sélectionné (et marqué) dans le champ « Crédit » plus bas.
   return (
-    <div className="bg-linear-to-r from-blue-50 to-blue-100 rounded-lg p-5 border border-blue-200">
-      <div className="space-y-3">
-        <div>
-          <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest mb-1">Client facturé</p>
-          <p className="text-lg font-bold text-blue-900">{clientFacture.libelle}</p>
-          <p className="text-sm text-blue-700 mt-1">{clientFacture.code}</p>
-        </div>
-        <div className="pt-3 border-t border-blue-200">
-          <p className="text-xs font-semibold text-blue-600 uppercase tracking-widest mb-2">Crédit par défaut</p>
-          <div className="flex items-center gap-2">
-            <div className="inline-block bg-white px-4 py-2 rounded-lg border border-blue-300">
-              <span className="text-base font-bold text-blue-900">{clientFacture.creditdefault} Jours</span>
-            </div>
-            <span className="text-sm text-blue-700">Recommandé</span>
-          </div>
-        </div>
+    <div className="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm">
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white text-gray-500 ring-1 ring-gray-200">
+        <FiBriefcase size={15} aria-hidden="true" />
+      </span>
+      <div className="min-w-0 flex-1 leading-tight">
+        <p className="text-[11px] text-gray-500">Client facturé</p>
+        <p className="truncate font-semibold text-gray-900" title={clientFacture.libelle}>
+          {clientFacture.libelle}
+          {clientFacture.code && (
+            <span className="ml-2 font-mono text-xs font-medium text-gray-500">{clientFacture.code}</span>
+          )}
+        </p>
       </div>
+      {clientFacture.creditdefault && (
+        <div className="shrink-0 text-right leading-tight">
+          <p className="text-[11px] text-gray-500">Crédit par défaut</p>
+          <p className="font-semibold text-gray-900">{formatCredit(clientFacture.creditdefault)}</p>
+        </div>
+      )}
     </div>
   );
 };
@@ -102,6 +120,7 @@ const ModalHeader = ({
         <button
           onClick={onClose}
           disabled={disabled}
+          aria-label="Fermer"
           className="p-2 hover:bg-white/10 rounded-lg transition-colors disabled:opacity-40"
         >
           <FiX size={20} />
@@ -129,8 +148,11 @@ export default function ProspectionModals({
   fournisseursLoading,
   onCloseCreate,
   onConfirmCreate,
+  terme = 'fournisseur',
 }: ProspectionModalsProps) {
+  const T = TERMES_FOURNISSEUR[terme];
   const dispatch = useDispatch<AppDispatch>();
+  useEscapeKey(!!selectedEntete && !isSaving, onCloseEdit);
 
   const { lastComment, confirmed } = useSelector(
     (state: RootState) => state.fournisseurCommentaire
@@ -170,8 +192,8 @@ export default function ProspectionModals({
                 <div className="grid grid-cols-2 gap-4">
                   <ReadField label="N° En-tête" value={selectedEntete.numeroEntete} />
                   <ReadField label="Type de vol" value={selectedEntete.typeVol} />
-                  <ReadField label="Fournisseur" value={selectedEntete.fournisseur?.libelle} />
-                  <ReadField label="Crédit" value={selectedEntete.credit} />
+                  <ReadField label={T.label} value={selectedEntete.fournisseur?.libelle} />
+                  <ReadField label="Crédit" value={formatCredit(selectedEntete.credit)} />
                 </div>
               </div>
 
@@ -242,12 +264,12 @@ export default function ProspectionModals({
         {/* Section Fournisseur */}
         <div>
           <label className={labelCls}>
-            Fournisseur <span className="text-red-500">*</span>
+            {T.label} <span className="text-red-500">*</span>
           </label>
           {fournisseursLoading ? (
             <div className="flex items-center gap-2 px-4 py-3 bg-gray-50 rounded-lg border border-gray-300">
               <span className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-              <span className="text-sm text-gray-500">Chargement des fournisseurs...</span>
+              <span className="text-sm text-gray-500">Chargement des {T.pluriel}…</span>
             </div>
           ) : (
             <select
@@ -262,7 +284,7 @@ export default function ProspectionModals({
               required
               disabled={isCreating}
             >
-              <option value="">— Choisir un fournisseur —</option>
+              <option value="">{T.choisir}</option>
               {fournisseurs.map((f) => (
                 <option key={f.id} value={f.id}>
                   {f.code} — {f.libelle}
@@ -282,17 +304,18 @@ export default function ProspectionModals({
               className={inputCls}
               disabled={isCreating}
             >
-              {/* Le crédit par défaut du client est la première option */}
-              {clientFacture?.creditdefault && (
-                <option value={clientFacture.creditdefault} className="font-semibold">
-                  ✓ {clientFacture.creditdefault} (Recommandé)
+              {/* Une seule option par crédit ; celle du client est marquée « recommandé » */}
+              {[
+                ...CREDIT_OPTIONS,
+                ...(clientFacture?.creditdefault && !CREDIT_OPTIONS.includes(clientFacture.creditdefault)
+                  ? [clientFacture.creditdefault]
+                  : []),
+              ].map((value) => (
+                <option key={value} value={value}>
+                  {formatCredit(value)}
+                  {value === clientFacture?.creditdefault ? ' (recommandé)' : ''}
                 </option>
-              )}
-              <option value="CREDIT_0">Crédit 0 (Au comptant)</option>
-              <option value="CREDIT_15">Crédit 15 jours</option>
-              <option value="CREDIT_30">Crédit 30 jours</option>
-              <option value="CREDIT_60">Crédit 60 jours</option>
-              <option value="CREDIT_90">Crédit 90 jours</option>
+              ))}
             </select>
           </div>
 
@@ -317,16 +340,16 @@ export default function ProspectionModals({
           <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-lg p-4">
             <FiAlertCircle size={18} className="text-red-600 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-semibold text-red-900 mb-0.5">Fournisseur bloqué</p>
+              <p className="text-sm font-semibold text-red-900 mb-0.5">{T.bloque}</p>
               <p className="text-xs text-red-700">
-                Ce fournisseur présente une alerte de niveau élevé. La création est désactivée pour cette prospection.
+                {T.ce} présente une alerte de niveau élevé. La création est désactivée pour cette prospection.
               </p>
             </div>
           </div>
         )}
       </CreateEnteteModal>
 
-      <FournisseurAlerteBadge />
+      <FournisseurAlerteBadge terme={terme} />
     </>
   );
 }

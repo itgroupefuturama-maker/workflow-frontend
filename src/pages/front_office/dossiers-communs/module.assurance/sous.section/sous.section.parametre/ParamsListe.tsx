@@ -4,7 +4,7 @@ import type { AppDispatch, RootState } from '../../../../../../app/store';
 import { createAssuranceParams, fetchAssuranceParams } from '../../../../../../app/front_office/parametre_assurance/assuranceParamsSlice';
 import { Badge, EmptyState, Input, Modal, Select, Spinner, SubmitBtn, TableHeader, Td, Th } from '../../components/atoms';
 import { fmtDate, fmtNum } from '../../utils/formatters';
-import { ChevronDown, Globe, Shield, Calendar, Layers, FileText, TrendingDown } from 'lucide-react';
+import { AlertTriangle, Calendar, ChevronDown, FileText, Globe, Layers, Shield, TrendingDown } from 'lucide-react';
 
 const ParamsListe = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -225,7 +225,7 @@ const ParamsListe = () => {
             
             {createError && (
               <div className="p-3 bg-red-50 text-red-600 text-[11px] rounded-lg font-medium border border-red-100">
-                ⚠️ {createError}
+                <AlertTriangle size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />{createError}
               </div>
             )}
 

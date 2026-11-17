@@ -4,6 +4,7 @@ import type { BilletPassagerData, BilletPassagerExigence, BilletPassagerService 
 import { useBilletPassagerPdf } from '../../../module.pdf/pdf.generation/hooks/usePdfGenerator';
 import type { BilletStyleId } from '../../../module.pdf/pdf.generation/types/pdf-design.types';
 import { BILLET_STYLES } from '../../../module.pdf/pdf.generation/config/billet-styles';
+import { formatStatut } from '../../../../../../utils/statut';
 
 interface PassagersCellProps {
   billets: BilletLigne['billet'];
@@ -217,7 +218,7 @@ export const PassagersCell: React.FC<PassagersCellProps> = ({ billets, handleRep
                 {b.statut && (
                   <span className="text-[10px] font-medium bg-amber-50 text-amber-700
                                    border border-amber-200 rounded-md px-1.5 py-0.5 shrink-0">
-                    {b.statut}
+                    {formatStatut(b.statut)}
                   </span>
                 )}
                 <svg className={`w-3.5 h-3.5 text-slate-400 shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`}

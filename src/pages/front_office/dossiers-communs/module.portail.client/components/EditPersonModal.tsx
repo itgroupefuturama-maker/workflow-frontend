@@ -4,6 +4,7 @@ import type { RootState, AppDispatch } from "../../../../../app/store";
 import { updateClientPerson } from "../../../../../app/portail_client/clientFormSlice";
 import type { ClientBeneficiairePerson } from "../../../../../app/portail_client/clientFormSlice";
 import { X, Loader2, CheckCircle } from "lucide-react";
+import { useEscapeKey } from '../../../../../hooks/useEscapeKey';
 
 const FIELDS: { name: string; label: string; type: string }[] = [
   { name: 'nom',           label: 'Nom',              type: 'text'  },
@@ -44,6 +45,7 @@ interface Props {
 }
 
 const EditPersonModal = ({ beneficiaireId, person, onClose }: Props) => {
+  useEscapeKey(true, onClose);
   const dispatch = useDispatch<AppDispatch>();
   const { loading, error } = useSelector((state: RootState) => state.user);
 

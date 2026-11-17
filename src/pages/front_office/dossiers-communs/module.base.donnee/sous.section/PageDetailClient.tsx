@@ -8,6 +8,7 @@ import { Tab } from "./atoms";
 import TabProfil     from "./TabProfil";
 import TabVisa       from "./TabVisa";
 import TabAssurance  from "./TabAssurance";
+import { formatStatut } from '../../../../../utils/statut';
 
 type MainTab = "profil" | "visa" | "assurance";
 
@@ -69,7 +70,7 @@ const PageDetailClient = () => {
                 ? "bg-emerald-50 text-emerald-700 border-emerald-200"
                 : "bg-red-50 text-red-600 border-red-200"
             }`}>
-              {data.statut}
+              {formatStatut(data.statut)}
             </span>
           </div>
         </div>

@@ -251,10 +251,24 @@ const authTransform = createTransform<any, any>(
   { whitelist: ['auth'] }
 );
 
+// Seules ces slices survivent à un rechargement (F5) : la session, le dossier actif et les
+// préférences d'affichage. Tout le reste est rechargé depuis l'API par les pages / AppLoader.
+// Avant : tout l'état (~86 slices, 1,6 Mo) était réécrit dans le localStorage à chaque action.
+const PERSISTED_SLICES = ['auth', 'dossierCommun', 'ui'] as const;
+
 const persistConfig: PersistConfig<ReturnType<typeof appReducer>> = {
   key: 'root',
   storage,
+  version: 2,
+  whitelist: [...PERSISTED_SLICES],
   transforms: [authTransform],
+  // Nettoie une ancienne sauvegarde complète (version < 2) : on ne réhydrate que les slices utiles.
+  migrate: (state: any) => {
+    if (!state) return Promise.resolve(state);
+    const kept: any = { _persist: state._persist };
+    PERSISTED_SLICES.forEach((k) => { if (k in state) kept[k] = state[k]; });
+    return Promise.resolve(kept);
+  },
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

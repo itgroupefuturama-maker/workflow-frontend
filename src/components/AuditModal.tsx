@@ -1,5 +1,6 @@
 import { useAudit } from '../hooks/useAudit';
 import { FiClock, FiX, FiUser, FiArrowRight, FiDatabase, FiAlertCircle } from 'react-icons/fi';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 interface AuditModalProps {
   entity: string;
@@ -11,6 +12,8 @@ interface AuditModalProps {
 
 const AuditModal = ({ entity, entityId, entityName, isOpen, onClose }: AuditModalProps) => {
   const { auditData, loading, error } = useAudit(entity, entityId);
+
+  useEscapeKey(isOpen, onClose);
 
   if (!isOpen) return null;
 

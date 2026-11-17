@@ -12,9 +12,9 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import RaisonAnnulationListe from '../../../module.parametre/RaisonAnnulation/RaisonAnnulationListe';
 import GestionPrixListe from '../../../module.attestation.voyage/SousMenuPrestation/GestionPrixListe';
 import ServiceSpecifiqueListe from '../../../module.parametre/ServiceSpecifique/ServiceSpecifiqueListe';
-import ItineraireListe from './ItineraireListe';
 import { API_URL } from '../../../../../../service/env';
 import Button from '../../../../../../components/ui/Button';
+import { Globe } from 'lucide-react';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -30,7 +30,6 @@ export default function ParametreView() {
     { id: 'listeRaisonAnnulation', label: 'Raison Annulation' },
     { id: 'listeService', label: 'Services & Spécifiques' },
     { id: 'listeExigence', label: 'Exigences de Voyage' },
-    { id: 'listeItineraire', label: 'Itinéraires' },
   ];
 
   const tabsAttestation = [
@@ -118,13 +117,6 @@ export default function ParametreView() {
             ══════════════════════════════════════ */}
             {activeTab === 'listeRaisonAnnulation' && (
               <RaisonAnnulationListe />
-            )}
-
-            {/* ══════════════════════════════════════
-                TAB : ITINÉRAIRES
-            ══════════════════════════════════════ */}
-            {activeTab === 'listeItineraire' && (
-              <ItineraireListe />
             )}
 
             {/* ══════════════════════════════════════
@@ -232,7 +224,7 @@ export default function ParametreView() {
                       {!selectedPaysId ? (
                         <div className="py-20 flex flex-col items-center gap-3">
                           <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
-                            <span className="text-2xl">🌍</span>
+                            <Globe size={14} aria-hidden="true" className="text-2xl shrink-0" />
                           </div>
                           <p className="text-sm font-semibold text-slate-500">Sélectionnez un pays</p>
                           <p className="text-xs text-slate-400">pour voir ses destinations et exigences</p>

@@ -4,6 +4,7 @@ import type { AppDispatch } from '../../../../../app/store';
 import { fetchVisaEnteteDetail, sendVisa } from '../../../../../app/front_office/parametre_visa/visaEnteteDetailSlice';
 import VisaModal from './VisaModal';
 import VisaField from './VisaField';
+import { AlertTriangle } from 'lucide-react';
 
 interface Props {
   visaId: string; 
@@ -54,7 +55,7 @@ const SendVisaModal = ({ visaId, visaEnteteId, onClose }: Props) => {
         onChange={setdateSoummission} required />
       {error && (
         <p className="text-red-500 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-          ⚠️ {error}
+          <AlertTriangle size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />{error}
         </p>
       )}
     </VisaModal>

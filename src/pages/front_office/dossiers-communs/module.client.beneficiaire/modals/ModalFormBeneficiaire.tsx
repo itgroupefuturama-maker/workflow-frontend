@@ -3,6 +3,7 @@ import { useDispatch } from 'react-redux';
 import type { AppDispatch } from '../../../../../app/store';
 import { FiX, FiLoader, FiCheckCircle, FiAlertCircle } from 'react-icons/fi';
 import { createClientBeneficiaire, fetchClientBeneficiaires, updateClientBeneficiaire, type ClientBeneficiaire } from '../../../../../app/back_office/clientBeneficiairesSlice';
+import { useEscapeKey } from '../../../../../hooks/useEscapeKey';
 
 interface Props {
   editingClient: ClientBeneficiaire | null;
@@ -10,6 +11,7 @@ interface Props {
 }
 
 const ModalFormBeneficiaire = ({ editingClient, onClose }: Props) => {
+  useEscapeKey(true, onClose);
   const dispatch = useDispatch<AppDispatch>();
 
   const [libelle, setLibelle]       = useState(editingClient?.libelle ?? '');

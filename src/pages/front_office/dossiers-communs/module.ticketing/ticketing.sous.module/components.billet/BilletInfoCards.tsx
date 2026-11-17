@@ -1,39 +1,11 @@
-import React, { useState } from 'react';
-import { 
-  FileText, Hash, Calendar, Tag, XCircle, User, 
-  Phone, Building2, Plane, DollarSign, Percent, 
-  ChevronDown, ChevronUp
-} from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Building2, ChevronDown, Percent, Plane, XCircle } from 'lucide-react';
+import { fmtAriary, fmtNombre } from '../../../../../../utils/format';
 
-// --- Sous-composant interne ---
-const InfoItemCompact = ({
-  label,
-  value,
-  icon: Icon,
-  highlight,
-}: {
-  label: string;
-  value?: string | number | React.ReactNode | null;
-  icon?: React.ElementType;
-  highlight?: 'red' | 'green' | 'amber';
-}) => {
-  const highlightColors = {
-    red:   'text-red-600',
-    green: 'text-emerald-600 font-black',
-    amber: 'text-amber-600 font-black',
-  };
-
-  return (
-    <div className="flex flex-col py-1.5 transition-colors group">
-      <div className="flex items-center gap-1.5 mb-0.5">
-        {Icon && <Icon size={10} className="text-slate-300" />}
-        <span className="text-[11px] font-bold uppercase tracking-tighter text-slate-400">{label}</span>
-      </div>
-      <p className={`text-[13px] ml-4 font-bold truncate ${highlight ? highlightColors[highlight] : 'text-slate-700'}`}>
-        {value ?? '—'}
-      </p>
-    </div>
-  );
+const TYPE_VOL: Record<string, string> = {
+  LONG_COURRIER: 'Long courrier',
+  NATIONAL: 'Vol national',
+  REGIONAL: 'Vol régional',
 };
 
 interface BilletInfoCardsProps {
@@ -42,95 +14,151 @@ interface BilletInfoCardsProps {
   dossier: any;
 }
 
-// --- Ton Composant Principal ---
+/**
+ * Carte compacte du billet, placée à droite du fil d'Ariane.
+ * Met en avant la compagnie, le client facturé et la commission appliquée ;
+ * le reste (entête, date, contact, totaux…) est dans le panneau « Plus d'infos ».
+ */
 const BilletInfoCards: React.FC<BilletInfoCardsProps> = ({ billet, clientFacture, dossier }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
   const isAnnule = !!billet?.raisonAnnul;
 
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  if (!billet) return null;
+
+  const compagnie = billet?.prospectionEntete?.fournisseur?.libelle;
+  const ecart = Number(billet?.commissionAppliquer ?? 0) - Number(billet?.commissionPropose ?? 0);
+
+  // Les valeurs vides ou nulles sont masquées plutôt qu'affichées « — », « 0 » ou « undefined ».
+  const hasNumber = (v: unknown) => v !== null && v !== undefined && v !== '' && Number(v) !== 0;
+  const details = [
+    { label: 'N° billet',           value: billet?.numeroBillet },
+    { label: 'En-tête',             value: billet?.prospectionEntete?.numeroEntete },
+    { label: 'Créé le',             value: billet?.createdAt ? new Date(billet.createdAt).toLocaleDateString('fr-FR') : null },
+    { label: 'Type de vol',         value: billet?.typeVol ? (TYPE_VOL[billet.typeVol] ?? billet.typeVol) : null },
+    { label: 'Type de passager',    value: billet?.typePassager },
+    { label: 'Contact principal',   value: dossier?.contactPrincipal },
+    { label: 'WhatsApp',            value: dossier?.whatsapp },
+    { label: 'Commission proposée', value: billet?.commissionPropose != null ? `${fmtNombre(billet.commissionPropose)} %` : null },
+    { label: 'Total compagnie',     value: hasNumber(billet?.totalCompagnie) ? `${fmtAriary(billet.totalCompagnie)} Ar` : null },
+    { label: 'Taux de change',      value: hasNumber(billet?.tauxEchange) ? `${fmtNombre(billet.tauxEchange)} Ar` : null },
+  ].filter((d) => d.value);
+
   return (
-    <div className="bg-white rounded-lg border border-slate-200 shadow-sm shadow-slate-100 transition-all duration-200 overflow-hidden">
-      
-      {/* Header Ultra-Compact */}
-      <div 
-        className={`px-4 py-2 flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors ${isExpanded ? 'border-b border-slate-100 bg-slate-50/30' : ''}`}
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="flex items-center gap-2">
-            <Plane size={14} className={isAnnule ? 'text-red-400' : 'text-indigo-500'} />
-            <span className="text-[13px] font-black text-slate-800 tracking-tight whitespace-nowrap">
-              {billet?.numeroBillet || 'N/A'}
-            </span>
+    <div ref={ref} className="relative inline-flex">
+      <div className={`flex items-stretch rounded-xl bg-white shadow-sm ring-1 ${isAnnule ? 'ring-red-200' : 'ring-slate-200/70'}`}>
+        {/* Compagnie + n° billet */}
+        <div className="flex min-w-0 items-center gap-2.5 py-1.5 pl-3 pr-4">
+          <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${isAnnule ? 'bg-red-50 text-red-500' : 'bg-sky-50 text-sky-600'}`}>
+            <Plane size={16} aria-hidden="true" />
           </div>
-
-          <div className="h-4 w-px bg-slate-200 hidden sm:block" />
-
-          <div className="hidden sm:flex items-center gap-3 truncate text-[13px]">
-            <span className="text-slate-500 font-medium truncate max-w-[150px]">
-              {clientFacture?.libelle}
-            </span>
-            <span className="font-bold text-emerald-600">
-              {billet?.totalCompagnie?.toLocaleString('fr-FR')} Ar
-            </span>
+          <div className="min-w-0 leading-tight">
+            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Compagnie</p>
+            <div className="flex items-center gap-1.5">
+              <span className="max-w-[220px] truncate text-sm font-bold text-slate-900" title={compagnie}>
+                {compagnie ?? '—'}
+              </span>
+              {billet?.prospectionEntete?.numeroEntete && (
+                <span className="rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-[11px] font-semibold text-slate-600">
+                  {billet.prospectionEntete.numeroEntete}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          {isAnnule && (
-            <span className="text-[13px] font-bold text-red-500 bg-red-50 px-1.5 py-0.5 rounded border border-red-100">ANNULÉ</span>
-          )}
-          <div className="text-slate-400">
-            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        {/* Facturé à */}
+        <div className="flex min-w-0 flex-col justify-center border-l border-slate-100 px-4 py-1.5 leading-tight">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Facturé à</p>
+          <span className="inline-flex max-w-[180px] items-center gap-1 truncate text-sm font-bold text-slate-800" title={clientFacture?.libelle}>
+            <Building2 size={13} className="shrink-0 text-slate-400" aria-hidden="true" />
+            {clientFacture?.libelle ?? '—'}
+          </span>
+        </div>
+
+        {/* Commission appliquée */}
+        <div
+          className="flex flex-col justify-center border-l border-slate-100 px-4 py-1.5 leading-tight"
+          title={`Commission proposée : ${fmtNombre(billet?.commissionPropose)} %`}
+        >
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Comm. appliquée</p>
+          <div className="flex items-baseline gap-1.5">
+            <span className="inline-flex items-center gap-0.5 text-sm font-bold text-emerald-700">
+              {fmtNombre(billet?.commissionAppliquer)}
+              <Percent size={12} aria-hidden="true" />
+            </span>
+            {ecart !== 0 && !Number.isNaN(ecart) && (
+              <span className={`text-[11px] font-medium ${ecart > 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                {ecart > 0 ? '+' : ''}{fmtNombre(ecart)} pt
+              </span>
+            )}
           </div>
         </div>
-      </div>
 
-      {/* Contenu Déplié */}
-      <div className={`overflow-hidden transition-all duration-200 ${isExpanded ? 'max-h-[500px] opacity-100' : 'max-h-0 opacity-0'}`}>
         {isAnnule && (
-          <div className="px-4 py-2 bg-red-50/50 border-b border-red-100 text-[13px] text-red-700 flex items-center gap-2">
-            <XCircle size={12} />
-            <strong>Motif:</strong> {billet.raisonAnnul}
+          <div className="flex items-center border-l border-red-100 bg-red-50 px-3">
+            <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-600">
+              <XCircle size={13} aria-hidden="true" /> Annulé
+            </span>
           </div>
         )}
 
-        <div className="px-5 py-4">
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-x-6 gap-y-4">
-            <div className="space-y-0.5">
-              <InfoItemCompact label="Entête" value={billet?.prospectionEntete?.numeroEntete} icon={FileText} />
-              <InfoItemCompact label="Date" value={billet?.createdAt ? new Date(billet.createdAt).toLocaleDateString() : null} icon={Calendar} />
-            </div>
-
-            <div className="space-y-0.5">
-              <InfoItemCompact label="Type Vol" value={billet?.typeVol} icon={Plane} />
-              <InfoItemCompact label="Compagnie" value={billet?.prospectionEntete?.fournisseur?.libelle} icon={Tag} />
-            </div>
-
-            <div className="space-y-0.5">
-              <InfoItemCompact label="Facturé à" value={clientFacture?.libelle} icon={Building2} />
-              <InfoItemCompact label="WhatsApp" value={dossier?.whatsapp} icon={Phone} />
-            </div>
-
-            <div className="space-y-0.5">
-              <InfoItemCompact label="Contact" value={dossier?.contactPrincipal} icon={User} />
-              <InfoItemCompact label="Passager" value={billet?.typePassager} icon={User} />
-            </div>
-
-            <div className="space-y-0.5">
-              <InfoItemCompact label="Comm. Prop" value={`${billet?.commissionPropose}%`} icon={Percent} />
-              <InfoItemCompact label="Comm. App" value={`${billet?.commissionAppliquer}%`} icon={Percent} highlight="green" />
-            </div>
-
-            <div className="space-y-0.5 border-l border-slate-100 pl-4 text-right sm:text-left">
-              <InfoItemCompact label="Total Ar" value={billet?.totalCompagnie?.toLocaleString('fr-FR')} icon={DollarSign} highlight="amber" />
-              <InfoItemCompact label="Taux" value={`${billet?.tauxEchange} Ar`} icon={Hash} />
-            </div>
-          </div>
-        </div>
+        {/* Plus d'infos */}
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          aria-label="Afficher plus d'informations sur le billet"
+          title="Plus d'infos"
+          className={`flex items-center rounded-r-xl border-l border-slate-100 px-2.5 transition-colors ${
+            open ? 'bg-slate-100 text-slate-900' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+          }`}
+        >
+          <ChevronDown size={14} aria-hidden="true" className={`transition-transform ${open ? 'rotate-180' : ''}`} />
+        </button>
       </div>
+
+      {open && (
+        <div
+          role="dialog"
+          aria-label="Détails du billet"
+          className="absolute right-0 top-full z-40 mt-2 w-80 overflow-hidden rounded-xl bg-white shadow-xl ring-1 ring-slate-900/10"
+        >
+          <div className="border-b border-slate-100 px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            Détails du billet
+          </div>
+          {isAnnule && (
+            <div className="flex items-start gap-2 border-b border-red-100 bg-red-50 px-4 py-2.5 text-xs text-red-700">
+              <XCircle size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
+              <span><strong>Motif d'annulation :</strong> {billet.raisonAnnul}</span>
+            </div>
+          )}
+          <dl className="divide-y divide-slate-100">
+            {details.map(({ label, value }) => (
+              <div key={label} className="flex items-start gap-3 px-4 py-2">
+                <dt className="w-36 shrink-0 text-xs text-slate-500">{label}</dt>
+                <dd className="min-w-0 flex-1 break-words text-xs font-medium text-slate-800">{value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      )}
     </div>
   );
 };
 
-// --- LE FIX : L'EXPORTATION ---
 export default BilletInfoCards;

@@ -13,7 +13,7 @@ import { AssuranceHeader } from '../../components/AssuranceHeader';
 import { Badge } from '../../components/atoms';
 import PageSkeleton from '../../../../../../components/ui/PageSkeleton';
 import { fmtDate, fmtNum } from '../../utils/formatters';
-import { ArrowLeft, CheckCircle, Clock, Download, Eye, FileText, Info, Send, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, CheckCircle, Clock, Download, Eye, FileText, Info, Send, ShieldCheck } from 'lucide-react';
 import { useAssurancePdf } from '../../../module.pdf/pdf.generation/hooks/usePdfGenerator';
 import { useAuthorization } from '../../../../../../hooks/useAuthorization';
 
@@ -31,7 +31,7 @@ const PageDetailProspectionAssurance = () => {
   const { devisDetail, loadingDevis, actionError, actionSuccess, error } =
     useSelector((s: RootState) => s.assuranceProspection);
 
-  const tabs = [
+  const tabs: { id: string; label: string }[] = [
     // { id: 'prospection', label: 'Listes des prospections' },
     // { id: 'assurance',   label: 'Listes des assurance' },
   ];
@@ -89,7 +89,7 @@ const PageDetailProspectionAssurance = () => {
   if (error) return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="text-center space-y-3">
-        <p className="text-sm font-medium text-red-500">⚠️ {error}</p>
+        <p className="text-sm font-medium text-red-500"><AlertTriangle size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />{error}</p>
         <button onClick={() => navigate(-1)} className="text-sm text-indigo-600 hover:underline">← Retour</button>
       </div>
     </div>
@@ -211,7 +211,7 @@ const PageDetailProspectionAssurance = () => {
             )}
             {actionError && (
               <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-2.5">
-                ⚠️ {actionError}
+                <AlertTriangle size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />{actionError}
               </div>
             )}
 

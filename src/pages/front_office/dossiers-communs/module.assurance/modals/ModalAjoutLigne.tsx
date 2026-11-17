@@ -7,6 +7,9 @@ import {
   fetchAssuranceProspections,
   clearCreateError,
 } from '../../../../../app/front_office/parametre_assurance/assuranceProspectionSlice';
+import { useEscapeKey } from '../../../../../hooks/useEscapeKey';
+import { formatStatut } from '../../../../../utils/statut';
+import { AlertTriangle, FileText } from 'lucide-react';
 
 /* ── atoms locaux ── */
 const Spinner = ({ size = 5 }: { size?: number }) => (
@@ -51,7 +54,7 @@ const Badge = ({ status }: { status: string }) => {
       isActif ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-gray-100 text-gray-500 border-gray-200'
     }`}>
       <span className={`h-1.5 w-1.5 rounded-full ${isActif ? 'bg-emerald-500' : 'bg-gray-400'}`} />
-      {status}
+      {formatStatut(status)}
     </span>
   );
 };
@@ -71,6 +74,7 @@ interface Props {
 
 /* ── composant ── */
 const ModalAjoutLigne = ({ data, prestationId, onClose }: Props) => {
+  useEscapeKey(true, onClose);
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
 
@@ -167,7 +171,7 @@ const ModalAjoutLigne = ({ data, prestationId, onClose }: Props) => {
                     const docInfo = docs.find(d => d.id === docParam.assuranceDocId);
                     return (
                       <div key={docParam.id} className="flex items-center gap-1.5 bg-white border border-slate-200 px-2 py-1 rounded shadow-sm text-[10px] font-semibold text-slate-600">
-                        📄 {docInfo?.document ?? docParam.assuranceDocId.slice(0, 8) + '…'}
+                        <FileText size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />{docInfo?.document ?? docParam.assuranceDocId.slice(0, 8) + '…'}
                       </div>
                     );
                   })}
@@ -254,7 +258,7 @@ const ModalAjoutLigne = ({ data, prestationId, onClose }: Props) => {
         {/* ── Erreur ── */}
         {createError && (
           <div className="p-4 bg-red-50 border border-red-100 rounded-xl flex gap-3">
-            <span className="text-red-500">⚠️</span>
+            <AlertTriangle size={14} aria-hidden="true" className="text-red-500 shrink-0" />
             <div className="space-y-1">
               <p className="text-xs font-bold text-red-700">{createError}</p>
               <button

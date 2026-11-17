@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { User, FileText, Briefcase, GraduationCap, Phone } from "lucide-react";
 import { Field } from "./atoms";
 import type { ClientBeneficiaireDetail } from "../../../../../app/front_office/parametre_baseDonnee/clientBeneficiaireDetailSlice";
+import { formatStatut } from '../../../../../utils/statut';
 
 const TabVisa = ({ infos }: { infos: ClientBeneficiaireDetail["clientbeneficiaireInfo"] }) => {
   const [visaSubTab, setVisaSubTab] = useState<"infos" | "personnes">("infos");
@@ -39,7 +40,7 @@ const TabVisa = ({ infos }: { infos: ClientBeneficiaireDetail["clientbeneficiair
                     ? "bg-blue-50 text-blue-700 border-blue-200"
                     : "bg-gray-100 text-gray-500 border-gray-200"
                 }`}>
-                  {info.statut}
+                  {formatStatut(info.statut)}
                 </span>
                 {infos.length > 1 && <span className="text-xs text-gray-400">Dossier {idx + 1}</span>}
               </div>

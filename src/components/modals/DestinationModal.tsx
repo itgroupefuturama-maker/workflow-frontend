@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../app/store';
 import { createDestination } from '../../app/front_office/parametre_ticketing/destinationSlice';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 import { fetchPays } from '../../app/front_office/parametre_ticketing/paysSlice'; // pour charger les pays si besoin
 
 interface DestinationModalProps {
@@ -28,6 +29,8 @@ export default function DestinationModal({ isOpen, onClose }: DestinationModalPr
       dispatch(fetchPays());
     }
   }, [isOpen, paysList.length, paysLoading, dispatch]);
+
+  useEscapeKey(isOpen, onClose);
 
   if (!isOpen) return null;
 

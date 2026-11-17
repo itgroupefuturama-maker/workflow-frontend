@@ -12,6 +12,7 @@ import Pagination from '../../../../../../components/Pagination';
 import Button from '../../../../../../components/ui/Button';
 import { useDebouncedValue } from '../../../../../../hooks/useDebouncedValue';
 import { toast } from '../../../../../../components/Toast/toast';
+import { formatStatut } from '../../../../../../utils/statut';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -82,6 +83,10 @@ export default function ItineraireListe() {
     }
     setLoadingId(null);
   };
+
+  // Les boutons Créer / Modifier / Activer / Supprimer sont masqués pour l'instant (voir JSX commenté).
+  // On garde la logique prête à être réactivée ; cette ligne évite l'erreur TS « déclaré mais jamais lu ».
+  void [Button, loadingId, openCreate, openEdit, handleToggleStatut, handleDelete];
 
   return (
     <div className="space-y-4">
@@ -178,7 +183,7 @@ export default function ItineraireListe() {
                         isActif ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' : 'bg-slate-100 text-slate-500 ring-1 ring-slate-200'
                       }`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${isActif ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-                        {item.statut}
+                        {formatStatut(item.statut)}
                       </span>
                     </td>
                     {/* <td className="px-5 py-3 text-right">

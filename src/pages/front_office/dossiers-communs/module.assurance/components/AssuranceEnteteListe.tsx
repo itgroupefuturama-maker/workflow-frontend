@@ -80,7 +80,7 @@ const AssuranceEnteteListe = () => {
       {/* ── Colonne principale ── */}
       <div className="flex-1 min-w-0 flex flex-col min-h-0">
         {/* ── Header fixe — ne scrolle PAS ── */}
-        <div className="shrink-0 px-4 py-2 bg-slate-200 rounded-t-xl">
+        <div className="flex items-center justify-between gap-4 shrink-0 px-4 py-2 bg-slate-200 rounded-t-xl">
           <AssuranceHeader
             numeroassurance={''}
             nomPassager={''}
@@ -89,10 +89,10 @@ const AssuranceEnteteListe = () => {
             isProspection={false}
             isDevis={false}
             />
+          <DossierActifCard />
         </div>
 
         <div className='px-4 bg-slate-200 rounded-b-xl'>
-          <DossierActifCard gradient="from-green-400 via-green-400 to-green-500" />
           <div className="flex items-center justify-between">
             {/* Tab headers */}
             <div className="flex items-center justify-between">

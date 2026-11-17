@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { FiPlus, FiX } from 'react-icons/fi';
 import Button from '../ui/Button';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface CreateEnteteModalProps {
   isOpen: boolean;
@@ -26,6 +27,8 @@ export default function CreateEnteteModal({
   loadingLabel = 'Création...',
   children,
 }: CreateEnteteModalProps) {
+  useEscapeKey(isOpen && !loading, onClose);
+
   if (!isOpen) return null;
 
   return (
@@ -34,6 +37,9 @@ export default function CreateEnteteModal({
       onClick={onClose}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-entete-title"
         className="bg-white rounded-xl shadow-xl w-full max-w-lg overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
@@ -42,11 +48,12 @@ export default function CreateEnteteModal({
             <div className="w-10 h-10 rounded-lg bg-white/20 flex items-center justify-center">
               <FiPlus size={18} />
             </div>
-            <h3 className="text-lg font-bold">Ajouter un en-tête</h3>
+            <h3 id="create-entete-title" className="text-lg font-bold">Ajouter un en-tête</h3>
           </div>
           <button
             onClick={onClose}
             disabled={loading}
+            aria-label="Fermer"
             className="p-2 hover:bg-white/10 rounded-lg transition-colors disabled:opacity-40"
           >
             <FiX size={20} />

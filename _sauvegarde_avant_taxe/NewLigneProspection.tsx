@@ -1,0 +1,721 @@
+import { useRef } from "react";
+import { FiSave, FiX } from "react-icons/fi";
+import type { ItineraireCascade } from "../../../../../hooks/useItineraireCascade";
+
+import { fmtAriary, fmtDevise, fmtNombre } from '../../../../../utils/format';
+interface NewLineRowProps {
+  newLine: any;
+  commissionPct: number;
+  cascade: ItineraireCascade;
+  servicesDisponibles: any[];
+  updateNewLineField: (field: string, value: any) => void;
+  updateServiceValue: (index: number, value: string) => void;
+  handleSaveNewLine: () => void;
+  handleCancelNewLine: () => void;
+  onSearchTrigger?: (params: {         // ← nouveau callback
+    numeroVol: string;
+    dateHeureDepart: string;
+    classe: string;
+    typePassager: string;
+    anchorRef: React.RefObject<HTMLTableCellElement | null>;
+  }) => void;
+}
+
+function NewLineRow({
+  newLine,
+  commissionPct,
+  cascade,
+  servicesDisponibles,
+  updateNewLineField,
+  updateServiceValue,
+  handleSaveNewLine,
+  handleCancelNewLine,
+  onSearchTrigger,
+}: NewLineRowProps) {
+  const inputClassName = "w-full min-w-[120px] px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-white";
+  const numberInputClassName = "w-full min-w-[140px] px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-right font-medium bg-white";
+  const dureeNumberClassName = "w-14 px-2 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-right bg-white";
+
+  // Format "XhYY" (ex: "2h40") ↔ { h, m }
+  const parseDuree = (str: string) => {
+    const match = String(str || '').match(/(\d+)\s*h\s*(\d*)/i);
+    return { h: match ? Number(match[1]) || 0 : 0, m: match ? Number(match[2]) || 0 : 0 };
+  };
+  const formatDuree = (h: number, m: number) => `${Math.min(99, Math.max(0, Math.floor(h || 0)))}h${String(Math.min(59, Math.max(0, Math.floor(m || 0)))).padStart(2, '0')}`;
+  // Garde uniquement les chiffres saisis et borne la valeur (heures 0–99, minutes 0–59)
+  const toDureeInt = (raw: string, max: number) => {
+    const digits = raw.replace(/\D/g, '').slice(0, 2);
+    return digits === '' ? 0 : Math.min(max, parseInt(digits, 10));
+  };
+
+  // ─── Calculs dérivés corrigés ───
+  const taux   = newLine.tauxEchange || 0;
+  const nombre = newLine.nombre || 1;
+  // commissionPct sera passé en prop depuis le parent
+  const facteur = 1 + (commissionPct / 100);
+
+  // PU Cie Devise (saisis)
+  const puBilletCieDevise   = newLine.puBilletCompagnieDevise  || 0;
+  const puServiceCieDevise  = newLine.puServiceCompagnieDevise || 0;
+  const puPenaliteCieDevise = newLine.puPenaliteCompagnieDevise || 0;
+
+  // Mt Cie Devise = PU * nombre
+  const mtBilletCieDevise   = puBilletCieDevise   * nombre;
+  const mtServiceCieDevise  = puServiceCieDevise  * nombre;
+  const mtPenaliteCieDevise = puPenaliteCieDevise * nombre;
+
+  // PU Cie Ariary = PU Devise * taux
+  const puBilletCieAriary   = puBilletCieDevise   * taux;
+  const puServiceCieAriary  = puServiceCieDevise  * taux;
+  const puPenaliteCieAriary = puPenaliteCieDevise * taux;
+
+  // Mt Cie Ariary = PU Ariary * nombre
+  const mtBilletCieAriary   = puBilletCieAriary   * nombre;
+  const mtServiceCieAriary  = puServiceCieAriary  * nombre;
+  const mtPenaliteCieAriary = puPenaliteCieAriary * nombre;
+
+  // Taxe : saisie soit du taux (%), soit du montant direct (règle de trois inversée)
+  const modeSaisieTaxe = newLine.modeSaisieTaxe || 'POURCENTAGE';
+  const tauxTaxe = modeSaisieTaxe === 'MONTANT'
+    ? (puBilletCieDevise > 0 ? ((newLine.montantTaxeDevise || 0) / puBilletCieDevise) * 100 : 0)
+    : (newLine.tauxTaxe || 0);
+  const montantTaxeDevise = modeSaisieTaxe === 'MONTANT'
+    ? (newLine.montantTaxeDevise || 0)
+    : puBilletCieDevise * (tauxTaxe / 100);
+  const montantTaxeAriary = montantTaxeDevise * taux;
+
+  // Mt Client Devise hors taxe = Mt Cie Devise * facteur
+  const mtBilletClientDeviseHorsTaxe = mtBilletCieDevise   * facteur;
+  const mtServiceClientDevise        = mtServiceCieDevise  * facteur;
+  const mtPenaliteClientDevise       = mtPenaliteCieDevise * facteur;
+
+  // Mt Client Devise Billet = hors taxe + taxe (taxe transparente, pas de commission dessus)
+  const mtBilletClientDevise = mtBilletClientDeviseHorsTaxe + montantTaxeDevise;
+
+  // Mt Client Ariary = Mt Client Devise * taux
+  const mtBilletClientAriary   = mtBilletClientDevise   * taux;
+  const mtServiceClientAriary  = mtServiceClientDevise  * taux;
+  const mtPenaliteClientAriary = mtPenaliteClientDevise * taux;
+
+  // Commission (sur le prix billet hors taxe uniquement — la taxe est reversée telle quelle)
+  const commissionEnDevise = (mtBilletClientDeviseHorsTaxe - mtBilletCieDevise)
+                          + (mtServiceClientDevise  - mtServiceCieDevise)
+                          + (mtPenaliteClientDevise - mtPenaliteCieDevise);
+  const commissionEnAriary = commissionEnDevise * taux;
+
+  const autoReadonlyCls = "w-full min-w-[140px] px-3 py-2 border border-slate-200 rounded-lg text-sm text-right font-medium bg-slate-100 text-slate-600 cursor-not-allowed";
+  const commissionCls   = "w-full min-w-[140px] px-3 py-2 border border-green-300 rounded-lg text-sm text-right font-bold bg-green-50 text-green-700 cursor-not-allowed";
+
+  const numeroVolCellRef = useRef<HTMLTableCellElement>(null);
+
+  return (
+    <tr className="bg-linear-to-r from-blue-50 to-blue-100/50 border-t-4 border-blue-400">
+      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
+      <td className="px-4 py-3 text-center text-slate-400 italic text-sm">Auto</td>
+      <td className="px-4 py-3">
+        <input
+          type="number"
+          step="1"
+          value={newLine.nombre ?? ''}
+          onChange={(e) => updateNewLineField('nombre', Number(e.target.value))}
+          className={numberInputClassName + " text-emerald-700"}
+          placeholder="1"
+        />
+      </td>
+      <td className="px-4 py-3 relative" ref={numeroVolCellRef}>
+        <input
+          type="text"
+          value={newLine.numeroVol}
+          onChange={(e) => {
+            updateNewLineField('numeroVol', e.target.value);
+            // Déclencher la recherche seulement si les 4 champs sont remplis
+            if (
+              e.target.value.trim() &&
+              newLine.dateHeureDepart &&
+              newLine.classe &&
+              newLine.typePassager
+            ) {
+              onSearchTrigger?.({
+                numeroVol: e.target.value.trim(),
+                dateHeureDepart: newLine.dateHeureDepart,
+                classe: newLine.classe,
+                typePassager: newLine.typePassager,
+                anchorRef: numeroVolCellRef,
+              });
+            }
+          }}
+          className={inputClassName}
+          placeholder="MD-003"
+          required
+        />
+      </td>
+
+      {/* Date Départ */}
+      <td className="px-4 py-3">
+        <input
+          type="datetime-local"
+          value={newLine.dateHeureDepart}
+          onChange={(e) => {
+            updateNewLineField('dateHeureDepart', e.target.value);
+            if (newLine.numeroVol?.trim() && newLine.classe && newLine.typePassager) {
+              onSearchTrigger?.({
+                numeroVol: newLine.numeroVol.trim(),
+                dateHeureDepart: e.target.value,
+                classe: newLine.classe,
+                typePassager: newLine.typePassager,
+                anchorRef: numeroVolCellRef,
+              });
+            }
+          }}
+          className={inputClassName}
+          required
+        />
+      </td>
+
+      {/* Date Arrivée */}
+      <td className="px-4 py-3">
+        <input
+          type="datetime-local"
+          value={newLine.dateHeureArrive}
+          onChange={(e) => {
+            updateNewLineField('dateHeureArrive', e.target.value);
+            // const duree = calculerDureeVol(newLine.dateHeureDepart, e.target.value);
+            // if (duree) updateNewLineField('dureeVol', duree);
+          }}
+          className={inputClassName}
+        />
+      </td>
+
+      <td className="px-4 py-3">
+        <select
+          value={newLine.classe}
+          onChange={(e) => {
+            updateNewLineField('classe', e.target.value);
+            if (newLine.numeroVol?.trim() && newLine.dateHeureDepart && newLine.typePassager) {
+              onSearchTrigger?.({
+                numeroVol: newLine.numeroVol.trim(),
+                dateHeureDepart: newLine.dateHeureDepart,
+                classe: e.target.value,
+                typePassager: newLine.typePassager,
+                anchorRef: numeroVolCellRef,
+              });
+            }
+          }}
+          className={inputClassName}
+        >
+          <option value="ECONOMIE">Économie</option>
+          <option value="BUSINESS">Business</option>
+          <option value="PREMIUM">Premium</option>
+          <option value="PREMIERE">Première</option>
+        </select>
+      </td>
+
+      <td className="px-4 py-3">
+        <select
+          value={newLine.typePassager}
+          onChange={(e) => {
+            updateNewLineField('typePassager', e.target.value);
+            if (newLine.numeroVol?.trim() && newLine.dateHeureDepart && newLine.classe) {
+              onSearchTrigger?.({
+                numeroVol: newLine.numeroVol.trim(),
+                dateHeureDepart: newLine.dateHeureDepart,
+                classe: newLine.classe,
+                typePassager: e.target.value,
+                anchorRef: numeroVolCellRef,
+              });
+            }
+          }}
+          className={inputClassName}
+        >
+          <option value="ADULTE">Adulte</option>
+          <option value="ENFANT">Enfant</option>
+          <option value="BEBE">Bébé</option>
+        </select>
+      </td>
+
+      <td className="px-4 py-3">
+        <input
+          type="text"
+          value={newLine.avion}
+          onChange={(e) => updateNewLineField('avion', e.target.value)}
+          className={inputClassName}
+          placeholder="Boeing 737"
+        />
+      </td>
+
+      {/* Cascade itinéraire : Pays départ → Ville départ (empilés dans la cellule "Départ") */}
+      <td className="px-4 py-3">
+        <div className="flex flex-col gap-1">
+          <select
+            value={cascade.paysDepartId}
+            onChange={e => cascade.selectPaysDepart(e.target.value)}
+            className={inputClassName}
+            required
+          >
+            <option value="">— Pays départ —</option>
+            {cascade.paysDepartOptions.map(p => (
+              <option key={p.id} value={p.id}>{p.pays}</option>
+            ))}
+          </select>
+          <select
+            value={cascade.villeDepartId}
+            onChange={e => cascade.selectVilleDepart(e.target.value)}
+            className={inputClassName}
+            disabled={!cascade.paysDepartId}
+            required
+          >
+            <option value="">— Ville départ —</option>
+            {cascade.villeDepartOptions.map(v => (
+              <option key={v.id} value={v.id}>{v.ville}</option>
+            ))}
+          </select>
+        </div>
+      </td>
+
+      {/* Cascade itinéraire : Pays arrivée → Ville arrivée (empilés dans la cellule "Destination") */}
+      <td className="px-4 py-3">
+        <div className="flex flex-col gap-1">
+          <select
+            value={cascade.paysArriveeId}
+            onChange={e => cascade.selectPaysArrivee(e.target.value)}
+            className={inputClassName}
+            disabled={!cascade.villeDepartId}
+            required
+          >
+            <option value="">— Pays arrivée —</option>
+            {cascade.paysArriveeOptions.map(p => (
+              <option key={p.id} value={p.id}>{p.pays}</option>
+            ))}
+          </select>
+          <select
+            value={cascade.itineraireId}
+            onChange={e => cascade.selectItineraire(e.target.value)}
+            className={inputClassName}
+            disabled={!cascade.paysArriveeId}
+            required
+          >
+            <option value="">— Ville arrivée —</option>
+            {cascade.villeArriveeOptions.map(it => (
+              <option key={it.id} value={it.id}>{it.villeArrivee.ville}</option>
+            ))}
+          </select>
+        </div>
+      </td>
+
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2 px-3 py-2 border border-blue-300 rounded-lg bg-blue-50/50 text-sm min-w-[160px]">
+          {cascade.selectedItineraire ? (
+            <span className="font-semibold text-blue-800">{cascade.selectedItineraire.libelle}</span>
+          ) : (
+            <span className="text-slate-400">Sélectionnez un trajet complet</span>
+          )}
+        </div>
+      </td>
+
+      {/* Durée Vol - readonly, calculé automatiquement */}
+      {/* <td className="px-4 py-3">
+        <input
+          type="text"
+          value={newLine.dureeVol}
+          readOnly
+          className="w-full min-w-[120px] px-3 py-2 border border-slate-200 rounded-lg text-sm bg-slate-100 text-slate-500 cursor-not-allowed"
+          placeholder="Calculé auto"
+        />
+      </td> */}
+
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-1">
+          <input
+            type="text" inputMode="numeric" maxLength={2}
+            value={parseDuree(newLine.dureeVol).h}
+            onChange={(e) => updateNewLineField('dureeVol', formatDuree(toDureeInt(e.target.value, 99), parseDuree(newLine.dureeVol).m))}
+            className={dureeNumberClassName}
+            placeholder="0"
+          />
+          <span className="text-xs text-slate-500">h</span>
+          <input
+            type="text" inputMode="numeric" maxLength={2}
+            value={parseDuree(newLine.dureeVol).m}
+            onChange={(e) => updateNewLineField('dureeVol', formatDuree(parseDuree(newLine.dureeVol).h, toDureeInt(e.target.value, 59)))}
+            className={dureeNumberClassName}
+            placeholder="0"
+          />
+          <span className="text-xs text-slate-500">min</span>
+        </div>
+      </td>
+
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-1">
+          <input
+            type="text" inputMode="numeric" maxLength={2}
+            value={parseDuree(newLine.dureeEscale).h}
+            onChange={(e) => updateNewLineField('dureeEscale', formatDuree(toDureeInt(e.target.value, 99), parseDuree(newLine.dureeEscale).m))}
+            className={dureeNumberClassName}
+            placeholder="0"
+          />
+          <span className="text-xs text-slate-500">h</span>
+          <input
+            type="text" inputMode="numeric" maxLength={2}
+            value={parseDuree(newLine.dureeEscale).m}
+            onChange={(e) => updateNewLineField('dureeEscale', formatDuree(parseDuree(newLine.dureeEscale).h, toDureeInt(e.target.value, 59)))}
+            className={dureeNumberClassName}
+            placeholder="0"
+          />
+          <span className="text-xs text-slate-500">min</span>
+        </div>
+      </td>
+
+      {/* Aéroport Départ — saisie */}
+      <td className="px-4 py-3">
+        <input
+          type="text"
+          value={newLine.aeroportDepart}
+          onChange={(e) => updateNewLineField('aeroportDepart', e.target.value)}
+          className={inputClassName}
+          placeholder="ex: CDG"
+        />
+      </td>
+
+      {/* Aéroport Arrivée — saisie */}
+      <td className="px-4 py-3">
+        <input
+          type="text"
+          value={newLine.aeroportArrivee}
+          onChange={(e) => updateNewLineField('aeroportArrivee', e.target.value)}
+          className={inputClassName}
+          placeholder="ex: JFK"
+        />
+      </td>
+
+      <td className="px-4 py-3">
+        <select
+          value={newLine.devise}
+          onChange={(e) => updateNewLineField('devise', e.target.value)}
+          className={inputClassName}
+        >
+          <option value="EUR">EUR</option>
+          <option value="USD">USD</option>
+          <option value="MGA">MGA</option>
+        </select>
+      </td>
+
+      <td className="px-4 py-3">
+        <input
+          type="number"
+          step="1"
+          value={newLine.tauxEchange}
+          onChange={(e) => updateNewLineField('tauxEchange', Number(e.target.value))}
+          className={numberInputClassName}
+          placeholder="4900"
+        />
+      </td>
+
+      {/* PU Billet Cie Devise — saisie */}
+      <td className="px-4 py-3">
+        <input
+          type="number" step="0.01"
+          value={newLine.puBilletCompagnieDevise}
+          onChange={(e) => updateNewLineField('puBilletCompagnieDevise', Number(e.target.value))}
+          className={numberInputClassName}
+          placeholder="0.00"
+        />
+      </td>
+
+      {/* PU Service Cie Devise — saisie */}
+      <td className="px-4 py-3">
+        <input
+          type="number" step="0.01"
+          value={newLine.puServiceCompagnieDevise}
+          onChange={(e) => updateNewLineField('puServiceCompagnieDevise', Number(e.target.value))}
+          className={numberInputClassName}
+          placeholder="0.00"
+        />
+      </td>
+
+      {/* PU Pénalité Cie Devise — grisé */}
+      <td className="px-4 py-3">
+        <input readOnly value={fmtDevise(puPenaliteCieDevise)}
+          className={autoReadonlyCls} />
+      </td>
+
+      {/* Mt Billet Cie Devise = PU * nombre — auto */}
+      <td className="px-4 py-3">
+        <input readOnly
+          value={fmtDevise(mtBilletCieDevise)}
+          className={autoReadonlyCls + " text-emerald-700"}
+        />
+      </td>
+
+      {/* Mt Service Cie Devise = PU * nombre — auto */}
+      <td className="px-4 py-3">
+        <input readOnly
+          value={fmtDevise(mtServiceCieDevise)}
+          className={autoReadonlyCls + " text-emerald-700"}
+        />
+      </td>
+
+      {/* Mt Pénalité Cie Devise — grisé */}
+      <td className="px-4 py-3">
+        <input readOnly
+          value={fmtDevise(mtPenaliteCieDevise)}
+          className={autoReadonlyCls}
+        />
+      </td>
+
+      {/* Taux Taxe — saisie du % ou calculé si saisie par montant */}
+      <td className="px-4 py-3">
+        <div className="flex flex-col gap-1">
+          <select
+            value={modeSaisieTaxe}
+            onChange={(e) => updateNewLineField('modeSaisieTaxe', e.target.value)}
+            className="w-full min-w-[140px] px-2 py-1 border border-blue-200 rounded-md text-xs bg-white text-slate-600"
+          >
+            <option value="POURCENTAGE">Saisir %</option>
+            <option value="MONTANT">Saisir prix</option>
+          </select>
+          {modeSaisieTaxe === 'POURCENTAGE' ? (
+            <input
+              type="number" step="0.01"
+              value={newLine.tauxTaxe}
+              onChange={(e) => updateNewLineField('tauxTaxe', Number(e.target.value))}
+              className={numberInputClassName}
+              placeholder="0.00"
+            />
+          ) : (
+            <input readOnly
+              value={fmtNombre(tauxTaxe)}
+              className={autoReadonlyCls}
+            />
+          )}
+        </div>
+      </td>
+
+      {/* Mt Taxe Devise = PU Billet Cie Devise * Taux Taxe % — ou saisie directe */}
+      <td className="px-4 py-3">
+        {modeSaisieTaxe === 'MONTANT' ? (
+          <input
+            type="number" step="0.01"
+            value={newLine.montantTaxeDevise}
+            onChange={(e) => updateNewLineField('montantTaxeDevise', Number(e.target.value))}
+            className={numberInputClassName}
+            placeholder="0.00"
+          />
+        ) : (
+          <input readOnly
+            value={fmtDevise(montantTaxeDevise)}
+            className={autoReadonlyCls}
+          />
+        )}
+      </td>
+
+      {/* Mt Taxe Ariary = Mt Taxe Devise * taux — auto */}
+      <td className="px-4 py-3">
+        <input readOnly
+          value={fmtAriary(montantTaxeAriary)}
+          className={autoReadonlyCls}
+        />
+      </td>
+
+      {/* PU Billet Cie Ariary = PU Devise * taux — auto */}
+      <td className="px-4 py-3">
+        <input readOnly
+          value={fmtAriary(puBilletCieAriary)}
+          className={autoReadonlyCls + " text-emerald-600"}
+        />
+      </td>
+
+      {/* PU Service Cie Ariary — auto */}
+      <td className="px-4 py-3">
+        <input readOnly
+          value={fmtAriary(puServiceCieAriary)}
+          className={autoReadonlyCls + " text-emerald-600"}
+        />
+      </td>
+
+      {/* PU Pénalité Cie Ariary — auto */}
+      <td className="px-4 py-3">
+        <input readOnly
+          value={fmtAriary(puPenaliteCieAriary)}
+          className={autoReadonlyCls + " text-emerald-600"}
+        />
+      </td>
+
+      {/* Mt Billet Cie Ariary = PU Ariary * nombre — auto */}
+      <td className="px-4 py-3">
+        <input readOnly
+          value={fmtAriary(mtBilletCieAriary)}
+          className={autoReadonlyCls + " text-emerald-700"}
+        />
+      </td>
+
+      {/* Mt Service Cie Ariary — auto */}
+      <td className="px-4 py-3">
+        <input readOnly
+          value={fmtAriary(mtServiceCieAriary)}
+          className={autoReadonlyCls + " text-emerald-700"}
+        />
+      </td>
+
+      {/* Mt Pénalité Cie Ariary — auto */}
+      <td className="px-4 py-3">
+        <input readOnly
+          value={fmtAriary(mtPenaliteCieAriary)}
+          className={autoReadonlyCls + " text-emerald-700"}
+        />
+      </td>
+
+      {/* Mt Billet Client Devise = Mt Cie * facteur — auto */}
+      <td className="px-4 py-3">
+        <input readOnly
+          value={fmtDevise(mtBilletClientDevise)}
+          className={autoReadonlyCls + " text-blue-700"}
+        />
+      </td>
+
+      {/* Mt Service Client Devise — auto */}
+      <td className="px-4 py-3">
+        <input readOnly
+          value={fmtDevise(mtServiceClientDevise)}
+          className={autoReadonlyCls + " text-blue-700"}
+        />
+      </td>
+
+      {/* Mt Pénalité Client Devise — auto */}
+      <td className="px-4 py-3">
+        <input readOnly
+          value={fmtDevise(mtPenaliteClientDevise)}
+          className={autoReadonlyCls + " text-blue-700"}
+        />
+      </td>
+
+      {/* Mt Billet Client Ariary = Mt Client Devise * taux — auto */}
+      <td className="px-4 py-3">
+        <input readOnly
+          value={fmtAriary(mtBilletClientAriary)}
+          className={autoReadonlyCls + " text-blue-600"}
+        />
+      </td>
+
+      {/* Mt Service Client Ariary — auto */}
+      <td className="px-4 py-3">
+        <input readOnly
+          value={fmtAriary(mtServiceClientAriary)}
+          className={autoReadonlyCls + " text-blue-600"}
+        />
+      </td>
+
+      {/* Mt Pénalité Client Ariary — auto */}
+      <td className="px-4 py-3">
+        <input readOnly
+          value={fmtAriary(mtPenaliteClientAriary)}
+          className={autoReadonlyCls + " text-blue-600"}
+        />
+      </td>
+
+      {/* Commission Devise — auto */}
+      <td className="px-4 py-3">
+        <input readOnly
+          value={fmtDevise(commissionEnDevise)}
+          className={commissionCls}
+        />
+      </td>
+
+      {/* Commission Ariary — auto */}
+      <td className="px-4 py-3">
+        <input readOnly
+          value={fmtAriary(commissionEnAriary)}
+          className={commissionCls}
+        />
+      </td>
+
+      {/* <td className="px-4 py-3">
+        <select
+          value={newLine.modePaiement}
+          onChange={(e) => updateNewLineField('modePaiement', e.target.value)}
+          className={inputClassName}
+        >
+          <option value="COMPTANT">Comptant</option>
+          <option value="CREDIT">Crédit</option>
+          <option value="CHEQUE">Chèque</option>
+          <option value="VIREMENT">Virement</option>
+        </select>
+      </td> */}
+
+      <td className="px-4 py-4">
+        {servicesDisponibles.length === 0 ? (
+          <div className="text-amber-600 py-2 text-sm">Aucun service</div>
+        ) : (
+          <div className="flex flex-row gap-3 text-sm">
+            {servicesDisponibles.map((svc, idx) => {
+              const current = newLine.serviceValues[idx];
+              if (!current) return null;
+
+              const isBoolean =
+                svc.type === 'SPECIFIQUE' || svc.type === 'SERVICE' &&
+                !svc.libelle.toLowerCase().includes('bagage') &&
+                !svc.libelle.toLowerCase().includes('siège') &&
+                !svc.libelle.toLowerCase().includes('supplément') ;
+
+
+              return (
+                <div key={svc.id} className="flex flex-col gap-1.5 p-3 bg-white rounded-lg border border-slate-200 shadow-sm">
+                  <label className="text-xs font-semibold text-slate-700">
+                    {svc.libelle}
+                    {/* <span className="ml-1 text-slate-400 font-normal">({svc.code})</span> */}
+                  </label>
+                  {isBoolean ? (
+                    <label className="inline-flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={current.valeur === 'true'}
+                        onChange={(e) => updateServiceValue(idx, e.target.checked ? 'true' : 'false')}
+                        className="h-4 w-4 text-blue-600 border-slate-300 rounded focus:ring-2 focus:ring-blue-500"
+                      />
+                      <span className="ml-2 text-sm text-slate-700">Activé</span>
+                    </label>
+                  ) : (
+                    <input
+                      type="text"
+                      value={current.valeur}
+                      onChange={(e) => updateServiceValue(idx, e.target.value)}
+                      placeholder={svc.libelle.includes('Bagage') ? 'ex: 23Kg' : 'valeur'}
+                      className="px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </td>
+
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleSaveNewLine}
+            disabled={newLine.isSaving}
+            className="flex items-center justify-center w-9 h-9 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shrink-0"
+            title="Enregistrer"
+          >
+            {newLine.isSaving ? (
+              <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-white"></div>
+            ) : (
+              <FiSave size={16} />
+            )}
+          </button>
+
+          <button
+            onClick={handleCancelNewLine}
+            disabled={newLine.isSaving}
+            className="flex items-center justify-center w-9 h-9 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm shrink-0"
+            title="Annuler"
+          >
+            <FiX size={16} />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+export default NewLineRow;

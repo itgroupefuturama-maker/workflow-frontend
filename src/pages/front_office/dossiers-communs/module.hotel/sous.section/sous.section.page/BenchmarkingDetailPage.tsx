@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import type { RootState, AppDispatch } from '../../../../../../app/store';
-import { createBenchmarkingLigne, fetchBenchmarkingDetail, sendBenchmarkingDevis, setBenchmarkOfficial, type CreateBenchmarkingLignePayload } from '../../../../../../app/front_office/parametre_hotel/hotelProspectionEnteteSlice';
+import { createBenchmarkingLigne, fetchBenchmarkingDetail, sendBenchmarkingDevis, setBenchmarkOfficial, setSelectedEntete, type CreateBenchmarkingLignePayload } from '../../../../../../app/front_office/parametre_hotel/hotelProspectionEnteteSlice';
 import ModalBenchmarkingLigneForm from '../../components/ModalBenchmarkingLigneForm';
 import { HotelHeader } from '../../components/HotelHeader';
 import ModalConfirmDevis from '../../components/ModalConfirmDevis';
@@ -22,6 +22,20 @@ const BenchmarkingDetailPage = () => {
   const location = useLocation();
 
   const selectedId = useSelector((state: RootState) => state.hotelProspectionEntete.selectedId);
+
+  // L'en-tête sélectionné est aussi dans l'URL (?id=…) : la page survit à un F5 ou à un lien partagé.
+  const [searchParamsId, setSearchParamsId] = useSearchParams();
+  const idUrl = searchParamsId.get('id');
+  useEffect(() => {
+    if (idUrl && idUrl !== selectedId) {
+      dispatch(setSelectedEntete(idUrl));
+    } else if (!idUrl && selectedId) {
+      const next = new URLSearchParams(searchParamsId);
+      next.set('id', selectedId);
+      setSearchParamsId(next, { replace: true, state: location.state });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idUrl, selectedId]);
   const { detail, loadingDetail, errorDetail } = useSelector(
     (state: RootState) => state.hotelProspectionEntete
   );
@@ -36,7 +50,7 @@ const BenchmarkingDetailPage = () => {
 
   const showPreferences = useSelector((state: RootState) => state.ui.showPreferences);
 
-  const tabs = [
+  const tabs: { id: string; label: string }[] = [
     // { id: 'prospection', label: 'Listes des entête benchmarking' },
     // { id: 'hotel', label: 'Listes des reservation hotel' }
   ];

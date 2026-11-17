@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import type { RootState, AppDispatch } from "../../../../../app/store";
 import { X, Loader2, UserPlus } from "lucide-react";
 import { createClientAssuranceForm, type ClientAssuranceFormPayload } from "../../../../../app/portail_client/clientFormSlice";
+import { useEscapeKey } from '../../../../../hooks/useEscapeKey';
 
 interface Props {
   beneficiaireId: string;
@@ -55,6 +56,7 @@ const Field = ({
 
 
 const AddAssuranceFormModal = ({ beneficiaireId, userId, onClose, initialData }: Props) => {
+  useEscapeKey(true, onClose);
   const dispatch = useDispatch<AppDispatch>();
   const { loading, error } = useSelector((state: RootState) => state.clientForm);
 

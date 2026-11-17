@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { FiCheck, FiDollarSign, FiHome, FiInfo, FiX } from "react-icons/fi";
+import { useEscapeKey } from '../../../hooks/useEscapeKey';
 
 // --- Tes Types (exportés pour être réutilisables) ---
 export type DeviseHotel = {
@@ -55,6 +56,8 @@ const ConfirmBenchmarkModal: React.FC<ConfirmBenchmarkModalProps> = ({
 }) => {
   const [isRefundable, setIsRefundable] = useState(false);
   const [selectedLigneId, setSelectedLigneId] = useState('');
+
+  useEscapeKey(isOpen, onClose);
 
   if (!isOpen) return null;
 

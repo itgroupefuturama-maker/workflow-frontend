@@ -9,6 +9,7 @@ import { setShowPreferences, togglePreferences } from '../../../../../../app/uiS
 import SuiviTabSection from '../../../module.suivi/SuiviTabSection';
 import PanneauPreferencesClient from '../../components/PanneauPreferencesClient';
 import Skeleton from '../../../../../../components/ui/Skeleton';
+import { formatStatut } from '../../../../../../utils/statut';
 
 interface Props {
   prestationId: string;
@@ -19,6 +20,7 @@ interface Props {
 const statutLabel: Record<string, string> = {
   CREER: 'Créé',
   APPORUVER: 'Approuvé',
+  APPROUVER: 'Approuvé',
   FACTURE_EMISE: 'Facture émise',
   ANNULER: 'Annulé',
 };
@@ -76,6 +78,7 @@ const HotelReservationsList = ({ prestationId, dossierNumero }: Props) => {
         <div className="shrink-0 px-4 bg-slate-200 rounded-t-lg">
           <div className='flex items-center justify-between'>
             <HotelHeader numerohotel={dossierNumero} navigate={navigate} isBenchmarking={false} />
+            <DossierActifCard className="ml-auto mr-3" />
             <button
               onClick={() => dispatch(togglePreferences())}
               className={`inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-md transition-colors ${
@@ -89,7 +92,6 @@ const HotelReservationsList = ({ prestationId, dossierNumero }: Props) => {
           </div>
         </div>
         <div className='px-4 bg-slate-200 rounded-b-lg'>
-          <DossierActifCard gradient="from-orange-400 via-red-400 to-orange-500 " />
           {/* ── Header page ── */}
           <div className='flex items-center justify-between'> 
             {/* Bouton + formulaire création */}
@@ -179,7 +181,7 @@ const HotelReservationsList = ({ prestationId, dossierNumero }: Props) => {
 
                             {/* Statut */}
                             <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${statutStyle[entete.statut] ?? 'bg-neutral-100 text-neutral-600'}`}>
-                              {statutLabel[entete.statut] ?? entete.statut}
+                              {statutLabel[entete.statut] ?? formatStatut(entete.statut)}
                             </span>
 
                             {/* Fournisseur */}

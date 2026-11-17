@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../app/store';
 import { createExigence } from '../../app/front_office/parametre_ticketing/exigenceSlice';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface ExigenceModalProps {
   isOpen: boolean;
@@ -22,6 +23,8 @@ export default function ExigenceModal({ isOpen, onClose }: ExigenceModalProps) {
   });
 
   const [localError, setLocalError] = useState<string | null>(null);
+
+  useEscapeKey(isOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -60,7 +63,7 @@ export default function ExigenceModal({ isOpen, onClose }: ExigenceModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-slate-900 bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
         <h2 className="text-xl font-bold mb-6">Nouvelle Exigence de Voyage</h2>
 

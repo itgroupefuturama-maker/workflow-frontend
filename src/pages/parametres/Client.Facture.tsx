@@ -8,14 +8,14 @@ import {
 } from '../../app/back_office/clientFacturesSlice';
 import type { RootState, AppDispatch } from '../../app/store';
 import {
-  FiPlus, FiSearch, FiCalendar, FiArrowUp, FiArrowDown, FiUsers, FiLoader, FiArrowLeft,
-  FiEye, FiEdit3, FiToggleLeft, FiTrash2
+  FiSearch, FiCalendar, FiArrowUp, FiArrowDown, FiUsers, FiLoader, FiArrowLeft,
 } from 'react-icons/fi';
 import AuditModal from '../../components/AuditModal';
 import type { ClientFacture } from '../../app/back_office/clientFacturesSlice';
 import { useNavigate } from 'react-router-dom';
 import { useDebouncedValue } from '../../hooks/useDebouncedValue';
 import Pagination from '../../components/Pagination';
+import { formatStatut } from '../../utils/statut';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -44,7 +44,7 @@ const ClientFacturePage = () => {
 
   type ActionMode = 'modifier' | 'tracer' | 'activer' | 'supprimer';
   // Nouveau état pour le mode d'action sélectionné
-  const [selectedAction, setSelectedAction] = useState<ActionMode>('modifier');
+  const [selectedAction] = useState<ActionMode>('modifier');
 
   // Revenir à la page 1 quand la recherche ou le filtre changent
   useEffect(() => {
@@ -285,7 +285,7 @@ const ClientFacturePage = () => {
                       <span className={`px-2.5 py-1 rounded-lg text-[10px] font-black tracking-widest ${
                         client.statut === 'ACTIF' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-red-50 text-red-600 border border-red-100'
                       }`}>
-                        {client.statut}
+                        {formatStatut(client.statut)}
                       </span>
                     </td>
                     <td className="px-4 py-4 whitespace-nowrap text-center text-xs text-gray-600">

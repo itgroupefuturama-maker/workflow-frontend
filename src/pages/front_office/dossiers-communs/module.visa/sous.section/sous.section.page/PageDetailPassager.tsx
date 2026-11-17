@@ -12,9 +12,10 @@ import {
 import { API_URL_PORTAIL } from '../../../../../../service/env';
 import TabContainer from '../../../../../../layouts/TabContainer';
 import { VisaHeader } from '../../components/VisaHeader';
-import { Briefcase, FileText, Phone, User, Users } from 'lucide-react';
+import { AlertTriangle, Briefcase, FileText, Phone, User, Users } from 'lucide-react';
 import { useAuthorization } from '../../../../../../hooks/useAuthorization';
 import PageSkeleton from '../../../../../../components/ui/PageSkeleton';
+import { formatStatut } from '../../../../../../utils/statut';
 
 const MODULE = 'visa';
 
@@ -41,7 +42,7 @@ const Badge = ({ status }: { status: string }) => {
         : 'bg-amber-50 text-amber-700 border border-amber-200'
     }`}>
       <span className={`h-1.5 w-1.5 rounded-full ${isValid ? 'bg-emerald-500' : 'bg-amber-400'}`} />
-      {status}
+      {formatStatut(status)}
     </span>
   );
 };
@@ -200,7 +201,7 @@ const PageDetailPassager = () => {
               )}
               {actionError && (
                 <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-2.5">
-                  ⚠️ {actionError}
+                  <AlertTriangle size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />{actionError}
                 </div>
               )}
             </div>
@@ -282,7 +283,7 @@ const PageDetailPassager = () => {
                             <td className="px-4 py-3 whitespace-nowrap">
                               <div className="flex items-center gap-2.5">
                                 <div className="h-8 w-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0 text-base">
-                                  📄
+                                  <FileText size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />
                                 </div>
                                 <span className="text-sm font-semibold text-gray-800">{doc.nomDoc}</span>
                               </div>

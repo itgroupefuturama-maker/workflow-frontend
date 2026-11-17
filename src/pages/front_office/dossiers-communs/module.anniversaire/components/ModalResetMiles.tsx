@@ -4,6 +4,7 @@ import { useDispatch } from 'react-redux';
 import type { AnnivClient } from '../types';
 import type { AppDispatch } from '../../../../../app/store';
 import { resetAllMiles, resetClientMiles } from '../../../../../app/front_office/paramatre_anniversaire/milesTransactionSlice';
+import { useEscapeKey } from '../../../../../hooks/useEscapeKey';
 
 type Mode = 'single' | 'all';
 
@@ -15,6 +16,7 @@ interface Props {
 }
 
 const ModalResetMiles = ({ mode, client, onClose, onSuccess }: Props) => {
+  useEscapeKey(true, onClose);
   const dispatch = useDispatch<AppDispatch>();
   const [resetting, setResetting] = useState(false);
   const [error,     setError]     = useState<string | null>(null);

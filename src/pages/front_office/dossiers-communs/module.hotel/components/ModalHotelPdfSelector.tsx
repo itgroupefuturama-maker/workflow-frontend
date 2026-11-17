@@ -4,6 +4,7 @@ import { normalizeDevisToEntete, type HotelPdfInput, type HotelProspectionEntete
 import type { HotelPdfSelection } from '../../module.pdf/pdf.generation/types/hotel.types';
 import type { PdfAudience, PdfDesignId } from '../../module.pdf/pdf.generation/types/pdf-design.types';
 import { PDF_DESIGNS } from '../../module.pdf/pdf.generation/config/pdf-designs';
+import { useEscapeKey } from '../../../../../hooks/useEscapeKey';
 
 interface Props {
   isOpen: boolean;
@@ -188,6 +189,8 @@ export const ModalHotelPdfSelector: React.FC<Props> = ({
 
   const formatDate = (iso: string) =>
     new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+
+  useEscapeKey(isOpen, onClose);
 
   if (!isOpen) return null;
 

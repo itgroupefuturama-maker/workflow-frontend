@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import { FiUsers, FiLoader, FiSearch, FiX, FiChevronDown, FiList, FiGrid} from 'react-icons/fi';
+import { FiUsers, FiLoader, FiSearch, FiX, FiChevronDown, FiList, FiGrid, FiHash, FiArrowRight } from 'react-icons/fi';
+import DossierActifCard from '../../../../components/CarteDossierActif/DossierActifCard';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../../../app/store';
 import { fetchClientFactureById, fetchPreferencesBeneficiaire } from '../../../../app/back_office/clientFacturesSlice';
 import PreferencesModal from './PreferencesModal';
+import { formatStatut } from '../../../../utils/statut';
 
 interface Props {
   clientFactureId: string;
@@ -42,7 +44,8 @@ const typeBadgeAvatar = (type: string) => ({
 export default function BeneficiaireListPage({ clientFactureId }: Props) {
   const dispatch = useDispatch<AppDispatch>();
 
-  const [clientOpen, setClientOpen] = useState(true);
+  // Grille de commission du client facturé : repliée par défaut pour alléger l'en-tête
+  const [tauxOpen, setTauxOpen] = useState(false);
 
   const [search, setSearch] = useState('');
 
@@ -58,11 +61,16 @@ export default function BeneficiaireListPage({ clientFactureId }: Props) {
       )
     : null;
 
-  useEffect(() => {
-    if (clientFactureId) dispatch(fetchClientFactureById(clientFactureId));
-  }, [clientFactureId, dispatch]);
+  // Les données de ce client facturé sont-elles déjà en mémoire (Redux) ?
+  const dejaCharge = currentDetail?.id === clientFactureId;
 
-  if (loadingDetail) {
+  // On ne recharge que si le client facturé a changé : revenir sur l'onglet ne relance plus d'appel API.
+  useEffect(() => {
+    if (clientFactureId && !dejaCharge) dispatch(fetchClientFactureById(clientFactureId));
+  }, [clientFactureId, dejaCharge, dispatch]);
+
+  // Le chargement plein écran ne s'affiche que s'il n'y a encore rien à montrer pour ce client.
+  if (loadingDetail && !dejaCharge) {
     return (
       <div className="flex flex-col items-center justify-center py-14 bg-white rounded-2xl border border-slate-100">
         <FiLoader className="animate-spin text-indigo-400 mb-3" size={24} />
@@ -71,7 +79,7 @@ export default function BeneficiaireListPage({ clientFactureId }: Props) {
     );
   }
 
-  if (errorDetail) {
+  if (errorDetail && !dejaCharge) {
     return (
       <div className="text-center py-8 text-red-600 bg-red-50 rounded-xl border border-red-100 text-sm">
         {errorDetail}
@@ -79,7 +87,7 @@ export default function BeneficiaireListPage({ clientFactureId }: Props) {
     );
   }
 
-  if (!currentDetail) return null;
+  if (!currentDetail || !dejaCharge) return null;
 
   const { code, libelle, statut, profilRisque, tauxBase, volDomestique, volRegional,
     longCourrier, auComptant, credit15jrs, credit30jrs, credit60jrs, credit90jrs,
@@ -93,226 +101,202 @@ export default function BeneficiaireListPage({ clientFactureId }: Props) {
   );
 
   return (
-    <div className="py-2 px-4">
-      {/* ── Carte client facturé (Version Minimaliste) ── */}
-      <div className="group bg-white border border-slate-300 rounded-lg overflow-hidden transition-all hover:shadow-md">
-        
-        {/* Header ultra-compact */}
-        <div
-          className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-slate-50/50"
-          onClick={() => setClientOpen(p => !p)}
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            {/* Avatar minimaliste */}
-            <div className="w-7 h-7 rounded bg-slate-200 flex items-center justify-center shrink-0 border border-slate-300 text-[10px] font-bold text-slate-500 group-hover:bg-white transition-colors">
-              {libelle.slice(0, 2).toUpperCase()}
+    <div className="flex flex-col min-h-0">
+      {/* ── En-tête : même structure que les onglets Prospection / Billets ── */}
+      <div className="shrink-0 px-4 bg-slate-200 rounded-xl">
+        <div className="flex items-center justify-between gap-4">
+          <header className="my-4">
+            <div className="flex items-center gap-2.5 px-4 py-2 text-sm font-bold rounded-lg bg-white text-slate-900 shadow-sm ring-1 ring-slate-200/50">
+              <span className="flex items-center justify-center w-5 h-5 rounded-md text-[10px] font-bold bg-blue-600 text-white">1</span>
+              Liste des bénéficiaires
             </div>
-
-            <div className="flex items-center gap-3 overflow-hidden">
-              <h3 className="text-sm font-semibold text-slate-800 truncate">{libelle}</h3>
-              
-              {/* Badges version simplifiée */}
-              <div className="hidden md:flex items-center gap-1.5 shrink-0">
-                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold border uppercase tracking-tighter ${statutBadge(statut)}`}>
-                  {statut}
-                </span>
-                <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold border uppercase tracking-tighter ${profilBadge(profilRisque)}`}>
-                  {profilRisque}
-                </span>
-              </div>
-
-              {/* Code client discret */}
-              <span className="text-[10px] font-mono text-slate-400 bg-slate-50 px-1 rounded border border-slate-300">
-                {code}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4 shrink-0">
-            {/* Responsable discret */}
-            <span className="hidden lg:block text-[11px] text-slate-400 italic">
-              {user ? `${user.prenom} ${user.nom}` : 'N/A'}
-            </span>
-            
-            {/* Chevron plus petit */}
-            <FiChevronDown 
-              size={14} 
-              className={`text-slate-400 transition-transform duration-200 ${clientOpen ? 'rotate-180' : '-rotate-90'}`} 
-            />
-          </div>
+          </header>
+          <DossierActifCard />
         </div>
 
-        {/* Contenu compact en grille serrée */}
-        <div className={`grid transition-all duration-200 ${clientOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
-          <div className="overflow-hidden bg-slate-50/30 border-t border-slate-100">
-            <div className="p-2 grid grid-cols-3 sm:grid-cols-5 md:grid-cols-9 gap-1">
-              {[
-                { label: 'Taux base',  val: tauxBase },
-                { label: 'Vol dom.',   val: volDomestique },
-                { label: 'Vol rég.',   val: volRegional },
-                { label: 'Long courrier',   val: longCourrier },
-                { label: 'Comptant',    val: auComptant },
-                { label: 'Crédit 15j',    val: credit15jrs },
-                { label: 'Crédit 30j',    val: credit30jrs },
-                { label: 'Crédit 60j',    val: credit60jrs },
-                { label: 'Crédit 90j',    val: credit90jrs },
-              ].map((item) => (
-                <div key={item.label} className="flex flex-col items-center justify-center py-1 border border-transparent hover:border-slate-200 hover:bg-white rounded transition-all">
-                  <span className="text-[8px] font-bold text-slate-400 uppercase leading-none mb-0.5">{item.label}</span>
-                  <span className="text-[11px] font-semibold text-slate-700 tabular-nums">{item.val}%</span>
-                </div>
+        {/* Barre d'outils : recherche, grille de commission, mode d'affichage */}
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-2">
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 text-sm font-medium rounded-lg bg-white text-slate-800 shadow-sm ring-1 ring-slate-200/50">
+              <FiUsers size={14} className="text-slate-400" aria-hidden="true" />
+              Bénéficiaires liés
+              <span className="px-1.5 py-0.5 rounded-md text-[10px] bg-slate-100 text-slate-600">{beneficiaires.length}</span>
+            </span>
+
+            {beneficiaires.length > 0 && (
+              <div className="relative">
+                <FiSearch size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" aria-hidden="true" />
+                <input
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Rechercher…"
+                  aria-label="Rechercher un bénéficiaire"
+                  className="w-56 pl-8 pr-8 py-1.5 text-sm bg-white border border-slate-300 rounded-lg text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 transition"
+                />
+                {search && (
+                  <button
+                    onClick={() => setSearch('')}
+                    aria-label="Effacer la recherche"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    <FiX size={12} />
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setTauxOpen((o) => !o)}
+              aria-expanded={tauxOpen}
+              className={`inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg border transition-all ${
+                tauxOpen
+                  ? 'border-indigo-300 bg-indigo-100 text-indigo-800'
+                  : 'border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100'
+              }`}
+            >
+              Grille de commission
+              <FiChevronDown size={13} className={`transition-transform ${tauxOpen ? 'rotate-180' : ''}`} aria-hidden="true" />
+            </button>
+
+            <div className="flex rounded-lg bg-slate-300 p-0.5 gap-0.5">
+              {(['table', 'cards'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setViewMode(mode)}
+                  aria-pressed={viewMode === mode}
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                    viewMode === mode ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-600 hover:text-slate-800'
+                  }`}
+                >
+                  {mode === 'table' ? <FiList size={12} /> : <FiGrid size={12} />}
+                  {mode === 'table' ? 'Tableau' : 'Cartes'}
+                </button>
               ))}
             </div>
           </div>
         </div>
+
+        {/* Grille de commission du client facturé (repliée par défaut) */}
+        {tauxOpen && (
+          <div className="mb-2 rounded-lg bg-white ring-1 ring-slate-200/70">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-slate-100 px-4 py-2 text-xs text-slate-500">
+              <span className="font-semibold text-slate-700">{libelle}</span>
+              <span className="font-mono">{code}</span>
+              <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${statutBadge(statut)}`}>{formatStatut(statut)}</span>
+              <span>Profil de risque : <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${profilBadge(profilRisque)}`}>{formatStatut(profilRisque)}</span></span>
+              {user && <span>Responsable : <span className="font-medium text-slate-700">{user.prenom} {user.nom}</span></span>}
+            </div>
+            <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-9 divide-x divide-slate-100">
+              {[
+                { label: 'Taux de base',  val: tauxBase },
+                { label: 'Vol domestique', val: volDomestique },
+                { label: 'Vol régional',  val: volRegional },
+                { label: 'Long courrier', val: longCourrier },
+                { label: 'Comptant',      val: auComptant },
+                { label: 'Crédit 15 j',   val: credit15jrs },
+                { label: 'Crédit 30 j',   val: credit30jrs },
+                { label: 'Crédit 60 j',   val: credit60jrs },
+                { label: 'Crédit 90 j',   val: credit90jrs },
+              ].map((item) => (
+                <div key={item.label} className="flex flex-col items-center py-2">
+                  <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">{item.label}</span>
+                  <span className="text-sm font-semibold text-slate-800 tabular-nums">{item.val} %</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* ── Liste bénéficiaires en grille ── */}
-      <div className="">
-
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-300">
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-2">
-              <FiUsers size={14} className="text-slate-400" />
-              <span className="text-sm font-semibold text-slate-700">Bénéficiaires liés</span>
-            </div>
-            {/* ── Barre de recherche ── */}
-            {beneficiaires.length > 0 && (
-              <div className="px-4 py-2.5">
-                <div className="relative">
-                  <FiSearch
-                    size={13}
-                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-                  />
-                  <input
-                    type="text"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Rechercher un bénéficiaire..."
-                    className="w-full pl-8 pr-8 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-200 focus:border-indigo-300 transition"
-                  />
-                  {search && (
-                    <button
-                      onClick={() => setSearch('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                    >
-                      <FiX size={12} />
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-          <div className="flex rounded-lg border border-slate-200 bg-slate-50 p-0.5 gap-0.5">
-            {(['table', 'cards'] as const).map((mode) => (
-              <button
-                key={mode}
-                onClick={() => setViewMode(mode)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-medium transition-all
-                  ${viewMode === mode
-                    ? 'bg-white text-slate-800 border border-slate-200 shadow-sm'
-                    : 'text-slate-500 hover:text-slate-700'
-                  }`}
-              >
-                {mode === 'table' ? <FiList size={12} /> : <FiGrid size={12} />}
-                {mode === 'table' ? 'Tableau' : 'Cartes'}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        
-
+      {/* ── Liste des bénéficiaires ── */}
+      <div className="py-4">
         {beneficiaires.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12">
-            <div className="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center mb-3">
-              <FiUsers className="text-slate-300" size={22} />
+          <div className="flex flex-col items-center justify-center py-16 bg-white rounded-2xl border-2 border-dashed border-slate-200">
+            <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mb-3">
+              <FiUsers className="text-slate-300" size={26} />
             </div>
-            <p className="text-sm font-medium text-slate-500 mb-1">Aucun bénéficiaire lié</p>
-            <p className="text-xs text-slate-400">Ce client facturé n'a pas encore de bénéficiaires.</p>
+            <p className="text-base font-semibold text-slate-500 mb-1">Aucun bénéficiaire lié</p>
+            <p className="text-sm text-slate-400">Ce client facturé n'a pas encore de bénéficiaires.</p>
           </div>
 
         ) : beneficiairesFiltres.length === 0 ? (
-          /* ── Aucun résultat de recherche ── */
-          <div className="flex flex-col items-center justify-center py-10">
-            <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center mb-3">
-              <FiSearch className="text-slate-300" size={18} />
+          <div className="flex flex-col items-center justify-center py-12 bg-white rounded-2xl border-2 border-dashed border-slate-200">
+            <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center mb-3">
+              <FiSearch className="text-slate-300" size={20} />
             </div>
-            <p className="text-sm font-medium text-slate-500 mb-1">Aucun résultat</p>
-            <p className="text-xs text-slate-400">
+            <p className="text-sm font-semibold text-slate-500 mb-1">Aucun résultat</p>
+            <p className="text-sm text-slate-400">
               Aucun bénéficiaire ne correspond à &laquo;&nbsp;{search}&nbsp;&raquo;
             </p>
             <button
               onClick={() => setSearch('')}
-              className="mt-3 text-xs text-indigo-500 hover:text-indigo-700 font-medium transition-colors"
+              className="mt-3 text-sm text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
             >
               Effacer la recherche
             </button>
           </div>
         ) : viewMode === 'table' ? (
 
-          /* ── Vue Tableau ── */
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm border-collapse">
-              <thead>
-                <tr className="bg-slate-50 border-b border-slate-200">
-                  <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2.5">
-                    Bénéficiaire
-                  </th>
-                  <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2.5">
-                    Code
-                  </th>
-                  <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2.5">
-                    Type
-                  </th>
-                  <th className="text-left text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-4 py-2.5">
-                    Statut
-                  </th>
-                  <th className="w-24" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {beneficiairesFiltres.map(({ clientBeneficiaireId, clientBeneficiaire }) => (
-                  <tr
-                    key={clientBeneficiaireId}
-                    onClick={() => dispatch(fetchPreferencesBeneficiaire(clientBeneficiaireId))}
-                    className="hover:bg-slate-50 cursor-pointer transition-colors group"
-                  >
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 ${typeBadgeAvatar(clientBeneficiaire.typeClient)}`}>
-                          {clientBeneficiaire.libelle.slice(0, 2).toUpperCase()}
-                        </div>
-                        <span className="font-medium text-slate-800 text-[13px] truncate max-w-[200px]">
-                          {clientBeneficiaire.libelle}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="font-mono text-[11px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                        {clientBeneficiaire.code}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${typeBadgeClass(clientBeneficiaire.typeClient)}`}>
-                        {clientBeneficiaire.typeClient === 'SIMPLE' ? 'Ponctuel' : clientBeneficiaire.typeClient}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold border ${statutBadge(clientBeneficiaire.statut)}`}>
-                        {clientBeneficiaire.statut}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button className="opacity-0 group-hover:opacity-100 transition-opacity text-[11px] font-medium text-indigo-600 hover:text-indigo-800 px-3 py-1 rounded-md border border-indigo-200 hover:bg-indigo-50">
-                        Détails
-                      </button>
-                    </td>
+          /* ── Vue Tableau (même style que les listes Prospection / Billets) ── */
+          <div className="bg-white rounded-xl shadow-sm border border-slate-300 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-slate-100">
+                <thead>
+                  <tr className="bg-slate-200">
+                    {['Bénéficiaire', 'Code', 'Type', 'Statut', 'Actions'].map((h) => (
+                      <th key={h} className="px-5 py-3.5 text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">
+                        {h}
+                      </th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {beneficiairesFiltres.map(({ clientBeneficiaireId, clientBeneficiaire }) => (
+                    <tr key={clientBeneficiaireId} className="hover:bg-amber-50/30 transition-colors">
+                      <td className="px-5 py-3.5 whitespace-nowrap">
+                        <div className="flex items-center gap-2.5">
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-bold shrink-0 ${typeBadgeAvatar(clientBeneficiaire.typeClient)}`}>
+                            {clientBeneficiaire.libelle.slice(0, 2).toUpperCase()}
+                          </div>
+                          <span className="text-sm font-bold text-slate-800 truncate max-w-[260px]">
+                            {clientBeneficiaire.libelle}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3.5 whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1.5 text-sm text-slate-600">
+                          <FiHash size={12} className="text-slate-400" aria-hidden="true" />
+                          {clientBeneficiaire.code}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold border ${typeBadgeClass(clientBeneficiaire.typeClient)}`}>
+                          {clientBeneficiaire.typeClient === 'SIMPLE' ? 'Ponctuel' : formatStatut(clientBeneficiaire.typeClient)}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 whitespace-nowrap">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold border ${statutBadge(clientBeneficiaire.statut)}`}>
+                          <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80" aria-hidden="true" />
+                          {formatStatut(clientBeneficiaire.statut)}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5 whitespace-nowrap">
+                        <button
+                          onClick={() => dispatch(fetchPreferencesBeneficiaire(clientBeneficiaireId))}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded-lg transition-colors"
+                        >
+                          Préférences <FiArrowRight size={11} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
         ) : (

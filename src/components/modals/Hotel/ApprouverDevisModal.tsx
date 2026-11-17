@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { FiCheck, FiImage, FiX } from 'react-icons/fi';
+import { useEscapeKey } from '../../../hooks/useEscapeKey';
 
 export interface DeviseOption {
   id: string;
@@ -24,6 +25,8 @@ const ApprouverDevisModal: React.FC<ApprouverDevisModalProps> = ({
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [deviseId, setDeviseId] = useState('');
+
+  useEscapeKey(isOpen, onClose);
 
   if (!isOpen) return null;
 

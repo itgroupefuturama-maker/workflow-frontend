@@ -1,4 +1,6 @@
 import React from 'react';
+import { useEscapeKey } from '../../../../../hooks/useEscapeKey';
+import { fmtDevise } from '../../../../../utils/format';
 
 type ConfirmDevisModalProps = {
   isOpen: boolean;
@@ -28,6 +30,7 @@ const ModalConfirmDevis: React.FC<ConfirmDevisModalProps> = ({
   data,
   loading,
 }) => {
+  useEscapeKey(isOpen, onClose);
   if (!isOpen) return null;
 
   const {
@@ -134,25 +137,25 @@ const ModalConfirmDevis: React.FC<ConfirmDevisModalProps> = ({
                       <div>
                         <div className="text-neutral-500 text-xs mb-1">Nuitée (Devise)</div>
                         <div className="font-mono font-medium text-neutral-900">
-                          {cd.nuiteDevise.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} {dv.devise?.devise}
+                          {fmtDevise(cd.nuiteDevise)} {dv.devise?.devise}
                         </div>
                       </div>
                       <div>
                         <div className="text-neutral-500 text-xs mb-1">Nuitée (Ariary)</div>
                         <div className="font-mono font-medium text-neutral-900">
-                          {cd.nuiteAriary.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} Ar
+                          {fmtDevise(cd.nuiteAriary)} Ar
                         </div>
                       </div>
                       <div>
                         <div className="text-neutral-500 text-xs mb-1">Montant (Devise)</div>
                         <div className="font-mono font-medium text-neutral-900">
-                          {cd.montantDevise.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} {dv.devise?.devise}
+                          {fmtDevise(cd.montantDevise)} {dv.devise?.devise}
                         </div>
                       </div>
                       <div>
                         <div className="text-neutral-500 text-xs mb-1">Montant (Ariary)</div>
                         <div className="font-mono font-semibold text-blue-700 text-base">
-                          {cd.montantAriary.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} Ar
+                          {fmtDevise(cd.montantAriary)} Ar
                         </div>
                       </div>
                     </div>
@@ -172,25 +175,25 @@ const ModalConfirmDevis: React.FC<ConfirmDevisModalProps> = ({
                   <div>
                     <div className="text-neutral-500 text-xs mb-1">% sur Prix Unitaire</div>
                     <div className="font-mono font-medium text-neutral-900">
-                      {commissionData.tauxPrixUnitaire.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} %
+                      {fmtDevise(commissionData.tauxPrixUnitaire)} %
                     </div>
                   </div>
                   <div>
                     <div className="text-neutral-500 text-xs mb-1">Forfaitaire Unitaire</div>
                     <div className="font-mono font-medium text-neutral-900">
-                      {commissionData.forfaitaireUnitaire.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+                      {fmtDevise(commissionData.forfaitaireUnitaire)}
                     </div>
                   </div>
                   <div>
                     <div className="text-neutral-500 text-xs mb-1">Forfaitaire Global</div>
                     <div className="font-mono font-medium text-neutral-900">
-                      {commissionData.forfaitaireGlobal.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+                      {fmtDevise(commissionData.forfaitaireGlobal)}
                     </div>
                   </div>
                   <div>
                     <div className="text-neutral-500 text-xs mb-1">Montant Commission</div>
                     <div className="font-mono font-semibold text-emerald-700 text-base">
-                      {commissionData.montantCommission.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} Ar
+                      {fmtDevise(commissionData.montantCommission)} Ar
                     </div>
                   </div>
                 </div>

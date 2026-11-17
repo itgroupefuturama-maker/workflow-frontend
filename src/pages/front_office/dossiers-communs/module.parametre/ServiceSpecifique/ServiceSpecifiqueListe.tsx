@@ -8,6 +8,7 @@ import {
   type ServiceSpecifique,
 } from '../../../../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
 import ServiceSpecifiqueModal from '../../../../../components/modals/ServiceSpecifiqueModal';
+import { ClipboardList } from 'lucide-react';
 
 interface Props {
   typeService: TypeService;
@@ -89,7 +90,7 @@ export default function ServiceSpecifiqueListe({ typeService }: Props) {
       ) : items.length === 0 ? (
         <div className="py-16 flex flex-col items-center gap-3">
           <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center">
-            <span className="text-2xl">📋</span>
+            <ClipboardList size={14} aria-hidden="true" className="text-2xl shrink-0" />
           </div>
           <p className="text-sm font-semibold text-slate-500">{emptyLabel}</p>
         </div>

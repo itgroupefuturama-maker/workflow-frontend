@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { Fragment, useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { FiCheck, FiCheckCircle, FiChevronDown, FiChevronRight, FiEye, FiMoreVertical, FiRefreshCw, FiX } from 'react-icons/fi';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -20,6 +20,7 @@ import { toast } from '../../../../../components/Toast/toast';
 import SkeletonTableRows from '../../../../../components/ui/SkeletonTableRows';
 import { useAuthorization } from '../../../../../hooks/useAuthorization';
 
+import { fmtAriary, fmtDevise } from '../../../../../utils/format';
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
 const MODULE = 'ticketing';
@@ -260,7 +261,7 @@ export default function Devis () {
     pendingAction?.run();
   };
 
-  const tabs = [
+  const tabs: { id: string; label: string }[] = [
     // { id: 'prospection', label: 'Listes des entête prospection' },
     // { id: 'billet', label: 'Listes des billets' }
   ];
@@ -397,7 +398,7 @@ export default function Devis () {
                           <th className="w-8"></th>
                           <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Référence</th>
                           <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Créé le</th>
-                          <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Fournisseur</th>
+                          <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Compagnie</th>
                           <th className="px-4 py-3 text-left text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Type de vol</th>
                           <th className="px-4 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Commission Appliquée</th>
                           <th className="px-4 py-3 text-right text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Commission Proposée</th>
@@ -446,7 +447,7 @@ export default function Devis () {
                           };
 
                           return (
-                            <>
+                            <Fragment key={devis.id}>
                               <tr
                                 key={devis.id}
                                 onClick={() => toggleDevis(devis.id)}
@@ -468,7 +469,7 @@ export default function Devis () {
                                   {entete.commissionPropose != null ? `${entete.commissionPropose} %` : '—'}
                                 </td>
                                 <td className="px-4 py-3 text-right font-medium text-slate-800">
-                                  {devis.totalGeneral.toLocaleString('fr-FR')} Ar
+                                  {fmtAriary(devis.totalGeneral)} Ar
                                 </td>
                                 <td className="px-4 py-3 text-center">
                                   <StatusBadge statut={devis.statut} />
@@ -611,10 +612,10 @@ export default function Devis () {
                                                   </p>
                                                 </td>
                                                 <td className="px-3 py-2 text-right text-slate-700">
-                                                  {(ligne.montantBilletCompagnieDevise + ligne.montantServiceCompagnieDevise).toLocaleString()} {ligne.devise}
+                                                  {fmtDevise(ligne.montantBilletCompagnieDevise + ligne.montantServiceCompagnieDevise)} {ligne.devise}
                                                 </td>
                                                 <td className="px-3 py-2 text-right text-indigo-700 font-medium">
-                                                  {(ligne.montantBilletClientDevise + ligne.montantServiceClientDevise).toLocaleString()} {ligne.devise}
+                                                  {fmtDevise(ligne.montantBilletClientDevise + ligne.montantServiceClientDevise)} {ligne.devise}
                                                 </td>
                                                 <td className="px-3 py-2">
                                                   <div className="flex flex-wrap gap-1">
@@ -638,7 +639,7 @@ export default function Devis () {
                                   </td>
                                 </tr>
                               )}
-                            </>
+                            </Fragment>
                           );
                         })}
                       </tbody>

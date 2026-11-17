@@ -12,6 +12,7 @@ import type { Commission, ModuleRef } from '../../app/back_office/commissionsSli
 import { FiPlus, FiX, FiLoader, FiPercent, FiAlertCircle, FiCheckCircle, FiArrowLeft } from 'react-icons/fi';
 import AuditModal from '../../components/AuditModal';
 import { useNavigate } from 'react-router-dom';
+import { formatStatut } from '../../utils/statut';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -173,7 +174,7 @@ const CommissionPage = () => {
                 </td>
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 rounded-full text-[10px] font-black ${comm.status === 'ACTIF' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                    {comm.status}
+                    {formatStatut(comm.status)}
                   </span>
                 </td>
                 <td className="px-6 py-4 text-center">

@@ -2,9 +2,13 @@ import { useState, useEffect } from 'react';
 import { FiX, FiSave } from 'react-icons/fi';
 import { toast } from '../../../../../components/Toast/toast';
 import Button from '../../../../../components/ui/Button';
+import { useEscapeKey } from '../../../../../hooks/useEscapeKey';
 import { useItineraireCascade } from '../../../../../hooks/useItineraireCascade';
 import ItineraireCascadeFields from '../../../../../components/ItineraireCascadeFields';
 
+import { fmtAriary, fmtDevise, fmtNombre } from '../../../../../utils/format';
+import { calculerPrixLigne } from './calculPrixLigne';
+import { AlertTriangle } from 'lucide-react';
 interface AddProspectionLigneModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -126,56 +130,25 @@ export default function AddProspectionLigneModal({
 
   // Calculs Ariary & commissions (dérivés, pas dans le form)
   // Après les useEffect, remplacer les calculs dérivés par :
-  const taux         = form.tauxEchange || 0;
-  const nombre       = form.nombre || 1;
+  // ─── Calcul unique (aperçu pendant la saisie) — voir calculPrixLigne.ts ───
   const commissionPct = Number(commissionAppliquer) || 0;
-  const facteur      = 1 + commissionPct / 100;
-
-  // PU Cie Devise (saisis)
-  const puBilletCieDevise   = form.puBilletCompagnieDevise;
-  const puServiceCieDevise  = form.puServiceCompagnieDevise;
-
-  // Mt Cie Devise = PU * nombre
-  const mtBilletCieDevise   = puBilletCieDevise  * nombre;
-  const mtServiceCieDevise  = puServiceCieDevise * nombre;
-
-  // PU Cie Ariary = PU Devise * taux
-  const puBilletAriary   = puBilletCieDevise  * taux;
-  const puServiceAriary  = puServiceCieDevise * taux;
-  const puPenaliteAriary = form.puPenaliteCompagnieDevise * taux;
-
-  // Mt Cie Ariary = PU Ariary * nombre
-  const mtBilletCieAriary   = puBilletAriary  * nombre;
-  const mtServiceCieAriary  = puServiceAriary * nombre;
-  const mtPenaliteCieAriary = puPenaliteAriary * nombre;
-
-  // Taxe : saisie soit du taux (%), soit du montant direct (règle de trois inversée)
-  const tauxTaxe = form.modeSaisieTaxe === 'MONTANT'
-    ? (puBilletCieDevise > 0 ? (form.montantTaxeDevise / puBilletCieDevise) * 100 : 0)
-    : form.tauxTaxe;
-  const montantTaxeDevise = form.modeSaisieTaxe === 'MONTANT'
-    ? form.montantTaxeDevise
-    : puBilletCieDevise * (form.tauxTaxe / 100);
-  const montantTaxeAriary = montantTaxeDevise * taux;
-
-  // Mt Client Devise hors taxe = Mt Cie Devise * facteur
-  const mtBilletClientDeviseHorsTaxe = mtBilletCieDevise  * facteur;
-  const mtServiceClientDevise        = mtServiceCieDevise * facteur;
-  const mtPenaliteClientDevise       = form.montantPenaliteCompagnieDevise * facteur;
-
-  // Mt Client Devise Billet = hors taxe + taxe (taxe transparente, pas de commission dessus)
-  const mtBilletClientDevise = mtBilletClientDeviseHorsTaxe + montantTaxeDevise;
-
-  // Mt Client Ariary = Mt Client Devise * taux
-  const mtBilletClientAriary   = mtBilletClientDevise   * taux;
-  const mtServiceClientAriary  = mtServiceClientDevise  * taux;
-  const mtPenaliteClientAriary = mtPenaliteClientDevise * taux;
-
-  // Commission (sur le prix billet hors taxe uniquement — la taxe est reversée telle quelle)
-  const commissionEnDevise = (mtBilletClientDeviseHorsTaxe - mtBilletCieDevise)
-                          + (mtServiceClientDevise  - mtServiceCieDevise)
-                          + (mtPenaliteClientDevise - form.montantPenaliteCompagnieDevise);
-  const commissionEnAriary = commissionEnDevise * taux;
+  const {
+    taux, mtBilletCieDevise, mtServiceCieDevise, puBilletCieAriary: puBilletAriary,
+    puServiceCieAriary: puServiceAriary, puPenaliteCieAriary: puPenaliteAriary, mtBilletCieAriary, mtServiceCieAriary,
+    mtPenaliteCieAriary, tauxTaxe, montantTaxeDevise, montantTaxeAriary,
+    facteur, mtBilletClientDevise, mtServiceClientDevise, mtBilletClientAriary,
+    mtServiceClientAriary, mtPenaliteClientAriary, commissionEnDevise, commissionEnAriary,
+  } = calculerPrixLigne({
+    nombre: form.nombre || 1,
+    tauxEchange: form.tauxEchange || 0,
+    commissionPct,
+    puBilletCieDevise: form.puBilletCompagnieDevise,
+    puServiceCieDevise: form.puServiceCompagnieDevise,
+    puPenaliteCieDevise: form.puPenaliteCompagnieDevise,
+    modeSaisieTaxe: form.modeSaisieTaxe,
+    tauxTaxe: form.tauxTaxe,
+    montantTaxeBilletUnitaireDevise: form.montantTaxeDevise,
+  });
 
   const set = (field: string, value: any) => setForm((prev) => ({ ...prev, [field]: value }));
 
@@ -219,7 +192,8 @@ export default function AddProspectionLigneModal({
         dureeEscale: form.dureeEscale || null,
         avion:       form.avion || null,
         tauxTaxe,
-        montantTaxeDevise,
+        // Montant saisi pour 1 billet (mode « Saisir prix ») : buildPayload recalcule la taxe totale
+        montantTaxeDevise: form.montantTaxeDevise,
         montantTaxeAriary,
         services:    serviceValues,   // ← on passe directement, buildPayload s'occupe du mapping
       });
@@ -291,6 +265,8 @@ export default function AddProspectionLigneModal({
     })),
   };
 
+  useEscapeKey(isOpen && !isSaving, onClose);
+
   if (!isOpen) return null;
 
   const inputCls = "w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white";
@@ -303,7 +279,12 @@ export default function AddProspectionLigneModal({
     const match = String(str || '').match(/(\d+)\s*h\s*(\d*)/i);
     return { h: match ? Number(match[1]) || 0 : 0, m: match ? Number(match[2]) || 0 : 0 };
   };
-  const formatDuree = (h: number, m: number) => `${Math.max(0, h || 0)}h${String(Math.min(59, Math.max(0, m || 0))).padStart(2, '0')}`;
+  const formatDuree = (h: number, m: number) => `${Math.min(99, Math.max(0, Math.floor(h || 0)))}h${String(Math.min(59, Math.max(0, Math.floor(m || 0)))).padStart(2, '0')}`;
+  // Garde uniquement les chiffres saisis et borne la valeur (heures 0–99, minutes 0–59)
+  const toDureeInt = (raw: string, max: number) => {
+    const digits = raw.replace(/\D/g, '').slice(0, 2);
+    return digits === '' ? 0 : Math.min(max, parseInt(digits, 10));
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-9999 p-4">
@@ -315,7 +296,7 @@ export default function AddProspectionLigneModal({
             <h2 className="text-white font-bold text-base tracking-wide">Nouvelle ligne de prospection</h2>
             <p className="text-blue-100 text-xs mt-0.5">Renseignez les informations du vol</p>
           </div>
-          <button onClick={onClose} className="text-blue-200 hover:text-white transition-colors p-1.5 hover:bg-white/10 rounded-lg">
+          <button onClick={onClose} aria-label="Fermer" className="text-blue-200 hover:text-white transition-colors p-1.5 hover:bg-white/10 rounded-lg">
             <FiX size={20} />
           </button>
         </div>
@@ -402,17 +383,17 @@ export default function AddProspectionLigneModal({
                 <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Durée vol</label>
                 <div className="flex items-center gap-1">
                   <input
-                    type="number" min="0"
+                    type="text" inputMode="numeric" maxLength={2}
                     value={parseDuree(form.dureeVol).h}
-                    onChange={(e) => set('dureeVol', formatDuree(Number(e.target.value), parseDuree(form.dureeVol).m))}
+                    onChange={(e) => set('dureeVol', formatDuree(toDureeInt(e.target.value, 99), parseDuree(form.dureeVol).m))}
                     className={dureeNumberCls}
                     placeholder="0"
                   />
                   <span className="text-xs text-gray-500">h</span>
                   <input
-                    type="number" min="0" max="59"
+                    type="text" inputMode="numeric" maxLength={2}
                     value={parseDuree(form.dureeVol).m}
-                    onChange={(e) => set('dureeVol', formatDuree(parseDuree(form.dureeVol).h, Number(e.target.value)))}
+                    onChange={(e) => set('dureeVol', formatDuree(parseDuree(form.dureeVol).h, toDureeInt(e.target.value, 59)))}
                     className={dureeNumberCls}
                     placeholder="0"
                   />
@@ -424,17 +405,17 @@ export default function AddProspectionLigneModal({
                 <label className="block text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Durée escale</label>
                 <div className="flex items-center gap-1">
                   <input
-                    type="number" min="0"
+                    type="text" inputMode="numeric" maxLength={2}
                     value={parseDuree(form.dureeEscale).h}
-                    onChange={(e) => set('dureeEscale', formatDuree(Number(e.target.value), parseDuree(form.dureeEscale).m))}
+                    onChange={(e) => set('dureeEscale', formatDuree(toDureeInt(e.target.value, 99), parseDuree(form.dureeEscale).m))}
                     className={dureeNumberCls}
                     placeholder="0"
                   />
                   <span className="text-xs text-gray-500">h</span>
                   <input
-                    type="number" min="0" max="59"
+                    type="text" inputMode="numeric" maxLength={2}
                     value={parseDuree(form.dureeEscale).m}
-                    onChange={(e) => set('dureeEscale', formatDuree(parseDuree(form.dureeEscale).h, Number(e.target.value)))}
+                    onChange={(e) => set('dureeEscale', formatDuree(parseDuree(form.dureeEscale).h, toDureeInt(e.target.value, 59)))}
                     className={dureeNumberCls}
                     placeholder="0"
                   />
@@ -511,7 +492,7 @@ export default function AddProspectionLigneModal({
                 {form.modeSaisieTaxe === 'POURCENTAGE' ? (
                   <input type="number" step="0.01" value={form.tauxTaxe} onChange={(e) => set('tauxTaxe', Number(e.target.value))} className={numberCls} placeholder="0.00" />
                 ) : (
-                  <input readOnly value={tauxTaxe.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} className={readonlyCls + " text-right"} />
+                  <input readOnly value={fmtNombre(tauxTaxe)} className={readonlyCls + " text-right"} />
                 )}
               </div>
 
@@ -524,7 +505,7 @@ export default function AddProspectionLigneModal({
                 {form.modeSaisieTaxe === 'MONTANT' ? (
                   <input type="number" step="0.01" value={form.montantTaxeDevise} onChange={(e) => set('montantTaxeDevise', Number(e.target.value))} className={numberCls} placeholder="0.00" />
                 ) : (
-                  <input readOnly value={montantTaxeDevise.toLocaleString('fr-FR', { minimumFractionDigits: 2 })} className={readonlyCls + " text-right"} />
+                  <input readOnly value={fmtDevise(montantTaxeDevise)} className={readonlyCls + " text-right"} />
                 )}
               </div>
 
@@ -534,7 +515,7 @@ export default function AddProspectionLigneModal({
                   Mt Taxe Ariary
                   <span className="ml-1 text-gray-400 normal-case font-normal">(auto)</span>
                 </label>
-                <input readOnly value={montantTaxeAriary.toLocaleString('fr-FR')} className={readonlyCls + " text-right"} />
+                <input readOnly value={fmtAriary(montantTaxeAriary)} className={readonlyCls + " text-right"} />
               </div>
 
               {/* Montants Compagnie */}
@@ -545,7 +526,7 @@ export default function AddProspectionLigneModal({
                 </label>
                 <input
                   readOnly
-                  value={mtBilletCieDevise.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+                  value={fmtDevise(mtBilletCieDevise)}
                   className={readonlyCls + " text-right text-emerald-700 font-semibold"}
                 />
               </div>
@@ -557,7 +538,7 @@ export default function AddProspectionLigneModal({
                 </label>
                 <input
                   readOnly
-                  value={mtServiceCieDevise.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+                  value={fmtDevise(mtServiceCieDevise)}
                   className={readonlyCls + " text-right text-emerald-700 font-semibold"}
                 />
               </div>
@@ -578,7 +559,7 @@ export default function AddProspectionLigneModal({
                 </label>
                 <input
                   readOnly
-                  value={mtBilletClientDevise.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+                  value={fmtDevise(mtBilletClientDevise)}
                   className={readonlyCls + " text-right text-blue-700 font-semibold"}
                 />
               </div>
@@ -590,7 +571,7 @@ export default function AddProspectionLigneModal({
                 </label>
                 <input
                   readOnly
-                  value={mtServiceClientDevise.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+                  value={fmtDevise(mtServiceClientDevise)}
                   className={readonlyCls + " text-right text-blue-700 font-semibold"}
                 />
               </div>
@@ -611,7 +592,7 @@ export default function AddProspectionLigneModal({
               <span className="w-5 h-5 rounded-full bg-emerald-600 text-white text-xs flex items-center justify-center font-bold shrink-0">3</span>
               <h3 className="text-sm font-semibold text-gray-800">
                 Récapitulatif en Ariary
-                <span className="ml-2 text-xs font-normal text-gray-500">(calculé automatiquement · taux: {taux.toLocaleString('fr-FR')} Ar)</span>
+                <span className="ml-2 text-xs font-normal text-gray-500">(calculé automatiquement · taux: {fmtNombre(taux)} Ar)</span>
               </h3>
             </div>
 
@@ -624,19 +605,19 @@ export default function AddProspectionLigneModal({
                   <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
                     <p className="text-xs text-gray-500 mb-1">PU Billet Cie</p>
                     <p className="text-sm font-semibold text-gray-900 text-right">
-                      {puBilletAriary.toLocaleString('fr-FR')} <span className="text-xs font-normal text-gray-500">Ar</span>
+                      {fmtAriary(puBilletAriary)} <span className="text-xs font-normal text-gray-500">Ar</span>
                     </p>
                   </div>
                   <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
                     <p className="text-xs text-gray-500 mb-1">PU Service Cie</p>
                     <p className="text-sm font-semibold text-gray-900 text-right">
-                      {puServiceAriary.toLocaleString('fr-FR')} <span className="text-xs font-normal text-gray-500">Ar</span>
+                      {fmtAriary(puServiceAriary)} <span className="text-xs font-normal text-gray-500">Ar</span>
                     </p>
                   </div>
                   <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
                     <p className="text-xs text-gray-500 mb-1">PU Pénalité Cie</p>
                     <p className="text-sm font-semibold text-gray-900 text-right">
-                      {puPenaliteAriary.toLocaleString('fr-FR')} <span className="text-xs font-normal text-gray-500">Ar</span>
+                      {fmtAriary(puPenaliteAriary)} <span className="text-xs font-normal text-gray-500">Ar</span>
                     </p>
                   </div>
                 </div>
@@ -649,19 +630,19 @@ export default function AddProspectionLigneModal({
                   <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
                     <p className="text-xs text-emerald-700 mb-1">Mt Billet Cie</p>
                     <p className="text-sm font-semibold text-emerald-800 text-right">
-                      {mtBilletCieAriary.toLocaleString('fr-FR')} <span className="text-xs font-normal">Ar</span>
+                      {fmtAriary(mtBilletCieAriary)} <span className="text-xs font-normal">Ar</span>
                     </p>
                   </div>
                   <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
                     <p className="text-xs text-emerald-700 mb-1">Mt Service Cie</p>
                     <p className="text-sm font-semibold text-emerald-800 text-right">
-                      {mtServiceCieAriary.toLocaleString('fr-FR')} <span className="text-xs font-normal">Ar</span>
+                      {fmtAriary(mtServiceCieAriary)} <span className="text-xs font-normal">Ar</span>
                     </p>
                   </div>
                   <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3">
                     <p className="text-xs text-emerald-700 mb-1">Mt Pénalité Cie</p>
                     <p className="text-sm font-semibold text-emerald-800 text-right">
-                      {mtPenaliteCieAriary.toLocaleString('fr-FR')} <span className="text-xs font-normal">Ar</span>
+                      {fmtAriary(mtPenaliteCieAriary)} <span className="text-xs font-normal">Ar</span>
                     </p>
                   </div>
                 </div>
@@ -674,19 +655,19 @@ export default function AddProspectionLigneModal({
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                     <p className="text-xs text-blue-700 mb-1">Mt Billet Client</p>
                     <p className="text-sm font-semibold text-blue-800 text-right">
-                      {mtBilletClientAriary.toLocaleString('fr-FR')} <span className="text-xs font-normal">Ar</span>
+                      {fmtAriary(mtBilletClientAriary)} <span className="text-xs font-normal">Ar</span>
                     </p>
                   </div>
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                     <p className="text-xs text-blue-700 mb-1">Mt Service Client</p>
                     <p className="text-sm font-semibold text-blue-800 text-right">
-                      {mtServiceClientAriary.toLocaleString('fr-FR')} <span className="text-xs font-normal">Ar</span>
+                      {fmtAriary(mtServiceClientAriary)} <span className="text-xs font-normal">Ar</span>
                     </p>
                   </div>
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                     <p className="text-xs text-blue-700 mb-1">Mt Pénalité Client</p>
                     <p className="text-sm font-semibold text-blue-800 text-right">
-                      {mtPenaliteClientAriary.toLocaleString('fr-FR')} <span className="text-xs font-normal">Ar</span>
+                      {fmtAriary(mtPenaliteClientAriary)} <span className="text-xs font-normal">Ar</span>
                     </p>
                   </div>
                 </div>
@@ -699,14 +680,14 @@ export default function AddProspectionLigneModal({
                   <div className={`rounded-lg p-4 border-2 ${commissionEnDevise >= 0 ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300'}`}>
                     <p className="text-xs font-medium text-gray-600 uppercase mb-1">Commission en Devise</p>
                     <p className={`text-xl font-bold text-right ${commissionEnDevise >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                      {commissionEnDevise.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+                      {fmtDevise(commissionEnDevise)}
                       <span className="text-sm font-normal ml-1">{form.devise}</span>
                     </p>
                   </div>
                   <div className={`rounded-lg p-4 border-2 ${commissionEnAriary >= 0 ? 'bg-green-50 border-green-300' : 'bg-red-50 border-red-300'}`}>
                     <p className="text-xs font-medium text-gray-600 uppercase mb-1">Commission en Ariary</p>
                     <p className={`text-xl font-bold text-right ${commissionEnAriary >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-                      {commissionEnAriary.toLocaleString('fr-FR')}
+                      {fmtAriary(commissionEnAriary)}
                       <span className="text-sm font-normal ml-1">Ar</span>
                     </p>
                   </div>
@@ -814,7 +795,7 @@ export default function AddProspectionLigneModal({
                 </div>
 
                 <p className="mt-3 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2.5 flex items-center gap-2">
-                  <span>⚠️</span>
+                  <AlertTriangle size={14} aria-hidden="true" className="shrink-0" />
                   Ce JSON est une prévisualisation en temps réel. Il se met à jour automatiquement à chaque modification du formulaire.
                 </p>
               </div>

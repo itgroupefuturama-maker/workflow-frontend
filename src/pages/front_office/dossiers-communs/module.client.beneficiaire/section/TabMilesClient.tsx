@@ -5,6 +5,7 @@ import { FiLoader, FiSearch } from 'react-icons/fi';
 import { fetchAllMiles } from '../../../../../app/front_office/parametre_client_beneficiaire/clientMilesSlice';
 import { useDebouncedValue } from '../../../../../hooks/useDebouncedValue';
 import Pagination from '../../../../../components/Pagination';
+import { formatStatut } from '../../../../../utils/statut';
 
 const typeClientColor: Record<string, string> = {
   SIMPLE:    'bg-gray-100 text-gray-600',
@@ -159,7 +160,7 @@ const TabMilesClient = () => {
                       <span className={`w-1.5 h-1.5 rounded-full ${
                         item.beneficiaire.statut === 'ACTIF' ? 'bg-green-500' : 'bg-red-500'
                       }`} />
-                      {item.beneficiaire.statut}
+                      {formatStatut(item.beneficiaire.statut)}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">

@@ -6,6 +6,7 @@ import {
   fetchAssuranceProspections,
 } from '../../../../../app/front_office/parametre_assurance/assuranceProspectionSlice';
 import CreateEnteteModal from '../../../../../components/modals/CreateEnteteModal';
+import { AlertTriangle } from 'lucide-react';
 
 interface Props {
   prestationId: string;
@@ -52,7 +53,7 @@ const ModalCreationProspection = ({ prestationId, onClose }: Props) => {
           ))}
         </select>
       </div>
-      {createError && <p className="text-xs text-red-500">⚠️ {createError}</p>}
+      {createError && <p className="text-xs text-red-500"><AlertTriangle size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />{createError}</p>}
     </CreateEnteteModal>
   );
 };

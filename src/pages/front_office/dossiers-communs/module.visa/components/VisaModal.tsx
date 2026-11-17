@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { BookUser } from 'lucide-react';
 
 interface Props {
   title: string;
@@ -16,7 +17,7 @@ const VisaModal = ({ title, onClose, onSubmit, loading, children }: Props) => (
       <div className="flex items-center justify-between px-7 py-5 border-b border-gray-100 shrink-0">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-indigo-100 flex items-center justify-center">
-            <span className="text-indigo-600 text-base">🛂</span>
+            <BookUser size={14} aria-hidden="true" className="text-indigo-600 text-base shrink-0" />
           </div>
           <div>
             <h2 className="text-base font-bold text-gray-800 leading-tight">{title}</h2>

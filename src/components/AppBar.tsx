@@ -1,14 +1,15 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { FiHelpCircle, FiBell, FiUser, FiChevronDown, FiLogOut, FiX, FiTrash2, FiHome, FiCheck, FiSettings, FiWifiOff } from "react-icons/fi";
+import { FiBell, FiUser, FiChevronDown, FiLogOut, FiX, FiTrash2, FiHome, FiCheck, FiSettings, FiWifiOff } from "react-icons/fi";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { logout } from '../app/authSlice';
 import { useDispatch, useSelector } from 'react-redux';
 import { persistor, store, type AppDispatch, type RootState } from '../app/store';
 import { setCurrentClientFactureId } from '../app/front_office/dossierCommunSlice';
-import { ICONE_NOTIFICATION, lienNotification, onNotification, type AppNotification } from '../service/notifications';
+import { ICONE_NOTIFICATION, lienNotification, onNotification, onNotificationsChangees, type AppNotification } from '../service/notifications';
 import logo from '../assets/logo.jpg';
 import axiosInstance from '../service/Axios';
 import { toast } from './Toast/toast';
+import { formatStatut } from '../utils/statut';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -40,6 +41,15 @@ function useClickOutside(ref: React.RefObject<HTMLElement | null>, onClose: () =
   }, [ref, onClose]);
 }
 
+// ── Hook : ferme menus et modale avec la touche Échap ─────────────────────────
+function useEscape(onEscape: () => void) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onEscape(); };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, [onEscape]);
+}
+
 export default function AppBar( { isBackOffice = false }: { isBackOffice?: boolean }) {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
@@ -63,6 +73,11 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
   // ── Fermeture au clic extérieur ──────────────────────────────────────────────
   useClickOutside(notifRef,    () => setOpenNotifications(false));
   useClickOutside(userMenuRef, () => setOpenUserMenu(false));
+  useEscape(useCallback(() => {
+    setOpenNotifications(false);
+    setOpenUserMenu(false);
+    setOpenProfileModal(false);
+  }, []));
 
   // Fermeture modal profil au clic extérieur
   useEffect(() => {
@@ -77,13 +92,35 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
   }, [openProfileModal]);
 
   // ── Notifications ────────────────────────────────────────────────────────────
+  // ── Stratégie de chargement ──────────────────────────────────────────────────
+  // • Au démarrage : les NOTIFS_LIMIT plus récentes de l'utilisateur (/notifications/me, déjà filtré
+  //   côté backend sur l'utilisateur connecté) + le vrai nombre de non lues (/notifications/me/count).
+  // • Ensuite : temps réel par le socket (la notification arrive complète, aucun appel API).
+  // • Resynchronisation seulement si nécessaire : reconnexion du socket (événements manqués pendant
+  //   la coupure), ou ouverture de la cloche si la liste a plus de NOTIFS_TTL_MS.
+  const NOTIFS_LIMIT = 30;
+  const NOTIFS_TTL_MS = 5 * 60_000;
+  const [unreadCount, setUnreadCount] = useState(0);
+  const lastFetchRef = useRef<number>(0);
+  // Copie à jour de la liste, lisible depuis les abonnements socket sans les réabonner
+  const notifsRef = useRef<AppNotification[]>([]);
+  useEffect(() => { notifsRef.current = notifications; }, [notifications]);
+
   const fetchNotifications = async () => {
-    if (!user?.id) return;
+    if (!user?.id || isBackOffice) return;   // pas de cloche dans le back office
     setLoadingNotifs(true);
     try {
-      const res = await axiosInstance.get('/notifications/me');
-      if (res.data.success) setNotifications(res.data.data);
-      return res.data.data as AppNotification[] | undefined;
+      const [res, count] = await Promise.all([
+        axiosInstance.get('/notifications/me', { params: { limit: NOTIFS_LIMIT } }),
+        axiosInstance.get('/notifications/me/count').catch(() => null),
+      ]);
+      lastFetchRef.current = Date.now();
+      const liste = (res.data.success ? res.data.data : []) as AppNotification[];
+      if (res.data.success) setNotifications(liste);
+      // Vrai total côté serveur (peut dépasser les NOTIFS_LIMIT chargées) ; repli : compte local
+      const total = count?.data?.data?.unreadCount ?? count?.data?.unreadCount;
+      setUnreadCount(typeof total === 'number' ? total : liste.filter((n) => !n.isRead).length);
+      return liste;
     } catch (e) {
       console.error(e);
       toast.error('Erreur lors du chargement des notifications');
@@ -93,6 +130,20 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
   };
 
   useEffect(() => { fetchNotifications(); }, [user?.id]);
+
+  // Lecture / suppression faites depuis la page Notifications : on resynchronise la cloche
+  useEffect(() => onNotificationsChangees(() => { fetchNotifications(); }), [user?.id]);
+
+  // Socket reconnecté après une coupure : on rattrape les notifications manquées
+  const socketConnectedNotif = useSelector((state: RootState) => state.ui.socketConnected);
+  const etaitDeconnecteRef = useRef(false);
+  useEffect(() => {
+    if (!socketConnectedNotif) { etaitDeconnecteRef.current = true; return; }
+    if (etaitDeconnecteRef.current) {
+      etaitDeconnecteRef.current = false;
+      fetchNotifications();
+    }
+  }, [socketConnectedNotif]);
 
   // Réception temps réel, ancien format (socket 'notification' sans notification jointe) :
   // refetch puis toast si un nouvel élément est bien apparu en tête de liste. `lastNotifIdRef` reste
@@ -114,7 +165,6 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
     }
   }, [notifications]);
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   // Clic sur une notification (cloche ou toast) : marque comme lue puis ouvre la page concernée.
   // Les anciennes notifications n'ont pas de lien : on se contente de les marquer comme lues.
@@ -123,6 +173,7 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
       try {
         await axiosInstance.patch(`/notifications/${n.id}/read`);
         setNotifications((prev) => prev.map((x) => x.id === n.id ? { ...x, isRead: true } : x));
+        setUnreadCount((c) => Math.max(0, c - 1));
       } catch (e) {
         console.error(e);
         toast.error('Impossible de marquer la notification comme lue');
@@ -144,7 +195,9 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
   // Réception temps réel, nouveau format : la notification complète arrive avec l'événement socket,
   // pas besoin de recharger la liste.
   useEffect(() => onNotification((n) => {
-    setNotifications((prev) => prev.some((x) => x.id === n.id) ? prev : [n, ...prev]);
+    if (notifsRef.current.some((x) => x.id === n.id)) return;   // déjà reçue (doublon socket)
+    setNotifications((prev) => [n, ...prev.filter((x) => x.id !== n.id)].slice(0, NOTIFS_LIMIT));
+    if (!n.isRead) setUnreadCount((c) => c + 1);
     lastNotifIdRef.current = n.id;
     toast.notification(n.description, n.titre ?? undefined, () => ouvrirNotification(n));
   }), [ouvrirNotification]);
@@ -152,7 +205,9 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
   const deleteNotification = async (id: string) => {
     try {
       await axiosInstance.delete(`/notifications/${id}`);
+      const supprimee = notifsRef.current.find((n) => n.id === id);
       setNotifications((prev) => prev.filter((n) => n.id !== id));
+      if (supprimee && !supprimee.isRead) setUnreadCount((c) => Math.max(0, c - 1));
     } catch (e) {
       console.error(e);
       toast.error('Impossible de supprimer la notification');
@@ -164,6 +219,7 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
     try {
       await axiosInstance.patch('/notifications/me/read-all');
       setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      setUnreadCount(0);
     } catch (e) {
       console.error(e);
       toast.error('Impossible de marquer toutes les notifications comme lues');
@@ -262,18 +318,21 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
               </div>
             )}
 
-            {/* Aide */}
-            <button className="p-2 text-slate-100 hover:text-slate-100 hover:bg-slate-500 rounded-lg transition-all">
-              <FiHelpCircle size={17} />
-            </button>
+            {/* Aide : bouton retiré tant qu'aucune page d'aide n'existe (il n'avait pas d'action).
+                À réactiver avec <FiHelpCircle /> et aria-label="Aide" quand la page sera prête. */}
 
-            {/* ── Notifications ── */}
+            {/* ── Notifications (front office uniquement : elles concernent les billets) ── */}
+            {!isBackOffice && (<>
             <div className="relative" ref={notifRef}>
               <button
                 onClick={() => {
                   setOpenNotifications((prev) => !prev);
-                  fetchNotifications();
+                  // Pas de rechargement à chaque ouverture : le socket tient la liste à jour.
+                  if (Date.now() - lastFetchRef.current > NOTIFS_TTL_MS) fetchNotifications();
                 }}
+                aria-label={unreadCount > 0 ? `Notifications (${unreadCount} non lues)` : 'Notifications'}
+                aria-expanded={openNotifications}
+                title="Notifications"
                 className="relative p-2 text-slate-100 hover:text-slate-100 hover:bg-slate-500 rounded-lg transition-all"
               >
                 <FiBell size={17} />
@@ -344,7 +403,10 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
                                 {notif.titre && (
                                   <p className={`text-sm leading-snug ${!notif.isRead ? 'font-semibold text-gray-900' : 'font-medium text-gray-600'}`}>
                                     {notif.type && ICONE_NOTIFICATION[notif.type] && (
-                                      <span className="mr-1.5">{ICONE_NOTIFICATION[notif.type]}</span>
+                                      (() => {
+                                        const { icon: Icone, className } = ICONE_NOTIFICATION[notif.type];
+                                        return <Icone size={14} aria-hidden="true" className={`inline -mt-0.5 mr-1.5 ${className}`} />;
+                                      })()
                                     )}
                                     {notif.titre}
                                   </p>
@@ -384,11 +446,14 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
             </div>
 
             <div className="w-px h-5 bg-slate-600 mx-1" />
+            </>)}
 
             {/* ── Menu utilisateur ── */}
             <div className="relative" ref={userMenuRef}>
               <button
                 onClick={() => setOpenUserMenu((prev) => !prev)}
+                aria-label="Menu utilisateur"
+                aria-expanded={openUserMenu}
                 className="flex items-center gap-2 px-2 py-1.5 hover:bg-slate-500 rounded-lg transition-all"
               >
                 {/* Avatar */}
@@ -413,7 +478,7 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
                     <p className="text-xs font-semibold text-gray-800 truncate">
                       {user ? `${user.prenom} ${user.nom}` : 'Administrateur'}
                     </p>
-                    <p className="text-xs text-gray-400 truncate mt-0.5">{user?.email}</p>
+                    <p className="text-xs text-gray-400 truncate mt-0.5" title={user?.email}>{user?.email}</p>
                   </div>
 
                   <button
@@ -461,6 +526,7 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
             <div className="bg-gray-950 px-6 py-5 relative">
               <button
                 onClick={() => setOpenProfileModal(false)}
+                aria-label="Fermer"
                 className="absolute top-4 right-4 p-1.5 text-gray-500 hover:text-white hover:bg-white/10 rounded-lg transition-all"
               >
                 <FiX size={16} />
@@ -495,7 +561,7 @@ export default function AppBar( { isBackOffice = false }: { isBackOffice?: boole
                     user.status === 'ACTIF' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
                   }`}>
                     <span className={`w-1.5 h-1.5 rounded-full ${user.status === 'ACTIF' ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                    {user.status}
+                    {formatStatut(user.status)}
                   </span>
                 </div>
               </div>

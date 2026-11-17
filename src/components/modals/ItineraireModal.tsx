@@ -10,6 +10,7 @@ import {
   type Itineraire,
 } from '../../app/front_office/parametre_ticketing/itineraireSlice';
 import Button from '../ui/Button';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -91,6 +92,8 @@ export default function ItineraireModal({ isOpen, onClose, onSaved, editingItine
     setLocalError(null);
     if (value && !villesByPaysId[value]) dispatch(fetchVillesByPays(value));
   };
+
+  useEscapeKey(isOpen, onClose);
 
   if (!isOpen) return null;
 

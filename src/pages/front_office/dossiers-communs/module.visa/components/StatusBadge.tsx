@@ -1,4 +1,5 @@
-{/* StatusBadge amélioré */}
+
+import { formatStatut } from '../../../../../utils/statut';{/* StatusBadge amélioré */}
 const COLORS: Record<string, string> = {
   créé    : 'bg-blue-50 text-blue-700 border border-blue-200',
   envoyé  : 'bg-green-50 text-green-700 border border-green-200',
@@ -20,7 +21,7 @@ const DOTS: Record<string, string> = {
 const StatusBadge = ({ status }: { status: string }) => (
   <span className={`uppercase inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-semibold ${COLORS[status] ?? 'bg-gray-100 text-gray-500 border border-gray-200'}`}>
     <span className={`h-1.5 w-1.5 rounded-full ${DOTS[status] ?? 'bg-gray-400'}`} />
-    {status}
+    {formatStatut(status)}
   </span>
 );
 

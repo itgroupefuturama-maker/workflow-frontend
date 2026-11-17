@@ -1,13 +1,28 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { FiX, FiTrash2, FiCheck } from 'react-icons/fi';
-import type { AppDispatch, RootState } from '../../app/store';
-import { useDispatch, useSelector } from 'react-redux';
-import { fetchClientBeneficiaireInfos } from '../../app/portail_client/clientBeneficiaireInfosSlice';
-import { selectServicesByType, type ServicePreference } from '../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
 import ReactDOM from 'react-dom';
-import PreferencesInlinePanel from './Hotel/PreferencesInlinePanel';
+import { useDispatch, useSelector } from 'react-redux';
+import {
+  FiX,
+  FiTrash2,
+  FiCheck,
+  FiChevronDown,
+  FiUploadCloud,
+  FiAlertTriangle,
+  FiUserPlus,
+  FiPaperclip,
+  FiExternalLink,
+} from 'react-icons/fi';
+import type { AppDispatch, RootState } from '../../app/store';
+import { fetchClientBeneficiaireInfos } from '../../app/portail_client/clientBeneficiaireInfosSlice';
+import {
+  selectServicesByType,
+  type ServicePreference,
+} from '../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
 import { fetchPreferencesBeneficiaire } from '../../app/back_office/clientFacturesSlice';
+import PreferencesInlinePanel from './Hotel/PreferencesInlinePanel';
 import { toast } from '../Toast/toast';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
+import { API_URL } from '../../service/env';
 
 interface ReservationModalProps {
   isOpen: boolean;
@@ -18,6 +33,91 @@ interface ReservationModalProps {
   loading?: boolean;
 }
 
+type PuKey =
+  | 'puResaBilletCompagnieDevise'
+  | 'puResaServiceCompagnieDevise'
+  | 'puResaPenaliteCompagnieDevise';
+
+// ─── Helpers d'affichage ─────────────────────────────────────
+const formatMontant = (val: number) =>
+  Number(val).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const fmt = (val?: number | null, suffix = '') =>
+  val != null ? `${formatMontant(val)}${suffix}` : '—';
+
+// Le back renvoie un chemin relatif (ex. "uploads/…") ; on garde une URL déjà absolue telle quelle.
+const fichierUrl = (chemin: string) =>
+  /^https?:\/\//i.test(chemin) ? chemin : `${String(API_URL ?? '').replace(/\/+$/, '')}/${chemin.replace(/^\/+/, '')}`;
+
+const formatDate = (d?: string) => (d ? new Date(d).toLocaleDateString('fr-FR') : '—');
+
+const inputCls =
+  'w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 ' +
+  'focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-900 ' +
+  'disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500 read-only:bg-slate-50';
+
+const TYPE_CLIENT_STYLES: Record<string, string> = {
+  SIMPLE: 'bg-slate-100 text-slate-600 ring-slate-200',
+  BRONZE: 'bg-orange-50 text-orange-700 ring-orange-200',
+  SILVER: 'bg-sky-50 text-sky-700 ring-sky-200',
+  GOLD: 'bg-amber-50 text-amber-700 ring-amber-200',
+  VIP: 'bg-violet-50 text-violet-700 ring-violet-200',
+};
+
+const TypeClientBadge: React.FC<{ type: string }> = ({ type }) => (
+  <span
+    className={`inline-flex shrink-0 items-center rounded px-1.5 py-0.5 text-[10px] font-semibold ring-1 ring-inset ${
+      TYPE_CLIENT_STYLES[type] ?? TYPE_CLIENT_STYLES.SIMPLE
+    }`}
+  >
+    {type}
+  </span>
+);
+
+const Label: React.FC<{ children: React.ReactNode; required?: boolean; hint?: string }> = ({
+  children,
+  required,
+  hint,
+}) => (
+  <label className="mb-1.5 block text-xs font-medium text-slate-600">
+    {children}
+    {required && <span className="ml-0.5 text-red-500">*</span>}
+    {hint && <span className="ml-1 font-normal text-slate-400">({hint})</span>}
+  </label>
+);
+
+const Section: React.FC<{
+  step: number;
+  title: string;
+  description?: React.ReactNode;
+  aside?: React.ReactNode;
+  children: React.ReactNode;
+}> = ({ step, title, description, aside, children }) => (
+  <section className="rounded-lg border border-slate-200 bg-white">
+    <header className="flex items-center justify-between gap-4 border-b border-slate-100 px-5 py-3.5">
+      <div className="flex min-w-0 items-center gap-3">
+        <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
+          {step}
+        </span>
+        <div className="min-w-0">
+          <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+          {description && <p className="mt-0.5 text-xs text-slate-500">{description}</p>}
+        </div>
+      </div>
+      {aside}
+    </header>
+    <div className="p-5">{children}</div>
+  </section>
+);
+
+const Detail: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
+  <div className="min-w-0">
+    <dt className="text-[11px] text-slate-400">{label}</dt>
+    <dd className="mt-0.5 truncate text-sm text-slate-800">{children}</dd>
+  </div>
+);
+
+// ─── Composant ───────────────────────────────────────────────
 const ReservationModal: React.FC<ReservationModalProps> = ({
   isOpen,
   onClose,
@@ -31,14 +131,14 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
   const beneficiaires = useSelector(
     (state: RootState) => state.clientFactures.current?.beneficiaires || []
   );
-
   const { list: infosList, loadingList: infosLoading } = useSelector(
     (state: RootState) => state.clientBeneficiaireInfos
   );
+  const servicesStore = useSelector(selectServicesByType('TICKET'));
 
-  const defaultDevise = ligne?.prospectionLigne?.devise || 'EUR';
-  const defaultTaux = ligne?.prospectionLigne?.tauxEchange || 4900;
-  // const nombrePassagersMax = ligne.prospectionLigne?.nombre || 0;
+  const prospection = ligne?.prospectionLigne;
+  const defaultDevise = prospection?.devise || 'EUR';
+  const defaultTaux = prospection?.tauxEchange || 4900;
 
   // Ligne déjà réservée (FAIT) : on modifie sa réservation, la modal part des valeurs enregistrées.
   // Après un envoi à Odoo, le back remet alors le billet en CREER (à soumettre de nouveau).
@@ -58,13 +158,12 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
     puResaMontantPenaliteCompagnieDevise: 0,
   }));
 
-  // Remplacer le useState selectedPassagers existant :
   const [selectedPassagers, setSelectedPassagers] = useState<
     Array<{
-      beneficiaireId: string;       // clientBeneficiaireId
-      infoId: string;               // clientbeneficiaireInfoId
+      beneficiaireId: string; // clientBeneficiaireId
+      infoId: string; // clientbeneficiaireInfoId
       nomComplet: string;
-      servicePreferenceIds: string[]; // ← nouveau
+      servicePreferenceIds: string[];
     }>
   >(() =>
     estModification
@@ -82,51 +181,44 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
 
   const [currentBeneficiaireId, setCurrentBeneficiaireId] = useState('');
   const [currentInfoId, setCurrentInfoId] = useState('');
-
   const [showConfirmation, setShowConfirmation] = useState(false);
-
-  // ─── Calculs dérivés ─────────────────────────────────────
-  const nombrePassagers = ligne.prospectionLigne?.nombre || 0;
-
-  const totalBillet = formData.puResaBilletCompagnieDevise * nombrePassagers;
-  const totalService = formData.puResaServiceCompagnieDevise * nombrePassagers;
-  const totalPenalite = formData.puResaPenaliteCompagnieDevise * nombrePassagers;
-
   const [preuveResa, setPreuveResa] = useState<File | null>(null);
   const [preuveResaPreview, setPreuveResaPreview] = useState<string | null>(null);
-
-  const isFormValid =
-    formData.reservation.trim() !== '' &&
-    selectedPassagers.length === nombrePassagers &&  // ← exact, pas juste > 0
-    formData.puResaBilletCompagnieDevise > 0 &&
-    formData.resaTauxEchange > 0;
-
-  // Ajouter ce helper avec les autres (typeClientBadge, etc.)
-  const typeClientConfig = (type: string) => ({
-    SIMPLE: { bg: 'bg-gray-100',    text: 'text-gray-700',   border: 'border-gray-300',   dot: 'bg-gray-400'   },
-    BRONZE: { bg: 'bg-orange-50',   text: 'text-orange-800', border: 'border-orange-300', dot: 'bg-orange-500' },
-    SILVER: { bg: 'bg-blue-50',     text: 'text-blue-800',   border: 'border-blue-300',   dot: 'bg-blue-500'   },
-    GOLD:   { bg: 'bg-amber-50',    text: 'text-amber-800',  border: 'border-amber-300',  dot: 'bg-amber-400'  },
-    VIP:    { bg: 'bg-purple-50',   text: 'text-purple-800', border: 'border-purple-300', dot: 'bg-purple-500' },
-  }[type] ?? { bg: 'bg-gray-100', text: 'text-gray-600', border: 'border-gray-300', dot: 'bg-gray-400' });
+  const [prefParPassager, setPrefParPassager] = useState<Record<string, string[]>>({});
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
   const triggerRef = useRef<HTMLButtonElement>(null);
 
-  // On cherche l'objet complet correspondant à l'ID sélectionné
-  const selectedInfoDetails = infosList.find(info => info.id === currentInfoId);
+  // ─── Calculs dérivés ─────────────────────────────────────
+  const nombrePassagers = prospection?.nombre || 0;
+  const totalBillet = formData.puResaBilletCompagnieDevise * nombrePassagers;
+  const totalService = formData.puResaServiceCompagnieDevise * nombrePassagers;
+  const totalPenalite = formData.puResaPenaliteCompagnieDevise * nombrePassagers;
+  const totalCompagnie = totalBillet + totalService + totalPenalite;
 
-  // Services actifs sur cette ligne (valeur !== "false" et !== "")
-  const servicesActifs = (ligne?.prospectionLigne?.serviceProspectionLigne || []).filter(
-    (s: any) => s.valeur && s.valeur !== 'false' && s.valeur !== ''
+  const isFormValid =
+    formData.reservation.trim() !== '' &&
+    selectedPassagers.length === nombrePassagers &&
+    formData.puResaBilletCompagnieDevise > 0 &&
+    formData.resaTauxEchange > 0;
+
+  const currentBeneficiaire = beneficiaires.find((b) => b.clientBeneficiaireId === currentBeneficiaireId);
+  const selectedInfoDetails = infosList.find((info) => info.id === currentInfoId);
+  const documentExpire =
+    !!selectedInfoDetails && new Date(selectedInfoDetails.dateValiditeDoc) < new Date();
+
+  const infosFiltrees = infosList.filter(
+    (info) =>
+      !prospection?.typePassager ||
+      info.clientType === null ||
+      info.clientType === prospection?.typePassager
   );
 
-  // État : préférences sélectionnées par passager (indexé par infoId)
-  const [prefParPassager, setPrefParPassager] = useState<Record<string, string[]>>({});
-
-  // Préférences dispo : on récupère depuis le store pour les services actifs
-  const servicesStore = useSelector(selectServicesByType('TICKET'));
+  // Services actifs sur cette ligne (valeur !== "false" et !== "")
+  const servicesActifs = (prospection?.serviceProspectionLigne || []).filter(
+    (s: any) => s.valeur && s.valeur !== 'false' && s.valeur !== ''
+  );
 
   // En modification, un passager absent de prefParPassager garde les préférences de son billet.
   // Le billet les stocke en libellés ("Chien") alors que l'API attend des ids : on les retrouve
@@ -143,18 +235,43 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
   };
   const getPrefs = (infoId: string) => prefParPassager[infoId] ?? prefsInitiales(infoId);
 
-  const handlePreuveResaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] || null;
-    setPreuveResa(file);
-    if (file) {
-      setPreuveResaPreview(URL.createObjectURL(file));
-    } else {
-      setPreuveResaPreview(null);
-    }
-  };
+  const lignesTarifs: Array<{
+    key: PuKey;
+    label: string;
+    required?: boolean;
+    editable: boolean;
+    total: number;
+    original?: number | null;
+  }> = [
+    {
+      key: 'puResaBilletCompagnieDevise',
+      label: 'Billet',
+      required: true,
+      editable: true,
+      total: totalBillet,
+      original: prospection?.puBilletCompagnieDevise,
+    },
+    {
+      key: 'puResaServiceCompagnieDevise',
+      label: 'Service',
+      editable: true,
+      total: totalService,
+      original: prospection?.puServiceCompagnieDevise,
+    },
+    {
+      key: 'puResaPenaliteCompagnieDevise',
+      label: 'Pénalité',
+      editable: false,
+      total: totalPenalite,
+      original: prospection?.puPenaliteCompagnieDevise,
+    },
+  ];
 
-  const fmt = (val?: number | null, suffix = '') =>
-    val != null ? `${Number(val).toFixed(2)}${suffix}` : '—';
+  const lignesClient = [
+    { label: 'Billet', devise: prospection?.montantBilletClientDevise, ariary: prospection?.montantBilletClientAriary },
+    { label: 'Service', devise: prospection?.montantServiceClientDevise, ariary: prospection?.montantServiceClientAriary },
+    { label: 'Pénalité', devise: prospection?.montantPenaliteClientDevise, ariary: prospection?.montantPenaliteClientAriary },
+  ];
 
   // ─── Effets ──────────────────────────────────────────────
   useEffect(() => {
@@ -173,9 +290,9 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
         puResaMontantPenaliteCompagnieDevise: totalPenalite,
       }));
     }
-  }, [nombrePassagers, formData.puResaBilletCompagnieDevise, formData.puResaServiceCompagnieDevise, formData.puResaPenaliteCompagnieDevise, totalBillet, totalService, totalPenalite]);
+  }, [nombrePassagers, totalBillet, totalService, totalPenalite]);
 
-  // ─── Initialisation des tarifs compagnie depuis prospectionLigne (nouvelle réservation seulement) ───
+  // Initialisation des tarifs compagnie depuis prospectionLigne (nouvelle réservation seulement)
   useEffect(() => {
     if (isOpen && ligne?.prospectionLigne && !estModification) {
       setFormData((prev) => ({
@@ -187,12 +304,19 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
     }
   }, [isOpen, ligne, estModification]);
 
+  // Libère l'URL d'aperçu précédente
+  useEffect(() => {
+    return () => {
+      if (preuveResaPreview) URL.revokeObjectURL(preuveResaPreview);
+    };
+  }, [preuveResaPreview]);
+
   useEffect(() => {
     if (!dropdownOpen) return;
 
     const handleOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
-      if (!target.closest('[data-dropdown="beneficiaire"]') && target !== triggerRef.current) {
+      if (!target.closest('[data-dropdown="beneficiaire"]') && !triggerRef.current?.contains(target)) {
         setDropdownOpen(false);
       }
     };
@@ -210,7 +334,7 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
     };
 
     document.addEventListener('mousedown', handleOutside);
-    document.addEventListener('scroll', handleScroll, true); // true = capture phase pour les scrolls imbriqués
+    document.addEventListener('scroll', handleScroll, true);
     return () => {
       document.removeEventListener('mousedown', handleOutside);
       document.removeEventListener('scroll', handleScroll, true);
@@ -236,6 +360,41 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
     }));
   };
 
+  const handlePreuveResaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setPreuveResa(file);
+    setPreuveResaPreview(file ? URL.createObjectURL(file) : null);
+  };
+
+  const retirerPreuve = () => {
+    setPreuveResa(null);
+    setPreuveResaPreview(null);
+  };
+
+  const toggleDropdown = () => {
+    if (!dropdownOpen && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setDropdownPos({
+        top: rect.bottom + window.scrollY + 4,
+        left: rect.left + window.scrollX,
+        width: rect.width,
+      });
+    }
+    setDropdownOpen((v) => !v);
+  };
+
+  const choisirBeneficiaire = (b: any | null) => {
+    setCurrentInfoId('');
+    setDropdownOpen(false);
+    if (!b) {
+      setCurrentBeneficiaireId('');
+      return;
+    }
+    setCurrentBeneficiaireId(b.clientBeneficiaireId);
+    dispatch(fetchPreferencesBeneficiaire(b.clientBeneficiaireId));
+    setPrefBeneficiaire(b);
+  };
+
   const addPassager = () => {
     if (!currentBeneficiaireId || !currentInfoId) {
       toast.warning('Veuillez sélectionner un bénéficiaire ET son document');
@@ -243,6 +402,10 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
     }
     if (selectedPassagers.length >= nombrePassagers) {
       toast.warning(`Nombre maximum de passagers atteint (${nombrePassagers})`);
+      return;
+    }
+    if (selectedPassagers.some((p) => p.infoId === currentInfoId)) {
+      toast.warning('Ce passager est déjà dans la liste');
       return;
     }
 
@@ -254,17 +417,9 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
 
     setSelectedPassagers((prev) => [
       ...prev,
-      {
-        beneficiaireId: currentBeneficiaireId,
-        infoId: currentInfoId,
-        nomComplet,
-        servicePreferenceIds: [], // ← initialisé vide
-      },
+      { beneficiaireId: currentBeneficiaireId, infoId: currentInfoId, nomComplet, servicePreferenceIds: [] },
     ]);
-
-    // Initialiser les prefs pour ce passager
     setPrefParPassager((prev) => ({ ...prev, [currentInfoId]: [] }));
-
     setCurrentBeneficiaireId('');
     setCurrentInfoId('');
   };
@@ -275,6 +430,16 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
       const next = { ...prev };
       delete next[infoId];
       return next;
+    });
+  };
+
+  const togglePreference = (infoId: string, prefId: string) => {
+    setPrefParPassager((prev) => {
+      const current = prev[infoId] ?? getPrefs(infoId);
+      return {
+        ...prev,
+        [infoId]: current.includes(prefId) ? current.filter((id) => id !== prefId) : [...current, prefId],
+      };
     });
   };
 
@@ -304,1122 +469,692 @@ const ReservationModal: React.FC<ReservationModalProps> = ({
       puResaMontantBilletCompagnieDevise: formData.puResaMontantBilletCompagnieDevise,
       puResaMontantServiceCompagnieDevise: formData.puResaMontantServiceCompagnieDevise,
       puResaMontantPenaliteCompagnieDevise: formData.puResaMontantPenaliteCompagnieDevise,
-      preuveResa, // ← NOUVEAU
+      preuveResa,
     };
 
     onSubmit(payload);
     setShowConfirmation(false);
   };
 
+  useEscapeKey(isOpen, onClose);
+
   if (!isOpen) return null;
 
+  const placesRestantes = Math.max(0, nombrePassagers - selectedPassagers.length);
+  const quotaAtteint = selectedPassagers.length === nombrePassagers && nombrePassagers > 0;
+
   return (
-    <>
-      <div className="fixed inset-0 bg-black/5 z-50" />
-        {/* ── Conteneur centré qui groupe les 2 modals ── */}
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className={`flex items-stretch gap-3 w-full transition-all duration-300 ${
-            prefBeneficiaire ? 'max-w-[1200px]' : 'max-w-6xl'
-          }`}>
-            <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col">
-              {/* Header - Fixed */}
-              <div className="bg-gray-50 border-b border-gray-200 px-6 py-4 flex justify-between items-center ">
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-900">
-                    {estModification ? 'Modifier la réservation' : 'Nouvelle Réservation'}
-                  </h2>
-                  <div className="flex items-center gap-2 mt-1 text-sm text-gray-600">
-                    {ligne.prospectionLigne?.numeroVol && (
-                      <span className="bg-gray-200 px-2 py-0.5 rounded text-xs font-medium">
-                        Vol {ligne.prospectionLigne.numeroVol}
-                      </span>
-                    )}
-                    {ligne.prospectionLigne?.itineraire && (
-                      <>
-                        <span>•</span>
-                        <span>{ligne.prospectionLigne.itineraire}</span>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <button 
-                  onClick={onClose} 
-                  className="text-gray-400 hover:text-gray-600 transition-colors p-1 hover:bg-gray-100 rounded"
-                >
-                  <FiX size={20} />
-                </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+      <div className="flex max-h-[95vh] w-full max-w-[1400px] items-stretch justify-center gap-3">
+        {/* ═══ Modal principale ═══ */}
+        <div className="flex w-full min-w-0 max-w-6xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
+          {/* Header */}
+          <header className="flex items-start justify-between gap-4 border-b border-slate-200 px-6 py-4">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-semibold text-slate-900">
+                  {estModification ? 'Modifier la réservation' : 'Nouvelle réservation'}
+                </h2>
+                {estModification && (
+                  <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 ring-1 ring-inset ring-amber-200">
+                    Réservation existante
+                  </span>
+                )}
               </div>
-
-              {/* Body - Scrollable */}
-              <div className="flex-1 overflow-y-auto">
-                <div className="p-6 space-y-6">
-                  
-                  {/* 1. Passagers */}
-                  <section className="border border-gray-200 rounded-lg overflow-hidden">
-                    <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
-                      <div className="flex items-center gap-3">
-                        <div className="w-7 h-7 bg-gray-900 text-white rounded flex items-center justify-center text-sm font-semibold">
-                          1
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="text-sm font-semibold text-gray-900">Passagers (Max : {nombrePassagers})</h3>
-                          <p className="text-xs text-gray-600 mt-0.5">
-                            Sélection obligatoire • Plusieurs passagers possibles
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="p-5">
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        
-                        {/* Sélection */}
-                        <div className="space-y-4">
-                          <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                              Bénéficiaire <span className="text-red-600">*</span>
-                            </label>
-
-                            <div className="relative">
-                              {/* Trigger */}
-                              <button
-                                ref={triggerRef}
-                                type="button"
-                                onClick={() => {
-                                  if (!dropdownOpen && triggerRef.current) {
-                                    const rect = triggerRef.current.getBoundingClientRect();
-                                    setDropdownPos({
-                                      top: rect.bottom + window.scrollY + 4,
-                                      left: rect.left + window.scrollX,
-                                      width: rect.width,
-                                    });
-                                  }
-                                  setDropdownOpen((v) => !v);
-                                }}
-                                className="w-full border border-gray-300 rounded px-3 py-2 text-sm text-left flex items-center justify-between gap-2 bg-white hover:border-gray-400 focus:ring-1 focus:ring-gray-900 focus:border-gray-900 transition-colors"
-                              >
-                                {currentBeneficiaireId ? (() => {
-                                  const b = beneficiaires.find(b => b.clientBeneficiaireId === currentBeneficiaireId);
-                                  if (!b) return <span className="text-gray-400">Sélectionner un bénéficiaire</span>;
-                                  const cfg = typeClientConfig(b.clientBeneficiaire.typeClient);
-                                  return (
-                                    <div className="flex items-center gap-2 min-w-0">
-                                      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border ${cfg.bg} ${cfg.text} ${cfg.border} shrink-0`}>
-                                        <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-                                        {b.clientBeneficiaire.typeClient}
-                                      </span>
-                                      <span className="font-medium text-gray-900 truncate">{b.clientBeneficiaire.libelle}</span>
-                                      <span className="text-gray-400 font-mono text-xs shrink-0">{b.clientBeneficiaire.code}</span>
-                                    </div>
-                                  );
-                                })() : (
-                                  <span className="text-gray-400">Sélectionner un bénéficiaire</span>
-                                )}
-                                {/* Chevron */}
-                                <svg className={`w-4 h-4 text-gray-400 shrink-0 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                                </svg>
-                              </button>
-
-                              {/* Dropdown */}
-                              {dropdownOpen && ReactDOM.createPortal(
-                                <div
-                                  style={{
-                                    position: 'absolute',
-                                    top: dropdownPos.top,
-                                    left: dropdownPos.left,
-                                    width: dropdownPos.width,
-                                    zIndex: 9999,
-                                  }}
-                                  data-dropdown="beneficiaire"
-                                  className="bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden"
-                                >
-                                  <button
-                                    type="button"
-                                    onClick={() => { setCurrentBeneficiaireId(''); setCurrentInfoId(''); setDropdownOpen(false); }}
-                                    className="w-full px-3 py-2 text-left text-sm text-gray-400 hover:bg-gray-50 border-b border-gray-100"
-                                  >
-                                    Sélectionner un bénéficiaire
-                                  </button>
-
-                                  <div className="max-h-52 overflow-y-auto">
-                                    {beneficiaires.map((b) => {
-                                      const cfg = typeClientConfig(b.clientBeneficiaire.typeClient);
-                                      const isSelected = currentBeneficiaireId === b.clientBeneficiaireId;
-                                      return (
-                                        <button
-                                          key={b.clientBeneficiaireId}
-                                          type="button"
-                                          onClick={() => {
-                                            setCurrentBeneficiaireId(b.clientBeneficiaireId);
-                                            setCurrentInfoId('');
-                                            setDropdownOpen(false);
-                                            dispatch(fetchPreferencesBeneficiaire(b.clientBeneficiaireId));
-                                            setPrefBeneficiaire(b);
-                                          }}
-                                          className={`w-full px-3 py-2.5 text-left flex items-center gap-2.5 hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0 ${isSelected ? 'bg-gray-50' : ''}`}
-                                        >
-                                          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold border shrink-0 ${cfg.bg} ${cfg.text} ${cfg.border}`}>
-                                            <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-                                            {b.clientBeneficiaire.typeClient}
-                                          </span>
-                                          <span className="text-sm font-medium text-gray-900 truncate flex-1">
-                                            {b.clientBeneficiaire.libelle}
-                                          </span>
-                                          <span className="text-xs font-mono text-gray-400 shrink-0">
-                                            {b.clientBeneficiaire.code}
-                                          </span>
-                                          {isSelected && (
-                                            <svg className="w-4 h-4 text-gray-900 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                                            </svg>
-                                          )}
-                                        </button>
-                                      );
-                                    })}
-                                  </div>
-                                </div>,
-                                document.body
-                              )}
-                            </div>
-                          </div>
-
-                          {currentBeneficiaireId && (
-                            <div>
-                              <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                                Document / Info passager <span className="text-red-600">*</span>
-                              </label>
-                              {infosLoading ? (
-                                <div className="text-sm text-gray-500 italic flex items-center gap-2 py-2">
-                                  <div className="w-4 h-4 border-2 border-gray-900 border-t-transparent rounded-full animate-spin"></div>
-                                  Chargement...
-                                </div>
-                              ) : infosList.length === 0 ? (
-                                <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 p-3 rounded">
-                                  Aucun document trouvé pour ce bénéficiaire
-                                </div>
-                              ) : (
-                                <select
-                                  value={currentInfoId}
-                                  onChange={(e) => setCurrentInfoId(e.target.value)}
-                                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
-                                >
-                                  <option value="">Sélectionner un document</option>
-                                  {infosList
-                                    .filter((info) =>
-                                      !ligne.prospectionLigne?.typePassager ||   // pas de filtre si typePassager absent
-                                      info.clientType === null ||                 // affiche si clientType null
-                                      info.clientType === ligne.prospectionLigne?.typePassager
-                                    )
-                                    .map((info) => (
-                                      <option key={info.id} value={info.id}>
-                                        {info.prenom} {info.nom} • {info.typeDoc} {info.referenceDoc}
-                                        {info.clientType ? ` (${info.clientType})` : ''}
-                                      </option>
-                                    ))
-                                  }
-                                </select>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Détails du document sélectionné */}
-                          {selectedInfoDetails && (
-                            <div className="p-4 bg-gray-50 border border-gray-200 rounded">
-                              <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">
-                                Document sélectionné
-                              </h4>
-                              <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                                <div className="col-span-2">
-                                  <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Passager</div>
-                                  <div className="text-sm font-semibold text-gray-900">
-                                    {selectedInfoDetails.prenom} {selectedInfoDetails.nom}
-                                  </div>
-                                </div>
-                                <div>
-                                  <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Type passager</div>
-                                  <div className="text-xs font-medium text-gray-700 bg-gray-200 rounded px-2 py-0.5 inline-block">
-                                    {selectedInfoDetails.clientType ?? '—'}   {/* ← null géré */}
-                                  </div>
-                                </div>
-                                <div>
-                                  <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Nationalité</div>
-                                  <div className="text-sm text-gray-900">{selectedInfoDetails.nationalite}</div>
-                                </div>
-                                <div>
-                                  <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Type document</div>
-                                  <div className="text-xs font-medium text-gray-700 bg-gray-200 rounded px-2 py-0.5 inline-block">
-                                    {selectedInfoDetails.typeDoc}
-                                  </div>
-                                </div>
-                                <div>
-                                  <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Référence doc</div>
-                                  <div className="text-xs font-mono text-gray-900">{selectedInfoDetails.referenceDoc}</div>
-                                </div>
-                                <div>
-                                  <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Validité</div>
-                                  <div className={`text-xs font-medium ${
-                                    new Date(selectedInfoDetails.dateValiditeDoc) < new Date()
-                                      ? 'text-red-600'
-                                      : 'text-gray-900'
-                                  }`}>
-                                    {new Date(selectedInfoDetails.dateValiditeDoc).toLocaleDateString('fr-FR')}
-                                  </div>
-                                  <div className="text-xs text-gray-500">
-                                    Del: {new Date(selectedInfoDetails.dateDelivranceDoc).toLocaleDateString('fr-FR')}
-                                  </div>
-                                </div>
-                                {/* CIN — affiché seulement si présent */}
-                                {selectedInfoDetails.referenceCin && (
-                                  <div>
-                                    <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">CIN</div>
-                                    <div className="text-xs font-mono text-gray-900">{selectedInfoDetails.referenceCin}</div>
-                                  </div>
-                                )}
-                                {selectedInfoDetails.tel && (
-                                  <div>
-                                    <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">Téléphone</div>
-                                    <div className="text-xs font-mono text-gray-900">{selectedInfoDetails.tel}</div>
-                                  </div>
-                                )}
-                                {selectedInfoDetails.whatsapp && (
-                                  <div>
-                                    <div className="text-xs text-gray-500 uppercase tracking-wide mb-0.5">WhatsApp</div>
-                                    <div className="text-xs font-mono text-gray-900">{selectedInfoDetails.whatsapp}</div>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          )}
-
-                          <button
-                              type="button"
-                              onClick={addPassager}
-                              disabled={!currentBeneficiaireId || !currentInfoId || selectedPassagers.length >= nombrePassagers}
-                              className={`w-full px-4 py-2 rounded text-sm font-medium transition-colors flex items-center justify-center gap-2 ${
-                                currentBeneficiaireId && currentInfoId && selectedPassagers.length < nombrePassagers
-                                  ? 'bg-gray-900 text-white hover:bg-gray-800'
-                                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                              }`}
-                            >
-                            <span className="text-lg">+</span>
-                            Ajouter ce passager
-                          </button>
-                        </div>
-
-                        {/* Liste sélectionnés */}
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-2 flex items-center gap-2">
-                            Passagers sélectionnés
-                            <span className={`px-2 py-0.5 rounded text-xs font-semibold ${
-                              selectedPassagers.length === nombrePassagers
-                                ? 'bg-green-100 text-green-700'      // ✅ quota exact atteint
-                                : selectedPassagers.length > 0
-                                  ? 'bg-amber-100 text-amber-700'    // ⚠️ en cours
-                                  : 'bg-gray-200 text-gray-700'      // neutre
-                            }`}>
-                              {selectedPassagers.length} / {nombrePassagers}
-                            </span>
-                          </label>
-
-                          {selectedPassagers.length === 0 ? (
-                            <div className="border-2 border-dashed border-gray-200 rounded p-8 text-center">
-                              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
-                                <FiCheck className="text-gray-400" size={24} />
-                              </div>
-                              <p className="text-sm text-gray-500">Aucun passager ajouté</p>
-                            </div>
-                          ) : (
-                            <div className="space-y-2 max-h-[400px] overflow-y-auto">
-                              {selectedPassagers.map((p, idx) => (
-                                <div
-                                  key={p.infoId}
-                                  className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded p-3 hover:border-gray-300 transition-all group"
-                                >
-                                  <div className="flex items-center gap-3">
-                                    <div className="w-8 h-8 bg-gray-900 text-white rounded flex items-center justify-center text-sm font-semibold">
-                                      {idx + 1}
-                                    </div>
-                                    <div>
-                                      <p className="text-sm font-semibold text-gray-900">{p.nomComplet}</p>
-                                      <p className="text-xs text-gray-500 font-mono">
-                                        ID: {p.infoId.slice(0, 8)}...
-                                      </p>
-                                    </div>
-                                  </div>
-                                  <button
-                                    onClick={() => removePassager(p.infoId)}
-                                    className="text-gray-400 hover:text-red-600 hover:bg-red-50 p-1.5 rounded transition-all"
-                                  >
-                                    <FiTrash2 size={18} />
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </section>
-
-                  {/* 1b. Preuve de réservation */}
-                  <section className="border border-gray-200 rounded-lg overflow-hidden">
-                    <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
-                      <div className="flex items-center gap-3">
-                        <div className="w-7 h-7 bg-gray-900 text-white rounded flex items-center justify-center text-sm font-semibold">
-                          ✉
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="text-sm font-semibold text-gray-900">Preuve de réservation</h3>
-                          <p className="text-xs text-gray-500 mt-0.5">
-                            {estModification && ligne?.preuveResa
-                              ? 'Une preuve est déjà enregistrée — ajoutez un fichier seulement pour la remplacer'
-                              : 'Image optionnelle (capture, confirmation…)'}
-                          </p>
-                        </div>
-                        {preuveResa && (
-                          <span className="text-xs text-green-700 bg-green-100 border border-green-200 px-2 py-0.5 rounded-full font-medium">
-                            Fichier sélectionné
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="p-5">
-                      <div className="flex flex-col sm:flex-row gap-5 items-start">
-                        {/* Zone de drop / input */}
-                        <label className="flex-1 cursor-pointer group">
-                          <div className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-                            preuveResa
-                              ? 'border-green-400 bg-green-50'
-                              : 'border-gray-300 hover:border-gray-400 bg-gray-50 hover:bg-white'
-                          }`}>
-                            <div className="flex flex-col items-center gap-2">
-                              {preuveResa ? (
-                                <svg className="w-8 h-8 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                              ) : (
-                                <svg className="w-8 h-8 text-gray-400 group-hover:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3 16.5V18a2.25 2.25 0 002.25 2.25h13.5A2.25 2.25 0 0021 18v-1.5M16.5 3.75h-9A2.25 2.25 0 005.25 6v9" />
-                                </svg>
-                              )}
-                              <p className="text-sm font-medium text-gray-700">
-                                {preuveResa ? preuveResa.name : 'Cliquez pour choisir une image'}
-                              </p>
-                              <p className="text-xs text-gray-400">PNG, JPG, WEBP — max 5 Mo</p>
-                            </div>
-                          </div>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={handlePreuveResaChange}
-                          />
-                        </label>
-
-                        {/* Aperçu */}
-                        {preuveResaPreview ? (
-                          <div className="relative shrink-0">
-                            <img
-                              src={preuveResaPreview}
-                              alt="Aperçu preuve"
-                              className="w-40 h-40 object-cover rounded-lg border border-gray-200 shadow-sm"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => { setPreuveResa(null); setPreuveResaPreview(null); }}
-                              className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center hover:bg-red-600 shadow"
-                            >
-                              <FiX size={12} />
-                            </button>
-                          </div>
-                        ) : (
-                          <div className="w-40 h-40 shrink-0 rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center bg-gray-50">
-                            <span className="text-xs text-gray-400 text-center px-2">Aperçu ici</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </section>
-
-                  {/* 2. Réservation + Taux */}
-                  <section className="border border-gray-200 rounded-lg overflow-hidden">
-                    <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
-                      <div className="flex items-center gap-3">
-                        <div className="w-7 h-7 bg-gray-900 text-white rounded flex items-center justify-center text-sm font-semibold">
-                          2
-                        </div>
-                        <h3 className="text-sm font-semibold text-gray-900">Réservation & Taux</h3>
-                      </div>
-                    </div>
-
-                    <div className="p-5">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                            N° Réservation <span className="text-red-600">*</span>
-                          </label>
-                          <input
-                            type="text"
-                            name="reservation"
-                            value={formData.reservation}
-                            onChange={handleChange}
-                            placeholder="RES-2026-002"
-                            className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1.5">Devise</label>
-                          <input
-                            type="text"
-                            value={formData.devise}
-                            readOnly
-                            className="w-full bg-gray-100 border border-gray-300 rounded px-3 py-2 text-sm text-gray-700 font-semibold"
-                          />
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                            Taux de change <span className="text-red-600">*</span>
-                          </label>
-                          <div className="relative">
-                            <input
-                              type="number"
-                              name="resaTauxEchange"
-                              value={formData.resaTauxEchange}
-                              onChange={handleChange}
-                              step="0.01"
-                              className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
-                              placeholder="4500"
-                            />
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                              Ar
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="flex items-end">
-                          <div className="bg-gray-50 border border-gray-200 rounded px-4 py-2 w-full">
-                            <p className="text-xs text-gray-500 font-medium uppercase mb-0.5">Passagers</p>
-                            <p className="text-xl font-semibold text-gray-900">
-                              {nombrePassagers}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </section>
-
-                  {/* 3. Tarifs Compagnie */}
-                  <section className="border border-gray-200 rounded-lg overflow-hidden">
-                    <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
-                      <div className="flex items-center gap-3">
-                        <div className="w-7 h-7 bg-gray-900 text-white rounded flex items-center justify-center text-sm font-semibold">
-                          3
-                        </div>
-                        <h3 className="text-sm font-semibold text-gray-900">
-                          Tarifs compagnie <span className="text-gray-600">({formData.devise})</span>
-                        </h3>
-                      </div>
-                    </div>
-
-                    <div className="p-5 space-y-5">
-                      {/* Prix unitaires */}
-                      <div>
-                        <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3">
-                          Prix unitaires
-                        </h4>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          {/* PU Billet */}
-                          <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                              PU Billet <span className="text-red-600">*</span>
-                            </label>
-                            <div className="relative">
-                              <input
-                                type="number"
-                                name="puResaBilletCompagnieDevise"
-                                value={formData.puResaBilletCompagnieDevise}
-                                onChange={handleChange}
-                                step="0.01"
-                                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-gray-900 focus:border-gray-900 font-semibold text-gray-900"
-                                placeholder={ligne?.prospectionLigne?.puBilletCompagnieDevise?.toFixed(2) || "0.00"}
-                              />
-                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                                {formData.devise}
-                              </span>
-                            </div>
-                            {nombrePassagers > 0 && (
-                              <p className="text-xs text-gray-600 mt-1.5">
-                                → Total: <span className="font-semibold">{totalBillet.toLocaleString('fr-FR')} {formData.devise}</span>
-                              </p>
-                            )}
-                            {ligne?.prospectionLigne?.puBilletCompagnieDevise && (
-                              <p className="text-xs text-gray-500 mt-1">
-                                Original: {ligne.prospectionLigne.puBilletCompagnieDevise.toFixed(2)}
-                              </p>
-                            )}
-                          </div>
-
-                          {/* PU Service */}
-                          <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                              PU Service
-                            </label>
-                            <div className="relative">
-                              <input
-                                type="number"
-                                name="puResaServiceCompagnieDevise"
-                                value={formData.puResaServiceCompagnieDevise}
-                                onChange={handleChange}
-                                step="0.01"
-                                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-gray-900 focus:border-gray-900 font-semibold text-gray-900"
-                                placeholder={ligne?.prospectionLigne?.puServiceCompagnieDevise?.toFixed(2) || "0.00"}
-                              />
-                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                                {formData.devise}
-                              </span>
-                            </div>
-                            {nombrePassagers > 0 && (
-                              <p className="text-xs text-gray-600 mt-1.5">
-                                → Total: <span className="font-semibold">{totalService.toLocaleString('fr-FR')} {formData.devise}</span>
-                              </p>
-                            )}
-                            {ligne?.prospectionLigne?.puServiceCompagnieDevise && (
-                              <p className="text-xs text-gray-500 mt-1">
-                                Original: {ligne.prospectionLigne.puServiceCompagnieDevise.toFixed(2)}
-                              </p>
-                            )}
-                          </div>
-
-                          {/* PU Pénalité */}
-                          <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                              PU Pénalité
-                            </label>
-                            <div className="relative">
-                              <input
-                                type="number"
-                                name="puResaPenaliteCompagnieDevise"
-                                value={formData.puResaPenaliteCompagnieDevise}
-                                onChange={handleChange}
-                                disabled
-                                step="0.01"
-                                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:ring-1 focus:ring-gray-900 focus:border-gray-900 font-semibold text-gray-900"
-                                placeholder={ligne?.prospectionLigne?.puPenaliteCompagnieDevise?.toFixed(2) || "0.00"}
-                              />
-                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                                {formData.devise}
-                              </span>
-                            </div>
-                            {nombrePassagers > 0 && (
-                              <p className="text-xs text-gray-600 mt-1.5">
-                                → Total: <span className="font-semibold">{totalPenalite.toLocaleString('fr-FR')} {formData.devise}</span>
-                              </p>
-                            )}
-                            {ligne?.prospectionLigne?.puPenaliteCompagnieDevise && (
-                              <p className="text-xs text-gray-500 mt-1">
-                                Original: {ligne.prospectionLigne.puPenaliteCompagnieDevise.toFixed(2)}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Montants totaux */}
-                      <div className="pt-4 border-t border-gray-200">
-                        <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-3">
-                          Montants totaux
-                        </h4>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                          <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                              Total Billet
-                            </label>
-                            <div className="relative">
-                              <input
-                                type="number"
-                                name="puResaMontantBilletCompagnieDevise"
-                                value={formData.puResaMontantBilletCompagnieDevise}
-                                onChange={handleChange}
-                                disabled
-                                step="0.01"
-                                className="w-full border border-gray-300 bg-blue-50 rounded px-3 py-2 text-sm font-semibold text-gray-900 focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
-                              />
-                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                                {formData.devise}
-                              </span>
-                            </div>
-                          </div>
-                          <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                              Total Service
-                            </label>
-                            <div className="relative">
-                              <input
-                                type="number"
-                                name="puResaMontantServiceCompagnieDevise"
-                                value={formData.puResaMontantServiceCompagnieDevise}
-                                onChange={handleChange}
-                                disabled
-                                step="0.01"
-                                className="w-full border border-gray-300 bg-blue-50 rounded px-3 py-2 text-sm font-semibold text-gray-900 focus:ring-1 focus:ring-gray-900 focus:border-gray-900"
-                              />
-                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                                {formData.devise}
-                              </span>
-                            </div>
-                          </div>
-                          <div>
-                            <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                              Total Pénalité
-                            </label>
-                            <div className="relative">
-                              <input
-                                type="number"
-                                name="puResaMontantPenaliteCompagnieDevise"
-                                value={formData.puResaMontantPenaliteCompagnieDevise}
-                                readOnly
-                                step="0.01"
-                                className="w-full bg-gray-100 border border-gray-300 rounded px-3 py-2 text-sm font-semibold text-gray-500 cursor-not-allowed"
-                              />
-                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-                                {formData.devise}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Badge d'info */}
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
-                        <span className="text-lg">ℹ️</span>
-                        <p className="text-xs text-blue-800">
-                          Les tarifs ont été pré-chargés depuis la prospection. Vous pouvez les modifier si nécessaire.
-                        </p>
-                      </div>
-                    </div>
-                  </section>
-
-                  {/* 4. Tarifs Client */}
-                  <section className="border border-gray-200 rounded-lg overflow-hidden">
-                    <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
-                      <div className="flex items-center gap-3">
-                        <div className="w-7 h-7 bg-gray-900 text-white rounded flex items-center justify-center text-sm font-semibold">
-                          4
-                        </div>
-                        <h3 className="text-sm font-semibold text-gray-900">
-                          Tarifs Client <span className="text-gray-600">(Devise & Ariary)</span>
-                        </h3>
-                      </div>
-                    </div>
-
-                    <div className="p-5">
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                        {/* Tarifs en Devise */}
-                        <div className="bg-gray-50 rounded border border-gray-200 p-4">
-                          <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">
-                            Montants en Devise
-                          </h4>
-                          <div className="space-y-2.5">
-                            <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                              <span className="text-xs text-gray-600">Billet Client</span>
-                              <span className="text-sm font-semibold text-gray-900">
-                                {fmt(ligne?.prospectionLigne?.montantBilletClientDevise)}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                              <span className="text-xs text-gray-600">Service Client</span>
-                              <span className="text-sm font-semibold text-gray-900">
-                                {fmt(ligne?.prospectionLigne?.montantServiceClientDevise)}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center py-2">
-                              <span className="text-xs text-gray-600">Pénalité Client</span>
-                              <span className="text-sm font-semibold text-red-600">
-                                {fmt(ligne?.prospectionLigne?.montantPenaliteClientDevise)}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Tarifs en Ariary */}
-                        <div className="bg-gray-50 rounded border border-gray-200 p-4">
-                          <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">
-                            Montants en Ariary
-                          </h4>
-                          <div className="space-y-2.5">
-                            <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                              <span className="text-xs text-gray-600">Billet Client</span>
-                              <span className="text-sm font-semibold text-gray-900">
-                                {fmt(ligne?.prospectionLigne?.montantBilletClientAriary, ' Ar')}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                              <span className="text-xs text-gray-600">Service Client</span>
-                              <span className="text-sm font-semibold text-gray-900">
-                                {fmt(ligne?.prospectionLigne?.montantServiceClientAriary, ' Ar')}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center py-2">
-                              <span className="text-xs text-gray-600">Pénalité Client</span>
-                              <span className="text-sm font-semibold text-red-600">
-                                {fmt(ligne?.prospectionLigne?.montantPenaliteClientAriary, ' Ar')}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Commissions */}
-                        <div className="bg-gray-50 rounded border border-gray-200 p-4">
-                          <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">
-                            Commission en Devise
-                          </h4>
-                          <div className="bg-white border border-gray-300 rounded px-4 py-3">
-                            <p className="text-xl font-semibold text-gray-900">
-                              {fmt(ligne?.prospectionLigne?.commissionEnDevise)}
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="bg-gray-50 rounded border border-gray-200 p-4">
-                          <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">
-                            Commission en Ariary
-                          </h4>
-                          <div className="bg-white border border-gray-300 rounded px-4 py-3">
-                            <p className="text-xl font-semibold text-gray-900">
-                              {fmt(ligne?.prospectionLigne?.commissionEnAriary, ' Ar')}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </section>
-
-                  {/* 5. Préférences de services */}
-                  {servicesActifs.length > 0 && selectedPassagers.length > 0 && (
-                    <section className="border border-gray-200 rounded-lg overflow-hidden">
-                      <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
-                        <div className="flex items-center gap-3">
-                          <div className="w-7 h-7 bg-gray-900 text-white rounded flex items-center justify-center text-sm font-semibold">
-                            5
-                          </div>
-                          <div>
-                            <h3 className="text-sm font-semibold text-gray-900">Préférences de services</h3>
-                            <p className="text-xs text-gray-500 mt-0.5">
-                              Sélectionnez les préférences pour chaque passager ( les préférences sont relier a un service)
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="p-5 space-y-5">
-                        {selectedPassagers.map((passager) => {
-                          const prefsPassager = getPrefs(passager.infoId);
-
-                          return (
-                            <div key={passager.infoId} className="border border-gray-200 rounded-lg overflow-hidden">
-                              {/* Header passager */}
-                              <div className="bg-gray-50 px-4 py-2.5 border-b border-gray-200 flex items-center gap-2">
-                                <div className="w-6 h-6 bg-gray-900 text-white rounded-full flex items-center justify-center text-xs font-bold">
-                                  {selectedPassagers.indexOf(passager) + 1}
-                                </div>
-                                <span className="text-sm font-semibold text-gray-800">{passager.nomComplet}</span>
-                                {prefsPassager.length > 0 && (
-                                  <span className="ml-auto text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">
-                                    {prefsPassager.length} préférence{prefsPassager.length > 1 ? 's' : ''}
-                                  </span>
-                                )}
-                              </div>
-
-                              <div className="p-4">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
-                                  {servicesActifs.map((serviceActif: any) => {
-                                    const serviceStore = servicesStore.find(
-                                      (s) => s.id === serviceActif.serviceSpecifiqueId
-                                    );
-                                    const prefsDisponibles: ServicePreference[] = serviceStore?.servicePreference || [];
-                                    const prefsPassager = getPrefs(passager.infoId);
-
-                                    return (
-                                      <div
-                                        key={serviceActif.id}
-                                        className="border border-gray-200 rounded-lg overflow-hidden flex flex-col"
-                                      >
-                                        {/* En-tête du service */}
-                                        <div className="flex items-center justify-between bg-gray-100 px-3 py-2 border-b border-gray-200">
-                                          <div className="flex items-center gap-2 min-w-0">
-                                            <span className="text-xs font-bold text-gray-700 uppercase tracking-wide truncate">
-                                              {serviceStore?.libelle
-                                                || serviceActif.serviceSpecifique?.libelle
-                                                || '—'}
-                                            </span>
-                                            <span className="text-[10px] text-gray-400 bg-white border border-gray-200 px-1.5 py-0.5 rounded font-mono shrink-0">
-                                              {serviceActif.valeur}
-                                            </span>
-                                          </div>
-                                          {prefsDisponibles.length > 0 && (
-                                            <span className="text-[10px] text-indigo-600 font-medium shrink-0 ml-2">
-                                              {prefsDisponibles.filter(p => prefsPassager.includes(p.id)).length}
-                                              /{prefsDisponibles.length}
-                                            </span>
-                                          )}
-                                        </div>
-
-                                        {/* Corps */}
-                                        <div className="p-3 flex-1">
-                                          {prefsDisponibles.length === 0 ? (
-                                            <p className="text-xs text-gray-400 italic text-center py-2">
-                                              Aucune préférence disponible
-                                            </p>
-                                          ) : (
-                                            <div className="flex flex-wrap gap-1.5">
-                                              {prefsDisponibles.map((pref) => {
-                                                const isSelected = prefsPassager.includes(pref.id);
-                                                return (
-                                                  <button
-                                                    key={pref.id}
-                                                    type="button"
-                                                    onClick={() => {
-                                                      setPrefParPassager((prev) => {
-                                                        const current = prev[passager.infoId] ?? getPrefs(passager.infoId);
-                                                        return {
-                                                          ...prev,
-                                                          [passager.infoId]: isSelected
-                                                            ? current.filter((id) => id !== pref.id)
-                                                            : [...current, pref.id],
-                                                        };
-                                                      });
-                                                    }}
-                                                    className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
-                                                      isSelected
-                                                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
-                                                        : 'bg-white text-gray-700 border-gray-300 hover:border-indigo-400 hover:text-indigo-600'
-                                                    }`}
-                                                  >
-                                                    {isSelected && <span className="mr-1">✓</span>}
-                                                    {pref.preference}
-                                                  </button>
-                                                );
-                                              })}
-                                            </div>
-                                          )}
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </section>
+              {(prospection?.numeroVol || prospection?.itineraire) && (
+                <div className="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-slate-500">
+                  {prospection?.numeroVol && (
+                    <span className="rounded bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
+                      Vol {prospection.numeroVol}
+                    </span>
                   )}
-
-                  {/* Récapitulatif */}
-                  {selectedPassagers.length > 0 && (
-                    <div className="bg-gray-50 border border-gray-300 rounded-lg p-5">
-                      <h3 className="text-sm font-semibold mb-4 flex items-center gap-2 text-gray-900">
-                        <FiCheck className="text-gray-900" size={18} />
-                        Récapitulatif avant envoi
-                      </h3>
-
-                      <div className="bg-white rounded border border-gray-200 p-4 space-y-4">
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          <div>
-                            <p className="text-xs text-gray-500 uppercase mb-1">Numéro réservation</p>
-                            <p className="text-sm font-semibold text-gray-900">{formData.reservation || '—'}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-500 uppercase mb-1">Passagers</p>
-                            <p className="text-lg font-semibold text-gray-900">{nombrePassagers}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-500 uppercase mb-1">Devise</p>
-                            <p className="text-sm font-semibold text-gray-900">{formData.devise}</p>
-                          </div>
-                          <div>
-                            <p className="text-xs text-gray-500 uppercase mb-1">Taux</p>
-                            <p className="text-sm font-semibold text-gray-900">{formData.resaTauxEchange.toLocaleString('fr-FR')} Ar</p>
-                          </div>
-                        </div>
-
-                        <div className="border-t border-gray-200 pt-3">
-                          <p className="text-xs text-gray-500 uppercase mb-2">Liste des passagers</p>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                            {selectedPassagers.map((p) => (
-                              <div key={p.infoId} className="flex items-center gap-2 bg-gray-50 rounded px-3 py-1.5">
-                                <span className="text-gray-900">✓</span>
-                                <span className="text-xs font-medium">{p.nomComplet}</span>
-                                <span className="text-xs text-gray-400 font-mono">({p.infoId.slice(0, 8)})</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        <div className="pt-3 border-t border-gray-200">
-                          <p className="text-xs font-semibold text-gray-600 uppercase mb-3">Montants totaux compagnie</p>
-                          <div className="grid grid-cols-3 gap-3">
-                            <div className="bg-gray-50 border border-gray-200 rounded p-3 text-center">
-                              <p className="text-xs text-gray-600 font-medium mb-1">BILLET</p>
-                              <p className="text-base font-semibold text-gray-900">
-                                {totalBillet.toLocaleString('fr-FR')} {formData.devise}
-                              </p>
-                            </div>
-                            <div className="bg-gray-50 border border-gray-200 rounded p-3 text-center">
-                              <p className="text-xs text-gray-600 font-medium mb-1">SERVICE</p>
-                              <p className="text-base font-semibold text-gray-900">
-                                {totalService.toLocaleString('fr-FR')} {formData.devise}
-                              </p>
-                            </div>
-                            <div className="bg-gray-50 border border-gray-200 rounded p-3 text-center">
-                              <p className="text-xs text-gray-600 font-medium mb-1">PÉNALITÉ</p>
-                              <p className="text-base font-semibold text-gray-900">
-                                {totalPenalite.toLocaleString('fr-FR')} {formData.devise}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Footer - Fixed */}
-              <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-between items-center">
-                <p className="text-xs text-gray-600">
-                  <span className="text-red-600 font-semibold">*</span> Champs obligatoires
-                </p>
-
-                <div className="flex gap-3">
-                  <button
-                    onClick={onClose}
-                    className="px-5 py-2 border border-gray-300 rounded text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                  >
-                    Annuler
-                  </button>
-
-                  <button
-                    onClick={handleShowConfirmation}
-                    disabled={!isFormValid || loading}
-                    className={`px-5 py-2 rounded text-sm font-medium transition-colors flex items-center gap-2 ${
-                      isFormValid && !loading 
-                        ? 'bg-gray-900 text-white hover:bg-gray-800' 
-                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                    }`}
-                  >
-                    <FiCheck size={16} />
-                    {loading ? 'Envoi en cours…' : 'Vérifier & Confirmer'}
-                  </button>
-                </div>
-              </div>
-
-              {/* Confirmation overlay */}
-              {showConfirmation && (
-                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-                  <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-                    {/* Header modal confirmation */}
-                    <div className="bg-gray-50 border-b border-gray-200 px-6 py-4">
-                      <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                        <FiCheck size={20} />
-                        Confirmation de réservation
-                      </h3>
-                      <p className="text-sm text-gray-600 mt-1">Vérifiez attentivement avant d'envoyer</p>
-                    </div>
-
-                    <div className="flex-1 overflow-y-auto p-6 space-y-5">
-                      {/* Infos rapides */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="bg-gray-50 border border-gray-200 rounded p-4">
-                          <p className="text-xs text-gray-500 uppercase mb-1">Réservation</p>
-                          <p className="text-base font-semibold text-gray-900">{formData.reservation || '—'}</p>
-                        </div>
-                        <div className="bg-gray-50 border border-gray-200 rounded p-4">
-                          <p className="text-xs text-gray-500 uppercase mb-1">Passagers</p>
-                          <p className="text-base font-semibold text-gray-900">{nombrePassagers}</p>
-                        </div>
-                        <div className="bg-gray-50 border border-gray-200 rounded p-4">
-                          <p className="text-xs text-gray-500 uppercase mb-1">Total Billet</p>
-                          <p className="text-base font-semibold text-gray-900">
-                            {totalBillet.toLocaleString('fr-FR')} {formData.devise}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* JSON payload */}
-                      {/* <div>
-                        <p className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">
-                          Payload JSON à envoyer
-                        </p>
-                        <pre className="bg-gray-900 text-green-400 p-4 rounded text-xs overflow-x-auto font-mono whitespace-pre-wrap">
-                          {JSON.stringify(
-                            {
-                              passagers: selectedPassagers.map((p) => ({
-                                clientbeneficiaireInfoId: p.infoId,
-                                clientBeneficiaireId: p.beneficiaireId,
-                                servicePreferenceIds: getPrefs(p.infoId),
-                              })),
-                              reservation: formData.reservation,
-                              puResaBilletCompagnieDevise: formData.puResaBilletCompagnieDevise,
-                              puResaServiceCompagnieDevise: formData.puResaServiceCompagnieDevise,
-                              puResaPenaliteCompagnieDevise: formData.puResaPenaliteCompagnieDevise,
-                              devise: formData.devise,
-                              resaTauxEchange: formData.resaTauxEchange,
-                              puResaMontantBilletCompagnieDevise: formData.puResaMontantBilletCompagnieDevise,
-                              puResaMontantServiceCompagnieDevise: formData.puResaMontantServiceCompagnieDevise,
-                              puResaMontantPenaliteCompagnieDevise: formData.puResaMontantPenaliteCompagnieDevise,
-                            },
-                            null,
-                            2
-                          )}
-                        </pre>
-                      </div> */}
-
-                      <div className="bg-amber-50 border border-amber-200 rounded p-4 flex items-start gap-3">
-                        <span className="text-xl">⚠️</span>
-                        <p className="text-sm text-amber-800">
-                          Vérifiez attentivement toutes les valeurs. Cette action sera <strong>irréversible</strong> une fois confirmée.
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Footer modal */}
-                    <div className="bg-gray-50 border-t border-gray-200 px-6 py-4 flex justify-end gap-3">
-                      <button
-                        onClick={() => setShowConfirmation(false)}
-                        className="px-5 py-2 border border-gray-300 rounded text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                      >
-                        ← Modifier / Retour
-                      </button>
-                      <button
-                        onClick={handleConfirmAndSubmit}
-                        disabled={loading}
-                        className="px-5 py-2 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <FiCheck size={16} />
-                        Confirmer et envoyer →
-                      </button>
-                    </div>
-                  </div>
+                  {prospection?.itineraire && <span>{prospection.itineraire}</span>}
                 </div>
               )}
             </div>
-          </div>
-          {/* ── Modal préférences — SÉPARÉ via portal, ancré à droite ── */}
-          {prefBeneficiaire && (
-            <div className=" shrink-0 bg-white rounded-xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col">
-              <PreferencesInlinePanel
-                beneficiaire={prefBeneficiaire}
-                onClose={() => setPrefBeneficiaire(null)}
-              />
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Fermer"
+              className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
+            >
+              <FiX size={18} />
+            </button>
+          </header>
+
+          {/* Body */}
+          <div className="flex-1 overflow-y-auto bg-slate-50 px-6 py-5">
+            <div className="space-y-5">
+              {/* 1. Passagers */}
+              <Section
+                step={1}
+                title="Passagers"
+                description={`${nombrePassagers} passager${nombrePassagers > 1 ? 's' : ''} à renseigner`}
+                aside={
+                  <span
+                    className={`rounded-full px-2.5 py-0.5 text-xs font-semibold tabular-nums ${
+                      quotaAtteint
+                        ? 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200'
+                        : 'bg-slate-100 text-slate-600'
+                    }`}
+                  >
+                    {selectedPassagers.length} / {nombrePassagers}
+                  </span>
+                }
+              >
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                  {/* Sélection */}
+                  <div className="space-y-4">
+                    <div>
+                      <Label required>Bénéficiaire</Label>
+                      <button
+                        ref={triggerRef}
+                        type="button"
+                        onClick={toggleDropdown}
+                        className={`${inputCls} flex items-center justify-between gap-2 text-left`}
+                      >
+                        {currentBeneficiaire ? (
+                          <span className="flex min-w-0 items-center gap-2">
+                            <TypeClientBadge type={currentBeneficiaire.clientBeneficiaire.typeClient} />
+                            <span className="truncate font-medium">{currentBeneficiaire.clientBeneficiaire.libelle}</span>
+                            <span className="shrink-0 text-xs text-slate-400">
+                              {currentBeneficiaire.clientBeneficiaire.code}
+                            </span>
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">Sélectionner un bénéficiaire</span>
+                        )}
+                        <FiChevronDown
+                          className={`shrink-0 text-slate-400 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`}
+                        />
+                      </button>
+
+                      {dropdownOpen &&
+                        ReactDOM.createPortal(
+                          <div
+                            data-dropdown="beneficiaire"
+                            style={{
+                              position: 'absolute',
+                              top: dropdownPos.top,
+                              left: dropdownPos.left,
+                              width: dropdownPos.width,
+                              zIndex: 9999,
+                            }}
+                            className="overflow-hidden rounded-md border border-slate-200 bg-white shadow-lg"
+                          >
+                            <div className="max-h-60 overflow-y-auto py-1">
+                              {beneficiaires.length === 0 && (
+                                <p className="px-3 py-2 text-sm text-slate-400">Aucun bénéficiaire sur ce dossier</p>
+                              )}
+                              {beneficiaires.map((b) => {
+                                const isSelected = currentBeneficiaireId === b.clientBeneficiaireId;
+                                return (
+                                  <button
+                                    key={b.clientBeneficiaireId}
+                                    type="button"
+                                    onClick={() => choisirBeneficiaire(b)}
+                                    className={`flex w-full items-center gap-2.5 px-3 py-2 text-left text-sm transition-colors hover:bg-slate-50 ${
+                                      isSelected ? 'bg-slate-50' : ''
+                                    }`}
+                                  >
+                                    <TypeClientBadge type={b.clientBeneficiaire.typeClient} />
+                                    <span className="flex-1 truncate font-medium text-slate-900">
+                                      {b.clientBeneficiaire.libelle}
+                                    </span>
+                                    <span className="shrink-0 text-xs text-slate-400">{b.clientBeneficiaire.code}</span>
+                                    {isSelected && <FiCheck className="shrink-0 text-slate-900" size={14} />}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                            {currentBeneficiaireId && (
+                              <button
+                                type="button"
+                                onClick={() => choisirBeneficiaire(null)}
+                                className="w-full border-t border-slate-100 px-3 py-2 text-left text-xs text-slate-500 hover:bg-slate-50"
+                              >
+                                Effacer la sélection
+                              </button>
+                            )}
+                          </div>,
+                          document.body
+                        )}
+                    </div>
+
+                    {currentBeneficiaireId && (
+                      <div>
+                        <Label required>Document du passager</Label>
+                        {infosLoading ? (
+                          <div className="flex items-center gap-2 py-2 text-sm text-slate-500">
+                            <span className="h-4 w-4 animate-spin rounded-full border-2 border-slate-900 border-t-transparent" />
+                            Chargement des documents…
+                          </div>
+                        ) : infosFiltrees.length === 0 ? (
+                          <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                            Aucun document trouvé pour ce bénéficiaire.
+                          </p>
+                        ) : (
+                          <select
+                            value={currentInfoId}
+                            onChange={(e) => setCurrentInfoId(e.target.value)}
+                            className={inputCls}
+                          >
+                            <option value="">Sélectionner un document</option>
+                            {infosFiltrees.map((info) => (
+                              <option key={info.id} value={info.id}>
+                                {info.prenom} {info.nom} – {info.typeDoc} {info.referenceDoc}
+                                {info.clientType ? ` (${info.clientType})` : ''}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                    )}
+
+                    {selectedInfoDetails && (
+                      <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
+                        <div className="mb-3 flex items-center justify-between gap-2">
+                          <p className="text-sm font-semibold text-slate-900">
+                            {selectedInfoDetails.prenom} {selectedInfoDetails.nom}
+                          </p>
+                          {documentExpire && (
+                            <span className="rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-700 ring-1 ring-inset ring-red-200">
+                              Document expiré
+                            </span>
+                          )}
+                        </div>
+                        <dl className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
+                          <Detail label="Type passager">{selectedInfoDetails.clientType ?? '—'}</Detail>
+                          <Detail label="Nationalité">{selectedInfoDetails.nationalite || '—'}</Detail>
+                          <Detail label={selectedInfoDetails.typeDoc || 'Document'}>
+                            {selectedInfoDetails.referenceDoc}
+                          </Detail>
+                          <Detail label="Délivré le">{formatDate(selectedInfoDetails.dateDelivranceDoc)}</Detail>
+                          <Detail label="Valide jusqu’au">
+                            <span className={documentExpire ? 'font-medium text-red-600' : ''}>
+                              {formatDate(selectedInfoDetails.dateValiditeDoc)}
+                            </span>
+                          </Detail>
+                          {selectedInfoDetails.referenceCin && (
+                            <Detail label="CIN">{selectedInfoDetails.referenceCin}</Detail>
+                          )}
+                          {selectedInfoDetails.tel && <Detail label="Téléphone">{selectedInfoDetails.tel}</Detail>}
+                          {selectedInfoDetails.whatsapp && (
+                            <Detail label="WhatsApp">{selectedInfoDetails.whatsapp}</Detail>
+                          )}
+                        </dl>
+                        <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-200 pt-3">
+                          <span className="flex items-center gap-1.5 text-xs text-slate-500">
+                            <FiPaperclip size={13} />
+                            Pièce jointe
+                          </span>
+                          {selectedInfoDetails.document ? (
+                            <a
+                              href={fichierUrl(selectedInfoDetails.document)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100"
+                            >
+                              <FiExternalLink size={13} />
+                              Voir le fichier
+                            </a>
+                          ) : (
+                            <span className="text-xs text-slate-400">Aucun fichier joint</span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <button
+                      type="button"
+                      onClick={addPassager}
+                      disabled={!currentBeneficiaireId || !currentInfoId || selectedPassagers.length >= nombrePassagers}
+                      className="flex w-full items-center justify-center gap-2 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+                    >
+                      <FiUserPlus size={15} />
+                      Ajouter le passager
+                    </button>
+                  </div>
+
+                  {/* Liste */}
+                  <div>
+                    <Label>Passagers ajoutés</Label>
+                    <ul className="max-h-[400px] space-y-2 overflow-y-auto">
+                      {selectedPassagers.map((p, idx) => (
+                        <li
+                          key={p.infoId}
+                          className="flex items-center gap-3 rounded-md border border-slate-200 bg-white px-3 py-2.5"
+                        >
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-900 text-xs font-semibold text-white">
+                            {idx + 1}
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium text-slate-900">{p.nomComplet}</p>
+                            <p className="text-[11px] text-slate-400">Réf. {p.infoId.slice(0, 8)}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => removePassager(p.infoId)}
+                            aria-label={`Retirer ${p.nomComplet}`}
+                            className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-red-50 hover:text-red-600"
+                          >
+                            <FiTrash2 size={15} />
+                          </button>
+                        </li>
+                      ))}
+                      {Array.from({ length: placesRestantes }).map((_, i) => (
+                        <li
+                          key={`vide-${i}`}
+                          className="flex items-center gap-3 rounded-md border border-dashed border-slate-200 px-3 py-2.5 text-sm text-slate-400"
+                        >
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-dashed border-slate-300 text-xs">
+                            {selectedPassagers.length + i + 1}
+                          </span>
+                          Passager à ajouter
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </Section>
+
+              {/* 2. Réservation */}
+              <Section step={2} title="Réservation">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                  <div>
+                    <Label required>N° de réservation</Label>
+                    <input
+                      type="text"
+                      name="reservation"
+                      value={formData.reservation}
+                      onChange={handleChange}
+                      placeholder="RES-2026-002"
+                      className={inputCls}
+                    />
+                  </div>
+                  <div>
+                    <Label>Devise</Label>
+                    <input type="text" value={formData.devise} readOnly className={`${inputCls} font-medium`} />
+                  </div>
+                  <div>
+                    <Label required>Taux de change</Label>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        name="resaTauxEchange"
+                        value={formData.resaTauxEchange}
+                        onChange={handleChange}
+                        step="0.01"
+                        placeholder="4500"
+                        className={`${inputCls} pr-10 tabular-nums`}
+                      />
+                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">
+                        Ar
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-5 border-t border-slate-100 pt-5">
+                  <Label hint="optionnel">Preuve de réservation</Label>
+                  {estModification && ligne?.preuveResa && !preuveResa && (
+                    <p className="mb-2 text-xs text-slate-500">
+                      Une preuve est déjà enregistrée. Ajoutez un fichier uniquement pour la remplacer.
+                    </p>
+                  )}
+
+                  {preuveResa ? (
+                    <div className="flex items-center gap-3 rounded-md border border-slate-200 bg-white p-2.5">
+                      {preuveResaPreview && (
+                        <img
+                          src={preuveResaPreview}
+                          alt="Aperçu de la preuve"
+                          className="h-14 w-14 shrink-0 rounded border border-slate-200 object-cover"
+                        />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-slate-900">{preuveResa.name}</p>
+                        <p className="text-xs text-slate-500">{Math.round(preuveResa.size / 1024)} Ko</p>
+                      </div>
+                      <label className="cursor-pointer rounded-md px-2.5 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900">
+                        Remplacer
+                        <input type="file" accept="image/*" className="hidden" onChange={handlePreuveResaChange} />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={retirerPreuve}
+                        aria-label="Retirer le fichier"
+                        className="rounded-md p-1.5 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                      >
+                        <FiX size={15} />
+                      </button>
+                    </div>
+                  ) : (
+                    <label className="flex cursor-pointer items-center gap-3 rounded-md border border-dashed border-slate-300 bg-white px-4 py-3 transition-colors hover:border-slate-400 hover:bg-slate-50">
+                      <FiUploadCloud className="shrink-0 text-slate-400" size={20} />
+                      <span className="text-sm text-slate-700">Choisir une image (capture, confirmation…)</span>
+                      <span className="ml-auto hidden text-xs text-slate-400 sm:inline">PNG, JPG, WEBP – 5 Mo max</span>
+                      <input type="file" accept="image/*" className="hidden" onChange={handlePreuveResaChange} />
+                    </label>
+                  )}
+                </div>
+              </Section>
+
+              {/* 3. Tarifs compagnie */}
+              <Section
+                step={3}
+                title={`Tarifs compagnie (${formData.devise})`}
+                description="Pré-remplis depuis la prospection, modifiables si nécessaire."
+              >
+                <div className="overflow-x-auto rounded-md border border-slate-200">
+                  <table className="w-full min-w-[560px] text-sm">
+                    <thead className="bg-slate-50 text-xs text-slate-500">
+                      <tr>
+                        <th className="px-4 py-2 text-left font-medium">Élément</th>
+                        <th className="px-4 py-2 text-left font-medium">Prix unitaire</th>
+                        <th className="px-4 py-2 text-right font-medium">Prospection</th>
+                        <th className="px-4 py-2 text-right font-medium">
+                          Total ({nombrePassagers} pax)
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {lignesTarifs.map((row) => (
+                        <tr key={row.key}>
+                          <td className="px-4 py-2.5 font-medium text-slate-700">
+                            {row.label}
+                            {row.required && <span className="ml-0.5 text-red-500">*</span>}
+                          </td>
+                          <td className="px-4 py-2">
+                            <div className="relative w-44">
+                              <input
+                                type="number"
+                                name={row.key}
+                                value={formData[row.key]}
+                                onChange={handleChange}
+                                disabled={!row.editable}
+                                step="0.01"
+                                className={`${inputCls} pr-12 text-right tabular-nums`}
+                              />
+                              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">
+                                {formData.devise}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-2.5 text-right tabular-nums text-slate-500">{fmt(row.original)}</td>
+                          <td className="px-4 py-2.5 text-right font-medium tabular-nums text-slate-900">
+                            {formatMontant(row.total)} {formData.devise}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="border-t border-slate-200 bg-slate-50">
+                      <tr>
+                        <td colSpan={3} className="px-4 py-2.5 text-sm font-medium text-slate-700">
+                          Total compagnie
+                        </td>
+                        <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-slate-900">
+                          {formatMontant(totalCompagnie)} {formData.devise}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </Section>
+
+              {/* 4. Tarifs client */}
+              <Section step={4} title="Tarifs client" description="Repris de la prospection, en lecture seule.">
+                <div className="overflow-x-auto rounded-md border border-slate-200">
+                  <table className="w-full min-w-[420px] text-sm">
+                    <thead className="bg-slate-50 text-xs text-slate-500">
+                      <tr>
+                        <th className="px-4 py-2 text-left font-medium">Élément</th>
+                        <th className="px-4 py-2 text-right font-medium">Devise</th>
+                        <th className="px-4 py-2 text-right font-medium">Ariary</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {lignesClient.map((row) => (
+                        <tr key={row.label}>
+                          <td className="px-4 py-2.5 text-slate-700">{row.label}</td>
+                          <td className="px-4 py-2.5 text-right tabular-nums text-slate-900">{fmt(row.devise)}</td>
+                          <td className="px-4 py-2.5 text-right tabular-nums text-slate-900">{fmt(row.ariary, ' Ar')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="border-t border-slate-200 bg-slate-50">
+                      <tr>
+                        <td className="px-4 py-2.5 font-medium text-slate-700">Commission</td>
+                        <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-slate-900">
+                          {fmt(prospection?.commissionEnDevise)}
+                        </td>
+                        <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-slate-900">
+                          {fmt(prospection?.commissionEnAriary, ' Ar')}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </Section>
+
+              {/* 5. Préférences de services */}
+              {servicesActifs.length > 0 && selectedPassagers.length > 0 && (
+                <Section
+                  step={5}
+                  title="Préférences de services"
+                  description="Choisissez, pour chaque passager, les préférences liées aux services de la ligne."
+                >
+                  <div className="divide-y divide-slate-100 rounded-md border border-slate-200">
+                    {selectedPassagers.map((passager, idx) => {
+                      const prefsPassager = getPrefs(passager.infoId);
+                      return (
+                        <div key={passager.infoId} className="p-4">
+                          <div className="mb-3 flex items-center gap-2">
+                            <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-900 text-[11px] font-semibold text-white">
+                              {idx + 1}
+                            </span>
+                            <span className="text-sm font-medium text-slate-900">{passager.nomComplet}</span>
+                            {prefsPassager.length > 0 && (
+                              <span className="ml-auto text-xs text-slate-500">
+                                {prefsPassager.length} préférence{prefsPassager.length > 1 ? 's' : ''}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                            {servicesActifs.map((serviceActif: any) => {
+                              const serviceStore = servicesStore.find((s) => s.id === serviceActif.serviceSpecifiqueId);
+                              const prefsDisponibles: ServicePreference[] = serviceStore?.servicePreference || [];
+                              const nbChoisies = prefsDisponibles.filter((p) => prefsPassager.includes(p.id)).length;
+
+                              return (
+                                <div key={serviceActif.id} className="rounded-md border border-slate-200 p-3">
+                                  <div className="mb-2 flex items-center justify-between gap-2">
+                                    <span className="truncate text-xs font-semibold text-slate-700">
+                                      {serviceStore?.libelle || serviceActif.serviceSpecifique?.libelle || '—'}
+                                    </span>
+                                    {prefsDisponibles.length > 0 && (
+                                      <span className="shrink-0 text-[11px] tabular-nums text-slate-400">
+                                        {nbChoisies}/{prefsDisponibles.length}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  {prefsDisponibles.length === 0 ? (
+                                    <p className="text-xs text-slate-400">Aucune préférence disponible</p>
+                                  ) : (
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {prefsDisponibles.map((pref) => {
+                                        const isSelected = prefsPassager.includes(pref.id);
+                                        return (
+                                          <button
+                                            key={pref.id}
+                                            type="button"
+                                            aria-pressed={isSelected}
+                                            onClick={() => togglePreference(passager.infoId, pref.id)}
+                                            className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${
+                                              isSelected
+                                                ? 'border-slate-900 bg-slate-900 text-white'
+                                                : 'border-slate-300 bg-white text-slate-700 hover:border-slate-500'
+                                            }`}
+                                          >
+                                            {isSelected && <FiCheck size={11} />}
+                                            {pref.preference}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Section>
+              )}
             </div>
-          )}
+          </div>
+
+          {/* Footer */}
+          <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-white px-6 py-3.5">
+            <div className="flex items-center gap-4 text-xs text-slate-500">
+              <span>
+                <span className="text-red-500">*</span> Champs obligatoires
+              </span>
+              <span className="hidden sm:inline">
+                Total compagnie :{' '}
+                <strong className="font-semibold tabular-nums text-slate-900">
+                  {formatMontant(totalCompagnie)} {formData.devise}
+                </strong>
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={handleShowConfirmation}
+                disabled={!isFormValid || loading}
+                className="flex items-center gap-2 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400"
+              >
+                <FiCheck size={15} />
+                {loading ? 'Envoi en cours…' : 'Vérifier et confirmer'}
+              </button>
+            </div>
+          </footer>
         </div>
-      </> 
+
+        {/* ═══ Panneau préférences du bénéficiaire, à droite de la modal ═══ */}
+        {prefBeneficiaire && (
+          <aside className="flex shrink-0 flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl">
+            <PreferencesInlinePanel beneficiaire={prefBeneficiaire} onClose={() => setPrefBeneficiaire(null)} />
+          </aside>
+        )}
+      </div>
+
+      {/* ═══ Confirmation ═══ */}
+      {showConfirmation && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 p-4">
+          <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-white shadow-2xl">
+            <header className="border-b border-slate-200 px-6 py-4">
+              <h3 className="text-base font-semibold text-slate-900">Confirmer la réservation</h3>
+              <p className="mt-0.5 text-sm text-slate-500">Vérifiez les informations avant l’envoi.</p>
+            </header>
+
+            <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
+              <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+                <Detail label="N° de réservation">
+                  <span className="font-semibold">{formData.reservation || '—'}</span>
+                </Detail>
+                <Detail label="Devise">{formData.devise}</Detail>
+                <Detail label="Taux de change">{formData.resaTauxEchange.toLocaleString('fr-FR')} Ar</Detail>
+                <Detail label="Passagers">{nombrePassagers}</Detail>
+              </dl>
+
+              <div>
+                <h4 className="mb-2 text-sm font-medium text-slate-700">Passagers</h4>
+                <ul className="divide-y divide-slate-100 rounded-md border border-slate-200">
+                  {selectedPassagers.map((p, idx) => {
+                    const nbPrefs = getPrefs(p.infoId).length;
+                    return (
+                      <li key={p.infoId} className="flex items-center gap-3 px-3 py-2 text-sm">
+                        <span className="w-5 text-right tabular-nums text-slate-400">{idx + 1}.</span>
+                        <span className="flex-1 truncate font-medium text-slate-900">{p.nomComplet}</span>
+                        {nbPrefs > 0 && (
+                          <span className="text-xs text-slate-500">
+                            {nbPrefs} préférence{nbPrefs > 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="mb-2 text-sm font-medium text-slate-700">Montants compagnie</h4>
+                <table className="w-full overflow-hidden rounded-md border border-slate-200 text-sm">
+                  <tbody className="divide-y divide-slate-100">
+                    {lignesTarifs.map((row) => (
+                      <tr key={row.key}>
+                        <td className="px-3 py-2 text-slate-600">{row.label}</td>
+                        <td className="px-3 py-2 text-right tabular-nums text-slate-900">
+                          {formatMontant(row.total)} {formData.devise}
+                        </td>
+                      </tr>
+                    ))}
+                    <tr className="bg-slate-50">
+                      <td className="px-3 py-2 font-medium text-slate-700">Total</td>
+                      <td className="px-3 py-2 text-right font-semibold tabular-nums text-slate-900">
+                        {formatMontant(totalCompagnie)} {formData.devise}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {preuveResa && (
+                <p className="text-sm text-slate-600">
+                  Preuve jointe : <span className="font-medium text-slate-900">{preuveResa.name}</span>
+                </p>
+              )}
+
+              <div className="flex items-start gap-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                <FiAlertTriangle className="mt-0.5 shrink-0" size={16} />
+                <p>Une fois confirmée, cette action est irréversible.</p>
+              </div>
+            </div>
+
+            <footer className="flex justify-end gap-2 border-t border-slate-200 bg-white px-6 py-3.5">
+              <button
+                type="button"
+                onClick={() => setShowConfirmation(false)}
+                className="rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50"
+              >
+                Retour
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmAndSubmit}
+                disabled={loading}
+                className="flex items-center gap-2 rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <FiCheck size={15} />
+                {loading ? 'Envoi en cours…' : 'Confirmer et envoyer'}
+              </button>
+            </footer>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

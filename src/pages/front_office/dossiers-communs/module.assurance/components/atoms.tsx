@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { FiChevronDown } from 'react-icons/fi';
+import { formatStatut } from '../../../../../utils/statut';
 
 export const Badge = ({ status }: { status: string }) => {
   const colors: Record<string, string> = {
@@ -10,7 +11,7 @@ export const Badge = ({ status }: { status: string }) => {
   return (
     <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-semibold border uppercase ${colors[status] ?? 'bg-gray-100 text-gray-500 border-gray-200'}`}>
       <span className={`h-1.5 w-1.5 rounded-full ${status === 'ACTIF' ? 'bg-emerald-500' : 'bg-gray-400'}`} />
-      {status}
+      {formatStatut(status)}
     </span>
   );
 };

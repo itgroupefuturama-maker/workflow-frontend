@@ -7,8 +7,10 @@ import {
   fermerBadgeTresEleve,
   refuserMalgréAlerte,
 } from '../../app/front_office/fournisseurCommentaire/fournisseurCommentaireSlice';
+import { TERMES_FOURNISSEUR, type TermeFournisseur } from '../../constants/termes';
 
-const FournisseurAlerteBadge = () => {
+const FournisseurAlerteBadge = ({ terme = 'fournisseur' }: { terme?: TermeFournisseur }) => {
+  const T = TERMES_FOURNISSEUR[terme];
   const dispatch = useDispatch<AppDispatch>();
   const { lastComment, fournisseurId, confirmed } = useSelector(
     (state: RootState) => state.fournisseurCommentaire
@@ -37,7 +39,7 @@ const FournisseurAlerteBadge = () => {
             </div>
             <div>
               <p className="text-white font-bold text-base tracking-wide">Accès refusé</p>
-              <p className="text-white text-xs mt-0.5">Fournisseur à risque très élevé</p>
+              <p className="text-white text-xs mt-0.5">{T.risque}</p>
             </div>
           </div>
 
@@ -57,7 +59,7 @@ const FournisseurAlerteBadge = () => {
             <div className="border-t border-gray-100 my-5" />
 
             <div className="bg-gray-50 rounded-xl px-4 py-3 text-xs text-gray-500 leading-relaxed">
-              Ce fournisseur ne peut pas être utilisé. Veuillez en sélectionner un autre
+              {T.ce} ne peut pas être utilisé{terme === 'compagnie' ? 'e' : ''}. {T.autre}
               ou contacter votre responsable pour débloquer l'accès.
             </div>
 
@@ -65,7 +67,7 @@ const FournisseurAlerteBadge = () => {
               onClick={() => dispatch(fermerBadgeTresEleve())}
               className="mt-4 w-full px-4 py-2.5 bg-gray-950 text-white text-sm font-medium rounded-xl hover:bg-gray-800 transition-colors"
             >
-              Changer de fournisseur
+              {T.changer}
             </button>
           </div>
         </div>
@@ -108,7 +110,7 @@ const FournisseurAlerteBadge = () => {
             <div className="border-t border-gray-100 my-5" />
 
             <p className="text-gray-600 text-sm">
-              Souhaitez-vous quand même continuer avec ce fournisseur ?
+              Souhaitez-vous quand même continuer avec {T.ce.toLowerCase()} ?
             </p>
 
             <div className="flex gap-3 mt-5">
@@ -150,7 +152,7 @@ const FournisseurAlerteBadge = () => {
             </div>
             <div>
               <p className="text-white font-bold text-base tracking-wide">Information</p>
-              <p className="text-gray-300 text-xs mt-0.5">Commentaire fournisseur</p>
+              <p className="text-gray-300 text-xs mt-0.5">{T.commentaire}</p>
             </div>
           </div>
 
@@ -198,7 +200,7 @@ const FournisseurAlerteBadge = () => {
           </div>
           <div>
             <p className="text-white font-bold text-base tracking-wide">Information</p>
-            <p className="text-white text-xs mt-0.5">Commentaire fournisseur</p>
+            <p className="text-white text-xs mt-0.5">{T.commentaire}</p>
           </div>
         </div>
 

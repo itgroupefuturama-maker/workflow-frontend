@@ -2,6 +2,8 @@ import { useRef } from "react";
 import { FiSave, FiX } from "react-icons/fi";
 import type { ItineraireCascade } from "../../../../../hooks/useItineraireCascade";
 
+import { fmtAriary, fmtDevise, fmtNombre } from '../../../../../utils/format';
+import { calculerPrixLigne } from './calculPrixLigne';
 interface NewLineRowProps {
   newLine: any;
   commissionPct: number;
@@ -40,62 +42,32 @@ function NewLineRow({
     const match = String(str || '').match(/(\d+)\s*h\s*(\d*)/i);
     return { h: match ? Number(match[1]) || 0 : 0, m: match ? Number(match[2]) || 0 : 0 };
   };
-  const formatDuree = (h: number, m: number) => `${Math.max(0, h || 0)}h${String(Math.min(59, Math.max(0, m || 0))).padStart(2, '0')}`;
+  const formatDuree = (h: number, m: number) => `${Math.min(99, Math.max(0, Math.floor(h || 0)))}h${String(Math.min(59, Math.max(0, Math.floor(m || 0)))).padStart(2, '0')}`;
+  // Garde uniquement les chiffres saisis et borne la valeur (heures 0–99, minutes 0–59)
+  const toDureeInt = (raw: string, max: number) => {
+    const digits = raw.replace(/\D/g, '').slice(0, 2);
+    return digits === '' ? 0 : Math.min(max, parseInt(digits, 10));
+  };
 
-  // ─── Calculs dérivés corrigés ───
-  const taux   = newLine.tauxEchange || 0;
-  const nombre = newLine.nombre || 1;
-  // commissionPct sera passé en prop depuis le parent
-  const facteur = 1 + (commissionPct / 100);
-
-  // PU Cie Devise (saisis)
-  const puBilletCieDevise   = newLine.puBilletCompagnieDevise  || 0;
-  const puServiceCieDevise  = newLine.puServiceCompagnieDevise || 0;
-  const puPenaliteCieDevise = newLine.puPenaliteCompagnieDevise || 0;
-
-  // Mt Cie Devise = PU * nombre
-  const mtBilletCieDevise   = puBilletCieDevise   * nombre;
-  const mtServiceCieDevise  = puServiceCieDevise  * nombre;
-  const mtPenaliteCieDevise = puPenaliteCieDevise * nombre;
-
-  // PU Cie Ariary = PU Devise * taux
-  const puBilletCieAriary   = puBilletCieDevise   * taux;
-  const puServiceCieAriary  = puServiceCieDevise  * taux;
-  const puPenaliteCieAriary = puPenaliteCieDevise * taux;
-
-  // Mt Cie Ariary = PU Ariary * nombre
-  const mtBilletCieAriary   = puBilletCieAriary   * nombre;
-  const mtServiceCieAriary  = puServiceCieAriary  * nombre;
-  const mtPenaliteCieAriary = puPenaliteCieAriary * nombre;
-
-  // Taxe : saisie soit du taux (%), soit du montant direct (règle de trois inversée)
-  const modeSaisieTaxe = newLine.modeSaisieTaxe || 'POURCENTAGE';
-  const tauxTaxe = modeSaisieTaxe === 'MONTANT'
-    ? (puBilletCieDevise > 0 ? ((newLine.montantTaxeDevise || 0) / puBilletCieDevise) * 100 : 0)
-    : (newLine.tauxTaxe || 0);
-  const montantTaxeDevise = modeSaisieTaxe === 'MONTANT'
-    ? (newLine.montantTaxeDevise || 0)
-    : puBilletCieDevise * (tauxTaxe / 100);
-  const montantTaxeAriary = montantTaxeDevise * taux;
-
-  // Mt Client Devise hors taxe = Mt Cie Devise * facteur
-  const mtBilletClientDeviseHorsTaxe = mtBilletCieDevise   * facteur;
-  const mtServiceClientDevise        = mtServiceCieDevise  * facteur;
-  const mtPenaliteClientDevise       = mtPenaliteCieDevise * facteur;
-
-  // Mt Client Devise Billet = hors taxe + taxe (taxe transparente, pas de commission dessus)
-  const mtBilletClientDevise = mtBilletClientDeviseHorsTaxe + montantTaxeDevise;
-
-  // Mt Client Ariary = Mt Client Devise * taux
-  const mtBilletClientAriary   = mtBilletClientDevise   * taux;
-  const mtServiceClientAriary  = mtServiceClientDevise  * taux;
-  const mtPenaliteClientAriary = mtPenaliteClientDevise * taux;
-
-  // Commission (sur le prix billet hors taxe uniquement — la taxe est reversée telle quelle)
-  const commissionEnDevise = (mtBilletClientDeviseHorsTaxe - mtBilletCieDevise)
-                          + (mtServiceClientDevise  - mtServiceCieDevise)
-                          + (mtPenaliteClientDevise - mtPenaliteCieDevise);
-  const commissionEnAriary = commissionEnDevise * taux;
+  // ─── Calcul unique (aperçu pendant la saisie) — voir calculPrixLigne.ts ───
+  const {
+    puPenaliteCieDevise, mtBilletCieDevise, mtServiceCieDevise, mtPenaliteCieDevise,
+    puBilletCieAriary, puServiceCieAriary, puPenaliteCieAriary, mtBilletCieAriary,
+    mtServiceCieAriary, mtPenaliteCieAriary, modeSaisieTaxe, tauxTaxe,
+    montantTaxeDevise, montantTaxeAriary, mtBilletClientDevise, mtServiceClientDevise,
+    mtPenaliteClientDevise, mtBilletClientAriary, mtServiceClientAriary, mtPenaliteClientAriary,
+    commissionEnDevise, commissionEnAriary,
+  } = calculerPrixLigne({
+    nombre: newLine.nombre || 1,
+    tauxEchange: newLine.tauxEchange || 0,
+    commissionPct,
+    puBilletCieDevise: newLine.puBilletCompagnieDevise,
+    puServiceCieDevise: newLine.puServiceCompagnieDevise,
+    puPenaliteCieDevise: newLine.puPenaliteCompagnieDevise,
+    modeSaisieTaxe: newLine.modeSaisieTaxe,
+    tauxTaxe: newLine.tauxTaxe,
+    montantTaxeBilletUnitaireDevise: newLine.montantTaxeDevise,
+  });
 
   const autoReadonlyCls = "w-full min-w-[140px] px-3 py-2 border border-slate-200 rounded-lg text-sm text-right font-medium bg-slate-100 text-slate-600 cursor-not-allowed";
   const commissionCls   = "w-full min-w-[140px] px-3 py-2 border border-green-300 rounded-lg text-sm text-right font-bold bg-green-50 text-green-700 cursor-not-allowed";
@@ -320,17 +292,17 @@ function NewLineRow({
       <td className="px-4 py-3">
         <div className="flex items-center gap-1">
           <input
-            type="number" min="0"
+            type="text" inputMode="numeric" maxLength={2}
             value={parseDuree(newLine.dureeVol).h}
-            onChange={(e) => updateNewLineField('dureeVol', formatDuree(Number(e.target.value), parseDuree(newLine.dureeVol).m))}
+            onChange={(e) => updateNewLineField('dureeVol', formatDuree(toDureeInt(e.target.value, 99), parseDuree(newLine.dureeVol).m))}
             className={dureeNumberClassName}
             placeholder="0"
           />
           <span className="text-xs text-slate-500">h</span>
           <input
-            type="number" min="0" max="59"
+            type="text" inputMode="numeric" maxLength={2}
             value={parseDuree(newLine.dureeVol).m}
-            onChange={(e) => updateNewLineField('dureeVol', formatDuree(parseDuree(newLine.dureeVol).h, Number(e.target.value)))}
+            onChange={(e) => updateNewLineField('dureeVol', formatDuree(parseDuree(newLine.dureeVol).h, toDureeInt(e.target.value, 59)))}
             className={dureeNumberClassName}
             placeholder="0"
           />
@@ -341,17 +313,17 @@ function NewLineRow({
       <td className="px-4 py-3">
         <div className="flex items-center gap-1">
           <input
-            type="number" min="0"
+            type="text" inputMode="numeric" maxLength={2}
             value={parseDuree(newLine.dureeEscale).h}
-            onChange={(e) => updateNewLineField('dureeEscale', formatDuree(Number(e.target.value), parseDuree(newLine.dureeEscale).m))}
+            onChange={(e) => updateNewLineField('dureeEscale', formatDuree(toDureeInt(e.target.value, 99), parseDuree(newLine.dureeEscale).m))}
             className={dureeNumberClassName}
             placeholder="0"
           />
           <span className="text-xs text-slate-500">h</span>
           <input
-            type="number" min="0" max="59"
+            type="text" inputMode="numeric" maxLength={2}
             value={parseDuree(newLine.dureeEscale).m}
-            onChange={(e) => updateNewLineField('dureeEscale', formatDuree(parseDuree(newLine.dureeEscale).h, Number(e.target.value)))}
+            onChange={(e) => updateNewLineField('dureeEscale', formatDuree(parseDuree(newLine.dureeEscale).h, toDureeInt(e.target.value, 59)))}
             className={dureeNumberClassName}
             placeholder="0"
           />
@@ -428,14 +400,14 @@ function NewLineRow({
 
       {/* PU Pénalité Cie Devise — grisé */}
       <td className="px-4 py-3">
-        <input readOnly value={puPenaliteCieDevise.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+        <input readOnly value={fmtDevise(puPenaliteCieDevise)}
           className={autoReadonlyCls} />
       </td>
 
       {/* Mt Billet Cie Devise = PU * nombre — auto */}
       <td className="px-4 py-3">
         <input readOnly
-          value={mtBilletCieDevise.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+          value={fmtDevise(mtBilletCieDevise)}
           className={autoReadonlyCls + " text-emerald-700"}
         />
       </td>
@@ -443,7 +415,7 @@ function NewLineRow({
       {/* Mt Service Cie Devise = PU * nombre — auto */}
       <td className="px-4 py-3">
         <input readOnly
-          value={mtServiceCieDevise.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+          value={fmtDevise(mtServiceCieDevise)}
           className={autoReadonlyCls + " text-emerald-700"}
         />
       </td>
@@ -451,7 +423,7 @@ function NewLineRow({
       {/* Mt Pénalité Cie Devise — grisé */}
       <td className="px-4 py-3">
         <input readOnly
-          value={mtPenaliteCieDevise.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+          value={fmtDevise(mtPenaliteCieDevise)}
           className={autoReadonlyCls}
         />
       </td>
@@ -477,7 +449,7 @@ function NewLineRow({
             />
           ) : (
             <input readOnly
-              value={tauxTaxe.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+              value={fmtNombre(tauxTaxe)}
               className={autoReadonlyCls}
             />
           )}
@@ -496,7 +468,7 @@ function NewLineRow({
           />
         ) : (
           <input readOnly
-            value={montantTaxeDevise.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+            value={fmtDevise(montantTaxeDevise)}
             className={autoReadonlyCls}
           />
         )}
@@ -505,7 +477,7 @@ function NewLineRow({
       {/* Mt Taxe Ariary = Mt Taxe Devise * taux — auto */}
       <td className="px-4 py-3">
         <input readOnly
-          value={montantTaxeAriary.toLocaleString('fr-FR')}
+          value={fmtAriary(montantTaxeAriary)}
           className={autoReadonlyCls}
         />
       </td>
@@ -513,7 +485,7 @@ function NewLineRow({
       {/* PU Billet Cie Ariary = PU Devise * taux — auto */}
       <td className="px-4 py-3">
         <input readOnly
-          value={puBilletCieAriary.toLocaleString('fr-FR')}
+          value={fmtAriary(puBilletCieAriary)}
           className={autoReadonlyCls + " text-emerald-600"}
         />
       </td>
@@ -521,7 +493,7 @@ function NewLineRow({
       {/* PU Service Cie Ariary — auto */}
       <td className="px-4 py-3">
         <input readOnly
-          value={puServiceCieAriary.toLocaleString('fr-FR')}
+          value={fmtAriary(puServiceCieAriary)}
           className={autoReadonlyCls + " text-emerald-600"}
         />
       </td>
@@ -529,7 +501,7 @@ function NewLineRow({
       {/* PU Pénalité Cie Ariary — auto */}
       <td className="px-4 py-3">
         <input readOnly
-          value={puPenaliteCieAriary.toLocaleString('fr-FR')}
+          value={fmtAriary(puPenaliteCieAriary)}
           className={autoReadonlyCls + " text-emerald-600"}
         />
       </td>
@@ -537,7 +509,7 @@ function NewLineRow({
       {/* Mt Billet Cie Ariary = PU Ariary * nombre — auto */}
       <td className="px-4 py-3">
         <input readOnly
-          value={mtBilletCieAriary.toLocaleString('fr-FR')}
+          value={fmtAriary(mtBilletCieAriary)}
           className={autoReadonlyCls + " text-emerald-700"}
         />
       </td>
@@ -545,7 +517,7 @@ function NewLineRow({
       {/* Mt Service Cie Ariary — auto */}
       <td className="px-4 py-3">
         <input readOnly
-          value={mtServiceCieAriary.toLocaleString('fr-FR')}
+          value={fmtAriary(mtServiceCieAriary)}
           className={autoReadonlyCls + " text-emerald-700"}
         />
       </td>
@@ -553,7 +525,7 @@ function NewLineRow({
       {/* Mt Pénalité Cie Ariary — auto */}
       <td className="px-4 py-3">
         <input readOnly
-          value={mtPenaliteCieAriary.toLocaleString('fr-FR')}
+          value={fmtAriary(mtPenaliteCieAriary)}
           className={autoReadonlyCls + " text-emerald-700"}
         />
       </td>
@@ -561,7 +533,7 @@ function NewLineRow({
       {/* Mt Billet Client Devise = Mt Cie * facteur — auto */}
       <td className="px-4 py-3">
         <input readOnly
-          value={mtBilletClientDevise.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+          value={fmtDevise(mtBilletClientDevise)}
           className={autoReadonlyCls + " text-blue-700"}
         />
       </td>
@@ -569,7 +541,7 @@ function NewLineRow({
       {/* Mt Service Client Devise — auto */}
       <td className="px-4 py-3">
         <input readOnly
-          value={mtServiceClientDevise.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+          value={fmtDevise(mtServiceClientDevise)}
           className={autoReadonlyCls + " text-blue-700"}
         />
       </td>
@@ -577,7 +549,7 @@ function NewLineRow({
       {/* Mt Pénalité Client Devise — auto */}
       <td className="px-4 py-3">
         <input readOnly
-          value={mtPenaliteClientDevise.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+          value={fmtDevise(mtPenaliteClientDevise)}
           className={autoReadonlyCls + " text-blue-700"}
         />
       </td>
@@ -585,7 +557,7 @@ function NewLineRow({
       {/* Mt Billet Client Ariary = Mt Client Devise * taux — auto */}
       <td className="px-4 py-3">
         <input readOnly
-          value={mtBilletClientAriary.toLocaleString('fr-FR')}
+          value={fmtAriary(mtBilletClientAriary)}
           className={autoReadonlyCls + " text-blue-600"}
         />
       </td>
@@ -593,7 +565,7 @@ function NewLineRow({
       {/* Mt Service Client Ariary — auto */}
       <td className="px-4 py-3">
         <input readOnly
-          value={mtServiceClientAriary.toLocaleString('fr-FR')}
+          value={fmtAriary(mtServiceClientAriary)}
           className={autoReadonlyCls + " text-blue-600"}
         />
       </td>
@@ -601,7 +573,7 @@ function NewLineRow({
       {/* Mt Pénalité Client Ariary — auto */}
       <td className="px-4 py-3">
         <input readOnly
-          value={mtPenaliteClientAriary.toLocaleString('fr-FR')}
+          value={fmtAriary(mtPenaliteClientAriary)}
           className={autoReadonlyCls + " text-blue-600"}
         />
       </td>
@@ -609,7 +581,7 @@ function NewLineRow({
       {/* Commission Devise — auto */}
       <td className="px-4 py-3">
         <input readOnly
-          value={commissionEnDevise.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+          value={fmtDevise(commissionEnDevise)}
           className={commissionCls}
         />
       </td>
@@ -617,7 +589,7 @@ function NewLineRow({
       {/* Commission Ariary — auto */}
       <td className="px-4 py-3">
         <input readOnly
-          value={commissionEnAriary.toLocaleString('fr-FR')}
+          value={fmtAriary(commissionEnAriary)}
           className={commissionCls}
         />
       </td>

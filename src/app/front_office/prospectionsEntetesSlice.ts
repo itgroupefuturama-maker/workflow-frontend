@@ -73,6 +73,19 @@ export const fetchProspectionEntetes = createAsyncThunk(
   }
 );
 
+// Thunk : un seul en-tête par id (page détail ouverte directement, ex. après un F5)
+export const fetchProspectionEnteteById = createAsyncThunk(
+  'prospectionsEntetes/fetchById',
+  async (enteteId: string, { rejectWithValue }) => {
+    try {
+      const response = await axios.get(`/prospections/entetes/${enteteId}`);
+      return response.data.data as ProspectionEntete;
+    } catch (err: any) {
+      return rejectWithValue(err.response?.data?.message || "Erreur lors du chargement de l'en-tête");
+    }
+  }
+);
+
 // Thunk UPDATE
 export const updateProspectionEntete = createAsyncThunk(
   'prospectionsEntetes/updateEntete',
@@ -119,6 +132,13 @@ const prospectionsEntetesSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder
+        // Ajoute ou remplace l'en-tête dans la liste, sans toucher aux autres
+        .addCase(fetchProspectionEnteteById.fulfilled, (state, action: PayloadAction<ProspectionEntete>) => {
+            if (!action.payload?.id) return;
+            const i = state.items.findIndex((e) => e.id === action.payload.id);
+            if (i >= 0) state.items[i] = { ...state.items[i], ...action.payload };
+            else state.items.push(action.payload);
+        })
         .addCase(fetchProspectionEntetes.pending, (state) => {
             state.loading = true;
             state.error = null;

@@ -1,57 +1,53 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import axiosInstance from '../service/Axios';
-import { FiEye, FiEyeOff, FiLoader, FiArrowRight, FiShield, FiGlobe } from "react-icons/fi";
-import { FaWhatsapp } from "react-icons/fa";
+import {
+  FiEye,
+  FiEyeOff,
+  FiLoader,
+  FiArrowRight,
+  FiShield,
+  FiGlobe,
+  FiUsers,
+  FiLock,
+  FiAlertCircle,
+} from 'react-icons/fi';
 
-const SLIDES = [
-  {
-    tag: "Gestion de voyages",
-    title: "Pilotez vos dossiers en toute simplicité",
-    description: "Cette App centralise la gestion de vos réservations hôtel, billets et dossiers clients dans une interface pensée pour vos équipes terrain."
-  },
-  {
-    tag: "Efficacité opérationnelle",
-    title: "Moins de saisie, plus de performance",
-    description: "Automatisez vos devis, suivez vos commissions en temps réel et générez vos documents PDF en un clic, depuis n'importe quel poste."
-  },
-  {
-    tag: "Collaboration",
-    title: "Tous vos collaborateurs, un seul outil",
-    description: "Front Office et Back Office travaillent en synchronisation parfaite. Chaque action est tracée, chaque dossier mis à jour instantanément."
-  }
-];
-
-function LoginPage() {
+const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [currentSlide, setCurrentSlide] = useState(0);
-  const [selectedInterface, setSelectedInterface] = useState<'front' | 'back'>('front');
+  const [selectedInterface, setSelectedInterface] = useState<
+    'front' | 'back'
+  >('front');
+
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+
+    if (isLoading) return;
+
     setError('');
     setIsLoading(true);
 
     try {
       const loginResponse = await axiosInstance.post('/auth/login', {
         email: email.trim(),
-        motDePasse: password.trim(),
+        motDePasse: password,
       });
 
       const { access_token } = loginResponse.data.data;
 
-      // access_token/refresh_token vivent désormais dans des cookies httpOnly posés par le
-      // serveur — plus besoin de les stocker nous-mêmes. access_token reste gardé en mémoire
-      // (Redux, non persisté) uniquement pour le handshake Socket.io.
       const userResponse = await axiosInstance.get('/users/me', {
-        headers: { Authorization: `Bearer ${access_token}` }
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+        },
       });
 
       const userData = userResponse.data.data;
@@ -61,7 +57,9 @@ function LoginPage() {
       );
 
       if (selectedInterface === 'back' && !hasAdminProfile) {
-        throw new Error("Accès refusé : vous n'avez pas les droits d'administrateur.");
+        throw new Error(
+          "Accès refusé : vous n'avez pas les droits d'administrateur."
+        );
       }
 
       const fullUser = {
@@ -79,247 +77,268 @@ function LoginPage() {
         autorisation: userData.autorisation || [],
       };
 
-      const redirectTo = selectedInterface === 'back' ? '/parametre' : '/';
-      login({ token: access_token, user: fullUser });
-      navigate(redirectTo, { replace: true });
+      const redirectTo =
+        selectedInterface === 'back' ? '/parametre' : '/';
 
+      login({
+        token: access_token,
+        user: fullUser,
+      });
+
+      navigate(redirectTo, { replace: true });
     } catch (err: any) {
-      setError(err.message || 'Identifiants incorrects. Veuillez réessayer.');
-      localStorage.clear();
+      setError(
+        err.message || 'Identifiants incorrects. Veuillez réessayer.'
+      );
+
+      // Ne pas effacer tout le localStorage :
+      // cela pourrait supprimer des données sans rapport avec la connexion.
     } finally {
       setIsLoading(false);
     }
   };
 
+  const interfaces = [
+    {
+      value: 'front' as const,
+      label: 'Front Office',
+      description: 'Dossiers et réservations',
+      icon: FiUsers,
+    },
+    {
+      value: 'back' as const,
+      label: 'Back Office',
+      description: 'Administration',
+      icon: FiShield,
+    },
+  ];
+
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row font-sans">
+    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-slate-50 px-4 py-10 font-sans text-slate-900 sm:px-6">
+      {/* Décoration légère, sans image de fond */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -top-32 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-blue-100/60 blur-3xl"
+      />
 
-      {/* ── Panneau gauche — image + slider ── */}
-      <div className="relative hidden lg:flex lg:w-[55%] flex-col justify-between p-12 overflow-hidden">
-
-        {/* Image de fond */}
-        <img
-          src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=2070&auto=format&fit=crop"
-          alt="Paysage"
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-black/70 via-black/50 to-black/30" />
-
-        {/* Logo */}
-        <div className="relative z-10">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center">
-              <FiGlobe className="text-black" size={16} />
-            </div>
-            <span className="text-white font-bold text-lg tracking-tight">Al Bouraq</span>
-          </div>
+      {/* En-tête */}
+      <header className="relative mb-8 flex items-center gap-3">
+        <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm">
+          <FiGlobe size={22} />
         </div>
 
-        {/* Slide content */}
-        <div className="relative z-10 max-w-lg">
-          <div key={currentSlide} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <span className="inline-block text-xs font-semibold uppercase tracking-widest text-white/50 border border-white/20 px-3 py-1 rounded-full mb-5">
-              {SLIDES[currentSlide].tag}
-            </span>
-            <h2 className="text-4xl font-bold text-white leading-snug mb-4">
-              {SLIDES[currentSlide].title}
-            </h2>
-            <p className="text-white/70 text-base leading-relaxed">
-              {SLIDES[currentSlide].description}
+        <div>
+          <p className="text-xl font-bold tracking-tight text-slate-900">
+            Al Bouraq Travel
+          </p>
+          <p className="text-xs font-medium tracking-wide text-slate-500">
+            VOYAGE · ESPACE PROFESSIONNEL
+          </p>
+        </div>
+      </header>
+
+      {/* Formulaire */}
+      <section className="relative w-full max-w-md">
+        <div className="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-xl shadow-slate-200/50 sm:p-9">
+          {/* Introduction */}
+          <div className="mb-7">
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-800">
+              <FiLock size={22} />
+            </div>
+
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+              Connexion
+            </h1>
+
+            <p className="mt-2 text-sm leading-6 text-slate-500">
+              Connectez-vous pour accéder à votre espace de travail.
             </p>
           </div>
 
-          {/* Indicateurs */}
-          <div className="flex items-center gap-2 mt-10">
-            {SLIDES.map((_, idx) => (
-              <button
-                key={idx}
-                onClick={() => setCurrentSlide(idx)}
-                className={`h-0.5 rounded-full transition-all duration-300 ${
-                  idx === currentSlide ? 'w-10 bg-white' : 'w-4 bg-white/30 hover:bg-white/50'
-                }`}
-              />
-            ))}
-          </div>
-        </div>
+          {/* Sélection de l'interface */}
+          <div className="mb-7">
+            <p className="mb-3 text-sm font-semibold text-slate-700">
+              Choisissez votre espace
+            </p>
 
-        {/* Footer gauche */}
-        <div className="relative z-10 flex items-center justify-between">
-          <p className="text-white/30 text-xs">© 2025 Al Bouraq Voyage</p>
-          <div className="flex gap-5">
-            <a href="#" className="text-white/30 hover:text-white/60 text-xs transition-colors">Confidentialité</a>
-            <a href="#" className="text-white/30 hover:text-white/60 text-xs transition-colors">Support</a>
-          </div>
-        </div>
-      </div>
+            <div className="grid grid-cols-2 gap-3">
+              {interfaces.map((item) => {
+                const Icon = item.icon;
+                const isSelected = selectedInterface === item.value;
 
-      {/* ── Panneau droit — formulaire ── */}
-      <div className="flex-1 flex flex-col bg-gray-50 min-h-screen">
-
-        {/* Header mobile uniquement */}
-        <div className="lg:hidden flex items-center justify-between px-6 py-5 bg-white border-b border-gray-100">
-          <div className="flex items-center gap-2">
-            <div className="w-7 h-7 bg-black rounded-lg flex items-center justify-center">
-              <FiGlobe className="text-white" size={13} />
-            </div>
-            <span className="font-bold text-gray-900">Al Bouraq</span>
-          </div>
-          <a href="#" className="text-xs text-gray-500 flex items-center gap-1 hover:text-gray-700">
-            Site web <FiArrowRight size={12} />
-          </a>
-        </div>
-
-        {/* Formulaire centré */}
-        <div className="flex-1 flex items-center justify-center px-6 py-12">
-          <div className="w-full max-w-md">
-
-            {/* Titre */}
-            <div className="mb-8">
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">Connexion</h1>
-              <p className="text-sm text-gray-500">
-                Accédez à votre espace de gestion Al Bouraq. Sélectionnez votre interface avant de vous connecter.
-              </p>
-            </div>
-
-            {/* Choix d'interface */}
-            <div className="grid grid-cols-2 gap-3 mb-8">
-              {[
-                {
-                  value: 'front' as const,
-                  label: 'Front Office',
-                  description: 'Dossiers & réservations',
-                  icon: <FiGlobe size={18} />,
-                },
-                {
-                  value: 'back' as const,
-                  label: 'Back Office',
-                  description: 'Administration',
-                  icon: <FiShield size={18} />,
-                },
-              ].map(({ value, label, description, icon }) => (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => setSelectedInterface(value)}
-                  className={`flex flex-col items-start gap-2 p-4 rounded-xl border-2 text-left transition-all ${
-                    selectedInterface === value
-                      ? 'border-gray-900 bg-white shadow-sm'
-                      : 'border-gray-200 bg-white hover:border-gray-300'
-                  }`}
-                >
-                  <div className={`p-1.5 rounded-lg ${selectedInterface === value ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-500'}`}>
-                    {icon}
-                  </div>
-                  <div>
-                    <p className={`text-sm font-semibold ${selectedInterface === value ? 'text-gray-900' : 'text-gray-600'}`}>
-                      {label}
-                    </p>
-                    <p className="text-xs text-gray-400 mt-0.5">{description}</p>
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            {/* Formulaire */}
-            <form onSubmit={handleSubmit} className="space-y-5">
-
-              {/* Email */}
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">
-                  Adresse email
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value.replace(/\s/g, ''))}
-                  placeholder="vous@albouraq.com"
-                  className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition-all"
-                  required
-                />
-              </div>
-
-              {/* Mot de passe */}
-              <div>
-                <div className="flex items-center justify-between mb-2">
-                  <label className="text-xs font-semibold text-gray-700 uppercase tracking-wide">
-                    Mot de passe
-                  </label>
-                  <button type="button" className="text-xs text-gray-400 hover:text-gray-700 transition-colors">
-                    Mot de passe oublié ?
-                  </button>
-                </div>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 transition-all pr-12"
-                    required
-                  />
+                return (
                   <button
+                    key={item.value}
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    aria-pressed={isSelected}
+                    onClick={() => {
+                      setSelectedInterface(item.value);
+                      setError('');
+                    }}
+                    className={`group relative flex min-h-[106px] flex-col items-start rounded-xl border p-3.5 text-left transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 ${
+                      isSelected
+                        ? 'border-blue-800 bg-blue-50/70'
+                        : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'
+                    }`}
                   >
-                    {showPassword ? <FiEyeOff size={18} /> : <FiEye size={18} />}
+                    <div
+                      className={`mb-3 flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
+                        isSelected
+                          ? 'bg-blue-900 text-white'
+                          : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200'
+                      }`}
+                    >
+                      <Icon size={17} />
+                    </div>
+
+                    <span
+                      className={`text-sm font-semibold ${
+                        isSelected ? 'text-blue-950' : 'text-slate-700'
+                      }`}
+                    >
+                      {item.label}
+                    </span>
+
+                    <span className="mt-1 text-xs leading-4 text-slate-500">
+                      {item.description}
+                    </span>
+
+                    {isSelected && (
+                      <span
+                        aria-hidden="true"
+                        className="absolute right-3 top-3 h-2 w-2 rounded-full bg-blue-800"
+                      />
+                    )}
                   </button>
-                </div>
-              </div>
+                );
+              })}
+            </div>
+          </div>
 
-              {/* Erreur */}
-              {error && (
-                <div className="flex items-start gap-2.5 bg-red-50 border border-red-200 text-red-700 text-xs p-3.5 rounded-xl">
-                  <svg className="w-4 h-4 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  {error}
-                </div>
-              )}
-
-              {/* Bouton connexion */}
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full bg-gray-900 text-white py-3.5 rounded-xl font-semibold text-sm tracking-wide hover:bg-gray-800 active:scale-[0.98] transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed mt-2"
+          {/* Formulaire de connexion */}
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Email */}
+            <div>
+              <label
+                htmlFor="email"
+                className="mb-2 block text-sm font-medium text-slate-700"
               >
-                {isLoading ? (
-                  <>
-                    <FiLoader className="animate-spin" size={16} />
-                    Connexion en cours...
-                  </>
-                ) : (
-                  <>
-                    Se connecter
-                    <FiArrowRight size={16} />
-                  </>
-                )}
-              </button>
-            </form>
+                Adresse email
+              </label>
 
-            {/* Séparateur */}
-            <div className="flex items-center gap-4 my-6">
-              <div className="flex-1 h-px bg-gray-200" />
-              <span className="text-xs text-gray-400 font-medium">Besoin d'aide ?</span>
-              <div className="flex-1 h-px bg-gray-200" />
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="username"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="vous@albouraq.com"
+                required
+                disabled={isLoading}
+                className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 hover:border-slate-300 focus:border-blue-800 focus:ring-4 focus:ring-blue-800/10 disabled:cursor-not-allowed disabled:bg-slate-50"
+              />
             </div>
 
-            {/* WhatsApp */}
-            <button className="w-full bg-white border border-gray-200 text-gray-600 py-3 rounded-xl flex items-center justify-center gap-2.5 hover:bg-gray-50 hover:border-gray-300 transition-all text-sm font-medium">
-              <FaWhatsapp size={18} className="text-green-500" />
-              Contacter le support WhatsApp
-            </button>
+            {/* Mot de passe */}
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-slate-700"
+                >
+                  Mot de passe
+                </label>
+              </div>
 
-            {/* Footer mobile */}
-            <p className="text-center text-xs text-gray-400 mt-8 lg:hidden">
-              © 2025 Al Bouraq Voyage • Tous droits réservés
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="Saisissez votre mot de passe"
+                  required
+                  disabled={isLoading}
+                  className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 pr-12 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 hover:border-slate-300 focus:border-blue-800 focus:ring-4 focus:ring-blue-800/10 disabled:cursor-not-allowed disabled:bg-slate-50"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((previous) => !previous)}
+                  aria-label={
+                    showPassword
+                      ? 'Masquer le mot de passe'
+                      : 'Afficher le mot de passe'
+                  }
+                  aria-pressed={showPassword}
+                  className="absolute inset-y-0 right-0 flex items-center px-4 text-slate-400 transition hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-600"
+                >
+                  {showPassword ? (
+                    <FiEyeOff size={18} />
+                  ) : (
+                    <FiEye size={18} />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Message d'erreur */}
+            {error && (
+              <div
+                role="alert"
+                className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-3.5 text-sm text-red-700"
+              >
+                <FiAlertCircle
+                  size={18}
+                  className="mt-0.5 shrink-0"
+                />
+                <p className="leading-5">{error}</p>
+              </div>
+            )}
+
+            {/* Bouton de connexion */}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-3.5 text-sm font-semibold text-white shadow-sm transition duration-200 hover:bg-blue-950 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-blue-900/20 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isLoading ? (
+                <>
+                  <FiLoader size={17} className="animate-spin" />
+                  Connexion en cours...
+                </>
+              ) : (
+                <>
+                  Se connecter
+                  <FiArrowRight size={17} />
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Aide */}
+          <div className="mt-6 border-t border-slate-100 pt-5 text-center">
+            <p className="text-xs leading-5 text-slate-500">
+              Un problème de connexion ?
+            </p>
+            <p className="mt-1 text-xs leading-5 text-slate-600">
+              Contactez votre administrateur pour obtenir de l'aide.
             </p>
           </div>
         </div>
-      </div>
-    </div>
+
+        {/* Pied de page */}
+        <footer className="mt-6 text-center">
+          <p className="text-xs text-slate-400">
+            © {new Date().getFullYear()} Al Bouraq Voyage. Tous droits réservés.
+          </p>
+        </footer>
+      </section>
+    </main>
   );
-}
+};
 
 export default LoginPage;

@@ -9,6 +9,7 @@ import DossierActifCard from '../../../../../components/CarteDossierActif/Dossie
 import { useState } from 'react';
 import SuiviTabSection from '../../module.suivi/SuiviTabSection';
 import Skeleton from '../../../../../components/ui/Skeleton';
+import { AlertTriangle } from 'lucide-react';
 
 const VisaTab = () => {
 
@@ -33,7 +34,7 @@ const VisaTab = () => {
       {/* ── Colonne principale ── */}
       <div className="flex-1 min-w-0 flex flex-col min-h-0">
         {/* ── Header fixe — ne scrolle PAS ── */}
-        <div className="shrink-0 px-4 bg-slate-200 rounded-t-xl">
+        <div className="flex items-center justify-between gap-4 shrink-0 px-4 bg-slate-200 rounded-t-xl">
           <VisaHeader
             numerovisa=''
             nomPassager={''}
@@ -42,10 +43,10 @@ const VisaTab = () => {
             isProspection={false}
             isDevis={false}
           />
+          <DossierActifCard />
         </div>
         
         <div className='px-4 bg-slate-200 rounded-b-xl'>
-          <DossierActifCard gradient="from-blue-400 via-indigo-400 to-blue-500" />
           {/* Header */}
           <div className="flex items-center justify-between">
             <nav className="flex rounded-lg mb-2 gap-2" aria-label="Tabs">
@@ -96,7 +97,7 @@ const VisaTab = () => {
         {/* Erreur */}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg px-4 py-3">
-            ⚠️ {error}
+            <AlertTriangle size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />{error}
           </div>
         )}
 

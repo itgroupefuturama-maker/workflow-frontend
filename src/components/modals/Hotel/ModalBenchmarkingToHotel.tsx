@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FiX, FiCheck } from 'react-icons/fi';
 import type { HotelProspectionEntete } from '../../../app/front_office/parametre_hotel/hotelProspectionEnteteSlice';
 import { toast } from '../../Toast/toast';
+import { useEscapeKey } from '../../../hooks/useEscapeKey';
 
 interface Props {
   isOpen: boolean;
@@ -24,6 +25,8 @@ const ModalBenchmarkingToHotel: React.FC<Props> = ({
 }) => {
   const [selectedLigneIds, setSelectedLigneIds] = useState<string[]>([]);
   const [showConfirmation, setShowConfirmation] = useState(false);
+
+  useEscapeKey(isOpen, onClose);
 
   if (!isOpen) return null;
 

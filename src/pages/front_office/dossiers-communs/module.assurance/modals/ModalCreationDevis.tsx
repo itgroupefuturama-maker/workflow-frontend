@@ -7,7 +7,7 @@ import {
   type AssuranceProspectionLigne,
 } from '../../../../../app/front_office/parametre_assurance/assuranceProspectionSlice';
 import { Modal, Spinner } from '../components/atoms';
-import { Calendar, Globe, Info, ClipboardCheck, Wallet, ArrowRight } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Calendar, ClipboardCheck, Globe, Info, Wallet } from 'lucide-react';
 
 export interface DevisModalData {
   enteteId: string;
@@ -162,7 +162,7 @@ const ModalCreationDevis = ({ data, prestationId, onClose }: Props) => {
 
         {createError && (
           <div className="p-3 bg-red-50 border border-red-100 rounded-lg text-red-600 text-[11px] font-bold flex items-center gap-2">
-            ⚠️ {createError}
+            <AlertTriangle size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />{createError}
           </div>
         )}
 

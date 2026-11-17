@@ -16,8 +16,9 @@ import PageSkeleton from '../../../../../../components/ui/PageSkeleton';
 import { fmtDate, fmtNum } from '../../utils/formatters';
 import StatusBadge from '../../../module.visa/components/StatusBadge';
 import { FactureModal } from '../../components/ModalsFacturation';
-import { FileText, Info, CreditCard, MapPin } from 'lucide-react';
+import { CreditCard, FileText, Info, MapPin, Pencil } from 'lucide-react';
 import { useAuthorization } from '../../../../../../hooks/useAuthorization';
+import { formatStatut } from '../../../../../../utils/statut';
 
 const MODULE = 'assurance';
 
@@ -31,7 +32,7 @@ const PageDetailAssurance = () => {
 
   const numeroDos = location.state?.numeroDos ?? '—';
 
-  const tabs = [
+  const tabs: { id: string; label: string }[] = [
     // { id: 'prospection', label: 'Listes des prospections' },
     // { id: 'assurance',   label: 'Listes des assurance' },
   ];
@@ -137,7 +138,7 @@ const PageDetailAssurance = () => {
 
           {/* ── Sous-header ── */}
           <div className="shrink-0 px-4 bg-slate-200 rounded-b-xl pb-2">
-            <DossierActifCard gradient="from-green-400 via-green-400 to-green-500" />
+            <div className="flex justify-end pt-2"><DossierActifCard /></div>
             <div className="py-1 flex items-center gap-3 cursor-pointer"
               onClick={() => navigate('/dossiers-communs/assurance/pages', { state: { targetTab: 'assurance' } })}
             >
@@ -421,7 +422,7 @@ const PageDetailAssurance = () => {
                                 ? 'bg-emerald-100 text-emerald-700'
                                 : 'bg-amber-100 text-amber-700'
                             }`}>
-                              {doc.status}
+                              {formatStatut(doc.status)}
                             </span>
                           </td>
                           <td className="px-4 py-2.5 whitespace-nowrap">
@@ -459,7 +460,7 @@ const PageDetailAssurance = () => {
                             onClick={() => setShowFactModal(true)}
                             className="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-semibold text-white bg-white/20 hover:bg-white/30 rounded-lg transition"
                           >
-                            ✏️ Saisir facture
+                            <Pencil size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Saisir facture
                           </button>
                         )}
                       </div>

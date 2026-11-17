@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useEscapeKey } from '../../../../../hooks/useEscapeKey';
 
 type Field = {
   name: string;
@@ -25,6 +26,8 @@ const ModalFormParametre: React.FC<Props> = ({
   loading = false,
 }) => {
   const [formData, setFormData] = useState<Record<string, any>>({});
+
+  useEscapeKey(isOpen, onClose);
 
   if (!isOpen) return null;
 

@@ -17,6 +17,7 @@ import ApprouverDevisModal, { type DeviseOption } from '../../../../../../compon
 import { API_URL } from '../../../../../../service/env';
 import { useAuthorization } from '../../../../../../hooks/useAuthorization';
 import PageSkeleton from '../../../../../../components/ui/PageSkeleton';
+import { formatStatut } from '../../../../../../utils/statut';
 
 const MODULE = 'hotel';
 // ─── Badge statut devis ───────────────────────────────────────────────────────
@@ -34,7 +35,7 @@ const StatutBadge = ({ statut }: { statut: string }) => {
   return (
     <span className={`uppercase inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${map[statut] ?? 'bg-gray-100 text-gray-600 border-gray-200'}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${statut === 'DEVIS_APPROUVE' ? 'bg-green-500' : statut === 'DEVIS_EN_ATTENTE' ? 'bg-orange-400' : 'bg-red-500'}`} />
-      {label[statut] ?? statut}
+      {label[statut] ?? formatStatut(statut)}
     </span>
   );
 };
@@ -204,7 +205,7 @@ export default function PageHotelDevis() {
 
   const [activeTab, setActiveTab] = useState(location.state?.targetTab || 'prospection');
 
-  const tabs = [
+  const tabs: { id: string; label: string }[] = [
     // { id: 'prospection', label: 'Listes des entête benchmarking' },
     // { id: 'hotel', label: 'Listes des reservation hotel' }
   ];

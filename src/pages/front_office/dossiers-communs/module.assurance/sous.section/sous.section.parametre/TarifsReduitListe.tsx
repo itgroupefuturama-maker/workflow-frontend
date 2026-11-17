@@ -6,6 +6,7 @@ import {
 } from '../../../../../../app/front_office/parametre_assurance/assuranceParamsSlice';
 import { Spinner, EmptyState, Th, Td, Input, Select, Modal, SubmitBtn, TableHeader } from '../../components/atoms';
 import { fmtDate } from '../../utils/formatters';
+import { AlertTriangle } from 'lucide-react';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -34,7 +35,7 @@ const TarifsReduitListe = () => {
   return (
     <>
       <TableHeader title="Tarifs réduits" count={tarifsReduit.length} onAdd={() => setOpen(true)} />
-      {error && <p className="text-sm text-red-500 mb-3">⚠️ {error}</p>}
+      {error && <p className="text-sm text-red-500 mb-3"><AlertTriangle size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />{error}</p>}
 
       <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden">
         <table className="w-full">
@@ -75,7 +76,7 @@ const TarifsReduitListe = () => {
               <Input label="Borne sup (Age)" type="number" placeholder="30" value={form.borneSup} onChange={e => set('borneSup', e.target.value)} required />
             </div>
             <Input label="Taux appliqué (ex: 0.1 pour 10%)" type="number" step="0.01" placeholder="0.10" value={form.tauxApplique} onChange={e => set('tauxApplique', e.target.value)} required />
-            {createError && <p className="text-xs text-red-500">⚠️ {createError}</p>}
+            {createError && <p className="text-xs text-red-500"><AlertTriangle size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />{createError}</p>}
             <div className="flex justify-end pt-2"><SubmitBtn loading={creating} label="Créer le tarif réduit" /></div>
           </form>
         </Modal>

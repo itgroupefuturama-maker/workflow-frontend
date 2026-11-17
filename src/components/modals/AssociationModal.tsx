@@ -4,6 +4,7 @@ import type { AppDispatch, RootState } from '../../app/store';
 import { createAssociation } from '../../app/front_office/parametre_ticketing/associationsPaysVoyageSlice';
 import { fetchPays } from '../../app/front_office/parametre_ticketing/paysSlice';
 import { fetchExigences } from '../../app/front_office/parametre_ticketing/exigenceSlice';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface AssociationModalProps {
   isOpen: boolean;
@@ -38,6 +39,8 @@ export default function AssociationModal({ isOpen, onClose, defaultPaysId }: Ass
       setPaysId(defaultPaysId || '');
     }
   }, [isOpen, defaultPaysId]);
+
+  useEscapeKey(isOpen, onClose);
 
   if (!isOpen) return null;
 

@@ -1,6 +1,7 @@
 // src/components/modals/EmissionBilletModal.tsx
 import {useState } from 'react';
 import { toast } from '../Toast/toast';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface EmissionBilletModalProps {
   isOpen: boolean;
@@ -18,6 +19,8 @@ export default function EmissionBilletModal({
   const [reference, setReference] = useState(initialReference);
   // L'envoi à Odoo peut prendre jusqu'à ~10 s : boutons bloqués pendant ce temps
   const [submitting, setSubmitting] = useState(false);
+
+  useEscapeKey(isOpen, onClose);
 
   if (!isOpen) return null;
 

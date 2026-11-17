@@ -4,6 +4,7 @@ import type { AppDispatch } from '../../../../../app/store';
 import axios from '../../../../../service/Axios';
 import { fetchProspectionEntetes, type VisaProspectionLigne } from '../../../../../app/front_office/parametre_visa/prospectionEnteteVisaSlice';
 import VisaModal from './VisaModal';
+import { AlertTriangle, ArrowLeftRight, Users } from 'lucide-react';
 
 interface Props {
   enteteId: string;
@@ -137,8 +138,8 @@ const CreateDevisModal = ({ enteteId, prestationId, lignes, onClose }: Props) =>
                     </div>
 
                     <div className="flex items-center gap-4 text-gray-500 text-xs">
-                      <span>👥 {ligne.nombre} pers.</span>
-                      <span>💱 {ligne.devise} — taux {ligne.tauxEchange.toLocaleString('fr-FR')}</span>
+                      <span><Users size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />{ligne.nombre} pers.</span>
+                      <span><ArrowLeftRight size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />{ligne.devise} — taux {ligne.tauxEchange.toLocaleString('fr-FR')}</span>
                       <span>PU client : {ligne.puClientAriary.toLocaleString('fr-FR')} Ar</span>
                     </div>
                   </div>
@@ -172,7 +173,7 @@ const CreateDevisModal = ({ enteteId, prestationId, lignes, onClose }: Props) =>
       {/* Erreur */}
       {error && (
         <p className="text-red-500 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-          ⚠️ {error}
+          <AlertTriangle size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />{error}
         </p>
       )}
 

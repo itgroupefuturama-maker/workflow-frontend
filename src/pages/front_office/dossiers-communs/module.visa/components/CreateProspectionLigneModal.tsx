@@ -6,6 +6,7 @@ import axios from '../../../../../service/Axios';
 import { fetchProspectionEntetes } from '../../../../../app/front_office/parametre_visa/prospectionEnteteVisaSlice';
 import VisaModal from './VisaModal';
 import VisaField from './VisaField';
+import { AlertTriangle } from 'lucide-react';
 
 interface Props {
   enteteId: string;
@@ -280,14 +281,14 @@ const CreateProspectionLigneModal = ({ enteteId, prestationId, onClose }: Props)
             <span className="text-sm font-normal ml-1">Ar</span>
           </p>
           {commissionAriary < 0 && (
-            <p className="text-[10px] text-red-400 mt-0.5">⚠️ Taux trop élevé</p>
+            <p className="text-[10px] text-red-400 mt-0.5"><AlertTriangle size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Taux trop élevé</p>
           )}
         </div>
       </div>
 
       {error && (
         <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-          ⚠️ {error}
+          <AlertTriangle size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />{error}
         </div>
       )}
     </VisaModal>

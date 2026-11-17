@@ -20,7 +20,7 @@ import ActionButton from '../../components/ActionButton';
 import SuiviTabSection from '../../../module.suivi/SuiviTabSection';
 import PanneauPreferencesClient from '../../components/PanneauPreferencesClient';
 import { setShowPreferences, togglePreferences } from '../../../../../../app/uiSlice';
-import { ChevronDown } from 'lucide-react';
+import { AlertTriangle, ChevronDown } from 'lucide-react';
 import { toast } from '../../../../../../components/Toast/toast';
 import { useAuthorization } from '../../../../../../hooks/useAuthorization';
 
@@ -509,7 +509,7 @@ const HotelReservationDetail = () => {
     (state: RootState) => state.raisonAnnulation
   );
 
-  const tabs = [
+  const tabs: { id: string; label: string }[] = [
     // { id: 'prospection', label: 'Listes des entête benchmarking' },
     // { id: 'hotel',       label: 'Listes des reservation hotel' },
   ];
@@ -995,7 +995,7 @@ const HotelReservationDetail = () => {
                         <div className="flex justify-between"><span className="text-gray-500">Total hôtel</span><span className="font-semibold">{fmt(totalHotel)} Ar</span></div>
                       </div>
                       <div className="bg-amber-50 border border-amber-200 rounded p-3 flex items-start gap-2">
-                        <span>⚠️</span>
+                        <AlertTriangle size={14} aria-hidden="true" className="shrink-0" />
                         <p className="text-xs text-amber-800">Cette action est <strong>irréversible</strong>.</p>
                       </div>
                     </div>

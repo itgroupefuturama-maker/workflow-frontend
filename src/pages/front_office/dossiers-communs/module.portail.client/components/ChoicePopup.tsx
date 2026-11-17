@@ -1,5 +1,6 @@
 import { ChevronRight, X } from "lucide-react";
 import type { ClientBeneficiaireForm, ClientFormPayload } from "../../../../../app/portail_client/clientFormSlice";
+import { useEscapeKey } from '../../../../../hooks/useEscapeKey';
 
 interface Props {
   shared: ClientBeneficiaireForm[];
@@ -9,6 +10,7 @@ interface Props {
 }
 
 const ChoicePopup = ({ shared, onClose, onStartFresh, onChoose }: Props) => {
+  useEscapeKey(true, onClose);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-7xl p-6 space-y-5">

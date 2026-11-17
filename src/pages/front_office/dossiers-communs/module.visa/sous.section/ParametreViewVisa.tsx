@@ -12,6 +12,7 @@ import CreateVisaDocModal from '../components/CreateVisaDocModal';
 import CreateVisaConsultatModal from '../components/CreateVisaConsultatModal';
 import CreateVisaParamModal from '../components/CreateVisaParamModal';
 import { ActionButtons, EmptyRow, LoadingRow, SectionHeader, TableWrapper } from '../../../../../layouts/Utilitaire';
+import { formatStatut } from '../../../../../utils/statut';
 
 const ParametreViewVisa = () => {
   const location = useLocation();
@@ -63,7 +64,7 @@ const ParametreViewVisa = () => {
     <span className={`px-2 py-1 rounded-full text-xs font-semibold ${
       status === 'ACTIF' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
     }`}>
-      {status}
+      {formatStatut(status)}
     </span>
   );
   // ─── View ────────────────────────────────────────────────────────────────────

@@ -9,6 +9,7 @@ import {
 import type { CadeauParamPayload, MessageParamPayload } from '../types';
 import CadeauParamModal from './CadeauParamModal';
 import MessageParamModal from './MessageParamModal';
+import { formatStatut } from '../../../../../utils/statut';
 
 const statusStyle: Record<'ACTIF' | 'INACTIF', string> = {
   ACTIF:   'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200',
@@ -233,7 +234,7 @@ const Section = ({
 const StatusBadge = ({ status }: { status: 'ACTIF' | 'INACTIF' }) => (
   <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${statusStyle[status]}`}>
     <span className={`w-1.5 h-1.5 rounded-full ${status === 'ACTIF' ? 'bg-emerald-500' : 'bg-gray-400'}`} />
-    {status}
+    {formatStatut(status)}
   </span>
 );
 

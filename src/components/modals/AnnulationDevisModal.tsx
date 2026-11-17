@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { FiX, FiAlertTriangle } from 'react-icons/fi';
 import type { Ligne } from '../../app/front_office/devisSlice';
 import { toast } from '../Toast/toast';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface AnnulationModalProps {
   isOpen: boolean;
@@ -57,6 +58,8 @@ export default function AnnulationDevisModal({
       // lignes: lignesData,
     });
   };
+
+  useEscapeKey(isOpen, onClose);
 
   if (!isOpen) return null;
 

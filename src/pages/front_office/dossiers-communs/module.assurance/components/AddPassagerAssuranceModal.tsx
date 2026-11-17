@@ -3,6 +3,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../../../../app/store';
 import { addPassagerToAssurance } from '../../../../../app/front_office/parametre_assurance/assuranceEnteteDetailSlice';
 import type { AssuranceLigne } from '../../../../../app/front_office/parametre_assurance/assuranceEnteteSlice';
+import { useEscapeKey } from '../../../../../hooks/useEscapeKey';
+import { AlertTriangle } from 'lucide-react';
 
 interface Props {
   assuranceEnteteId: string;
@@ -15,6 +17,7 @@ const fmtDate = (d: string | null) =>
   d ? new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
 
 const AddPassagerAssuranceModal = ({ assuranceEnteteId, lignes, onClose, onSuccess }: Props) => {
+  useEscapeKey(true, onClose);
   const dispatch      = useDispatch<AppDispatch>();
   const clientFacture = useSelector((s: RootState) => s.clientFactures.current);
   const beneficiaires = clientFacture?.beneficiaires ?? [];
@@ -149,7 +152,7 @@ const AddPassagerAssuranceModal = ({ assuranceEnteteId, lignes, onClose, onSucce
         {/* ── Error ── */}
         {error && (
           <div className="mx-5 mb-1 flex items-center gap-2 bg-red-50 border border-red-200 text-red-600 text-xs rounded-lg px-3 py-2 shrink-0">
-            ⚠️ {error}
+            <AlertTriangle size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />{error}
           </div>
         )}
 

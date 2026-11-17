@@ -169,11 +169,36 @@ export interface ServiceProspectionLigne {
   serviceSpecifique: ServiceSpecifique;   // ← plus optionnel, toujours présent
 }
 
+// Réponse d'Odoo à l'étape en cours de la ligne (vente si FAIT, achat si CLOTURER) ; repart à AUCUN
+// quand le statut change. Sur l'entête : agrégat des lignes. Calculé par le backend, jamais écrit par le front.
+export type EtatOdoo = 'AUCUN' | 'ENVOYE' | 'VALIDE' | 'REJETE';
+
+// Compteurs par état de ligne (statut × etatOdoo), renvoyés avec l'entête
+export interface ResumeLignes {
+  total: number;
+  aReserver: number;
+  aApprouver: number;
+  venteEnAttente: number;
+  venteRejetee: number;
+  aSaisir: number;
+  aEmettre: number;
+  achatEnAttente: number;
+  achatRejete: number;
+  emises: number;
+  annulees: number;
+}
+
 export interface BilletLigne {
   id: string;
   statut: string;
   statusLigne: string;
   origineLine: string | null;
+  etatOdoo?: EtatOdoo;
+  // Dernier rejet d'Odoo
+  motifRejet?: string | null;
+  rejeteAt?: string | null;
+  odooSaleId?: string | null;
+  odooPurchaseId?: string | null;
   referenceLine: string;
   prospectionLigneId: string;
   billetEnteteId: string;
@@ -353,6 +378,8 @@ export interface BilletEntete {
   devis?: Devis;
   // 10 derniers envois à Odoo, du plus récent au plus ancien
   odooEnvois?: OdooEnvoi[];
+  etatOdoo?: EtatOdoo;
+  resumeLignes?: ResumeLignes;
 }
 
 export interface EmissionPayload {
@@ -378,6 +405,10 @@ interface BilletState {
   list: BilletEntete[];               // ← NOUVEAU : liste des billets du dossier
   loadingList: boolean;               // ← séparé du loading du current
   errorList: string | null;
+  /** Dossier auquel appartient `list` (évite d'afficher les billets d'un autre dossier). */
+  listDossierId: string | null;
+  /** Horodatage (ms) du dernier chargement réussi de `list`, pour savoir si elle est récente. */
+  listFetchedAt: number | null;
   loading: boolean;
   error: string | null;
 }
@@ -387,6 +418,8 @@ const initialState: BilletState = {
   list: [],
   loadingList: false,
   errorList: null,
+  listDossierId: null,
+  listFetchedAt: null,
   loading: false,
   error: null,
 };
@@ -496,6 +529,8 @@ export interface OdooEnvoi {
 
 export interface OdooSoumissionResponse {
   envoi: OdooEnvoi;
+  // Un clic peut produire plusieurs envois (création, modification, annulation de lignes)
+  envois?: OdooEnvoi[];
   billet: BilletEntete;
 }
 
@@ -664,6 +699,11 @@ const billetSlice = createSlice({
       state.current = null;
       state.error = null;
     },
+    // Événement temps réel (socket 'billet:statut') : on met à jour la ligne concernée sans recharger.
+    majStatutBilletListe: (state, action: { payload: { billetEnteteId: string; nouveauStatut: string } }) => {
+      const b = state.list.find((x) => x.id === action.payload.billetEnteteId);
+      if (b) b.statut = action.payload.nouveauStatut;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -674,6 +714,9 @@ const billetSlice = createSlice({
       .addCase(fetchBilletById.fulfilled, (state, action) => {
         state.loading = false;
         state.current = action.payload;
+        // Garde la liste cohérente avec le détail (ex. après une émission ou une approbation)
+        const enListe = state.list.find((x) => x.id === action.payload?.id);
+        if (enListe && action.payload?.statut) enListe.statut = action.payload.statut;
       })
       .addCase(fetchBilletById.rejected, (state, action) => {
         state.loading = false;
@@ -714,18 +757,27 @@ const billetSlice = createSlice({
       state.error = action.payload as string;
     })
     // fetchBilletsByDossierCommun
-    .addCase(fetchBilletsByDossierCommun.pending, (state) => {
+    .addCase(fetchBilletsByDossierCommun.pending, (state, action) => {
       state.loadingList = true;
       state.errorList = null;
+      // Autre dossier : on vide pour ne pas montrer les billets du précédent
+      if (state.listDossierId !== action.meta.arg) {
+        state.list = [];
+        state.listDossierId = null;
+        state.listFetchedAt = null;
+      }
     })
     .addCase(fetchBilletsByDossierCommun.fulfilled, (state, action) => {
       state.loadingList = false;
       state.list = action.payload;
+      state.listDossierId = action.meta.arg;
+      state.listFetchedAt = Date.now();
     })
     .addCase(fetchBilletsByDossierCommun.rejected, (state, action) => {
       state.loadingList = false;
       state.errorList = action.payload as string;
-      state.list = [];
+      // Échec d'une mise à jour en arrière-plan : on garde la liste déjà affichée
+      if (state.listDossierId !== action.meta.arg) state.list = [];
     })
     // ────────────────────────────────────────────────
     // Annulation de la réservation (avant émission)
@@ -759,5 +811,5 @@ const billetSlice = createSlice({
   },
 });
 
-export const { clearCurrent } = billetSlice.actions;
+export const { clearCurrent, majStatutBilletListe } = billetSlice.actions;
 export default billetSlice.reducer;

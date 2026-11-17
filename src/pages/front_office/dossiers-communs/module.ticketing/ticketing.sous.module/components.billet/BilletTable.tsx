@@ -5,11 +5,29 @@ import { API_URL } from '../../../../../../service/env';
 import { BilletActions } from './BilletActions';
 import OdooEnvoisStatus from './OdooEnvoisStatus';
 import { PassagersCell } from './PassagersCell';
+import {
+  CLASSES_TON,
+  estEnAttente,
+  estLectureSeule,
+  estLigneFrais,
+  estTerminee,
+  libelleLigne,
+  peutAnnuler,
+  peutReprogrammer,
+  peutReserver,
+  peutSaisirNumeros,
+} from './utils/billetStatuts';
+
+import { fmtAriary, fmtDevise, fmtNombre } from '../../../../../../utils/format';
+import { AlertTriangle, Building2, Coins, Plane, Ticket, User } from 'lucide-react';
+import SelecteurVuesPrix from '../../prospection/SelecteurVuesPrix';
+import { CellulesBillet, EnTeteGroupeBillet, SousEnTetesBillet } from '../../prospection/ColonnesPrixBillet';
+import { aEmission, aResa, useVuesPrix } from '../../prospection/vuesPrix';
 
 // --- Sous-composant pour les cellules de prix (évite la répétition et les erreurs de rendu) ---
 const PriceCell = ({ value, isCurrency = false, className = "" }: { value: number, isCurrency?: boolean, className?: string }) => (
   <td className={`px-4 py-3 text-right ${className}`}>
-    {value?.toLocaleString('fr-FR', isCurrency ? { minimumFractionDigits: 2 } : {}) || '—'}
+    {isCurrency ? fmtDevise(value) : fmtNombre(value)}
   </td>
 );
 
@@ -21,12 +39,11 @@ interface BilletTableProps {
   billetLignes: any[];
   handleOpenReservation: (ligne: any) => void;
   handleOpenEmission: (ligne: any) => void;
-  handleReprogrammer: (ligne: BilletLigne) => void;   // ← CHANGEMENT ICI : une seule ligne
+  // « Modifier » : choix mise à jour de la réservation / reprogrammation (ou reprogrammation directe si achetée)
+  handleModifier: (ligne: BilletLigne) => void;
   handleRemove: (ligne: BilletLigne) => void;
   serviceById: Map<string, ServiceSpecifique>;
   handleReporter: (ligne: BilletLigne) => void;
-  allLinesEmission: boolean;
-  allLinesReservation: boolean;
   envoiOdooEnCours: 'VENTE' | 'ACHAT' | null;
   onRenvoyerAchat: () => void;
   onActualiser: () => void;
@@ -76,11 +93,10 @@ const BilletTable: React.FC<BilletTableProps> = ({
   billet,
   handleOpenReservation,
   handleOpenEmission,
-  handleReprogrammer,
+  handleModifier,
   handleRemove,
   handleReporter,
-  allLinesEmission,
-  allLinesReservation,
+  billetLignes,
   envoiOdooEnCours,
   onRenvoyerAchat,
   onActualiser,
@@ -90,6 +106,14 @@ const BilletTable: React.FC<BilletTableProps> = ({
   onAnnulerEmission,
 }) => {
   const [sortOriginAsc, setSortOriginAsc] = useState(true);
+
+  // ── Prix affichés : Prospection / Résa / Émission (choix libre, mémorisé pour l'écran billet) ──
+  const { vues, setVues, afficher } = useVuesPrix('billet.vuesPrix', ['PROSPECTION', 'RESA']);
+  const [emissionReplie, setEmissionReplie] = useState(false);
+  const compteursVues = {
+    RESA: lignes.filter((l) => aResa(l)).length,
+    EMISSION: lignes.filter((l) => aEmission(l)).length,
+  };
 
   // On trie les lignes (copie pour ne pas muter la prop)
   const sortedLignes = [...lignes].sort((a, b) => {
@@ -167,12 +191,17 @@ const BilletTable: React.FC<BilletTableProps> = ({
                 {sortOriginAsc ? '▲ A→Z' : '▼ Z→A'}
               </span>
             </button>
+            <SelecteurVuesPrix
+              value={vues}
+              onChange={setVues}
+              compteurs={compteursVues}
+              total={lignes.length}
+            />
           </div>
           <div className="flex items-center gap-3">
             <BilletActions
               billet={billet}
-              allLinesEmission={allLinesEmission}
-              allLinesReservation={allLinesReservation}
+              lignes={billetLignes}
               envoiEnCours={envoiOdooEnCours}
               onApprouver={onApprouver}
               onShowEmission={onShowEmission}
@@ -195,28 +224,29 @@ const BilletTable: React.FC<BilletTableProps> = ({
         <div className="px-5 py-2 bg-slate-200 border-b border-slate-300 flex items-center gap-2 flex-wrap">
           <span className="text-xs font-semibold text-slate-500 uppercase mr-1">Groupes :</span>
           {([
-            { key: 'infosVol',       label: '✈️ Infos Vol',       color: 'slate'  },
-            { key: 'puCieDevise',    label: '🏢 PU Cie Devise',   color: 'emerald'},
-            { key: 'puCieAriary',    label: '🏢 PU Cie Ar',       color: 'emerald'},
-            { key: 'puClientDevise', label: '👤 PU Client Devise', color: 'blue'   },
-            { key: 'puClientAriary', label: '👤 PU Client Ar',    color: 'blue'   },
-            { key: 'mtCieDevise',    label: '🏢 Mt Cie Devise',   color: 'teal'   },
-            { key: 'mtCieAriary',    label: '🏢 Mt Cie Ar',       color: 'teal'   },
-            { key: 'mtClientDevise', label: '👤 Mt Client Devise', color: 'indigo' },
-            { key: 'mtClientAriary', label: '👤 Mt Client Ar',    color: 'indigo' },
-            { key: 'mtResa',         label: '🎫 Mt Résa',         color: 'violet' },
-            { key: 'commissions',    label: '💰 Commissions',     color: 'green'  },
-            { key: 'annulation',     label: '⚠️ Conditions',      color: 'orange' },
-          ] as const).map(({ key, label }) => (
+            { key: 'infosVol',       label: 'Infos Vol', icon: Plane,       color: 'slate'  },
+            { key: 'puCieDevise',    label: 'PU Cie Devise', icon: Building2,   color: 'emerald'},
+            { key: 'puCieAriary',    label: 'PU Cie Ar', icon: Building2,       color: 'emerald'},
+            { key: 'puClientDevise', label: 'PU Client Devise', icon: User, color: 'blue'   },
+            { key: 'puClientAriary', label: 'PU Client Ar', icon: User,    color: 'blue'   },
+            { key: 'mtCieDevise',    label: 'Mt Cie Devise', icon: Building2,   color: 'teal'   },
+            { key: 'mtCieAriary',    label: 'Mt Cie Ar', icon: Building2,       color: 'teal'   },
+            { key: 'mtClientDevise', label: 'Mt Client Devise', icon: User, color: 'indigo' },
+            { key: 'mtClientAriary', label: 'Mt Client Ar', icon: User,    color: 'indigo' },
+            { key: 'mtResa',         label: 'Mt Résa', icon: Ticket,         color: 'violet' },
+            { key: 'commissions',    label: 'Commissions', icon: Coins,     color: 'green'  },
+            { key: 'annulation',     label: 'Conditions', icon: AlertTriangle,      color: 'orange' },
+          ] as const).map(({ key, label, icon: Icon }) => (
             <button
               key={key}
               onClick={() => toggleGroup(key)}
-              className={`text-xs px-2.5 py-1 rounded-full border font-medium transition-all ${
+              className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border font-medium transition-all ${
                 collapsedGroups[key]
                   ? 'bg-white text-slate-400 border-slate-200 line-through'
                   : 'bg-white text-slate-700 border-slate-300 hover:border-slate-400'
               }`}
             >
+              <Icon size={12} aria-hidden="true" />
               {label}
             </button>
           ))}
@@ -255,8 +285,9 @@ const BilletTable: React.FC<BilletTableProps> = ({
               <tr className="border-b-2 border-slate-300">
                 {/* Colonnes fixes (rowSpan=2) */}
                 <th rowSpan={2} className="px-4 py-3 text-center font-semibold text-slate-700 uppercase bg-slate-100 w-12">N°</th>
+                <th rowSpan={2} className="px-4 py-3 text-left font-semibold text-slate-700 uppercase bg-slate-100 min-w-[130px]">N° Dos Ref</th>
                 <th rowSpan={2} className="px-4 py-3 text-left font-semibold text-slate-700 uppercase bg-slate-100">Origin Ligne</th>
-                <th rowSpan={2} className="px-4 py-3 text-left font-semibold text-slate-700 uppercase bg-slate-100">Fournisseur</th>
+                <th rowSpan={2} className="px-4 py-3 text-left font-semibold text-slate-700 uppercase bg-slate-100">Compagnie</th>
                 <th rowSpan={2} className="px-4 py-3 text-left font-semibold text-slate-700 uppercase bg-slate-100">N° Résa</th>
                 <th rowSpan={2} className="px-4 py-3 text-right font-semibold text-slate-700 uppercase bg-slate-100">Taux Prospection</th>
                 <th rowSpan={2} className="px-4 py-3 text-right font-semibold text-slate-700 uppercase bg-slate-100">Taux Resa</th>
@@ -270,11 +301,12 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-slate-700 border-x border-slate-500 cursor-pointer hover:bg-slate-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
-                    ✈️ Infos Vol
+                    <Plane size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Infos Vol
                     <span className="text-slate-300 text-xs">{collapsedGroups.infosVol ? '▶' : '▼'}</span>
                   </div>
                 </th>
 
+                {afficher.PROSPECTION && (<>
                 {/* ********************** Prix Prospection ********************** */}
                 {/* Groupe PU Cie Devise */}
                 <th
@@ -283,7 +315,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-emerald-700 border-x border-emerald-500 cursor-pointer hover:bg-emerald-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
-                    🏢 PU Cie Devise Prospection
+                    <Building2 size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />PU Cie Devise Prospection
                     <span className="text-xs">{collapsedGroups.puCieDevise ? '▶' : '▼'}</span>
                   </div>
                 </th>
@@ -295,7 +327,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-emerald-800 border-x border-emerald-600 cursor-pointer hover:bg-emerald-700 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
-                    🏢 PU Cie Ariary Prospection
+                    <Building2 size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />PU Cie Ariary Prospection
                     <span className="text-xs">{collapsedGroups.puCieAriary ? '▶' : '▼'}</span>
                   </div>
                 </th>
@@ -307,7 +339,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-blue-700 border-x border-blue-500 cursor-pointer hover:bg-blue-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
-                    👤 PU Client Devise Prospection
+                    <User size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />PU Client Devise Prospection
                     <span className="text-xs">{collapsedGroups.puClientDevise ? '▶' : '▼'}</span>
                   </div>
                 </th>
@@ -319,7 +351,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-blue-800 border-x border-blue-600 cursor-pointer hover:bg-blue-700 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
-                    👤 PU Client Ariary Prospection
+                    <User size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />PU Client Ariary Prospection
                     <span className="text-xs">{collapsedGroups.puClientAriary ? '▶' : '▼'}</span>
                   </div>
                 </th>
@@ -331,7 +363,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-teal-700 border-x border-teal-500 cursor-pointer hover:bg-teal-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
-                    🏢 Mt Cie Devise Prospection
+                    <Building2 size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Mt Cie Devise Prospection
                     <span className="text-xs">{collapsedGroups.mtCieDevise ? '▶' : '▼'}</span>
                   </div>
                 </th>
@@ -343,7 +375,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-teal-800 border-x border-teal-600 cursor-pointer hover:bg-teal-700 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
-                    🏢 Mt Cie Ariary Prospection
+                    <Building2 size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Mt Cie Ariary Prospection
                     <span className="text-xs">{collapsedGroups.mtCieAriary ? '▶' : '▼'}</span>
                   </div>
                 </th>
@@ -355,7 +387,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-indigo-700 border-x border-indigo-500 cursor-pointer hover:bg-indigo-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
-                    👤 Mt Client Devise Prospection
+                    <User size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Mt Client Devise Prospection
                     <span className="text-xs">{collapsedGroups.mtClientDevise ? '▶' : '▼'}</span>
                   </div>
                 </th>
@@ -367,7 +399,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-indigo-800 border-x border-indigo-600 cursor-pointer hover:bg-indigo-700 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
-                    👤 Mt Client Ariary Prospection
+                    <User size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Mt Client Ariary Prospection
                     <span className="text-xs">{collapsedGroups.mtClientAriary ? '▶' : '▼'}</span>
                   </div>
                 </th>
@@ -379,11 +411,14 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-violet-700 border-x border-violet-500 cursor-pointer hover:bg-violet-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
-                    🎫 Mt Total CIE Prospection
+                    <Ticket size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Mt Total CIE Prospection
                     <span className="text-xs">{collapsedGroups.mtResa ? '▶' : '▼'}</span>
                   </div>
                 </th>
 
+                </>)}
+
+                {afficher.RESA && (<>
                 {/* ****************************** Prix Reservation ****************************** */}
 
                 {/* Groupe PU Cie Devise */}
@@ -393,7 +428,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-emerald-700 border-x border-emerald-500 cursor-pointer hover:bg-emerald-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
-                    🏢 PU Cie Devise Réservation
+                    <Building2 size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />PU Cie Devise Réservation
                     <span className="text-xs">{collapsedGroups.puCieDevise ? '▶' : '▼'}</span>
                   </div>
                 </th>
@@ -405,7 +440,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-emerald-800 border-x border-emerald-600 cursor-pointer hover:bg-emerald-700 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
-                    🏢 PU Cie Ariary Réservation
+                    <Building2 size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />PU Cie Ariary Réservation
                     <span className="text-xs">{collapsedGroups.puCieAriary ? '▶' : '▼'}</span>
                   </div>
                 </th>
@@ -417,7 +452,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-blue-700 border-x border-blue-500 cursor-pointer hover:bg-blue-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
-                    👤 PU Client Devise Réservation
+                    <User size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />PU Client Devise Réservation
                     <span className="text-xs">{collapsedGroups.puClientDevise ? '▶' : '▼'}</span>
                   </div>
                 </th>
@@ -429,7 +464,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-blue-800 border-x border-blue-600 cursor-pointer hover:bg-blue-700 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
-                    👤 PU Client Ariary Réservation
+                    <User size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />PU Client Ariary Réservation
                     <span className="text-xs">{collapsedGroups.puClientAriary ? '▶' : '▼'}</span>
                   </div>
                 </th>
@@ -441,7 +476,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-teal-700 border-x border-teal-500 cursor-pointer hover:bg-teal-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
-                    🏢 Mt Cie Devise Réservation
+                    <Building2 size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Mt Cie Devise Réservation
                     <span className="text-xs">{collapsedGroups.mtCieDevise ? '▶' : '▼'}</span>
                   </div>
                 </th>
@@ -453,7 +488,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-teal-800 border-x border-teal-600 cursor-pointer hover:bg-teal-700 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
-                    🏢 Mt Cie Ariary Réservation
+                    <Building2 size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Mt Cie Ariary Réservation
                     <span className="text-xs">{collapsedGroups.mtCieAriary ? '▶' : '▼'}</span>
                   </div>
                 </th>
@@ -465,7 +500,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-indigo-700 border-x border-indigo-500 cursor-pointer hover:bg-indigo-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
-                    👤 Mt Client Devise Réservation
+                    <User size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Mt Client Devise Réservation
                     <span className="text-xs">{collapsedGroups.mtClientDevise ? '▶' : '▼'}</span>
                   </div>
                 </th>
@@ -477,7 +512,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-indigo-800 border-x border-indigo-600 cursor-pointer hover:bg-indigo-700 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
-                    👤 Mt Client Ariary Réservation
+                    <User size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Mt Client Ariary Réservation
                     <span className="text-xs">{collapsedGroups.mtClientAriary ? '▶' : '▼'}</span>
                   </div>
                 </th>
@@ -489,10 +524,18 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-violet-700 border-x border-violet-500 cursor-pointer hover:bg-violet-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
-                    🎫 Mt Réservation Réservation
+                    <Ticket size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Mt Réservation Réservation
                     <span className="text-xs">{collapsedGroups.mtResa ? '▶' : '▼'}</span>
                   </div>
                 </th>
+
+                </>)}
+
+                {/* Prix Émission */}
+                {afficher.EMISSION && (
+                  <EnTeteGroupeBillet vue="EMISSION" showPenalite collapsed={emissionReplie}
+                    onToggle={() => setEmissionReplie((v) => !v)} />
+                )}
 
                 {/* Groupe Commissions */}
                 <th
@@ -501,7 +544,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-green-700 border-x border-green-500 cursor-pointer hover:bg-green-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
-                    💰 Commissions
+                    <Coins size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Commissions
                     <span className="text-xs">{collapsedGroups.commissions ? '▶' : '▼'}</span>
                   </div>
                 </th>
@@ -513,7 +556,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   className="px-4 py-2 text-center font-bold text-white uppercase bg-orange-700 border-x border-orange-500 cursor-pointer hover:bg-orange-600 transition-colors select-none"
                 >
                   <div className="flex items-center justify-center gap-2">
-                    ⚠️ Conditions
+                    <AlertTriangle size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Conditions
                     <span className="text-xs">{collapsedGroups.annulation ? '▶' : '▼'}</span>
                   </div>
                 </th>
@@ -550,6 +593,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   <th className="px-4 py-2 text-center text-xs text-slate-400 italic bg-slate-800/10">— replié —</th>
                 )}
 
+                {afficher.PROSPECTION && (<>
                 {/* PU Cie Devise */}
                 {!collapsedGroups.puCieDevise ? (
                   <>
@@ -653,6 +697,9 @@ const BilletTable: React.FC<BilletTableProps> = ({
                 )}
 
 
+                </>)}
+
+                {afficher.RESA && (<>
                 {/* ********************** Prix resa ******************* */}
 
                 {/* PU Cie Devise */}
@@ -754,6 +801,10 @@ const BilletTable: React.FC<BilletTableProps> = ({
                   <th className="px-4 py-2 text-center text-xs text-violet-400 italic bg-violet-50">— replié —</th>
                 )}
 
+                </>)}
+
+                {afficher.EMISSION && <SousEnTetesBillet vue="EMISSION" collapsed={emissionReplie} showPenalite />}
+
                 {/* Commissions */}
                 {!collapsedGroups.commissions ? (
                   <>
@@ -782,29 +833,42 @@ const BilletTable: React.FC<BilletTableProps> = ({
                 const prospectionEntete = billet?.prospectionEntete;
 
                 // Calculs simples par ligne (plus de group)
-                const isReserved = !!ligne.reservation?.trim();
-                const isEmitted  = ligne.statut === 'CLOTURER';
-                const canReserve = !isReserved && !['MODIFIER', 'ANNULER', 'FAIT'].includes(ligne.statut || '') ;
-                // Ligne réservée mais pas encore émise : sa réservation reste modifiable (le back refuse après CLOTURER)
-                const canModifierResa = ligne.statut === 'FAIT';
-                const canEmit    = ligne.statut === 'FAIT' && billet?.statut !== 'CREER';
-                // Reprogrammer / Annuler : possibles même après émission (CLOTURER), le billet repasse en CREER.
-                // Masqués sur les lignes déjà annulées ou remplacées, les lignes de frais d'annulation
-                // (refusées par le back) et les lignes CREER (pas encore réservées)
-                const canModifierOuAnnuler =
-                  !['ANNULER', 'MODIFIER', 'CREER'].includes(ligne.statut) &&
-                  ligne.statusLigne !== 'ANNULATION';
+                // Règles du backend (utils/billetStatuts) : ligne annulée, remplacée ou de frais = lecture seule
+                // Annulée / remplacée : grisée et barrée ; frais d'annulation : grisée ; en attente d'Odoo : verrouillée
+                const lectureSeule = estLectureSeule(billet, ligne);
+                const terminee     = estTerminee(ligne);
+                const ligneFrais   = estLigneFrais(ligne);
+                const etatLigne    = libelleLigne(ligne);
 
                 return (
-                    <tr key={ligne.id} className="hover:bg-slate-50/70 transition-colors text-xs">
+                    <tr
+                      key={ligne.id}
+                      className={`transition-colors text-xs ${terminee || ligneFrais ? 'bg-slate-50 opacity-60' : 'hover:bg-slate-50/70'}`}
+                    >
                       {/* Colonnes fixes */}
                       <td className="px-4 py-3 text-center text-slate-500 font-medium">{index + 1}</td>
-                      <td className="px-4 py-3 text-xs text-slate-600">{ligne.referenceLine}</td>
+                    <td className={`px-4 py-3 whitespace-nowrap font-mono text-xs font-semibold text-slate-800 ${terminee ? 'line-through' : ''}`}>
+                      {p?.numeroDosRef || '—'}
+                    </td>
+                      <td className={`px-4 py-3 text-xs text-slate-600 ${terminee ? 'line-through' : ''}`}>{ligne.referenceLine}</td>
                       <td className="px-4 py-3 font-medium text-slate-800">{fournisseurLibelle}</td>
                       <td className="px-4 py-3 text-xs text-slate-600">{ligne.reservation || '—'}</td>
                       <td className="px-4 py-3 text-right font-medium">{ligne.prospectionLigne.tauxEchange || '—'}</td>
                       <td className="px-4 py-3 text-right font-medium">{ligne.resaTauxEchange || '—'}</td>
-                      <td className="px-4 py-3 text-center text-xs">{ligne.statusLigne == 'ANNULER' ? 'ANNULÉ' : ligne.statusLigne == 'CLOTURER' ? 'CLÔTURÉ' : ligne.statusLigne == 'MODIFIER' ? 'MODIFIÉ' : ligne.statusLigne == 'CREER' ? 'CRÉÉ' : ligne.statusLigne || '—'}</td>
+                      <td className="px-4 py-3 text-center text-xs min-w-[160px]">
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full border font-semibold whitespace-nowrap ${CLASSES_TON[etatLigne.ton]}`}>
+                          {etatLigne.texte}
+                        </span>
+                        {ligneFrais && <p className="mt-1 text-[10px] text-slate-500">Frais d'annulation</p>}
+                        {ligne.etatOdoo === 'REJETE' && ligne.motifRejet && (
+                          <p className="mt-1 text-[11px] text-red-600 text-left max-w-[220px]">
+                            {ligne.motifRejet}
+                            {ligne.rejeteAt && (
+                              <span className="text-red-400"> — {new Date(ligne.rejeteAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</span>
+                            )}
+                          </p>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-center font-medium">{ligne.prospectionLigne.nombre || '—'}</td>
 
                       {/* Infos Vol */}
@@ -833,6 +897,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                         </td>
                       )}
 
+                      {afficher.PROSPECTION && (<>
                       {/* **************************** Prix Prospection **************************** */}
 
                       {/* ===== SECTION PRIX PROSPECTION (depuis ligne.prospectionLigne) ===== */}
@@ -849,7 +914,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                         </>
                       ) : (
                         <td className="px-4 py-3 text-center text-xs text-emerald-600 bg-emerald-50 font-semibold">
-                          {p?.puBilletCompagnieDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+                          {fmtDevise(p?.puBilletCompagnieDevise)}
                         </td>
                       )}
 
@@ -862,7 +927,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                         </>
                       ) : (
                         <td className="px-4 py-3 text-center text-xs text-emerald-700 bg-emerald-100 font-semibold">
-                          {p?.puBilletCompagnieAriary?.toLocaleString('fr-FR')} Ar
+                          {fmtAriary(p?.puBilletCompagnieAriary)} Ar
                         </td>
                       )}
 
@@ -877,7 +942,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                         </>
                       ) : (
                         <td className="px-4 py-3 text-center text-xs text-blue-600 bg-blue-50 font-semibold">
-                          {p?.montantBilletClientDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+                          {fmtDevise(p?.montantBilletClientDevise)}
                         </td>
                       )}
 
@@ -890,7 +955,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                         </>
                       ) : (
                         <td className="px-4 py-3 text-center text-xs text-blue-700 bg-blue-100 font-semibold">
-                          {p?.montantBilletClientAriary?.toLocaleString('fr-FR')} Ar
+                          {fmtAriary(p?.montantBilletClientAriary)} Ar
                         </td>
                       )}
 
@@ -903,7 +968,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                         </>
                       ) : (
                         <td className="px-4 py-3 text-center text-xs text-teal-600 bg-teal-50 font-semibold">
-                          {p?.montantBilletCompagnieDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+                          {fmtDevise(p?.montantBilletCompagnieDevise)}
                         </td>
                       )}
 
@@ -916,7 +981,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                         </>
                       ) : (
                         <td className="px-4 py-3 text-center text-xs text-teal-700 bg-teal-100 font-semibold">
-                          {p?.montantBilletCompagnieAriary?.toLocaleString('fr-FR')} Ar
+                          {fmtAriary(p?.montantBilletCompagnieAriary)} Ar
                         </td>
                       )}
 
@@ -929,7 +994,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                         </>
                       ) : (
                         <td className="px-4 py-3 text-center text-xs text-indigo-600 bg-indigo-50 font-semibold">
-                          {p?.montantBilletClientDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+                          {fmtDevise(p?.montantBilletClientDevise)}
                         </td>
                       )}
 
@@ -942,7 +1007,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                         </>
                       ) : (
                         <td className="px-4 py-3 text-center text-xs text-indigo-700 bg-indigo-100 font-semibold">
-                          {p?.montantBilletClientAriary?.toLocaleString('fr-FR')} Ar
+                          {fmtAriary(p?.montantBilletClientAriary)} Ar
                         </td>
                       )}
 
@@ -955,10 +1020,13 @@ const BilletTable: React.FC<BilletTableProps> = ({
                         </>
                       ) : (
                         <td className="px-4 py-3 text-center text-xs text-violet-600 bg-violet-50 font-semibold">
-                          {p?.montantBilletCompagnieAriary?.toLocaleString('fr-FR')} Ar
+                          {fmtAriary(p?.montantBilletCompagnieAriary)} Ar
                         </td>
                       )}
 
+                      </>)}
+
+                      {afficher.RESA && (<>
                       {/* **************************** Prix Resa **************************** */}
                       {/* PU Cie Devise */}
                       {!collapsedGroups.puCieDevise ? (
@@ -969,7 +1037,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                         </>
                       ) : (
                         <td className="px-4 py-3 text-center text-xs text-emerald-600 bg-emerald-50 font-semibold">
-                          {ligne.puResaBilletCompagnieDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+                          {fmtDevise(ligne.puResaBilletCompagnieDevise)}
                         </td>
                       )}
 
@@ -982,7 +1050,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                         </>
                       ) : (
                         <td className="px-4 py-3 text-center text-xs text-emerald-700 bg-emerald-100 font-semibold">
-                          {ligne.puResaBilletCompagnieAriary?.toLocaleString('fr-FR')} Ar
+                          {fmtAriary(ligne.puResaBilletCompagnieAriary)} Ar
                         </td>
                       )}
 
@@ -995,7 +1063,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                         </>
                       ) : (
                         <td className="px-4 py-3 text-center text-xs text-blue-600 bg-blue-50 font-semibold">
-                          {ligne.puResaBilletClientDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+                          {fmtDevise(ligne.puResaBilletClientDevise)}
                         </td>
                       )}
 
@@ -1008,7 +1076,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                         </>
                       ) : (
                         <td className="px-4 py-3 text-center text-xs text-blue-700 bg-blue-100 font-semibold">
-                          {ligne.puResaBilletClientAriary?.toLocaleString('fr-FR')} Ar
+                          {fmtAriary(ligne.puResaBilletClientAriary)} Ar
                         </td>
                       )}
 
@@ -1021,7 +1089,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                         </>
                       ) : (
                         <td className="px-4 py-3 text-center text-xs text-teal-600 bg-teal-50 font-semibold">
-                          {ligne.puResaMontantBilletCompagnieDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+                          {fmtDevise(ligne.puResaMontantBilletCompagnieDevise)}
                         </td>
                       )}
 
@@ -1034,7 +1102,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                         </>
                       ) : (
                         <td className="px-4 py-3 text-center text-xs text-teal-700 bg-teal-100 font-semibold">
-                          {ligne.puResaMontantBilletCompagnieAriary?.toLocaleString('fr-FR')} Ar
+                          {fmtAriary(ligne.puResaMontantBilletCompagnieAriary)} Ar
                         </td>
                       )}
 
@@ -1047,7 +1115,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                         </>
                       ) : (
                         <td className="px-4 py-3 text-center text-xs text-indigo-600 bg-indigo-50 font-semibold">
-                          {ligne.puResaMontantBilletClientDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+                          {fmtDevise(ligne.puResaMontantBilletClientDevise)}
                         </td>
                       )}
 
@@ -1060,7 +1128,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                         </>
                       ) : (
                         <td className="px-4 py-3 text-center text-xs text-indigo-700 bg-indigo-100 font-semibold">
-                          {ligne.puResaMontantBilletClientAriary?.toLocaleString('fr-FR')} Ar
+                          {fmtAriary(ligne.puResaMontantBilletClientAriary)} Ar
                         </td>
                       )}
                       
@@ -1074,8 +1142,16 @@ const BilletTable: React.FC<BilletTableProps> = ({
                         </>
                       ) : (
                         <td className="px-4 py-3 text-center text-xs text-violet-600 bg-violet-50 font-semibold">
-                          {ligne.puResaMontantBilletCompagnieAriary?.toLocaleString('fr-FR')} Ar
+                          {fmtAriary(ligne.puResaMontantBilletCompagnieAriary)} Ar
                         </td>
+                      )}
+
+                      </>)}
+
+                      {/* Prix Émission */}
+                      {afficher.EMISSION && (
+                        <CellulesBillet vue="EMISSION" liee={{ principale: ligne, toutes: [ligne] }}
+                          collapsed={emissionReplie} showPenalite />
                       )}
 
                       {/* Commissions */}
@@ -1086,7 +1162,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                         </>
                       ) : (
                         <td className="px-4 py-3 text-center text-xs text-green-700 bg-green-50 font-bold">
-                          {ligne.resaCommissionEnDevise?.toLocaleString('fr-FR', { minimumFractionDigits: 2 })}
+                          {fmtDevise(ligne.resaCommissionEnDevise)}
                         </td>
                       )}
 
@@ -1162,24 +1238,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                       <td className="px-4 py-3 text-center min-w-[220px]">
                         <div className="flex items-center justify-center gap-2 flex-wrap">
 
-                          {canModifierResa &&
-                            ligne.statusLigne !== 'ANNULATION' &&
-                            ligne.statusLigne !== 'ANNULER' && (
-                            <button
-                              onClick={() => handleOpenReservation(ligne)}
-                              title="Modifier la réservation de cette ligne"
-                              className="flex items-center gap-1 px-3 py-1.5 bg-sky-50 text-sky-700 border border-sky-200 rounded-md text-xs font-semibold hover:bg-sky-600 hover:text-white transition-all active:scale-95"
-                            >
-                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                              </svg>
-                              Modifier résa
-                            </button>
-                          )}
-
-                          {canReserve && 
-                            ligne.statusLigne !== 'ANNULATION' && 
-                            ligne.statusLigne !== 'ANNULER' && (
+                          {peutReserver(billet, ligne) && ligne.statut === 'CREER' && (
                             <button
                               onClick={() => handleOpenReservation(ligne)}
                               className="flex items-center gap-1 px-3 py-1.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-md text-xs font-semibold hover:bg-blue-600 hover:text-white transition-all active:scale-95"
@@ -1191,23 +1250,35 @@ const BilletTable: React.FC<BilletTableProps> = ({
                             </button>
                           )}
 
-                          {canEmit && 
-                            ligne.statusLigne !== 'ANNULATION' && 
-                            ligne.statusLigne !== 'ANNULER' && (
+                          {/* Saisie des numéros : seulement après validation de la vente de CETTE ligne par Odoo */}
+                          {ligne.statut === 'FAIT' && !lectureSeule && !peutSaisirNumeros(billet, ligne) && (
+                            <span title="La vente doit d'abord être validée par Odoo">
+                              <button
+                                disabled
+                                className="flex items-center gap-1 px-3 py-1.5 bg-slate-50 text-slate-300 border border-slate-100 rounded-md text-xs font-semibold cursor-not-allowed"
+                              >
+                                Acheter
+                              </button>
+                            </span>
+                          )}
+
+                          {peutSaisirNumeros(billet, ligne) && (
                             <button
                               onClick={() => handleOpenEmission(ligne)}
+                              title="Saisir les numéros de billet compagnie"
                               className="flex items-center gap-1 px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md text-xs font-semibold hover:bg-emerald-600 hover:text-white transition-all active:scale-95"
                             >
                               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 012-2h14a2 2 0 012 2v14a2 2 0 01-2 2H7a2 2 0 01-2-2V5z" />
                               </svg>
-                              Émettre
+                              {ligne.statut === 'CLOTURER' ? 'Corriger les numéros' : 'Acheter'}
                             </button>
                           )}
 
-                          {canModifierOuAnnuler && (
+                          {/* FAIT : modal de choix (réservation / reprogrammation) ; CREER, CLOTURER : reprogrammation seule */}
+                          {peutReprogrammer(billet, ligne) && (
                             <button
-                              onClick={() => handleReprogrammer(ligne)}
+                              onClick={() => handleModifier(ligne)}
                               className="flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-600 hover:text-white active:scale-95"
                             >
                               <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1217,7 +1288,7 @@ const BilletTable: React.FC<BilletTableProps> = ({
                             </button>
                           )}
 
-                          {canModifierOuAnnuler && (
+                          {peutAnnuler(billet, ligne) && (
                             <button
                               onClick={() => handleRemove(ligne)}
                               className="flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-semibold transition-all bg-red-50 text-red-700 border border-red-200 hover:bg-red-600 hover:text-white active:scale-95"
@@ -1227,10 +1298,14 @@ const BilletTable: React.FC<BilletTableProps> = ({
                             </button>
                           )}
 
-                          {isEmitted && (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
-                              TERMINÉ
+                          {estEnAttente(ligne) && !terminee && (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                              En attente de la réponse d'Odoo
                             </span>
+                          )}
+
+                          {lectureSeule && !estEnAttente(ligne) && (
+                            <span className="text-xs text-slate-400">—</span>
                           )}
                         </div>
                       </td>

@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import type { BilletLigne } from '../../../../../../../app/front_office/billetSlice';
 import Button from '../../../../../../../components/ui/Button';
+import { useEscapeKey } from '../../../../../../../hooks/useEscapeKey';
 
 interface ReporterDialogProps {
   billet: BilletLigne['billet'][0] | null;
@@ -10,6 +11,7 @@ interface ReporterDialogProps {
 }
 
 export const ReporterDialog: React.FC<ReporterDialogProps> = ({ billet, onConfirm, onClose }) => {
+  useEscapeKey(true, onClose);
   const [date, setDate] = useState('');
 
   if (!billet) return null;

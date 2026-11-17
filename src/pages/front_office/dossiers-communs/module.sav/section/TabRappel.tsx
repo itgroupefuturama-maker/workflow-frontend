@@ -9,6 +9,7 @@ import {
 import type { SavRappel } from '../../../../../app/front_office/parametre_sav/savRappelSlice';
 import { useDebouncedValue } from '../../../../../hooks/useDebouncedValue';
 import Pagination from '../../../../../components/Pagination';
+import { AlertTriangle, Search } from 'lucide-react';
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
@@ -164,7 +165,7 @@ function ModalEnvoi({
 
             {numeroFinal && numeroFinal.length !== 9 && (
               <p className="mt-1.5 text-[11px] text-amber-600 font-medium flex items-center gap-1">
-                ⚠️ Le numéro formaté fait {numeroFinal.length} chiffres au lieu de 9 — vérifiez la saisie.
+                <AlertTriangle size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Le numéro formaté fait {numeroFinal.length} chiffres au lieu de 9 — vérifiez la saisie.
               </p>
             )}
           </div>
@@ -338,7 +339,7 @@ function ModalReenvoi({
 
             {numeroFinal && numeroFinal.length !== 9 && (
               <p className="mt-1.5 text-[11px] text-amber-600 font-medium flex items-center gap-1">
-                ⚠️ Le numéro formaté fait {numeroFinal.length} chiffres au lieu de 9 — vérifiez la saisie.
+                <AlertTriangle size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Le numéro formaté fait {numeroFinal.length} chiffres au lieu de 9 — vérifiez la saisie.
               </p>
             )}
           </div>
@@ -468,7 +469,7 @@ export default function TabRappel() {
               className="w-full text-sm pl-9 pr-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-slate-900/5 focus:border-slate-900 outline-none transition-all"
               placeholder="Rechercher un rappel..."
             />
-            <span className="absolute left-3 top-2.5 text-slate-400">🔍</span>
+            <Search size={14} aria-hidden="true" className="absolute left-3 top-2.5 text-slate-400 shrink-0" />
           </div>
           <select
             value={statutFilter}

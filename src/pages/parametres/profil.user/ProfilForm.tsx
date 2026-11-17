@@ -14,6 +14,7 @@ import {
 import type { RootState, AppDispatch } from '../../../app/store';
 import { FiArrowLeft,  FiSearch, FiPlus, FiLoader, FiCheckCircle } from 'react-icons/fi';
 import { fetchAutorisations } from '../../../app/back_office/autorisationsSlice';
+import { formatStatut } from '../../../utils/statut';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -300,7 +301,7 @@ const ProfilFormPage = () => {
                   {/* Toggle Switch */}
                   <div className="flex items-center gap-3">
                     <span className={`text-[10px] font-bold ${p.status === 'ACTIF' ? 'text-emerald-500' : 'text-gray-300'}`}>
-                      {p.status}
+                      {formatStatut(p.status)}
                     </span>
                     <button
                       onClick={() => handleDeactivatePrivilege(p.privilege.id)}
@@ -392,7 +393,7 @@ const ProfilFormPage = () => {
                     {/* Toggle Switch pour le statut du module */}
                     <div className="flex items-center gap-3">
                       <span className={`text-[10px] font-bold ${m.status === 'ACTIF' ? 'text-emerald-500' : 'text-gray-300'}`}>
-                        {m.status}
+                        {formatStatut(m.status)}
                       </span>
                       <button
                         onClick={() => handleDeactivateModule(m.module.id)}
@@ -500,7 +501,7 @@ const ProfilFormPage = () => {
                     {/* Toggle Switch pour l'accès utilisateur */}
                     <div className="flex items-center gap-3">
                       <span className={`text-[10px] font-bold ${u.status === 'ACTIF' ? 'text-emerald-500' : 'text-gray-300'}`}>
-                        {u.status}
+                        {formatStatut(u.status)}
                       </span>
                       <button
                         onClick={() => handleDeactivateUser(u.user.id)}

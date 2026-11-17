@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useEscapeKey } from '../../../../../hooks/useEscapeKey';
 
 type Props = {
   isOpen: boolean;
@@ -85,6 +86,8 @@ const ModalBenchmarkingForm: React.FC<Props> = ({
     const n = calculerNuites(form.du, form.au);
     if (n > 0) setForm((prev) => ({ ...prev, nuite: String(n) }));
   }, [form.du, form.au]);
+
+  useEscapeKey(isOpen, onClose);
 
   if (!isOpen) return null;
 

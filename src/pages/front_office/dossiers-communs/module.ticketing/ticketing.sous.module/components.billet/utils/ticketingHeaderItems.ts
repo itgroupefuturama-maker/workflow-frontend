@@ -10,7 +10,7 @@ export const billetListeItems = (): BreadcrumbItem[] => [
 
 /** Liste des prospections (badge jaune simple) */
 export const prospectionListeItems = (): BreadcrumbItem[] => [
-  { label: "Liste des Prospection", isCurrent: true },
+  { label: "Liste des prospections", isCurrent: true },
 ];
 
 /** Détail d'un billet */
@@ -26,22 +26,22 @@ export const billetDetailItems = (numeroBillet: string | number): BreadcrumbItem
 /** Détail d'une prospection */
 export const prospectionDetailItems = (_enteteId: string | number): BreadcrumbItem[] => [
   {
-    label: "Liste des Prospection",
+    label: "Liste des prospections",
     path: TICKETING_BASE,
     state: { targetTab: "prospection" },
   },
-  { label: "Prospection detail", isCurrent: true },
+  { label: "Détail de la prospection", isCurrent: true },
 ];
 
 /** Liste des devis d'une prospection */
 export const devisListeItems = (enteteId: string | number): BreadcrumbItem[] => [
   {
-    label: "Liste des Prospection",
+    label: "Liste des prospections",
     path: TICKETING_BASE,
     state: { targetTab: "prospection" },
   },
   {
-    label: "Prospection detail",
+    label: "Détail de la prospection",
     path: `${TICKETING_BASE}/prospection/${enteteId}`,
   },
   { label: "Liste Devis", isCurrent: true },

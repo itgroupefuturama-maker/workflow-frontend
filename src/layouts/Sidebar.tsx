@@ -100,7 +100,8 @@ export default function Sidebar({ module }: SidebarProps) {
   }, [openPanel]);
 
   const isTabActive = (tab: string): boolean => {
-    const navTab = location.state?.targetTab as string | undefined;
+    const navTab = (location.state?.targetTab as string | undefined)
+      ?? new URLSearchParams(location.search).get('onglet') ?? undefined;
     if (navTab) return navTab === tab;
     return pathname.split('/').includes(tab) || pathname.endsWith(tab);
   };
@@ -128,7 +129,6 @@ export default function Sidebar({ module }: SidebarProps) {
             { label: 'Raison Annulation',    path: `parametres/${module}`, icon: <FiMap    size={15} />, tab: 'listeRaisonAnnulation' },
             { label: 'Service & spécifique', path: `parametres/${module}`, icon: <FiLayers size={15} />, tab: 'listeService'          },
             { label: 'Exigence de voyage',   path: `parametres/${module}`, icon: <FiMap    size={15} />, tab: 'listeExigence'         },
-            { label: 'Itinéraires',          path: `parametres/${module}`, icon: <FiMap    size={15} />, tab: 'listeItineraire'       },
           ]
         : module === 'hotel'
         ? [
@@ -170,7 +170,7 @@ export default function Sidebar({ module }: SidebarProps) {
   const subLinks: NavLink[] =
     module === 'ticketing'
       ? [
-          { label: 'Entête Prospection', path: pagesPath, icon: <FiPlusSquare size={14} />, tab: 'prospection'  },
+          { label: 'En-têtes de prospection', path: pagesPath, icon: <FiPlusSquare size={14} />, tab: 'prospection'  },
           { label: 'Liste Billets',      path: pagesPath, icon: <FiList       size={14} />, tab: 'billet'       },
           { label: 'Liste Bénéficiaire', path: pagesPath, icon: <FiUsers      size={14} />, tab: 'beneficiaire' },
         ]

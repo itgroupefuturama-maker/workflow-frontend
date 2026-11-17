@@ -5,6 +5,7 @@ import { fetchVisaParams } from '../../../../../app/front_office/parametre_visa/
 import VisaModal from './VisaModal';
 import VisaField from './VisaField';
 import axios from '../../../../../service/Axios';
+import { AlertTriangle } from 'lucide-react';
 
 interface Props { onClose: () => void; }
 
@@ -175,7 +176,7 @@ const CreateVisaParamModal = ({ onClose }: Props) => {
       {/* Erreur */}
       {error && (
         <p className="text-red-500 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-          ⚠️ {error}
+          <AlertTriangle size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />{error}
         </p>
       )}
     </VisaModal>

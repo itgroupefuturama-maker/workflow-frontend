@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../../../../../app/store';
 import Button from '../../../../../../components/ui/Button';
+import { formatStatut } from '../../../../../../utils/statut';
 
 import {
   createCommentaire,
@@ -488,7 +489,7 @@ const SuiviTabContent: React.FC<SuiviTabContentProps> = ({
                     </td>
                     <td className="px-4 py-3 text-center border-r border-gray-200">
                       <span className="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold bg-blue-100 text-blue-800 border border-blue-200">
-                        {suivi.statut.replace(/_/g, ' ')}
+                        {formatStatut(suivi.statut)}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-center text-xs text-gray-700 border-r border-gray-200">
@@ -535,7 +536,7 @@ const SuiviTabContent: React.FC<SuiviTabContentProps> = ({
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
               </svg>
-              Évolution Fournisseur
+              Évolution compagnie
             </h3>
           </div>
           
@@ -546,7 +547,7 @@ const SuiviTabContent: React.FC<SuiviTabContentProps> = ({
                   <TableHeader>Type</TableHeader>
                   <TableHeader>Statut</TableHeader>
                   <TableHeader>Origine</TableHeader>
-                  <TableHeader>Fournisseur</TableHeader>
+                  <TableHeader>Compagnie</TableHeader>
                   <TableHeader>Réf. BC FRN</TableHeader>
                   <TableHeader>Création BC</TableHeader>
                   <TableHeader>Soumission BC</TableHeader>
@@ -564,7 +565,7 @@ const SuiviTabContent: React.FC<SuiviTabContentProps> = ({
                     </span>
                   </td>
                   <td colSpan={10} className="px-4 py-3 text-center text-sm text-gray-500 border-r border-gray-200">
-                    Données fournisseurs synchronisées avec le billet
+                    Données compagnie synchronisées avec le billet
                   </td>
                 </tr>
               </tbody>

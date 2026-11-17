@@ -24,6 +24,7 @@ import { useLocation, useNavigate, useParams } from "react-router-dom";
 import TabContainer from "../../../../layouts/TabContainer";
 import { AssuranceHeader } from "../module.assurance/components/AssuranceHeader";
 import { VisaHeader } from "../module.visa/components/VisaHeader";
+import { Globe } from 'lucide-react';
 
 // ── Page principale ──
 const ClientInfoPage = () => {
@@ -271,7 +272,7 @@ const ClientInfoPage = () => {
 
                       {/* Pays avec drapeau */}
                       <span className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full bg-white/10 border border-white/20 text-white mt-1">
-                        🌍 {client.visa?.pays ?? '—'}
+                        <Globe size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />{client.visa?.pays ?? '—'}
                       </span>
                     </div>
                   </div>

@@ -9,7 +9,7 @@ import { parametresRoutes } from "./routes/Parametres.routes";
 import { frontOfficeRoutes } from "./routes/FrontOffice.routes"; // Nouveau import
 import FrontOfficeLayout from "./layouts/FrontOfficeLayout";
 import ToastContainer from "./components/Toast/ToastContainer";
-import PageLoader from "./components/PageLoader";
+import AppSplash from "./components/AppSplash";
 
 const ListeParametre = lazy(() => import("./pages/ListeParametre"));
 const SuccesCreateCompte = lazy(() => import("./pages/front_office/dossiers-communs/module.calendar/succesCreateCompte"));
@@ -23,7 +23,7 @@ export function App() {
     <BrowserRouter>
       <ToastContainer />
 
-      <Suspense fallback={<PageLoader />}>
+      <Suspense fallback={<AppSplash />}>
         <Routes>
           {/* LOGIN : Ne redirige pas vers "/" ici, laisse le composant LoginPage gérer le succès */}
           <Route path="/login" element={<LoginPage />} />

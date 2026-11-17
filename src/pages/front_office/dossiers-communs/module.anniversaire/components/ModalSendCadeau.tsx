@@ -6,6 +6,8 @@ import type { AppDispatch, RootState } from '../../../../../app/store';
 import { sendAnnivCadeau } from '../../../../../app/front_office/paramatre_anniversaire/annivClientsSlice';
 import { createMilesTransaction } from '../../../../../app/front_office/paramatre_anniversaire/milesTransactionSlice';
 import { FiArrowRight } from 'react-icons/fi';
+import { useEscapeKey } from '../../../../../hooks/useEscapeKey';
+import { formatStatut } from '../../../../../utils/statut';
 
 interface Props {
   client: AnnivClient;
@@ -18,6 +20,7 @@ type Step = 'cadeau' | 'transaction' | 'success';
 const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400';
 
 const ModalSendCadeau = ({ client, onClose, onSuccess }: Props) => {
+  useEscapeKey(true, onClose);
   const dispatch = useDispatch<AppDispatch>();
 
   const { cadeauParams } = useSelector((s: RootState) => s.annivParams);
@@ -157,7 +160,7 @@ const ModalSendCadeau = ({ client, onClose, onSuccess }: Props) => {
                       <span className={`text-[11px] font-medium ${
                         c.status === 'ACTIF' ? 'text-green-600' : 'text-gray-400'
                       }`}>
-                        {c.status}
+                        {formatStatut(c.status)}
                       </span>
                     </div>
                     <p className="mt-1 ml-5 text-[11px] text-gray-400">{c.proposition}</p>

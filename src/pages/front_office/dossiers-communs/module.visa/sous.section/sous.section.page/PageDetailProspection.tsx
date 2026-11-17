@@ -6,7 +6,7 @@ import { approuverDevis, clearVisaDevis, creerVisaEntete, envoyerDevis, fetchVis
 import TabContainer from '../../../../../../layouts/TabContainer';
 import { VisaHeader } from '../../components/VisaHeader';
 import { useVisaPdf } from '../../../module.pdf/pdf.generation/hooks/usePdfGenerator';
-import { Download, Eye } from 'lucide-react';
+import { AlertTriangle, BookUser, Download, Eye, Upload } from 'lucide-react';
 import { useAuthorization } from '../../../../../../hooks/useAuthorization';
 import PageSkeleton from '../../../../../../components/ui/PageSkeleton';
 import Button from '../../../../../../components/ui/Button';
@@ -66,7 +66,7 @@ const PageDetailProspection = () => {
     const [actionError,   setActionError]   = useState('');
     const [actionSuccess, setActionSuccess] = useState('');
 
-    const tabs = [
+    const tabs: { id: string; label: string }[] = [
         // { id: 'prospection', label: 'Listes des prospections' },
         // { id: 'visa',        label: 'Listes des visa' },
     ];
@@ -317,7 +317,7 @@ const PageDetailProspection = () => {
                                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
                                                 </svg>
-                                                ) : <span className={devis.statut !== 'CREER' ? 'grayscale opacity-50' : ''}>📤</span>}
+                                                ) : <span className={devis.statut !== 'CREER' ? 'grayscale opacity-50' : ''}><Upload size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" /></span>}
                                                 Envoyer le devis
                                             </button>
 
@@ -359,7 +359,7 @@ const PageDetailProspection = () => {
                                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
                                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
                                                 </svg>
-                                                ) : <span className={devis.statut !== 'DEVIS_APPROUVE' ? 'grayscale opacity-50' : ''}>🛂</span>}
+                                                ) : <span className={devis.statut !== 'DEVIS_APPROUVE' ? 'grayscale opacity-50' : ''}><BookUser size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" /></span>}
                                                 Créer le Visa
                                             </button>
                                         </div>
@@ -375,7 +375,7 @@ const PageDetailProspection = () => {
                         )}
                         {actionError && (
                         <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg px-4 py-3 flex items-center gap-2">
-                            ⚠️ {actionError}
+                            <AlertTriangle size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />{actionError}
                         </div>
                         )}
                         <div className="flex-1 min-h-0 overflow-y-auto py-2 space-y-4">

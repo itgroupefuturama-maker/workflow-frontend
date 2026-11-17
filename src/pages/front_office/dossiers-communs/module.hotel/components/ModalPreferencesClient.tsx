@@ -1,4 +1,5 @@
 import { X, Star, Calendar, Users, Bed, Coffee, DollarSign, MessageSquare } from 'lucide-react';
+import { useEscapeKey } from '../../../../../hooks/useEscapeKey';
 
 type Props = {
   isOpen: boolean;
@@ -88,6 +89,8 @@ const SectionTitle = ({ icon, label }: { icon: React.ReactNode; label: string })
 // ─── Composant principal ──────────────────────────────────────────────────────
 const ModalPreferencesClient = ({ isOpen, onClose, prestationId }: Props) => {
   const p = STATIC_PREFERENCES;
+
+  useEscapeKey(isOpen, onClose);
 
   if (!isOpen) return null;
 

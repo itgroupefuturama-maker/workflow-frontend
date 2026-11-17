@@ -1,5 +1,6 @@
 import type { ClientBeneficiaireInfo } from "../../app/portail_client/clientBeneficiaireInfosSlice";
 import { FiX, FiUser, FiFileText, FiPhone } from 'react-icons/fi';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface Props {
   isOpen: boolean;
@@ -18,6 +19,7 @@ const BeneficiaireInfosModal: React.FC<Props> = ({
   loading = false,
   error = null,
 }) => {
+  useEscapeKey(isOpen, onClose);
   if (!isOpen) return null;
 
   return (

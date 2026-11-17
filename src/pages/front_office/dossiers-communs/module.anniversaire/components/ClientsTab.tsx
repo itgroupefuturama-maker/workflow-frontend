@@ -1,4 +1,4 @@
-import { EyeIcon, RotateCcwIcon, SearchIcon, MessageSquareIcon, CheckSquareIcon, XIcon, SendIcon } from 'lucide-react';
+import { AlertTriangle, CheckSquareIcon, EyeIcon, MessageSquareIcon, RotateCcwIcon, SearchIcon, SendIcon, XIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AnnivClient } from '../types';
@@ -70,7 +70,7 @@ const ModalConfirmGroupSms = ({
           <span className="font-black text-indigo-600">{count} client{count > 1 ? 's' : ''}</span>.
         </p>
         <div className="flex items-start gap-2 px-3 py-2.5 bg-amber-50 border border-amber-100 rounded-xl">
-          <span className="text-amber-500 text-xs mt-0.5">⚠️</span>
+          <AlertTriangle size={14} aria-hidden="true" className="text-amber-500 text-xs mt-0.5 shrink-0" />
           <p className="text-xs text-amber-700 font-medium">
             Cette action est irréversible. Les SMS seront envoyés immédiatement.
           </p>

@@ -5,6 +5,7 @@ import { updateClientForm } from "../../../../../app/portail_client/clientFormSl
 import type { ClientFormPayload, ClientBeneficiaireForm } from "../../../../../app/portail_client/clientFormSlice";
 import { X, Loader2, ChevronRight, ChevronLeft, CheckCircle } from "lucide-react";
 import { useParams } from "react-router-dom";
+import { useEscapeKey } from '../../../../../hooks/useEscapeKey';
 
 // ── Réutilise exactement les mêmes SECTIONS que AddBeneficiaireModal ──
 const SECTIONS = [
@@ -106,6 +107,7 @@ interface Props {
 }
 
 const EditBeneficiaireModal = ({ beneficiaire, onClose }: Props) => {
+  useEscapeKey(true, onClose);
   const dispatch = useDispatch<AppDispatch>();
   const { userId } = useParams<{ userId: string }>();
   const { loading, error } = useSelector((state: RootState) => state.user);

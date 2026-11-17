@@ -9,6 +9,7 @@ import type { RootState, AppDispatch } from '../../app/store';
 import type { Profil } from '../../app/back_office/profilesSlice';
 import { FiPlus, FiX, FiCheckCircle, FiAlertCircle, FiLoader, FiShield, FiArrowLeft } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
+import { formatStatut } from '../../utils/statut';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -205,7 +206,7 @@ const ProfilPage = () => {
                         : 'bg-red-50 text-red-600 border border-red-100'
                     }`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${prof.status === 'ACTIF' ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                      {prof.status}
+                      {formatStatut(prof.status)}
                     </span>
                   </td>
 

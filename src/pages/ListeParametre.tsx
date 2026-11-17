@@ -1,23 +1,23 @@
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchPrivileges }           from '../app/back_office/privilegesSlice';
-import { fetchProfiles }             from '../app/back_office/profilesSlice';
-import { fetchAutorisations }        from '../app/back_office/autorisationsSlice';
-import { fetchUsers }                from '../app/back_office/usersSlice';
-import { fetchTransactionTypes }     from '../app/back_office/transactionTypesSlice';
-import { fetchTransactions }         from '../app/back_office/transactionsSlice';
-import { fetchModules }              from '../app/back_office/modulesSlice';
-import { fetchModeles }              from '../app/back_office/modelesSlice';
-import { fetchCommissions }          from '../app/back_office/commissionsSlice';
-import { fetchDossiers }             from '../app/back_office/numerotationSlice';
-import { fetchMiles }                from '../app/back_office/milesSlice';
-import { fetchPieces }               from '../app/back_office/piecesSlice';
-import { fetchClientBeneficiaires }  from '../app/back_office/clientBeneficiairesSlice';
-import { fetchDevisTransactions }    from '../app/back_office/devisTransactionsSlice';
-import { fetchClientFactures }       from '../app/back_office/clientFacturesSlice';
-import { fetchArticles }             from '../app/back_office/articlesSlice';
-import { fetchFournisseurs }         from '../app/back_office/fournisseursSlice';
-import { PARAMETRES_CATEGORIES }     from '../constants/parametres';
+import { fetchPrivileges } from '../app/back_office/privilegesSlice';
+import { fetchProfiles } from '../app/back_office/profilesSlice';
+import { fetchAutorisations } from '../app/back_office/autorisationsSlice';
+import { fetchUsers } from '../app/back_office/usersSlice';
+import { fetchTransactionTypes } from '../app/back_office/transactionTypesSlice';
+import { fetchTransactions } from '../app/back_office/transactionsSlice';
+import { fetchModules } from '../app/back_office/modulesSlice';
+import { fetchModeles } from '../app/back_office/modelesSlice';
+import { fetchCommissions } from '../app/back_office/commissionsSlice';
+import { fetchDossiers } from '../app/back_office/numerotationSlice';
+import { fetchMiles } from '../app/back_office/milesSlice';
+import { fetchPieces } from '../app/back_office/piecesSlice';
+import { fetchClientBeneficiaires } from '../app/back_office/clientBeneficiairesSlice';
+import { fetchDevisTransactions } from '../app/back_office/devisTransactionsSlice';
+import { fetchClientFactures } from '../app/back_office/clientFacturesSlice';
+import { fetchArticles } from '../app/back_office/articlesSlice';
+import { fetchFournisseurs } from '../app/back_office/fournisseursSlice';
+import { PARAMETRES_CATEGORIES } from '../constants/parametres';
 import type { RootState, AppDispatch } from '../app/store';
 import { FiRefreshCw, FiChevronRight, FiActivity } from 'react-icons/fi';
 
@@ -26,23 +26,23 @@ const useAppDispatch = () => useDispatch<AppDispatch>();
 function ListeParametre() {
   const dispatch = useAppDispatch();
 
-  const { loading: privilegesLoading }          = useSelector((s: RootState) => s.privileges);
-  const { loading: profilesLoading }            = useSelector((s: RootState) => s.profiles);
-  const { loading: autorisationsLoading }       = useSelector((s: RootState) => s.autorisations);
-  const { loading: usersLoading }               = useSelector((s: RootState) => s.users);
-  const { loading: transactionTypesLoading }    = useSelector((s: RootState) => s.transactionTypes);
-  const { loading: transactionsLoading }        = useSelector((s: RootState) => s.transactions);
-  const { loading: modulesLoading }             = useSelector((s: RootState) => s.modules);
-  const { loading: modelesLoading }             = useSelector((s: RootState) => s.modeles);
-  const { loading: commissionLoading }          = useSelector((s: RootState) => s.commissions);
-  const { loading: numerotationLoading }        = useSelector((s: RootState) => s.numerotation);
-  const { loading: milesLoading }               = useSelector((s: RootState) => s.miles);
-  const { loading: piecesLoading }              = useSelector((s: RootState) => s.pieces);
+  const { loading: privilegesLoading } = useSelector((s: RootState) => s.privileges);
+  const { loading: profilesLoading } = useSelector((s: RootState) => s.profiles);
+  const { loading: autorisationsLoading } = useSelector((s: RootState) => s.autorisations);
+  const { loading: usersLoading } = useSelector((s: RootState) => s.users);
+  const { loading: transactionTypesLoading } = useSelector((s: RootState) => s.transactionTypes);
+  const { loading: transactionsLoading } = useSelector((s: RootState) => s.transactions);
+  const { loading: modulesLoading } = useSelector((s: RootState) => s.modules);
+  const { loading: modelesLoading } = useSelector((s: RootState) => s.modeles);
+  const { loading: commissionLoading } = useSelector((s: RootState) => s.commissions);
+  const { loading: numerotationLoading } = useSelector((s: RootState) => s.numerotation);
+  const { loading: milesLoading } = useSelector((s: RootState) => s.miles);
+  const { loading: piecesLoading } = useSelector((s: RootState) => s.pieces);
   const { loading: clientBeneficiairesLoading } = useSelector((s: RootState) => s.clientBeneficiaires);
-  const { loading: devisTransactionsLoading }   = useSelector((s: RootState) => s.devisTransactions);
-  const { loading: clientFacturesLoading }      = useSelector((s: RootState) => s.clientFactures);
-  const { loading: articlesLoading }            = useSelector((s: RootState) => s.articles);
-  const { loading: fournisseursLoading }        = useSelector((s: RootState) => s.fournisseurs);
+  const { loading: devisTransactionsLoading } = useSelector((s: RootState) => s.devisTransactions);
+  const { loading: clientFacturesLoading } = useSelector((s: RootState) => s.clientFactures);
+  const { loading: articlesLoading } = useSelector((s: RootState) => s.articles);
+  const { loading: fournisseursLoading } = useSelector((s: RootState) => s.fournisseurs);
 
   const anyLoading =
     privilegesLoading || profilesLoading || autorisationsLoading || usersLoading ||
@@ -71,90 +71,129 @@ function ListeParametre() {
     dispatch(fetchFournisseurs());
   };
 
+  const totalItems = PARAMETRES_CATEGORIES.reduce(
+    (total, category) => total + category.items.length,
+    0
+  );
+
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8 max-w-[1600px] mx-auto animate-in fade-in duration-500">
+    <main className="min-h-screen bg-slate-50 text-slate-900">
+      <div className="mx-auto max-w-[1600px] px-4 py-5 sm:px-6 lg:px-8">
 
-      {/* ── Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-6 mb-8 sm:mb-10">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
-            <FiActivity className="text-indigo-600 shrink-0" />
-            Console d'Administration
-          </h1>
-          <p className="text-gray-500 mt-1 font-medium text-sm sm:text-base">
-            Configurez les fondations techniques de votre plateforme.
-          </p>
-        </div>
-        <button
-          onClick={handleRefreshAll}
-          disabled={anyLoading}
-          className="flex items-center gap-2 bg-white border border-gray-200 text-gray-600 px-5 py-2.5 rounded-xl font-bold shadow-sm hover:bg-gray-50 hover:text-indigo-600 transition-all active:scale-95 disabled:opacity-50 self-start sm:self-auto shrink-0"
-        >
-          <FiRefreshCw className={anyLoading ? 'animate-spin' : ''} />
-          {anyLoading ? 'Mise à jour...' : 'Actualiser les données'}
-        </button>
-      </div>
-
-      {/* ── Catégories ── */}
-      <div className="space-y-10">
-        {PARAMETRES_CATEGORIES.map((category) => (
-          <div key={category.key}>
-
-            {/* En-tête de catégorie */}
-            <div className="flex items-start gap-3 mb-4 pb-3 border-b border-gray-100">
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${category.iconBg}`}>
-                <span className={`text-base ${category.iconColor}`}>
-                  ▪
-                </span>
-              </div>
-              <div>
-                <h2 className="text-sm font-semibold text-gray-800 mb-0.5">{category.label}</h2>
-                <p className="text-xs text-gray-400">{category.desc}</p>
-              </div>
+        {/* En-tête compact */}
+        <header className="mb-6 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white">
+              <FiActivity size={19} />
             </div>
 
-            {/* Grille */}
-            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-              {category.items.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.path}
-                    to={`/parametre/${item.path}`}
-                    className="group relative bg-white border border-gray-100 p-4 sm:p-5 lg:p-6 rounded-2xl shadow-sm hover:shadow-xl hover:shadow-indigo-500/10 hover:-translate-y-1 transition-all duration-300 overflow-hidden"
-                  >
-                    {/* Icône */}
-                    <div className="flex items-start justify-between mb-3 sm:mb-4">
-                      <div className={`p-2 sm:p-3 rounded-xl ${category.iconBg} ${category.iconColor} group-hover:bg-indigo-600 group-hover:text-white transition-colors duration-300`}>
-                        <Icon size={20} className="sm:hidden" />
-                        <Icon size={28} className="hidden sm:block" />
-                      </div>
-                    </div>
-
-                    {/* Label */}
-                    <div className="mt-3 sm:mt-6">
-                      <h3 className="text-sm sm:text-lg font-bold text-gray-800 group-hover:text-indigo-700 leading-snug">
-                        {item.label}
-                      </h3>
-                      <div className="hidden sm:flex items-center gap-1 text-sm text-gray-400 mt-1 font-medium">
-                        Gérer les configurations
-                        <FiChevronRight className="group-hover:translate-x-1 transition-transform" />
-                      </div>
-                      <p className="flex sm:hidden items-center gap-0.5 text-xs text-gray-400 mt-0.5 font-medium">
-                        Gérer <FiChevronRight size={11} className="group-hover:translate-x-0.5 transition-transform" />
-                      </p>
-                    </div>
-
-                    {/* Barre décorative */}
-                    <div className="absolute bottom-0 left-0 h-1 bg-indigo-600 rounded-b-2xl transition-all duration-500 w-0 group-hover:w-full opacity-50" />
-                  </Link>
-                );
-              })}
+            <div className="min-w-0">
+              <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+                Console d'administration
+              </h1>
+              <p className="mt-0.5 text-xs text-slate-500 sm:text-sm">
+                Gérez les accès, les transactions et les configurations.
+              </p>
             </div>
           </div>
-        ))}
+
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="hidden rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 sm:inline-flex">
+              {totalItems} configurations
+            </span>
+
+            <button
+              type="button"
+              onClick={handleRefreshAll}
+              disabled={Boolean(anyLoading)}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition-colors hover:border-slate-300 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4"
+            >
+              <FiRefreshCw
+                size={15}
+                className={anyLoading ? 'animate-spin' : ''}
+              />
+              <span>{anyLoading ? 'Actualisation...' : 'Actualiser'}</span>
+            </button>
+          </div>
+        </header>
+
+        {/* Catégories de paramètres */}
+        <div className="space-y-6">
+          {PARAMETRES_CATEGORIES.map((category) => (
+            <section key={category.key}>
+              {/* Titre de catégorie */}
+              <div className="mb-3 flex items-center gap-2.5">
+                <div
+                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${category.iconBg}`}
+                >
+                  <span
+                    className={`h-2.5 w-2.5 rounded-full ${category.iconColor.replace(
+                      'text-',
+                      'bg-'
+                    )}`}
+                  />
+                </div>
+
+                <div className="min-w-0">
+                  <h2 className="text-sm font-bold text-slate-800">
+                    {category.label}
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    {category.desc}
+                  </p>
+                </div>
+
+                <span className="ml-auto shrink-0 rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-500">
+                  {category.items.length}
+                </span>
+              </div>
+
+              {/* Grille compacte */}
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
+                {category.items.map((item) => {
+                  const Icon = item.icon;
+
+                  return (
+                    <Link
+                      key={item.path}
+                      to={`/parametre/${item.path}`}
+                      className="group flex min-h-[68px] min-w-0 items-center gap-2.5 rounded-xl border border-slate-200 bg-white px-3 py-3 transition-colors hover:border-indigo-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2 sm:gap-3 sm:px-3.5"
+                    >
+                      <div
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${category.iconBg} ${category.iconColor} transition-colors group-hover:bg-indigo-600 group-hover:text-white`}
+                      >
+                        <Icon size={17} />
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <h3 className="line-clamp-2 text-xs font-semibold leading-4 text-slate-800 group-hover:text-indigo-700 sm:text-sm">
+                          {item.label}
+                        </h3>
+                        <p className="mt-1 text-[11px] text-slate-400">
+                          Configurer
+                        </p>
+                      </div>
+
+                      <FiChevronRight
+                        size={15}
+                        className="shrink-0 text-slate-100 transition-transform group-hover:translate-x-0.5 group-hover:text-indigo-600"
+                      />
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+          ))}
+        </div>
+
+        {/* Pied de page */}
+        <footer className="mt-7 border-t border-slate-200 pt-4 text-center">
+          <p className="text-xs text-slate-400">
+            Copyright © {new Date().getFullYear()} ABT IT Développement
+          </p>
+        </footer>
       </div>
-    </div>
+    </main>
   );
 }
 

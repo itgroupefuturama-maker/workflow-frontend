@@ -1,6 +1,7 @@
 import { XIcon } from 'lucide-react';
 import React, { useState } from 'react';
 import type { MessageParamPayload } from '../types';
+import { useEscapeKey } from '../../../../../hooks/useEscapeKey';
 
 const inputCls = 'w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-yellow-400';
 
@@ -11,6 +12,7 @@ interface Props {
 }
 
 const MessageParamModal = ({ initial, onClose, onSave }: Props) => {
+  useEscapeKey(true, onClose);
   const [form, setForm] = useState<MessageParamPayload>({
     messageAnnif:  initial?.messageAnnif  ?? '',
     messageCadeau: initial?.messageCadeau ?? '',

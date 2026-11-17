@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../app/store';
 import { createRaisonAnnulation } from '../../app/front_office/parametre_ticketing/raisonAnnulationSlice';
 import { toast } from '../Toast/toast';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface Props {
   isOpen: boolean;
@@ -38,6 +39,8 @@ export default function RaisonAnnulationModal({ isOpen, onClose }: Props) {
       // l'erreur est déjà gérée dans le slice (createError)
     }
   };
+
+  useEscapeKey(isOpen, onClose);
 
   if (!isOpen) return null;
 

@@ -1,48 +1,191 @@
-import { FiArrowLeft, FiPlus, FiCheck, FiTrash2, FiChevronDown, FiX } from "react-icons/fi";
+import { FiArrowLeft, FiCheck, FiChevronDown, FiSearch, FiX } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import type { FormEvent, ReactNode } from "react";
 import type { RootState, AppDispatch } from "../../../../app/store";
 import { createDossierCommun, resetCreateStatus } from "../../../../app/front_office/dossierCommunSlice";
 import axiosInstance from "../../../../service/Axios";
+import type { ModuleAttribution, UserAttribution } from "../../../../app/back_office/profilesSlice";
+import Button from "../../../../components/ui/Button";
+import Card from "../../../../components/ui/Card";
+import { toast } from "../../../../components/Toast/toast";
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
-// SectionHeader (inchangé)
-interface SectionHeaderProps {
-  num: number;
+const inputClass =
+  "w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition";
+
+/* ---------- Petits composants de mise en page ---------- */
+
+const FormSection = ({
+  title,
+  description,
+  children,
+}: {
   title: string;
-  isComplete: boolean;
-  isExpanded: boolean;
-  onToggle: () => void;
+  description: string;
+  children: ReactNode;
+}) => (
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8 px-6 py-6 border-b border-slate-100 last:border-b-0">
+    <div>
+      <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
+      <p className="mt-1 text-xs text-slate-500 leading-relaxed">{description}</p>
+    </div>
+    <div className="md:col-span-2">{children}</div>
+  </div>
+);
+
+const Field = ({
+  label,
+  required,
+  htmlFor,
+  children,
+}: {
+  label: string;
+  required?: boolean;
+  htmlFor?: string;
+  children: ReactNode;
+}) => (
+  <div>
+    <label htmlFor={htmlFor} className="block text-sm font-medium text-slate-700 mb-1.5">
+      {label}
+      {required && <span className="text-red-500 ml-0.5">*</span>}
+    </label>
+    {children}
+  </div>
+);
+
+/* ---------- Sélecteur de client facturé avec recherche ---------- */
+
+interface ClientOption {
+  id: string;
+  code: string;
+  libelle: string;
+  statut?: string;
 }
 
-const SectionHeader = ({ num, title, isComplete, isExpanded, onToggle }: SectionHeaderProps) => (
-  <button
-    onClick={onToggle}
-    className={`w-full flex items-center justify-between p-4 transition-all border-b border-slate-100 ${
-      isExpanded ? "bg-white shadow-sm" : "bg-gray-50 hover:bg-gray-100"
-    }`}
-  >
-    <div className="flex items-center gap-3">
-      <span
-        className={`w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
-          isComplete 
-            ? "bg-green-600 text-white" 
-            : isExpanded ? "bg-blue-600 text-white" : "bg-gray-300 text-gray-600"
-        }`}
+const ClientSelect = ({
+  clients,
+  value,
+  onChange,
+}: {
+  clients: ClientOption[];
+  value: string | null;
+  onChange: (id: string | null) => void;
+}) => {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+
+  const selected = clients.find((c) => c.id === value) ?? null;
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return clients;
+    return clients.filter(
+      (c) => c.libelle?.toLowerCase().includes(q) || c.code?.toLowerCase().includes(q)
+    );
+  }, [clients, query]);
+
+  useEffect(() => {
+    const onClickOutside = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        id="client-facture"
+        onClick={() => setOpen((o) => !o)}
+        className={`${inputClass} flex items-center justify-between text-left`}
       >
-        {isComplete ? <FiCheck size={14} /> : num}
-      </span>
-      <span className={`font-semibold ${isExpanded ? "text-blue-700" : "text-gray-800"}`}>
-        {title}
-      </span>
+        {selected ? (
+          <span className="flex items-center gap-2 min-w-0">
+            <span className="font-medium truncate">{selected.libelle}</span>
+            {selected.code && <span className="text-xs text-slate-400 shrink-0">{selected.code}</span>}
+          </span>
+        ) : (
+          <span className="text-slate-400">Sélectionner un client facturé…</span>
+        )}
+        <span className="flex items-center gap-1 shrink-0 ml-2">
+          {selected && (
+            <span
+              role="button"
+              tabIndex={-1}
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange(null);
+              }}
+              className="p-0.5 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100"
+              aria-label="Effacer"
+            >
+              <FiX size={14} />
+            </span>
+          )}
+          <FiChevronDown className={`text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} />
+        </span>
+      </button>
+
+      {open && (
+        <div className="absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg overflow-hidden">
+          <div className="p-2 border-b border-slate-100">
+            <div className="relative">
+              <FiSearch className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+              <input
+                autoFocus
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Rechercher par nom ou code…"
+                className="w-full pl-8 pr-3 py-1.5 text-sm border border-slate-200 rounded-md focus:outline-none focus:border-indigo-500"
+              />
+            </div>
+          </div>
+          <ul className="max-h-64 overflow-y-auto py-1">
+            {filtered.length === 0 && (
+              <li className="px-3 py-3 text-sm text-slate-400 text-center">Aucun client trouvé</li>
+            )}
+            {filtered.map((c) => {
+              const isSelected = c.id === value;
+              return (
+                <li key={c.id}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onChange(c.id);
+                      setOpen(false);
+                      setQuery("");
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2 text-sm text-left transition-colors ${
+                      isSelected ? "bg-indigo-50 text-indigo-700" : "text-slate-700 hover:bg-slate-50"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2 min-w-0">
+                      <span className="font-medium truncate">{c.libelle}</span>
+                      {c.code && <span className="text-xs text-slate-400 shrink-0">{c.code}</span>}
+                      {c.statut === "INACTIF" && (
+                        <span className="text-[10px] uppercase font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
+                          Inactif
+                        </span>
+                      )}
+                    </span>
+                    {isSelected && <FiCheck size={14} className="shrink-0" />}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
     </div>
-    <FiChevronDown 
-      className={`transition-transform duration-300 ${isExpanded ? "rotate-180 text-blue-600" : "text-gray-400"}`} 
-    />
-  </button>
-);
+  );
+};
+
+/* ---------- Page ---------- */
 
 export default function DossierCommunForm() {
   const navigate = useNavigate();
@@ -50,418 +193,286 @@ export default function DossierCommunForm() {
 
   const { data: profiles } = useSelector((state: RootState) => state.profiles);
   const { data: clients } = useSelector((state: RootState) => state.clientFactures);
-  const { loading: loadingCreate, createSuccess, createError, data: dossiers } = useSelector(
-    (state: RootState) => state.dossierCommun
-  );
+  const { creating } = useSelector((state: RootState) => state.dossierCommun);
 
-  // États
-  const [selectedClientFactureId, setSelectedClientFactureId] = useState<string | null>(null);
-  const [selectedClientFactureLibelle, setSelectedClientFactureLibelle] = useState("");
-  const [selectedColabs, setSelectedColabs] = useState<{ userId: string; moduleId: string }[]>([]);
+  const [clientFactureId, setClientFactureId] = useState<string | null>(null);
   const [referenceTravelPlaner, setReferenceTravelPlaner] = useState("");
   const [description, setDescription] = useState("");
   const [contactPrincipal, setContactPrincipal] = useState("");
   const [whatsapp, setWhatsapp] = useState("");
-  const [expandedSections, setExpandedSections] = useState<number[]>([0]);
+  const [colabs, setColabs] = useState<Record<string, string>>({}); // moduleId -> userId
+  // Suggestions (moduleId -> userId) mémorisées pour le client qui les a produites
+  const [suggestionState, setSuggestionState] = useState<{ clientId: string; map: Record<string, string> } | null>(
+    null
+  );
+  const suggestions: Record<string, string> =
+    suggestionState && suggestionState.clientId === clientFactureId ? suggestionState.map : {};
+  const [submitted, setSubmitted] = useState(false);
 
-  // Suggestions automatiques des collaborateurs
-  const [suggestedCollaborators, setSuggestedCollaborators] = useState<Record<string, string>>({});
-
-  // Notification
-  const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
-
-  // Reset au montage
   useEffect(() => {
     dispatch(resetCreateStatus());
   }, [dispatch]);
 
-
-  // Redirection après succès
-  useEffect(() => {
-    if (createSuccess && dossiers?.length > 0) {
-      const nouveauDossier = dossiers[0];
-      if (nouveauDossier?.numero) {
-        setNotification({
-          type: "success",
-          message: "Dossier commun créé avec succès ! Redirection...",
-        });
-
-        const timer = setTimeout(() => {
-          navigate(`/dossiers-communs`);
-          dispatch(resetCreateStatus());
-        }, 2500);
-
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [createSuccess, dossiers, navigate, dispatch]);
-
-  // Gestion erreurs
-  useEffect(() => {
-    if (createError) {
-      setNotification({ type: "error", message: `Erreur : ${createError}` });
-    }
-  }, [createError]);
-
-  // Fermeture auto notification
-  useEffect(() => {
-    if (notification) {
-      const timer = setTimeout(() => setNotification(null), 5000);
-      return () => clearTimeout(timer);
-    }
-  }, [notification]);
-
-  // Récupérer les modules et leurs utilisateurs
-  const getModulesWithUsers = () => {
-    const modulesMap = new Map<string, { module: any; users: Map<string, any> }>();
+  // Modules disponibles et leurs utilisateurs (dérivés des profils)
+  const modules = useMemo(() => {
+    const map = new Map<
+      string,
+      { module: ModuleAttribution["module"]; users: Map<string, UserAttribution["user"]> }
+    >();
     profiles.forEach((prof) => {
       prof.modules?.forEach((m) => {
-        if (!modulesMap.has(m.module.id)) {
-          modulesMap.set(m.module.id, { module: m.module, users: new Map() });
-        }
-        prof.users?.forEach((u) => {
-          modulesMap.get(m.module.id)!.users.set(u.user.id, u.user);
-        });
+        if (m.module?.status?.toUpperCase() !== "ACTIF") return; // modules inactifs masqués
+        if (!map.has(m.module.id)) map.set(m.module.id, { module: m.module, users: new Map() });
+        prof.users?.forEach((u) => map.get(m.module.id)!.users.set(u.user.id, u.user));
       });
     });
-
-    return Array.from(modulesMap.entries()).map(([id, data]) => ({
+    return Array.from(map.entries()).map(([id, d]) => ({
       id,
-      module: data.module,
-      users: Array.from(data.users.entries()).map(([userId, user]) => ({ userId, ...user })),
+      module: d.module,
+      users: Array.from(d.users.entries()).map(([userId, user]) => ({ userId, ...user })),
     }));
+  }, [profiles]);
+
+  // Suggestions de responsables selon le client facturé
+  useEffect(() => {
+    if (!clientFactureId) return;
+
+    let cancelled = false;
+    Promise.all(
+      modules.map(async ({ id: moduleId }) => {
+        try {
+          const res = await axiosInstance.get(`/prestations/${moduleId}/clientFact/${clientFactureId}`);
+          const colabId = res.data?.success ? res.data.data?.collaboratorId : null;
+          return colabId ? ([moduleId, colabId] as const) : null;
+        } catch {
+          return null;
+        }
+      })
+    ).then((results) => {
+      if (cancelled) return;
+      const next: Record<string, string> = {};
+      results.forEach((r) => {
+        if (r) next[r[0]] = r[1];
+      });
+      setSuggestionState({ clientId: clientFactureId, map: next });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [clientFactureId, modules]);
+
+  const toggleModule = (moduleId: string, users: { userId: string }[]) => {
+    setColabs((prev) => {
+      if (moduleId in prev) {
+        const rest = { ...prev };
+        delete rest[moduleId];
+        return rest;
+      }
+      const suggested = suggestions[moduleId];
+      const defaultUser =
+        suggested && users.some((u) => u.userId === suggested) ? suggested : users[0]?.userId ?? "";
+      return { ...prev, [moduleId]: defaultUser };
+    });
   };
 
-  // Charger les suggestions de collaborateurs quand le client facturé change
-  useEffect(() => {
-    setSuggestedCollaborators({});
+  const activeCount = Object.keys(colabs).length;
+  const missingResponsable = Object.values(colabs).some((u) => !u);
+  const clientError = submitted && !clientFactureId;
 
-    if (!selectedClientFactureId) {
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setSubmitted(true);
+
+    if (!clientFactureId) {
+      toast.error("Veuillez sélectionner un client facturé.");
+      return;
+    }
+    if (missingResponsable) {
+      toast.error("Chaque module activé doit avoir un responsable.");
       return;
     }
 
-    const fetchSuggestions = async () => {
-      const modules = getModulesWithUsers();
-
-      const suggestions: Record<string, string> = {};
-
-      for (const { id: moduleId } of modules) {
-        try {
-          const response = await axiosInstance.get(
-            `/prestations/${moduleId}/clientFact/${selectedClientFactureId}`
-          );
-
-          if (response.data.success && response.data.data?.collaboratorId) {
-            suggestions[moduleId] = response.data.data.collaboratorId;
-          }
-        } catch (err: any) {
-          console.error(`Erreur API module ${moduleId} :`, err?.response?.data || err.message);
-        }
-      }
-
-      setSuggestedCollaborators(suggestions);
-    };
-
-    fetchSuggestions();
-  }, [selectedClientFactureId, profiles]);
-
-
-  const toggleSection = (sectionNum: number) => {
-    setExpandedSections((prev) =>
-      prev.includes(sectionNum) ? prev.filter((id) => id !== sectionNum) : [...prev, sectionNum]
-    );
-  };
-
-  const handleSelectClientFacture = (id: string, libelle: string) => {
-    setSelectedClientFactureId(id);
-    setSelectedClientFactureLibelle(libelle);
-  };
-
-  const handlePreview = () => {
-    if (!selectedClientFactureId) {
-      return setNotification({ type: "error", message: "Veuillez sélectionner un Client Facturé" });
+    try {
+      await dispatch(
+        createDossierCommun({
+          referenceTravelPlaner: referenceTravelPlaner.trim() || undefined,
+          description: description.trim() || undefined,
+          contactPrincipal: contactPrincipal.trim() || undefined,
+          whatsapp: whatsapp.trim() || undefined,
+          clientFactureId,
+          colabs: Object.entries(colabs).map(([moduleId, userId]) => ({ moduleId, userId })),
+        })
+      ).unwrap();
+      toast.success("Le dossier commun a été créé.");
+      dispatch(resetCreateStatus());
+      navigate("/dossiers-communs");
+    } catch (err: unknown) {
+      toast.error(typeof err === "string" ? err : "Impossible de créer le dossier.");
     }
-
-    const payload = {
-      referenceTravelPlaner: referenceTravelPlaner || undefined,
-      description: description || undefined,
-      contactPrincipal: contactPrincipal || undefined,
-      whatsapp: whatsapp || undefined,
-      clientFactureId: selectedClientFactureId,
-      colabs: selectedColabs,
-    };
-
-    dispatch(createDossierCommun(payload));
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 py-8 px-4">
-      <div className="max-w-5xl mx-auto">
-        {/* Notification */}
-        {notification && (
-          <div
-            className={`fixed top-4 right-4 z-50 flex items-center gap-3 px-6 py-4 rounded-xl shadow-2xl text-white font-bold animate-in slide-in-from-top duration-500 ${
-              notification.type === "success" ? "bg-emerald-600" : "bg-red-600"
-            }`}
-          >
-            {notification.type === "success" ? <FiCheck size={20} /> : <FiX size={20} />}
-            <span>{notification.message}</span>
-            <button onClick={() => setNotification(null)} className="ml-4 hover:opacity-70">
-              <FiX size={18} />
-            </button>
-          </div>
-        )}
-
-        {/* Header */}
+    <div className="min-h-screen bg-slate-50 py-8 px-4">
+      <form onSubmit={handleSubmit} className="max-w-4xl mx-auto">
+        {/* En-tête */}
         <div className="mb-6">
           <button
+            type="button"
             onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm mb-4"
+            className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 mb-3"
           >
-            <FiArrowLeft size={16} /> Retour
+            <FiArrowLeft size={14} /> Retour
           </button>
-          <h1 className="text-2xl font-bold text-gray-900">Nouveau Dossier Commun</h1>
-          <p className="text-gray-500 text-sm mt-1">Remplissez les informations pour créer un nouveau dossier</p>
+          <h1 className="text-2xl font-semibold text-slate-900">Nouveau dossier commun</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Les champs marqués d'un <span className="text-red-500">*</span> sont obligatoires.
+          </p>
         </div>
 
-        {/* Informations générales */}
-        <div className="bg-white rounded-lg shadow-sm mb-4 overflow-hidden">
-          <SectionHeader
-            num={0}
+        <Card>
+          {/* Client */}
+          <FormSection
+            title="Client facturé"
+            description="Le client à qui seront facturées les prestations de ce dossier."
+          >
+            <Field label="Client facturé" required htmlFor="client-facture">
+              <div className={clientError ? "[&>div>button]:border-red-400" : ""}>
+                <ClientSelect clients={clients} value={clientFactureId} onChange={setClientFactureId} />
+              </div>
+              {clientError && <p className="mt-1.5 text-xs text-red-600">Ce champ est obligatoire.</p>}
+            </Field>
+          </FormSection>
+
+          {/* Informations */}
+          <FormSection
             title="Informations générales"
-            isComplete={!!referenceTravelPlaner || !!description}
-            isExpanded={expandedSections.includes(0)}
-            onToggle={() => toggleSection(0)}
-          />
-          {expandedSections.includes(0) && (
-            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-500 uppercase mb-1">
-                  Référence Travel Planner
-                </label>
+            description="Référence, objet du dossier et coordonnées du contact côté client."
+          >
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="Référence Travel Planner" htmlFor="ref-tp">
                 <input
-                  type="text"
+                  id="ref-tp"
                   value={referenceTravelPlaner}
                   onChange={(e) => setReferenceTravelPlaner(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  className={inputClass}
                   placeholder="REF-2026-001"
                 />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 uppercase mb-1">Description</label>
+              </Field>
+              <Field label="Contact principal" htmlFor="contact">
                 <input
-                  type="text"
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                  placeholder="Import/Export, Voyage groupe..."
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 uppercase mb-1">
-                  Contact Principal
-                </label>
-                <input
-                  type="text"
+                  id="contact"
                   value={contactPrincipal}
                   onChange={(e) => setContactPrincipal(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  className={inputClass}
+                  placeholder="Nom du contact"
                 />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 uppercase mb-1">WhatsApp</label>
+              </Field>
+              <Field label="WhatsApp" htmlFor="whatsapp">
                 <input
+                  id="whatsapp"
                   type="tel"
                   value={whatsapp}
                   onChange={(e) => setWhatsapp(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  className={inputClass}
                   placeholder="+261 34 00 000 00"
                 />
+              </Field>
+              <div className="sm:col-span-2">
+                <Field label="Description" htmlFor="description">
+                  <textarea
+                    id="description"
+                    rows={3}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className={`${inputClass} resize-none`}
+                    placeholder="Voyage de groupe, séminaire, import/export…"
+                  />
+                </Field>
               </div>
             </div>
-          )}
-        </div>
+          </FormSection>
 
-        {/* Client Facturé */}
-        <div className="bg-white rounded-lg shadow-sm mb-4 overflow-hidden">
-          <SectionHeader
-            num={1}
-            title="Client Facturé"
-            isComplete={!!selectedClientFactureId}
-            isExpanded={expandedSections.includes(1)}
-            onToggle={() => toggleSection(1)}
-          />
-          {expandedSections.includes(1) && (
-            <div className="p-4">
-              <table className="w-full">
-                <thead>
-                  <tr className="text-left text-xs font-medium text-gray-500 uppercase border-b">
-                    <th className="pb-3 pl-4">Sélection</th>
-                    <th className="pb-3">Libellé</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {clients.map((client) => (
-                    <tr
-                      key={client.id}
-                      onClick={() => handleSelectClientFacture(client.id, client.libelle)}
-                      className={`cursor-pointer transition-colors ${
-                        selectedClientFactureId === client.id ? "bg-blue-50" : "hover:bg-gray-50"
+          {/* Modules */}
+          <FormSection
+            title="Modules et responsables"
+            description="Activez les prestations concernées et désignez un responsable pour chacune. Un responsable habituel est suggéré selon le client."
+          >
+            {modules.length === 0 ? (
+              <p className="text-sm text-slate-400">Aucun module disponible.</p>
+            ) : (
+              <div className="border border-slate-200 rounded-lg divide-y divide-slate-100">
+                {modules.map(({ id: moduleId, module, users }) => {
+                  const active = moduleId in colabs;
+                  const userId = colabs[moduleId] ?? "";
+                  const suggested = suggestions[moduleId];
+                  return (
+                    <div
+                      key={moduleId}
+                      className={`flex flex-col sm:flex-row sm:items-center gap-3 px-4 py-3 transition-colors ${
+                        active ? "bg-indigo-50/40" : ""
                       }`}
                     >
-                      <td className="py-3 pl-4">
+                      <label className="flex items-center gap-3 sm:w-48 shrink-0 cursor-pointer select-none">
                         <input
-                          type="radio"
-                          checked={selectedClientFactureId === client.id}
-                          onChange={() => handleSelectClientFacture(client.id, client.libelle)}
-                          className="w-4 h-4 text-blue-600"
+                          type="checkbox"
+                          checked={active}
+                          onChange={() => toggleModule(moduleId, users)}
+                          className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
                         />
-                      </td>
-                      <td className="py-3 font-medium text-gray-900">{client.libelle}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+                        <span className={`text-sm font-medium ${active ? "text-slate-900" : "text-slate-600"}`}>
+                          {module.nom}
+                        </span>
+                      </label>
 
-        {/* Attribution Modules avec suggestion auto */}
-        <div className="bg-white rounded-lg shadow-sm mb-4 overflow-hidden">
-          <SectionHeader
-            num={2}
-            title={`Attribution des modules (${selectedColabs.length})`}
-            isComplete={selectedColabs.length > 0}
-            isExpanded={expandedSections.includes(2)}
-            onToggle={() => toggleSection(2)}
-          />
-          {expandedSections.includes(2) && (
-            <div className="p-4">
-              <table className="w-full">
-                <thead>
-                  <tr className="text-left text-xs font-medium text-gray-500 uppercase border-b">
-                    <th className="pb-3 pl-4">Activer</th>
-                    <th className="pb-3">Module</th>
-                    <th className="pb-3">Responsable</th>
-                    <th className="pb-3 text-right pr-4">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {getModulesWithUsers().map(({ id: moduleId, module, users }) => {
-                    const suggestedId = suggestedCollaborators[moduleId];
-                    const selectedColab = selectedColabs.find((c) => c.moduleId === moduleId);
-                    const isChecked = !!selectedColab;
-
-                    return (
-                      <tr key={moduleId} className={isChecked ? "bg-blue-50" : ""}>
-                        <td className="py-3 pl-4">
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                // 1. On vérifie s'il y a une suggestion stockée pour ce module
-                                const suggestedId = suggestedCollaborators[moduleId];
-                                // 2. On vérifie si cet ID suggéré existe bien dans la liste des users du module
-                                const suggestionExisteDansListe = users.some(u => u.userId === suggestedId);
-                                // 3. On choisit l'ID final : la suggestion si elle est valide, sinon le 1er user, sinon vide
-                                const finalUserId = (suggestedId && suggestionExisteDansListe) 
-                                  ? suggestedId 
-                                  : (users[0]?.userId || "");
-
-                                setSelectedColabs((prev) => [
-                                  ...prev,
-                                  { moduleId, userId: finalUserId }
-                                ]);
-                              } else {
-                                // Si on décoche, on retire simplement le module de la liste
-                                setSelectedColabs((prev) => prev.filter((c) => c.moduleId !== moduleId));
-                              }
-                            }}
-                            className="w-4 h-4 text-blue-600 rounded cursor-pointer"
-                          />
-                        </td>
-
-                        <td className="py-3">
-                          <span className="font-medium text-gray-900">{module.nom}</span>
-                          {suggestedId && (
-                            <span className="ml-2 text-xs text-green-600 italic">(suggéré)</span>
-                          )}
-                        </td>
-
-                        <td className="py-3">
-                          {isChecked ? (
-                            <div className="flex items-center gap-2">
-                              <select
-                                value={selectedColab?.userId || ""}
-                                onChange={(e) => {
-                                  // Cette mise à jour manuelle ne sera PAS écrasée par le useEffect 
-                                  // car le module sera déjà considéré comme "alreadySelected"
-                                  setSelectedColabs((prev) => {
-                                    const filtered = prev.filter((c) => c.moduleId !== moduleId);
-                                    return [...filtered, { userId: e.target.value, moduleId }];
-                                  });
-                                }}
-                                className="px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 flex-1"
-                              >
-                                <option value="">— Choisir —</option>
-                                {users.map((user) => (
-                                  <option key={user.userId} value={user.userId}>
-                                    {user.prenom} {user.nom}
-                                  </option>
-                                ))}
-                              </select>
-
-                              {/* Badge dynamique */}
-                              {suggestedId === selectedColab?.userId && (
-                                <span className="text-[10px] bg-green-100 text-green-700 px-2 py-1 rounded-full font-bold whitespace-nowrap">
-                                  Suggéré
-                                </span>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-gray-400 text-sm italic">En attente d'activation...</span>
-                          )}
-                        </td>
-
-                        <td className="py-3 text-right pr-4">
-                          {isChecked && (
-                            <button
-                              onClick={() => setSelectedColabs((prev) => prev.filter((c) => c.moduleId !== moduleId))}
-                              className="text-gray-400 hover:text-red-500"
-                            >
-                              <FiTrash2 size={16} />
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* Actions */}
-        <div className="flex justify-between items-center bg-white rounded-lg shadow-sm p-4">
-          <div className="text-sm text-gray-500">
-            {selectedClientFactureId ? (
-              <span className="text-green-600">✓ Client: {selectedClientFactureLibelle}</span>
-            ) : (
-              <span>Aucun client sélectionné</span>
+                      <div className="flex-1 flex items-center gap-2">
+                        <select
+                          value={userId}
+                          disabled={!active}
+                          onChange={(e) => setColabs((prev) => ({ ...prev, [moduleId]: e.target.value }))}
+                          className={`${inputClass} py-1.5 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed ${
+                            submitted && active && !userId ? "border-red-400" : ""
+                          }`}
+                        >
+                          <option value="">{active ? "Choisir un responsable" : "Module non activé"}</option>
+                          {users.map((u) => (
+                            <option key={u.userId} value={u.userId}>
+                              {u.prenom} {u.nom}
+                              {u.userId === suggested ? " (suggéré)" : ""}
+                            </option>
+                          ))}
+                        </select>
+                        {active && suggested && userId === suggested && (
+                          <span className="shrink-0 text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full">
+                            Suggéré
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
+          </FormSection>
+
+          {/* Pied de formulaire */}
+          <div className="flex flex-col-reverse sm:flex-row sm:items-center sm:justify-between gap-3 px-6 py-4 bg-slate-50 border-t border-slate-200">
+            <p className="text-xs text-slate-500">
+              {activeCount === 0
+                ? "Aucun module activé"
+                : `${activeCount} module${activeCount > 1 ? "s" : ""} activé${activeCount > 1 ? "s" : ""}`}
+            </p>
+            <div className="flex gap-2 justify-end">
+              <Button type="button" variant="secondary" onClick={() => navigate(-1)} disabled={creating}>
+                Annuler
+              </Button>
+              <Button type="submit" disabled={creating}>
+                {creating ? "Création…" : "Créer le dossier"}
+              </Button>
+            </div>
           </div>
-          <button
-            onClick={handlePreview}
-            disabled={!selectedClientFactureId || loadingCreate}
-            className="px-6 py-2.5 bg-blue-600 text-white font-medium rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-          >
-            <FiPlus size={18} />
-            {loadingCreate ? "Création..." : "Créer le Dossier"}
-          </button>
-        </div>
-      </div>
+        </Card>
+      </form>
     </div>
   );
 }

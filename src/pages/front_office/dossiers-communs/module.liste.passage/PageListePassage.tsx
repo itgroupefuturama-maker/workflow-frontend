@@ -13,6 +13,7 @@ import { usePassagerPdf } from '../module.pdf/pdf.generation/hooks/usePdfGenerat
 import type { PassagerPdfFilters } from '../module.pdf/pdf.generation/generators/passager.generator';
 import { useDebouncedValue } from '../../../../hooks/useDebouncedValue';
 import Pagination from '../../../../components/Pagination';
+import { formatStatut } from '../../../../utils/statut';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -428,7 +429,7 @@ const PageListePassage: React.FC = () => {
                       <td className="px-5 py-3.5 whitespace-nowrap text-gray-600">{p.typeVol}</td>
                       <td className="px-5 py-3.5 whitespace-nowrap">
                         <span className={`text-xs font-black px-2.5 py-0.5 rounded-full ${statusStyle[p.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                          {p.status}
+                          {formatStatut(p.status)}
                         </span>
                       </td>
                     </tr>

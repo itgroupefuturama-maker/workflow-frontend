@@ -85,7 +85,7 @@ export default function ItineraireCascadeFields({
         </select>
         {paysArriveeId && !loading.villeArrivee && villeArriveeOptions.length === 0 && (
           <p className="mt-1 text-[11px] text-amber-600">
-            Aucun itinéraire disponible, il doit être créé dans le référentiel (Odoo / paramétrage Itinéraires).
+            Aucun itinéraire disponible, il doit être créé dans le référentiel Odoo.
           </p>
         )}
       </div>

@@ -16,6 +16,7 @@ import {
   FiLoader, FiUserCheck, FiMail, FiMapPin, FiArrowLeft, FiEyeOff, FiEye, FiPlus, FiUsers
 } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
+import { formatStatut } from '../../utils/statut';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -198,7 +199,7 @@ const Utilisateur = () => {
                       user.status === 'ACTIF' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                     }`}>
                       <span className={`h-1.5 w-1.5 rounded-full ${user.status === 'ACTIF' ? 'bg-green-500' : 'bg-red-500'}`} />
-                      {user.status}
+                      {formatStatut(user.status)}
                     </span>
                   </td>
                   {/* <td className="px-6 py-4">

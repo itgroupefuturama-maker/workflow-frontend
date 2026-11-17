@@ -8,6 +8,7 @@ import {
 } from "../../../../app/portail_client/clientBeneficiaireInfosSlice";
 import axiosInstance from "../../../../service/Axios";
 import { fetchDossiersCommuns } from "../../../../app/front_office/dossierCommunSlice";
+import { formatStatut } from '../../../../utils/statut';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -249,7 +250,7 @@ const handleAnnulerDossier = async () => {
                   <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
                     dossier.status === 'ANNULE' ? 'bg-red-500' : 'bg-emerald-500'
                   }`}></span>
-                  {dossier.status}
+                  {formatStatut(dossier.status)}
                 </span>
               </div>
             </div>

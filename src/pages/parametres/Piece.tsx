@@ -14,6 +14,7 @@ import type { Piece } from '../../app/back_office/piecesSlice';
 import { FiPlus, FiX, FiCheckCircle, FiAlertCircle, FiLoader, FiTag, FiFileText, FiArrowLeft } from 'react-icons/fi';
 import AuditModal from '../../components/AuditModal';
 import { useNavigate } from 'react-router-dom';
+import { formatStatut } from '../../utils/statut';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -181,7 +182,7 @@ const PiecePage = () => {
                     piece.status === 'ACTIF' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                   }`}>
                     <span className={`h-1.5 w-1.5 rounded-full ${piece.status === 'ACTIF' ? 'bg-green-500' : 'bg-red-500'}`} />
-                    {piece.status}
+                    {formatStatut(piece.status)}
                   </span>
                 </td>
                 <td className="px-6 py-4 text-right">

@@ -15,6 +15,7 @@ import Skeleton from '../../../../../components/ui/Skeleton';
 import Button from '../../../../../components/ui/Button';
 import CreateEnteteModal from '../../../../../components/modals/CreateEnteteModal';
 import { FiPlus } from 'react-icons/fi';
+import { AlertTriangle, FileText } from 'lucide-react';
 
 const MODULE = 'visa';
 
@@ -77,7 +78,7 @@ const ProspectionTab = ({ prestationId }: Props) => {
       {/* ── Colonne principale ── */}
       <div className="flex-1 min-w-0 flex flex-col min-h-0">
         {/* ── Header fixe — ne scrolle PAS ── */}
-        <div className="shrink-0 px-4 bg-slate-200 rounded-t-xl">
+        <div className="flex items-center justify-between gap-4 shrink-0 px-4 bg-slate-200 rounded-t-xl">
           <VisaHeader
             numerovisa={prestationId}
             nomPassager= {''}
@@ -86,10 +87,10 @@ const ProspectionTab = ({ prestationId }: Props) => {
             isProspection={true}
             isDevis={false}
           />
+          <DossierActifCard />
         </div>
 
         <div className='px-4 bg-slate-200 rounded-b-xl'>
-          <DossierActifCard gradient="from-blue-400 via-indigo-400 to-blue-500" />
 
           <div className='flex items-center justify-between'> 
             <nav className="flex rounded-lg mb-2 gap-1" aria-label="Tabs">
@@ -151,7 +152,7 @@ const ProspectionTab = ({ prestationId }: Props) => {
         {/* Erreur */}
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg px-4 py-3">
-            ⚠️ {error}
+            <AlertTriangle size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />{error}
           </div>
         )}
 
@@ -226,7 +227,7 @@ const ProspectionTab = ({ prestationId }: Props) => {
                               flex items-center gap-1.5 shadow-sm active:scale-95
                             "
                           >
-                            <span className="opacity-70">📄</span> Devis
+                            <FileText size={14} aria-hidden="true" className="opacity-70 shrink-0" /> Devis
                           </button>
                         )}
 

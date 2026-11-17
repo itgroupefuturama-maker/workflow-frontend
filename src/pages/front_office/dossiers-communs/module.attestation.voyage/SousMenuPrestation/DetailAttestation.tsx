@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import type { AppDispatch, RootState } from '../../../../../app/store';
 import { fetchDestinations } from '../../../../../app/front_office/parametre_ticketing/destinationSlice';
 import { fetchClientFactureById } from '../../../../../app/back_office/clientFacturesSlice';
-import { fetchAttestationEnteteDetail, fetchAttestationSuivi } from '../../../../../app/front_office/parametre_attestation/attestationEnteteSlice';
+import { fetchAttestationEnteteDetail, fetchAttestationSuivi, setSelectedEntete } from '../../../../../app/front_office/parametre_attestation/attestationEnteteSlice';
 import AddLigneModal from './AddLigneModal';
 import { AttestationHeader } from './components.attestation/AttestationHeader';
 import ViewDevisModal from '../../../../../components/modals/Attestation/ViewDevisModal';
@@ -12,6 +12,7 @@ import TabContainer from '../../../../../layouts/TabContainer';
 import SuiviTabSection from '../../module.suivi/SuiviTabSection';
 import { FileText, PlaneTakeoff, Users, Info } from 'lucide-react';
 import { useAuthorization } from '../../../../../hooks/useAuthorization';
+import { formatStatut } from '../../../../../utils/statut';
 
 const MODULE = 'attestation';
 
@@ -30,11 +31,24 @@ const DetailAttestation = () => {
     selectedDetail,
     loading: loadingEntete,
   } = useSelector((state: RootState) => state.attestationEntete);
+  // L'en-tête sélectionné est aussi dans l'URL (?id=…) : la page survit à un F5 ou à un lien partagé.
+  const [searchParamsId, setSearchParamsId] = useSearchParams();
+  const idUrl = searchParamsId.get('id');
+  useEffect(() => {
+    if (idUrl && idUrl !== selectedId) {
+      dispatch(setSelectedEntete(idUrl));
+    } else if (!idUrl && selectedId) {
+      const next = new URLSearchParams(searchParamsId);
+      next.set('id', selectedId);
+      setSearchParamsId(next, { replace: true, state: location.state });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idUrl, selectedId]);
 
   const { items: destinations } = useSelector((state: RootState) => state.destination);
   const { current: clientFactureDetail } = useSelector((state: RootState) => state.clientFactures);
 
-  const tabs = [
+  const tabs: { id: string; label: string }[] = [
     // { id: 'prospection', label: 'Listes des entête attestation' },
     // { id: 'beneficiaire', label: 'Listes des bénéficiaires' },
   ];
@@ -428,7 +442,7 @@ const DetailAttestation = () => {
                                         ligne.status === 'CREER'  ? 'bg-blue-100 text-blue-700' :
                                         'bg-slate-100 text-slate-500'
                                       }`}>
-                                        {ligne.status}
+                                        {formatStatut(ligne.status)}
                                       </span>
                                     </td>
                                     <td className="px-4 py-2.5 text-xs text-gray-600" colSpan={3}>

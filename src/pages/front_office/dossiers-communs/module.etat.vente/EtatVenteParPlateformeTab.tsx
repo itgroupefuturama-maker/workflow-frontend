@@ -8,6 +8,7 @@ import {
   type PlateformeReservation,
 } from '../../../../app/front_office/parametre_dashboard/dashboardSlice';
 import Pagination from '../../../../components/Pagination';
+import { formatStatut } from '../../../../utils/statut';
 
 // Statuts connus des réservations hôtel (le backend ne renvoie plus la liste complète
 // des réservations par plateforme une fois paginé — impossible de la déduire des données
@@ -150,7 +151,7 @@ const StatutBadge: React.FC<{ statut: string }> = ({ statut }) => (
     className="px-2 py-0.5 rounded-full text-[10px] font-bold text-white whitespace-nowrap"
     style={{ background: statutColor(statut) }}
   >
-    {statut}
+    {formatStatut(statut)}
   </span>
 );
 

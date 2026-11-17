@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { FiPlus, FiClock, FiActivity, FiArrowRight, FiHash } from 'react-icons/fi';
-import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
+import { FiPlus, FiClock, FiActivity, FiArrowRight, FiHash, FiRefreshCw } from 'react-icons/fi';
+import { useLocation, useNavigate, useOutletContext, useSearchParams } from 'react-router-dom';
 import TabContainer from '../../../../../../layouts/TabContainer';
 import type { RootState } from '../../../../../../app/store';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchBilletsByDossierCommun, type BilletEntete } from '../../../../../../app/front_office/billetSlice';
+import { fetchBilletsByDossierCommun, majStatutBilletListe, type BilletEntete } from '../../../../../../app/front_office/billetSlice';
+import { onBilletStatut } from '../../../../../../service/notifications';
 import DossierActifCard from '../../../../../../components/CarteDossierActif/DossierActifCard';
 import { TicketingHeader } from '../components.billet/TicketingHeader';
 import { billetListeItems, prospectionListeItems } from '../components.billet/utils/ticketingHeaderItems';
@@ -13,6 +14,8 @@ import BeneficiaireListPage from '../../../module.client.beneficiaire/Beneficiai
 import { useAuthorization } from '../../../../../../hooks/useAuthorization';
 import SkeletonTableRows from '../../../../../../components/ui/SkeletonTableRows';
 import Button from '../../../../../../components/ui/Button';
+import { formatStatut } from '../../../../../../utils/statut';
+import { fmtCredit } from '../../../../../../utils/format';
 
 const MODULE = 'ticketing';
 
@@ -38,19 +41,62 @@ export default function PageView() {
   const { prestationId, entetes, loadingEntetes, errorEntetes, openCreateModal, openEditModal } =
     useOutletContext<PrestationContext>();
 
-  const { list: billets, loadingList: loadingBillets, errorList: errorBillets } =
+  const { list: billetsStore, loadingList, errorList, listDossierId, listFetchedAt } =
     useSelector((state: RootState) => state.billet);
 
-  const [activeTab, setActiveTab] = useState('prospection');
+  // ── Stratégie de données des billets ─────────────────────────────────────
+  // 1. Affichage immédiat de la liste déjà en mémoire pour ce dossier (pas d'écran de chargement au retour sur l'onglet).
+  // 2. Mise à jour silencieuse en arrière-plan si la liste a plus de BILLETS_TTL_MS.
+  // 3. Temps réel : les changements de statut Odoo (socket 'billet:statut') mettent la ligne à jour sans appel API.
+  const billetsDuDossier = !!dossierId && listDossierId === dossierId;
+  const billets = billetsDuDossier ? billetsStore : [];
+  const loadingBillets = loadingList && !billetsDuDossier;      // squelette seulement au tout premier chargement
+  const errorBillets = billetsDuDossier ? null : errorList;     // une erreur de rafraîchissement n'efface pas la liste
+
+  // L'onglet actif est reflété dans l'URL (?onglet=billet) : un rechargement ou un lien partagé
+  // rouvre le bon onglet. `location.state.targetTab` reste pris en charge pour les liens existants.
+  const ONGLETS = ['prospection', 'billet', 'beneficiaire'];
+  const [searchParams, setSearchParams] = useSearchParams();
+  const ongletUrl = searchParams.get('onglet');
+  const [activeTab, setActiveTab] = useState(() =>
+    (location.state?.targetTab as string | undefined) ??
+    (ongletUrl && ONGLETS.includes(ongletUrl) ? ongletUrl : 'prospection')
+  );
+
+  useEffect(() => {
+    if (searchParams.get('onglet') === activeTab) return;
+    const next = new URLSearchParams(searchParams);
+    next.set('onglet', activeTab);
+    // replace + conservation du state : pas d'entrée d'historique en plus, Sidebar garde l'onglet actif
+    setSearchParams(next, { replace: true, state: location.state });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   const [sortEntetes, setSortEntetes] = useState<'desc' | 'asc'>('desc');
   const [sortBillets, setSortBillets] = useState<'desc' | 'asc'>('desc');
 
 
+  const BILLETS_TTL_MS = 30_000;
+
+  const actualiserBillets = () => {
+    if (dossierId) dispatch(fetchBilletsByDossierCommun(dossierId) as any);
+  };
+
   useEffect(() => {
-    if (dossierId && activeTab === 'billet') {
+    if (!dossierId || activeTab !== 'billet') return;
+    const recente = billetsDuDossier && listFetchedAt !== null && Date.now() - listFetchedAt < BILLETS_TTL_MS;
+    if (!recente) dispatch(fetchBilletsByDossierCommun(dossierId) as any);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dossierId, activeTab, dispatch]);
+
+  // Temps réel : statut d'un billet modifié par Odoo → mise à jour immédiate de la ligne,
+  // puis resynchronisation discrète pour récupérer les autres champs (dates, compteurs…).
+  useEffect(() => {
+    if (!dossierId || activeTab !== 'billet') return;
+    return onBilletStatut((e) => {
+      dispatch(majStatutBilletListe({ billetEnteteId: e.billetEnteteId, nouveauStatut: e.nouveauStatut }));
       dispatch(fetchBilletsByDossierCommun(dossierId) as any);
-    }
+    });
   }, [dossierId, activeTab, dispatch]);
 
   useEffect(() => {
@@ -60,7 +106,7 @@ export default function PageView() {
     }
   }, [location.state?.targetTab]);
 
-  const tabs = [
+  const tabs: { id: string; label: string }[] = [
     // { id: 'prospection', label: 'Listes des entête prospection' },
     // { id: 'billet',      label: 'Listes des billets'            },
     // { id: 'beneficiaire', label: 'Listes des bénéficiaires' },
@@ -77,10 +123,7 @@ export default function PageView() {
     return map[statut] ?? 'bg-slate-100 text-slate-600 border-slate-200';
   };
 
-  const statutLabel = (statut: string) => {
-    if (statut === 'CREER') return 'Créé';
-    return statut.replace(/_/g, ' ');
-  };
+  const statutLabel = (statut: string) => formatStatut(statut);
 
   return (
     <div className="h-full flex flex-col min-h-0">
@@ -94,15 +137,15 @@ export default function PageView() {
             {/* ── Colonne principale ── */}
             <div className="flex-1 min-w-0 flex flex-col min-h-0">
               <div className="shrink-0 px-4 bg-slate-200 rounded-t-xl">
-                <div className='flex items-center justify-between'>
+                <div className='flex items-center justify-between gap-4'>
                   <TicketingHeader items={prospectionListeItems()} />
+                  {/* Dossier actif : carte compacte à droite de l'en-tête */}
+                  <DossierActifCard />
                 </div>
               </div>
 
               {/* ── Carte dossier actif ── */}
               <div className='px-4 bg-slate-200 rounded-b-xl'>
-                <DossierActifCard gradient="from-orange-400 via-red-400 to-orange-500 " />
-
                 <div className="flex items-center justify-between">
                   <nav className="flex gap-1 my-2" aria-label="Tabs">
                     <button
@@ -163,7 +206,7 @@ export default function PageView() {
                           <table className="min-w-full divide-y divide-slate-100">
                             <thead>
                               <tr className="bg-slate-200">
-                                {['N° En-tête', 'Type Vol', 'Fournisseur', 'Crédit', 'Comm. proposée', 'Comm. appliquée', 'Créé le', 'Actions'].map(h => (
+                                {['N° En-tête', 'Type Vol', 'Compagnie', 'Crédit', 'Comm. proposée', 'Comm. appliquée', 'Créé le', 'Actions'].map(h => (
                                   <th key={h} className="px-5 py-3.5 text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">
                                     {h}
                                   </th>
@@ -200,7 +243,7 @@ export default function PageView() {
                           <table className="min-w-full divide-y divide-slate-100">
                             <thead>
                               <tr className="bg-slate-200">
-                                {['N° En-tête', 'Type Vol', 'Fournisseur', 'Crédit', 'Comm. proposée', 'Comm. appliquée', 'Créé le', 'Actions'].map(h => (
+                                {['N° En-tête', 'Type Vol', 'Compagnie', 'Crédit', 'Comm. proposée', 'Comm. appliquée', 'Créé le', 'Actions'].map(h => (
                                   <th key={h} className="px-5 py-3.5 text-left text-[10px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">
                                     {h}
                                   </th>
@@ -231,7 +274,7 @@ export default function PageView() {
                                     {entete.fournisseur?.libelle || entete.fournisseurId}
                                   </td>
                                   <td className="px-5 py-3.5 whitespace-nowrap text-sm text-slate-600">
-                                    {entete.credit}
+                                    {fmtCredit(entete.credit)}
                                   </td>
                                   <td className="px-5 py-3.5 whitespace-nowrap">
                                     <span className="text-sm font-semibold text-slate-700">{entete.commissionPropose}
@@ -292,6 +335,8 @@ export default function PageView() {
               <div className="shrink-0 px-4 bg-slate-200 rounded-t-xl">
                 <div className='flex items-center justify-between'>
                   <TicketingHeader items={billetListeItems()} />
+                  <div className="flex items-center gap-3">
+                  <DossierActifCard />
                   <button
                     onClick={() => setSortBillets(o => o === 'desc' ? 'asc' : 'desc')}
                     className="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-all"
@@ -302,10 +347,10 @@ export default function PageView() {
                     </svg>
                     {sortBillets === 'desc' ? 'Plus récent' : 'Plus ancien'}
                   </button>
+                  </div>
                 </div>
               </div>
               <div className='px-4 bg-slate-200 rounded-b-xl'>
-                <DossierActifCard gradient="from-amber-400 via-orange-400 to-amber-500" />
                 <div className="flex items-center justify-between">
                   <nav className="flex my-2 gap-1" aria-label="Tabs">
                     <button
@@ -320,7 +365,7 @@ export default function PageView() {
                       <span className={`ml-2 px-1.5 py-0.5 rounded-md text-[10px] ${
                         activeTabSousSection === 'lignes' ? 'bg-slate-100 text-slate-600' : 'bg-slate-200/50 text-slate-500'
                       }`}>
-                        {entetes.length}
+                        {billets.length}
                       </span>
                     </button>
                     
@@ -335,6 +380,22 @@ export default function PageView() {
                       Suivi
                     </button>
                   </nav>
+
+                  {/* Actualisation manuelle (l'icône tourne pendant le chargement) */}
+                  {activeTabSousSection === 'lignes' && billetsDuDossier && (
+                    <div className="flex items-center">
+                      <button
+                        type="button"
+                        onClick={actualiserBillets}
+                        disabled={loadingList}
+                        title="Recharger la liste des billets"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
+                      >
+                        <FiRefreshCw size={12} className={loadingList ? 'animate-spin' : ''} aria-hidden="true" />
+                        {loadingList ? 'Actualisation…' : 'Actualiser'}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
               

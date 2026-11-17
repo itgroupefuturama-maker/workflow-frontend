@@ -3,9 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchDossiersCommunsPaginated, setCurrentClientFactureId } from '../../../../app/front_office/dossierCommunSlice';
 import type { RootState, AppDispatch } from '../../../../app/store';
-import { FiPlus, FiFolder, FiSearch, FiRefreshCw, FiGrid, FiFilter, FiChevronDown, FiX, FiArrowUp, FiArrowDown, FiArrowLeft } from 'react-icons/fi';
+import { FiPlus, FiFolder, FiSearch, FiRefreshCw, FiGrid, FiFilter, FiChevronDown, FiX, FiArrowUp, FiArrowDown, FiArrowLeft, FiCheck } from 'react-icons/fi';
 import { useDebouncedValue } from '../../../../hooks/useDebouncedValue';
 import Pagination from '../../../../components/Pagination';
+import Button from '../../../../components/ui/Button';
+import StatusBadge from '../../../../components/ui/StatusBadge';
+import SkeletonTableRows from '../../../../components/ui/SkeletonTableRows';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -171,201 +174,208 @@ function DossierCommun() {
       d.dossierCommunColab?.filter((c) => c.status === 'CREER').some((c) => c.module?.nom === moduleName)
     ).length;
 
+  const fmtDate = (d?: string | null) => (d ? new Date(d).toLocaleDateString('fr-FR') : '—');
+
+  const selectClass =
+    'w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-lg text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition';
+
+  const toolbarBtn = (active: boolean) =>
+    `inline-flex items-center gap-2 px-3.5 py-2 text-sm font-medium rounded-lg border transition-colors ${
+      active
+        ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+        : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50 hover:text-slate-900'
+    }`;
+
+  const chip = (label: string, onRemove: () => void, key?: string) => (
+    <span key={key} className="inline-flex items-center gap-1.5 bg-white text-slate-700 text-xs font-medium pl-2.5 pr-1.5 py-1 rounded-md border border-slate-200">
+      {label}
+      <button onClick={onRemove} className="p-0.5 rounded text-slate-400 hover:text-slate-700 hover:bg-slate-100" aria-label="Retirer">
+        <FiX size={11} />
+      </button>
+    </span>
+  );
+
+  const COLUMNS = ['Dossier', 'Client facturé', 'Description', 'Modules', 'Statut', 'Création'];
+
   return (
-    <div className="flex h-full  overflow-hidden">
+    <div className="flex h-full overflow-hidden bg-slate-50">
 
       {/* ── SIDEBAR ─────────────────────────────────────────────────────────── */}
-      <aside className="w-60 flex flex-col py-6 px-3 gap-1">
-        <p className="text-[10px] font-black text-slate-700 uppercase tracking-widest px-3 mb-3">Modules</p>
+      <aside className="w-60 shrink-0 flex flex-col bg-white border-r border-slate-200">
+        <div className="px-4 pt-6 pb-4">
+          <button
+            onClick={() => navigate('/')}
+            className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 transition-colors"
+          >
+            <FiArrowLeft size={14} /> Accueil
+          </button>
+        </div>
 
-        <button
-          onClick={() => setSelectedModule(null)}
-          className={`flex items-center justify-between gap-2 w-full px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-            selectedModule === null ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-          }`}
-        >
-          <div className="flex items-center gap-2.5"><FiGrid size={15} /><span>Tous</span></div>
-          <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${selectedModule === null ? 'bg-white/20 text-white' : 'bg-gray-100 text-gray-500'}`}>
-            {dossiers.length}
-          </span>
-        </button>
+        <p className="px-4 pb-2 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Modules</p>
 
-        {modules.filter((mod) => mod.status === 'ACTIF').map((mod) => {
-          const isActive = selectedModule === mod.nom;
-          const count    = countByModule(mod.nom);
-          return (
-            <button
-              key={mod.id}
-              onClick={() => setSelectedModule(isActive ? null : mod.nom)}
-              className={`flex items-center justify-between gap-2 w-full px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                isActive ? 'bg-indigo-600 text-white shadow-md shadow-indigo-100' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-              }`}
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <FiFolder size={15} className="shrink-0" />
-                <span className="truncate">{mod.nom}</span>
-              </div>
-              {count > 0 && (
-                <span className={`shrink-0 text-[10px] font-black px-1.5 py-0.5 rounded-full ${isActive ? 'bg-white/20 text-white' : 'bg-indigo-50 text-indigo-600'}`}>
-                  {count}
+        <nav className="flex-1 overflow-y-auto px-2 pb-4 flex flex-col gap-0.5">
+          {[{ id: '__all__', nom: null as string | null, label: 'Tous les dossiers', count: dossiers.length, icon: <FiGrid size={15} /> },
+            ...modules.filter((mod) => mod.status === 'ACTIF').map((mod) => ({
+              id: mod.id, nom: mod.nom as string | null, label: mod.nom, count: countByModule(mod.nom), icon: <FiFolder size={15} />,
+            })),
+          ].map((item) => {
+            const isActive = selectedModule === item.nom;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setSelectedModule(isActive && item.nom ? null : item.nom)}
+                className={`relative flex items-center justify-between gap-2 w-full px-3 py-2 rounded-lg text-sm transition-colors ${
+                  isActive
+                    ? 'bg-indigo-50 text-indigo-700 font-semibold'
+                    : 'text-slate-600 font-medium hover:bg-slate-50 hover:text-slate-900'
+                }`}
+              >
+                {isActive && <span className="absolute left-0 top-1.5 bottom-1.5 w-0.5 rounded-full bg-indigo-600" />}
+                <span className="flex items-center gap-2.5 min-w-0">
+                  <span className={isActive ? 'text-indigo-600' : 'text-slate-400'}>{item.icon}</span>
+                  <span className="truncate">{item.label}</span>
                 </span>
-              )}
-            </button>
-          );
-        })}
+                {item.count > 0 && (
+                  <span className={`shrink-0 text-[11px] font-semibold tabular-nums px-1.5 py-0.5 rounded ${
+                    isActive ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500'
+                  }`}>
+                    {item.count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
       </aside>
 
       {/* ── CONTENU PRINCIPAL ───────────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col overflow-hidden px-8 pt-8">
+      <div className="flex-1 min-w-0 flex flex-col overflow-hidden px-8 pt-7">
 
         {/* Header */}
         <div className="shrink-0 mb-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className='flex space-x-5 items-center'>
-              <div className="bg-white flex items-center gap-2 px-4 py-2 text-slate-700 hover:text-slate-900 rounded-lg transition-all group cursor-pointer" 
-                onClick={() => navigate('/')}
-              >
-                <FiArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
-                <span className="text-sm font-medium">Retour</span>
-              </div>
-              <div>
-                <h1 className="text-2xl font-black text-slate-700">{selectedModule ?? 'Tous les dossiers'}</h1>
-                <p className="text-slate-600 text-sm mt-0.5">
-                  {processedDossiers.length} dossier{processedDossiers.length !== 1 ? 's' : ''}
-                  {selectedModule ? ` dans le module ${selectedModule}` : ' au total'}
-                </p>
-              </div>
+          <div className="flex items-start justify-between gap-4 mb-5">
+            <div>
+              <p className="text-xs font-medium text-slate-400 mb-1">Dossiers communs</p>
+              <h1 className="text-2xl font-semibold text-slate-900">{selectedModule ?? 'Tous les dossiers'}</h1>
+              <p className="text-sm text-slate-500 mt-1">
+                {meta.total} dossier{meta.total !== 1 ? 's' : ''}
+                {selectedModule ? ` dans le module ${selectedModule}` : ' au total'}
+              </p>
             </div>
-            <button
-              onClick={() => navigate('/dossiers-communs/nouveau')}
-              className="bg-slate-700 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-md shadow-indigo-100 flex items-center gap-2 text-sm"
-            >
-              <FiPlus size={16} /> Nouveau Dossier
-            </button>
+            <Button icon={<FiPlus size={16} />} onClick={() => navigate('/dossiers-communs/nouveau')}>
+              Nouveau dossier
+            </Button>
           </div>
 
           {/* ── Barre d'outils ─────────────────────────────────────────────── */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
 
             {/* Recherche */}
-            <div className="relative group flex-1 max-w-sm">
-              <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-indigo-500 transition-colors" size={15} />
+            <div className="relative flex-1 max-w-sm">
+              <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
               <input
                 type="text"
-                placeholder="Rechercher un dossier..."
-                className="w-full pl-9 pr-4 py-2 text-sm bg-white border border-slate-200 rounded-xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 transition-all shadow-sm"
+                placeholder="Rechercher un dossier…"
+                className="w-full pl-9 pr-3 py-2 text-sm bg-white border border-slate-300 rounded-lg placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
 
-            {/* Séparateur */}
-            <div className="h-6 w-px bg-gray-200" />
-
             {/* ── Bouton FILTRE ── */}
             <div className="relative" ref={filterRef}>
               <button
                 onClick={() => { setOpenFilter((p) => !p); setOpenSort(false); }}
-                className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border transition-all shadow-sm ${
-                  openFilter || activeFilterCount > 0
-                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-indigo-100'
-                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                }`}
+                className={toolbarBtn(openFilter || activeFilterCount > 0)}
               >
                 <FiFilter size={14} />
-                Filtrer
+                Filtres
                 {activeFilterCount > 0 && (
-                  <span className="bg-white text-indigo-600 text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center">
+                  <span className="bg-indigo-600 text-white text-[10px] font-semibold min-w-4 h-4 px-1 rounded-full flex items-center justify-center">
                     {activeFilterCount}
                   </span>
                 )}
-                <FiChevronDown size={13} className={`transition-transform ${openFilter ? 'rotate-180' : ''}`} />
+                <FiChevronDown size={13} className={`text-slate-400 transition-transform ${openFilter ? 'rotate-180' : ''}`} />
               </button>
 
-              {/* Panel filtre */}
               {openFilter && (
-                <div className="absolute left-0 top-full mt-2 w-90 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 p-5 flex flex-col gap-4">
-
-                  {/* Header panel */}
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-black text-gray-800">Filtres</p>
+                <div className="absolute left-0 top-full mt-2 w-80 bg-white rounded-xl shadow-lg border border-slate-200 z-50">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
+                    <p className="text-sm font-semibold text-slate-900">Filtres</p>
                     {activeFilterCount > 0 && (
-                      <button onClick={resetFilters} className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 font-semibold transition-colors">
-                        <FiX size={12} /> Réinitialiser
+                      <button onClick={resetFilters} className="text-xs font-medium text-slate-500 hover:text-slate-900">
+                        Réinitialiser
                       </button>
                     )}
                   </div>
 
-                  {/* Statut — multi-select visuel */}
-                  <div>
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Statut</p>
-                    <div className="flex gap-2 flex-wrap">
-                      {[
-                        { value: 'CREER',   label: 'Ouvert',   color: 'emerald' },
-                        { value: 'ANNULER', label: 'Annulé',   color: 'red'     },
-                      ].map(({ value, label, color }) => (
-                        <button
-                          key={value}
-                          onClick={() => toggleStatut(value)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                            filters.statuts.includes(value)
-                              ? color === 'emerald'
-                                ? 'bg-emerald-500 text-white border-emerald-500'
-                                : 'bg-red-500 text-white border-red-500'
-                              : color === 'emerald'
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100'
-                                : 'bg-red-50 text-red-700 border-red-100 hover:bg-red-100'
-                          }`}
-                        >
-                          {label}
-                        </button>
-                      ))}
+                  <div className="p-4 flex flex-col gap-4">
+                    <div>
+                      <p className="text-xs font-medium text-slate-600 mb-2">Statut</p>
+                      <div className="flex gap-2">
+                        {[
+                          { value: 'CREER', label: 'Ouvert' },
+                          { value: 'ANNULER', label: 'Annulé' },
+                        ].map(({ value, label }) => {
+                          const on = filters.statuts.includes(value);
+                          return (
+                            <button
+                              key={value}
+                              onClick={() => toggleStatut(value)}
+                              className={`flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+                                on ? 'bg-indigo-50 text-indigo-700 border-indigo-300' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50'
+                              }`}
+                            >
+                              {on && <FiCheck size={12} />}
+                              {label}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Client facturé */}
-                  <div>
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Client facturé</p>
-                    <select
-                      value={filters.clientFacture}
-                      onChange={(e) => setFilters((p) => ({ ...p, clientFacture: e.target.value }))}
-                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 transition-all bg-white text-gray-700"
-                    >
-                      <option value="">Tous les clients</option>
-                      {uniqueClients.map((c) => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
+                    <div>
+                      <p className="text-xs font-medium text-slate-600 mb-2">Client facturé</p>
+                      <select
+                        value={filters.clientFacture}
+                        onChange={(e) => setFilters((p) => ({ ...p, clientFacture: e.target.value }))}
+                        className={selectClass}
+                      >
+                        <option value="">Tous les clients</option>
+                        {uniqueClients.map((c) => <option key={c} value={c}>{c}</option>)}
+                      </select>
+                    </div>
 
-                  {/* Créé par */}
-                  <div>
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Créé par</p>
-                    <select
-                      value={filters.creePar}
-                      onChange={(e) => setFilters((p) => ({ ...p, creePar: e.target.value }))}
-                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 transition-all bg-white text-gray-700"
-                    >
-                      <option value="">Tous les utilisateurs</option>
-                      {uniqueUsers.map((u) => <option key={u} value={u}>{u}</option>)}
-                    </select>
-                  </div>
+                    <div>
+                      <p className="text-xs font-medium text-slate-600 mb-2">Créé par</p>
+                      <select
+                        value={filters.creePar}
+                        onChange={(e) => setFilters((p) => ({ ...p, creePar: e.target.value }))}
+                        className={selectClass}
+                      >
+                        <option value="">Tous les utilisateurs</option>
+                        {uniqueUsers.map((u) => <option key={u} value={u}>{u}</option>)}
+                      </select>
+                    </div>
 
-                  {/* Date de création */}
-                  <div>
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Date de création</p>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="date"
-                        value={filters.dateFrom}
-                        onChange={(e) => setFilters((p) => ({ ...p, dateFrom: e.target.value }))}
-                        className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 transition-all"
-                      />
-                      <span className="text-xs text-gray-400 font-semibold shrink-0">→</span>
-                      <input
-                        type="date"
-                        value={filters.dateTo}
-                        onChange={(e) => setFilters((p) => ({ ...p, dateTo: e.target.value }))}
-                        className="flex-1 px-3 py-2 text-sm border border-gray-200 rounded-xl outline-none focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 transition-all"
-                      />
+                    <div>
+                      <p className="text-xs font-medium text-slate-600 mb-2">Date de création</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          type="date"
+                          aria-label="Du"
+                          value={filters.dateFrom}
+                          onChange={(e) => setFilters((p) => ({ ...p, dateFrom: e.target.value }))}
+                          className={selectClass}
+                        />
+                        <input
+                          type="date"
+                          aria-label="Au"
+                          value={filters.dateTo}
+                          onChange={(e) => setFilters((p) => ({ ...p, dateTo: e.target.value }))}
+                          className={selectClass}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -376,27 +386,16 @@ function DossierCommun() {
             <div className="relative" ref={sortRef}>
               <button
                 onClick={() => { setOpenSort((p) => !p); setOpenFilter(false); }}
-                className={`flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border transition-all shadow-sm ${
-                  openSort || sortField
-                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-indigo-100'
-                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                }`}
+                className={toolbarBtn(openSort || !!sortField)}
               >
-                {sortDir === 'asc' ? <FiArrowUp size={14} /> : <FiArrowDown size={14} />}
-                Trier
-                {sortField && (
-                  <span className="text-[10px] font-black bg-white/20 px-1.5 py-0.5 rounded-full">
-                    {sortField === 'date' ? 'Date' : 'Statut'}
-                  </span>
-                )}
-                <FiChevronDown size={13} className={`transition-transform ${openSort ? 'rotate-180' : ''}`} />
+                {sortField && sortDir === 'desc' ? <FiArrowDown size={14} /> : <FiArrowUp size={14} />}
+                {sortField ? `Tri : ${sortField === 'date' ? 'Date' : 'Statut'}` : 'Trier'}
+                <FiChevronDown size={13} className={`text-slate-400 transition-transform ${openSort ? 'rotate-180' : ''}`} />
               </button>
 
-              {/* Panel tri */}
               {openSort && (
-                <div className="absolute left-0 top-full mt-2 w-70 bg-white rounded-2xl shadow-xl border border-gray-100 z-50 p-2">
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-3 py-2">Trier par</p>
-
+                <div className="absolute left-0 top-full mt-2 w-64 bg-white rounded-xl shadow-lg border border-slate-200 z-50 py-1">
+                  <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider px-3 py-2">Trier par</p>
                   {[
                     { field: 'date'   as SortField, label: 'Date de création' },
                     { field: 'status' as SortField, label: 'Statut'           },
@@ -404,27 +403,26 @@ function DossierCommun() {
                     <button
                       key={field!}
                       onClick={() => handleSort(field)}
-                      className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
-                        sortField === field ? 'bg-indigo-50 text-indigo-700' : 'text-gray-600 hover:bg-gray-50'
+                      className={`w-full flex items-center justify-between px-3 py-2 text-sm transition-colors ${
+                        sortField === field ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-slate-700 hover:bg-slate-50'
                       }`}
                     >
                       <span>{label}</span>
                       {sortField === field && (
-                        <span className="flex items-center gap-1 text-xs text-indigo-500 font-bold">
+                        <span className="flex items-center gap-1 text-xs">
                           {sortDir === 'asc' ? <><FiArrowUp size={12} /> Croissant</> : <><FiArrowDown size={12} /> Décroissant</>}
                         </span>
                       )}
                     </button>
                   ))}
-
                   {sortField && (
                     <>
-                      <div className="h-px bg-gray-100 mx-2 my-1" />
+                      <div className="h-px bg-slate-100 my-1" />
                       <button
                         onClick={() => { setSortField(null); setOpenSort(false); }}
-                        className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-red-500 hover:bg-red-50 transition-all"
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-500 hover:bg-slate-50 hover:text-slate-900"
                       >
-                        <FiX size={12} /> Retirer le tri
+                        <FiX size={13} /> Retirer le tri
                       </button>
                     </>
                   )}
@@ -437,46 +435,23 @@ function DossierCommun() {
               onClick={loadList}
               disabled={loadingDossiers}
               title="Actualiser"
-              className="p-2.5 text-slate-500 bg-white border border-slate-200 rounded-xl hover:text-indigo-600 hover:border-indigo-100 hover:bg-indigo-50/50 transition-all disabled:opacity-50 shadow-sm"
+              aria-label="Actualiser"
+              className="p-2.5 text-slate-500 bg-white border border-slate-300 rounded-lg hover:text-slate-900 hover:bg-slate-50 transition-colors disabled:opacity-50"
             >
-              <FiRefreshCw className={loadingDossiers ? 'animate-spin' : ''} size={15} />
+              <FiRefreshCw className={loadingDossiers ? 'animate-spin' : ''} size={14} />
             </button>
           </div>
 
           {/* ── Chips filtres actifs ─────────────────────────────────────────── */}
           {activeFilterCount > 0 && (
             <div className="flex items-center gap-2 mt-3 flex-wrap">
-              <span className="text-xs text-gray-400 font-semibold">Filtres actifs :</span>
-
-              {filters.statuts.map((s) => (
-                <span key={s} className="flex items-center gap-1.5 bg-indigo-50 text-indigo-700 text-xs font-bold px-2.5 py-1 rounded-full border border-indigo-100">
-                  {s === 'CREER' ? 'Ouvert' : 'Annulé'}
-                  <button onClick={() => toggleStatut(s)} className="hover:text-indigo-900"><FiX size={11} /></button>
-                </span>
-              ))}
-
-              {filters.clientFacture && (
-                <span className="flex items-center gap-1.5 bg-indigo-50 text-indigo-700 text-xs font-bold px-2.5 py-1 rounded-full border border-indigo-100">
-                  {filters.clientFacture}
-                  <button onClick={() => setFilters((p) => ({ ...p, clientFacture: '' }))} className="hover:text-indigo-900"><FiX size={11} /></button>
-                </span>
-              )}
-
-              {filters.creePar && (
-                <span className="flex items-center gap-1.5 bg-indigo-50 text-indigo-700 text-xs font-bold px-2.5 py-1 rounded-full border border-indigo-100">
-                  {filters.creePar}
-                  <button onClick={() => setFilters((p) => ({ ...p, creePar: '' }))} className="hover:text-indigo-900"><FiX size={11} /></button>
-                </span>
-              )}
-
-              {(filters.dateFrom || filters.dateTo) && (
-                <span className="flex items-center gap-1.5 bg-indigo-50 text-indigo-700 text-xs font-bold px-2.5 py-1 rounded-full border border-indigo-100">
-                  {filters.dateFrom || '…'} → {filters.dateTo || '…'}
-                  <button onClick={() => setFilters((p) => ({ ...p, dateFrom: '', dateTo: '' }))} className="hover:text-indigo-900"><FiX size={11} /></button>
-                </span>
-              )}
-
-              <button onClick={resetFilters} className="text-xs text-red-500 hover:text-red-700 font-bold transition-colors ml-1">
+              {filters.statuts.map((s) => chip(s === 'CREER' ? 'Ouvert' : 'Annulé', () => toggleStatut(s), s))}
+              {filters.clientFacture && chip(filters.clientFacture, () => setFilters((p) => ({ ...p, clientFacture: '' })))}
+              {filters.creePar && chip(`Créé par ${filters.creePar}`, () => setFilters((p) => ({ ...p, creePar: '' })))}
+              {(filters.dateFrom || filters.dateTo) &&
+                chip(`${filters.dateFrom ? fmtDate(filters.dateFrom) : '…'} → ${filters.dateTo ? fmtDate(filters.dateTo) : '…'}`,
+                  () => setFilters((p) => ({ ...p, dateFrom: '', dateTo: '' })))}
+              <button onClick={resetFilters} className="text-xs font-medium text-indigo-600 hover:text-indigo-800 ml-1">
                 Tout effacer
               </button>
             </div>
@@ -484,80 +459,109 @@ function DossierCommun() {
         </div>
 
         {/* ── Tableau ─────────────────────────────────────────────────────────── */}
-        <div className="flex-1 min-h-0 overflow-hidden bg-white border border-gray-100 rounded-2xl shadow-sm flex flex-col mb-6">
-          <div className="overflow-auto flex-1 scrollbar-thin scrollbar-thumb-gray-200">
-            <table className="min-w-full divide-y divide-gray-100">
-              <thead className="bg-gray-50/70 sticky top-0 z-10">
+        <div className="flex-1 min-h-0 overflow-hidden bg-white border border-slate-200 rounded-xl shadow-sm flex flex-col mb-6">
+          <div className="overflow-auto flex-1">
+            <table className="min-w-full">
+              <thead className="bg-slate-50 sticky top-0 z-10 border-b border-slate-200">
                 <tr>
-                  {['N° Dos','Réf Travel Planner','Date Création','Statut','Description','Date Annulation','Raison Annulation','Client Facturé','Contact Principal','Whatsapp','Crée par','Modules'].map((h) => (
-                    <th key={h} className="px-5 py-4 text-left text-[10px] font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">{h}</th>
+                  {COLUMNS.map((h) => (
+                    <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-slate-500 whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-slate-100">
                 {loadingDossiers ? (
-                  [...Array(6)].map((_, i) => (
-                    <tr key={i} className="animate-pulse">
-                      <td colSpan={12} className="px-5 py-4"><div className="h-4 bg-gray-100 rounded w-full" /></td>
+                  <SkeletonTableRows columns={COLUMNS.length} />
+                ) : processedDossiers.map((dossier) => {
+                  const colabs = dossier.dossierCommunColab?.filter((c) => c.status === 'CREER') ?? [];
+                  const isCancelled = dossier.status === 'ANNULER';
+                  return (
+                    <tr
+                      key={dossier.id}
+                      onClick={async () => { await dispatch(setCurrentClientFactureId(dossier)); navigate('/dossiers-communs/dossier-detail'); }}
+                      className="hover:bg-slate-50 transition-colors cursor-pointer align-top"
+                    >
+                      {/* Dossier */}
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <p className="text-sm font-semibold text-slate-900">{dossier.numero}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          {dossier.referenceTravelPlaner ? `Réf. TP ${dossier.referenceTravelPlaner}` : 'Sans réf. TP'}
+                        </p>
+                      </td>
+
+                      {/* Client */}
+                      <td className="px-4 py-3">
+                        <p className="text-sm font-medium text-slate-800">{dossier.clientfacture?.libelle || 'Non défini'}</p>
+                        {(dossier.contactPrincipal || dossier.whatsapp) && (
+                          <p className="text-xs text-slate-500 mt-0.5 whitespace-nowrap">
+                            {[dossier.contactPrincipal, dossier.whatsapp].filter(Boolean).join(' · ')}
+                          </p>
+                        )}
+                      </td>
+
+                      {/* Description */}
+                      <td className="px-4 py-3 max-w-[240px]">
+                        <p className="text-sm text-slate-600 truncate" title={dossier.description || undefined}>
+                          {dossier.description || <span className="text-slate-300">—</span>}
+                        </p>
+                      </td>
+
+                      {/* Modules */}
+                      <td className="px-4 py-3">
+                        {colabs.length === 0 ? (
+                          <span className="text-slate-300 text-sm">—</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1 max-w-[220px]">
+                            {colabs.map((c, idx) => (
+                              <span
+                                key={idx}
+                                className={`px-2 py-0.5 rounded text-[11px] font-medium border ${
+                                  c.module?.nom === selectedModule
+                                    ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+                                    : 'bg-slate-50 text-slate-600 border-slate-200'
+                                }`}
+                              >
+                                {c.module?.nom}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </td>
+
+                      {/* Statut */}
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <StatusBadge status={dossier.status === 'CREER' ? 'success' : isCancelled ? 'danger' : 'neutral'}>
+                          {dossier.status === 'CREER' ? 'Ouvert' : isCancelled ? 'Annulé' : dossier.status}
+                        </StatusBadge>
+                        {isCancelled && (dossier.dateAnnulation || dossier.raisonAnnulation) && (
+                          <p className="text-xs text-slate-500 mt-1 max-w-[180px] truncate" title={dossier.raisonAnnulation || undefined}>
+                            {fmtDate(dossier.dateAnnulation)}
+                            {dossier.raisonAnnulation ? ` · ${dossier.raisonAnnulation}` : ''}
+                          </p>
+                        )}
+                      </td>
+
+                      {/* Création */}
+                      <td className="px-4 py-3 whitespace-nowrap">
+                        <p className="text-sm text-slate-700">{fmtDate(dossier.createdAt)}</p>
+                        <p className="text-xs text-slate-500 mt-0.5">{dossier.user?.prenom} {dossier.user?.nom}</p>
+                      </td>
                     </tr>
-                  ))
-                ) : processedDossiers.map((dossier) => (
-                  <tr
-                    key={dossier.id}
-                    onClick={async () => { await dispatch(setCurrentClientFactureId(dossier)); navigate('/dossiers-communs/dossier-detail'); }}
-                    className="hover:bg-indigo-50/20 transition-colors cursor-pointer"
-                  >
-                    <td className="px-5 py-3.5 whitespace-nowrap">
-                      <div className="flex items-center gap-2.5">
-                        <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg"><FiFolder size={14} /></div>
-                        <span className="text-sm font-black text-gray-900">{dossier.numero}</span>
-                      </div>
-                    </td>
-                    <td className="px-5 py-3.5 text-xs font-semibold text-gray-600">{dossier.referenceTravelPlaner || '—'}</td>
-                    <td className="px-5 py-3.5 text-xs text-gray-500 whitespace-nowrap">{new Date(dossier.createdAt).toLocaleDateString('fr-FR')}</td>
-                    <td className="px-5 py-3.5">
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase border ${
-                        dossier.status === 'CREER' ? 'bg-emerald-50 border-emerald-100 text-emerald-700'
-                        : dossier.status === 'ANNULER' ? 'bg-red-50 border-red-100 text-red-700'
-                        : 'bg-gray-50 border-gray-200 text-gray-500'
-                      }`}>
-                        {dossier.status === 'CREER' ? 'Ouvert' : dossier.status}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5 text-xs text-gray-600 max-w-[140px] truncate">{dossier.description || '—'}</td>
-                    <td className="px-5 py-3.5 text-xs text-red-400 whitespace-nowrap">
-                      {dossier.dateAnnulation ? new Date(dossier.dateAnnulation).toLocaleDateString('fr-FR') : '—'}
-                    </td>
-                    <td className="px-5 py-3.5 text-xs text-gray-500 italic">{dossier.raisonAnnulation || '—'}</td>
-                    <td className="px-5 py-3.5 text-xs font-semibold text-gray-700">{dossier.clientfacture?.libelle || 'Non défini'}</td>
-                    <td className="px-5 py-3.5 text-xs font-semibold text-gray-600">{dossier.contactPrincipal}</td>
-                    <td className="px-5 py-3.5 text-xs text-emerald-600">{dossier.whatsapp || '—'}</td>
-                    <td className="px-5 py-3.5 text-xs text-gray-600">{dossier.user?.nom} {dossier.user?.prenom}</td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex flex-row gap-1">
-                        {dossier.dossierCommunColab?.filter((c) => c.status === 'CREER').map((c, idx) => (
-                          <span key={idx} className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${
-                            c.module?.nom === selectedModule
-                              ? 'bg-indigo-600 text-white border-indigo-600'
-                              : 'bg-blue-50 text-blue-600 border-blue-100'
-                          }`}>
-                            {c.module?.nom}
-                          </span>
-                          ))}
-                      </div>
-                    </td>
-                    
-                  </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
 
             {!loadingDossiers && processedDossiers.length === 0 && (
-              <div className="py-24 flex flex-col items-center justify-center">
-                <FiFolder size={40} className="text-gray-200 mb-3" />
-                <p className="text-sm font-semibold text-gray-400">Aucun dossier trouvé</p>
-                <p className="text-xs text-gray-300 mt-1">
-                  {activeFilterCount > 0 ? 'Essaie de modifier ou réinitialiser les filtres' : `Aucun résultat pour "${searchTerm}"`}
+              <div className="py-20 flex flex-col items-center justify-center text-center">
+                <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
+                  <FiFolder size={20} className="text-slate-400" />
+                </div>
+                <p className="text-sm font-medium text-slate-700">Aucun dossier trouvé</p>
+                <p className="text-sm text-slate-500 mt-1">
+                  {activeFilterCount > 0 || searchTerm
+                    ? 'Modifiez la recherche ou les filtres.'
+                    : 'Créez votre premier dossier commun pour commencer.'}
                 </p>
               </div>
             )}

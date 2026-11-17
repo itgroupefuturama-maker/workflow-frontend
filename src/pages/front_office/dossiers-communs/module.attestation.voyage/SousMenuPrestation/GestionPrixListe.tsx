@@ -5,6 +5,7 @@ import type { RootState } from '../../../../../app/store';
 import AttestationParamModal from '../../../../../components/modals/Attestation/AttestationParamModal';
 import { useAuthorization } from '../../../../../hooks/useAuthorization';
 import SkeletonTableRows from '../../../../../components/ui/SkeletonTableRows';
+import { formatStatut } from '../../../../../utils/statut';
 
 const MODULE = 'attestation';
 
@@ -73,7 +74,7 @@ export default function GestionPrixListe() {
                       item.status === 'ACTIF' ? 'bg-green-500' : 'bg-slate-400'
                     }`}
                   />
-                  {item.status}
+                  {formatStatut(item.status)}
                 </span>
               </td>
               <td className="px-6 py-4 text-sm text-slate-600">

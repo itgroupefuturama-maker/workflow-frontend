@@ -1,4 +1,5 @@
 import { FiAlertTriangle, FiLoader, FiX } from 'react-icons/fi';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -29,6 +30,7 @@ export default function ConfirmDialog({
   onConfirm,
   onClose,
 }: ConfirmDialogProps) {
+  useEscapeKey(isOpen, onClose);
   if (!isOpen) return null;
 
   const styles = TONE_STYLES[tone];

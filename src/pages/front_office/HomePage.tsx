@@ -1,61 +1,87 @@
+
 import { useNavigate } from 'react-router-dom';
-import { FiFolder, FiCheckCircle, FiTag, FiFileText, FiLock, FiSettings, FiHome, FiArrowRight, FiMapPin, FiShield, FiDatabase, FiMessageSquare, FiUsers, FiPlusCircle, FiList, FiUserCheck, FiUser, FiHeadphones, FiBarChart2, FiPieChart, FiTrendingUp } from 'react-icons/fi';
+import {
+  FiFolder,
+  FiCheckCircle,
+  FiTag,
+  FiFileText,
+  FiLock,
+  FiSettings,
+  FiHome,
+  FiArrowRight,
+  FiMapPin,
+  FiShield,
+  FiDatabase,
+  FiMessageSquare,
+  FiUsers,
+  FiPlusCircle,
+  FiList,
+  FiUserCheck,
+  FiUser,
+  FiHeadphones,
+  FiBarChart2,
+  FiPieChart,
+  FiTrendingUp,
+  FiClipboard,
+  FiAward,
+} from 'react-icons/fi';
+import { useState } from "react";
 
 const CATEGORIES = [
   {
     key: 'prestation',
     label: 'Modules prestation',
-    desc: 'Gestion complète des prestations clients : tickets, hébergements, assurances, visas et documents.',
+    desc: 'Gestion des prestations clients.',
     icon: FiTag,
-    iconColor: 'text-orange-500',
+    iconColor: 'text-orange-600',
     iconBg: 'bg-orange-50',
     modules: [
-      { label: 'Ticketing',          desc: 'Suivez vos demandes et tickets', path: '/dossiers-communs/ticketing/pages',    defaultTab: 'prospection', icon: FiTag,      color: 'amber'  },
-      { label: 'Hôtel',              desc: 'Gestion des réservations',        path: '/dossiers-communs/hotel/pages',       defaultTab: 'prospection', icon: FiHome,     color: 'orange' },
-      { label: 'Assurance',          desc: 'Contrats et garanties',           path: '/dossiers-communs/assurance/pages',   defaultTab: 'prospection', icon: FiShield,   color: 'green'  },
-      { label: 'Visa',               desc: 'Gestion des visas',               path: '/dossiers-communs/visa/pages',        defaultTab: 'prospection', icon: FiMapPin,   color: 'indigo' },
-      { label: 'Attestation Voyage', desc: 'Générez vos attestations',        path: '/dossiers-communs/attestation/pages', defaultTab: 'prospection', icon: FiFileText, color: 'rose'   },
+      { label: 'Ticketing', desc: 'Suivi des demandes et tickets', path: '/dossiers-communs/ticketing/pages', defaultTab: 'prospection', icon: FiTag, color: 'amber' },
+      { label: 'Hôtel', desc: 'Gestion des réservations', path: '/dossiers-communs/hotel/pages', defaultTab: 'prospection', icon: FiHome, color: 'orange' },
+      { label: 'Assurance', desc: 'Contrats et garanties', path: '/dossiers-communs/assurance/pages', defaultTab: 'prospection', icon: FiShield, color: 'green' },
+      { label: 'Visa', desc: 'Gestion des visas', path: '/dossiers-communs/visa/pages', defaultTab: 'prospection', icon: FiMapPin, color: 'indigo' },
+      { label: 'Attestation Voyage', desc: 'Génération des attestations', path: '/dossiers-communs/attestation/pages', defaultTab: 'prospection', icon: FiFileText, color: 'rose' },
     ],
   },
   {
     key: 'workspace',
     label: 'Espace de travail',
-    desc: 'Ressources partagées, tâches quotidiennes et outils transversaux.',
+    desc: 'Documents, tâches et outils partagés.',
     icon: FiHome,
-    iconColor: 'text-blue-600',
+    iconColor: 'text-blue-700',
     iconBg: 'bg-blue-50',
     modules: [
-      { label: 'Dossier',             desc: 'Accédez à vos fichiers partagés',      path: '/dossiers-communs',                         defaultTab: null, icon: FiFolder,      color: 'blue'  },
-      { label: 'To Do List',          desc: 'Gérez vos tâches quotidiennes',        path: '/dossiers-communs/todolist',                defaultTab: null, icon: FiCheckCircle, color: 'teal'  },
-      { label: 'Base de Connaissance',desc: 'Consultation information',             path: '/dossiers-communs/base-connaissance',       defaultTab: null, icon: FiDatabase,    color: 'cyan'  },
-      { label: 'Contrôle',            desc: 'Audit et vérification',                path: '/dossiers-communs/pageControle',            defaultTab: null, icon: FiShield,     color: 'slate' },
-      { label: 'Résultats Stats',     desc: 'Analyses de données',                  path: '/dossiers-communs/pageResultatStatDossierCommun', icon: FiBarChart2,  color: 'indigo' },
-      { label: 'Tableau de bord',     desc: "Vue d'ensemble",                       path: '/dossiers-communs/pageTableauBord',             icon: FiPieChart,   color: 'blue'   },
-      { label: 'Etat de Vente',       desc: "Vue d'ensemble des ventes",            path: '/dossiers-communs/pageEtatVente',               icon: FiTrendingUp, color: 'teal'   },
+      { label: 'Dossier', desc: 'Fichiers partagés', path: '/dossiers-communs', defaultTab: null, icon: FiFolder, color: 'blue' },
+      { label: 'Liste de tâches', desc: 'Tâches quotidiennes', path: '/dossiers-communs/todolist', defaultTab: null, icon: FiCheckCircle, color: 'teal' },
+      { label: 'Base de connaissances', desc: 'Informations et ressources', path: '/dossiers-communs/base-connaissance', defaultTab: null, icon: FiDatabase, color: 'cyan' },
+      { label: 'Contrôle', desc: 'Audit et vérification', path: '/dossiers-communs/pageControle', defaultTab: null, icon: FiClipboard, color: 'slate' },
+      { label: 'Résultats et statistiques', desc: 'Analyses de données', path: '/dossiers-communs/pageResultatStatDossierCommun', defaultTab: null, icon: FiBarChart2, color: 'indigo' },
+      { label: 'Tableau de bord', desc: "Vue d'ensemble", path: '/dossiers-communs/pageTableauBord', defaultTab: null, icon: FiPieChart, color: 'blue' },
+      { label: 'État des ventes', desc: 'Suivi des ventes', path: '/dossiers-communs/pageEtatVente', defaultTab: null, icon: FiTrendingUp, color: 'teal' },
     ],
   },
   {
     key: 'clients',
     label: 'Gestion des clients',
-    desc: 'Profils voyageurs, documents, fidélité et listes de passagers.',
+    desc: 'Profils, documents et fidélité des voyageurs.',
     icon: FiUsers,
-    iconColor: 'text-green-600',
-    iconBg: 'bg-green-50',
+    iconColor: 'text-emerald-700',
+    iconBg: 'bg-emerald-50',
     modules: [
-      { label: 'Client Bénéficiaire',         desc: 'Consultation & base de données',                    path: '/dossiers-communs/AllClientBeneficiairePage',         defaultTab: null, icon: FiUserCheck,    color: 'green'     },
-      { label: 'Profilage',                   desc: 'Profilages des clients bénéficiaires',              path: '/dossiers-communs/pageProfilage',                     defaultTab: null, icon: FiUser,         color: 'teal'      },
-      { label: 'Gestion des Document Client', desc: 'Passeport, CIN et autres pièces',                   path: '/dossiers-communs/pagePassport',                      defaultTab: null, icon: FiFileText,     color: 'cyan'      },
-      { label: 'SMS Anniversaire',            desc: 'Fidélité voyageurs, Miles Al Bouraq Travel',        path: '/dossiers-communs/pageAnniversaire',                  defaultTab: null, icon: FiMessageSquare,color: 'roseSombre'},
-      { label: 'Liste Passager',              desc: 'Liste des passagers',                               path: '/dossiers-communs/pageListePassage',                  defaultTab: null, icon: FiList,         color: 'navy'      },
-      { label: 'Miles Compagnie',             desc: 'Gestion des miles compagnie',                       path: '/dossiers-communs/pageMilesCompagnie',                defaultTab: null, icon: FiFileText,     color: 'fluo'      },
+      { label: 'Clients bénéficiaires', desc: 'Base de données clients', path: '/dossiers-communs/AllClientBeneficiairePage', defaultTab: null, icon: FiUserCheck, color: 'green' },
+      { label: 'Profilage', desc: 'Profils des bénéficiaires', path: '/dossiers-communs/pageProfilage', defaultTab: null, icon: FiUser, color: 'teal' },
+      { label: 'Documents clients', desc: 'Passeport, CIN et pièces', path: '/dossiers-communs/pagePassport', defaultTab: null, icon: FiFileText, color: 'cyan' },
+      { label: 'SMS Anniversaire', desc: 'Fidélité et anniversaires', path: '/dossiers-communs/pageAnniversaire', defaultTab: null, icon: FiMessageSquare, color: 'roseSombre' },
+      { label: 'Liste des passagers', desc: 'Passagers par vol et dossier', path: '/dossiers-communs/pageListePassage', defaultTab: null, icon: FiList, color: 'navy' },
+      { label: 'Miles compagnies', desc: 'Miles des compagnies', path: '/dossiers-communs/pageMilesCompagnie', defaultTab: null, icon: FiAward, color: 'fluo' },
     ],
   },
   {
     key: 'sav',
     label: 'Service après-vente',
-    desc: 'Suivi des demandes et support client.',
+    desc: 'Demandes et assistance client.',
     icon: FiHeadphones,
-    iconColor: 'text-amber-600',
+    iconColor: 'text-amber-700',
     iconBg: 'bg-amber-50',
     modules: [
       { label: 'SAV', desc: 'Service après-vente', path: '/dossiers-communs/pageSAV', defaultTab: null, icon: FiPlusCircle, color: 'amber' },
@@ -64,167 +90,266 @@ const CATEGORIES = [
   {
     key: 'parametres',
     label: "Paramètres globaux de l'application",
-    desc: 'Configurations générales, modèles PDF, gestion des commentaires et des utilisateurs.',
+    desc: 'Configuration et gestion des utilisateurs.',
     icon: FiSettings,
-    iconColor: 'text-violet-600',
+    iconColor: 'text-violet-700',
     iconBg: 'bg-violet-50',
     modules: [
-      { label: 'Paramètre Application', desc: 'Réglage et configurations',               path: '/dossiers-communs/parametre',            defaultTab: null, icon: FiSettings,     color: 'violet' },
-      { label: 'Paramètre Pdf',         desc: 'Ajouter vos modèle, Logo et Cachet',      path: '/dossiers-communs/parametrePdf',         defaultTab: null, icon: FiFileText,     color: 'violet' },
-      { label: 'Gestion Commentaire',   desc: 'Ajouter vos commentaire et modification', path: '/dossiers-communs/parametreCommentaire', defaultTab: null, icon: FiMessageSquare,color: 'violet' },
-      { label: 'Paramètre Utilisateur', desc: 'Gestion de votre profil',                 path: '/dossiers-communs/parametreUtilisateur', defaultTab: null, icon: FiUsers,        color: 'violet' },
-      { label: 'Gestion Couleurs',      desc: 'Palettes et thèmes écran',                path: '/dossiers-communs/couleurs',             defaultTab: null, icon: FiSettings,     color: 'violet' },
+      { label: 'Paramètres de l’application', desc: 'Configuration générale', path: '/dossiers-communs/parametre', defaultTab: null, icon: FiSettings, color: 'violet' },
+      { label: 'Paramètres PDF', desc: 'Modèles, logo et cachet', path: '/dossiers-communs/parametrePdf', defaultTab: null, icon: FiFileText, color: 'violet' },
+      { label: 'Gestion des commentaires', desc: 'Gestion des commentaires', path: '/dossiers-communs/parametreCommentaire', defaultTab: null, icon: FiMessageSquare, color: 'violet' },
+      { label: 'Paramètres utilisateurs', desc: 'Gestion des profils', path: '/dossiers-communs/parametreUtilisateur', defaultTab: null, icon: FiUsers, color: 'violet' },
+      { label: 'Gestion des couleurs', desc: 'Palettes et thèmes', path: '/dossiers-communs/couleurs', defaultTab: null, icon: FiSettings, color: 'violet' },
     ],
   },
 ];
 
 const COLOR_MAP: Record<string, {
-  gradient: string;
   iconBg: string;
   iconText: string;
-  border: string;
-  glow: string;
-  arrow: string;
+  hoverBorder: string;
 }> = {
-  blue:       { gradient: 'from-blue-500 to-blue-600',      iconBg: 'bg-blue-50',       iconText: 'text-blue-600',    border: 'border-slate-200 hover:border-blue-300',    glow: 'hover:shadow-blue-100',    arrow: 'text-blue-500'    },
-  teal:       { gradient: 'from-teal-500 to-emerald-600',   iconBg: 'bg-teal-50',        iconText: 'text-teal-600',    border: 'border-slate-200 hover:border-teal-300',    glow: 'hover:shadow-teal-100',    arrow: 'text-teal-500'    },
-  cyan:       { gradient: 'from-cyan-400 to-cyan-600',      iconBg: 'bg-cyan-50',        iconText: 'text-cyan-600',    border: 'border-slate-200 hover:border-cyan-300',    glow: 'hover:shadow-cyan-100',    arrow: 'text-cyan-500'    },
-  slate:      { gradient: 'from-slate-400 to-slate-600',    iconBg: 'bg-slate-100',      iconText: 'text-slate-500',   border: 'border-slate-200 hover:border-slate-300',   glow: 'hover:shadow-slate-100',   arrow: 'text-slate-400'   },
-  green:      { gradient: 'from-emerald-500 to-green-600',  iconBg: 'bg-green-50',       iconText: 'text-green-600',   border: 'border-slate-200 hover:border-green-300',   glow: 'hover:shadow-green-100',   arrow: 'text-green-500'   },
-  roseSombre: { gradient: 'from-rose-700 to-pink-900',      iconBg: 'bg-fuchsia-50',     iconText: 'text-rose-700',    border: 'border-slate-200 hover:border-rose-300',    glow: 'hover:shadow-rose-100',    arrow: 'text-rose-500'    },
-  navy:       { gradient: 'from-blue-700 to-blue-900',      iconBg: 'bg-blue-50',        iconText: 'text-blue-700',    border: 'border-slate-200 hover:border-blue-300',    glow: 'hover:shadow-blue-100',    arrow: 'text-blue-600'    },
-  fluo:       { gradient: 'from-green-600 to-green-800',    iconBg: 'bg-green-50',       iconText: 'text-green-700',   border: 'border-slate-200 hover:border-green-300',   glow: 'hover:shadow-green-100',   arrow: 'text-green-600'   },
-  amber:      { gradient: 'from-amber-400 to-orange-500',   iconBg: 'bg-amber-50',       iconText: 'text-amber-600',   border: 'border-slate-200 hover:border-amber-300',   glow: 'hover:shadow-amber-100',   arrow: 'text-amber-500'   },
-  orange:     { gradient: 'from-orange-400 to-red-500',     iconBg: 'bg-orange-50',      iconText: 'text-orange-500',  border: 'border-slate-200 hover:border-orange-300',  glow: 'hover:shadow-orange-100',  arrow: 'text-orange-500'  },
-  indigo:     { gradient: 'from-indigo-500 to-blue-700',    iconBg: 'bg-indigo-50',      iconText: 'text-indigo-600',  border: 'border-slate-200 hover:border-indigo-300',  glow: 'hover:shadow-indigo-100',  arrow: 'text-indigo-500'  },
-  rose:       { gradient: 'from-rose-500 to-pink-600',      iconBg: 'bg-rose-50',        iconText: 'text-rose-500',    border: 'border-slate-200 hover:border-rose-300',    glow: 'hover:shadow-rose-100',    arrow: 'text-rose-400'    },
-  violet:     { gradient: 'from-violet-500 to-purple-600',  iconBg: 'bg-violet-50',      iconText: 'text-violet-600',  border: 'border-slate-200 hover:border-violet-300',  glow: 'hover:shadow-violet-100',  arrow: 'text-violet-500'  },
-  gray:       { gradient: 'from-gray-300 to-gray-400',      iconBg: 'bg-gray-100',       iconText: 'text-gray-300',    border: 'border-gray-200',                           glow: '',                         arrow: ''                 },
+  blue:       { iconBg: 'bg-blue-50',    iconText: 'text-blue-700',    hoverBorder: 'hover:border-blue-300' },
+  teal:       { iconBg: 'bg-teal-50',    iconText: 'text-teal-700',    hoverBorder: 'hover:border-teal-300' },
+  cyan:       { iconBg: 'bg-cyan-50',    iconText: 'text-cyan-700',    hoverBorder: 'hover:border-cyan-300' },
+  slate:      { iconBg: 'bg-slate-100',  iconText: 'text-slate-600',   hoverBorder: 'hover:border-slate-300' },
+  green:      { iconBg: 'bg-green-50',   iconText: 'text-green-700',   hoverBorder: 'hover:border-green-300' },
+  roseSombre: { iconBg: 'bg-rose-50',    iconText: 'text-rose-700',    hoverBorder: 'hover:border-rose-300' },
+  navy:       { iconBg: 'bg-blue-50',    iconText: 'text-blue-800',    hoverBorder: 'hover:border-blue-300' },
+  fluo:       { iconBg: 'bg-emerald-50', iconText: 'text-emerald-700', hoverBorder: 'hover:border-emerald-300' },
+  amber:      { iconBg: 'bg-amber-50',   iconText: 'text-amber-700',   hoverBorder: 'hover:border-amber-300' },
+  orange:     { iconBg: 'bg-orange-50',  iconText: 'text-orange-700',  hoverBorder: 'hover:border-orange-300' },
+  indigo:     { iconBg: 'bg-indigo-50',  iconText: 'text-indigo-700',  hoverBorder: 'hover:border-indigo-300' },
+  rose:       { iconBg: 'bg-rose-50',    iconText: 'text-rose-700',    hoverBorder: 'hover:border-rose-300' },
+  violet:     { iconBg: 'bg-violet-50',  iconText: 'text-violet-700',  hoverBorder: 'hover:border-violet-300' },
+  gray:       { iconBg: 'bg-gray-100',   iconText: 'text-gray-500',    hoverBorder: 'hover:border-gray-300' },
 };
 
-const ACTIVE_COUNT = CATEGORIES.filter(c => c.key !== 'locked').reduce((sum, c) => sum + c.modules.length, 0);
+// Seuls les modules affichés sur la page sont comptés (les paramètres globaux sont dans le menu ⚙).
+const ACTIVE_COUNT = CATEGORIES.filter((category) => category.key !== 'parametres').reduce(
+  (total, category) => total + category.modules.length,
+  0
+);
+
+
 
 function HomePage() {
   const navigate = useNavigate();
 
+  const [settingsOpen, setSettingsOpen] = useState(false);
+
+  const settingsCategory = CATEGORIES.find(
+    (category) => category.key === "parametres"
+  );
+
+  const visibleCategories = CATEGORIES.filter(
+    (category) => category.key !== "parametres"
+  );
+
   return (
-    <div className="min-h-screen relative overflow-hidden">
+    <main className="min-h-screen bg-slate-50 text-slate-900">
+      <div className="mx-auto max-w-[1600px] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
 
-      {/* Fond décoratif */}
-      <div className="absolute inset-0 bg-linear-to-br from-[#dde6f5] via-[#e8f0fd] to-[#eef2fb] pointer-events-none" />
-      <div className="absolute -top-40 -left-40 w-[500px] h-[500px] bg-linear-to-br from-blue-400/20 to-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
-      <div className="absolute -bottom-40 -right-40 w-[600px] h-[600px] bg-linear-to-tl from-violet-400/15 to-purple-500/12 rounded-full blur-3xl pointer-events-none" />
-      <div
-        className="absolute inset-0 pointer-events-none opacity-[0.04]"
-        style={{ backgroundImage: 'radial-gradient(circle, #475569 1px, transparent 1px)', backgroundSize: '28px 28px' }}
-      />
+        {/* En-tête compact */}
+        <header className="mb-6 flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white">
+              <FiFolder size={20} />
+            </div>
 
-      {/* Contenu */}
-      <div className="relative max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-16">
-
-        {/* Header */}
-        <div className="mb-10 sm:mb-12">
-          <div className="inline-flex items-center gap-2 bg-white border border-blue-500 rounded-full px-3 py-1 mb-4 shadow-sm">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-            <span className="text-xs font-medium text-blue-600">{ACTIVE_COUNT} modules actifs</span>
+            <div>
+              <h1 className="text-xl font-bold tracking-tight sm:text-2xl">
+                Liste des modules
+              </h1>
+              <p className="mt-0.5 text-sm text-slate-500">
+                Accédez aux outils de gestion Al Bouraq.
+              </p>
+            </div>
           </div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-2 tracking-tight">
-            Liste des modules
-          </h1>
-          <p className="text-sm sm:text-base text-slate-500 max-w-md">
-            Accédez à tous les outils de gestion depuis cet espace centralisé.
-          </p>
-        </div>
+
+          <div className="flex items-center gap-2">
+            <span className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700">
+              {ACTIVE_COUNT} modules
+            </span>
+
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setSettingsOpen((open) => !open)}
+                aria-label="Ouvrir les paramètres globaux"
+                aria-expanded={settingsOpen}
+                className={`flex h-10 w-10 items-center justify-center rounded-lg
+                  border transition-colors
+                  ${
+                    settingsOpen
+                      ? "border-slate-400 bg-slate-100 text-slate-900"
+                      : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                  }`}
+              >
+                <FiSettings size={18} />
+              </button>
+
+              {settingsOpen && settingsCategory && (
+                <div className="absolute right-0 top-full z-50 mt-2 w-72
+                  overflow-hidden rounded-xl border border-slate-200
+                  bg-white p-2 shadow-xl">
+
+                  <p className="px-3 py-2 text-xs font-semibold uppercase
+                    tracking-wider text-slate-400">
+                    Paramètres globaux
+                  </p>
+
+                  {settingsCategory.modules.map((mod) => {
+                    const Icon = mod.icon;
+
+                    return (
+                      <button
+                        key={mod.path}
+                        type="button"
+                        onClick={() => {
+                          setSettingsOpen(false);
+                          navigate(mod.path);
+                        }}
+                        className="flex w-full items-center gap-3 rounded-lg
+                          px-3 py-2.5 text-left text-sm text-slate-700
+                          transition-colors hover:bg-slate-50 hover:text-slate-900"
+                      >
+                        <span className="flex h-8 w-8 shrink-0 items-center
+                          justify-center rounded-lg bg-slate-100 text-slate-600">
+                          <Icon size={16} />
+                        </span>
+
+                        <span className="min-w-0 flex-1">{mod.label}</span>
+
+                        <FiArrowRight
+                          size={14}
+                          className="shrink-0 text-slate-400"
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </header>
 
         {/* Catégories */}
-        <div className="space-y-10">
-          {CATEGORIES.map((category) => {
-            const CatIcon = category.icon;
-            return (
-              <div key={category.key}>
+        <div className="space-y-6">
+          {visibleCategories.map((category) => {
+            const CategoryIcon = category.icon;
 
-                {/* En-tête de catégorie */}
-                <div className="flex items-start gap-3 mb-4 pb-3 border-b border-slate-100">
-                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${category.iconBg}`}>
-                    <CatIcon className={category.iconColor} size={15} />
+            return (
+              <section key={category.key}>
+                {/* Titre de catégorie */}
+                <div className="mb-3 flex items-center gap-2.5">
+                  <div
+                    className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${category.iconBg}`}
+                  >
+                    <CategoryIcon
+                      className={category.iconColor}
+                      size={16}
+                    />
                   </div>
-                  <div>
-                    <h2 className="text-sm font-semibold text-slate-800 mb-0.5">{category.label}</h2>
-                    <p className="text-xs text-slate-400">{category.desc}</p>
+
+                  <div className="min-w-0">
+                    <h2 className="text-sm font-bold text-slate-800">
+                      {category.label}
+                    </h2>
+                    <p className="text-xs text-slate-500">
+                      {category.desc}
+                    </p>
                   </div>
+
+                  <div className="ml-auto hidden h-px flex-1 bg-slate-200 sm:block" />
+                  <span className="shrink-0 text-xs text-slate-400">
+                    {category.modules.length}
+                  </span>
                 </div>
 
-                {/* Grille de modules */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {/* Grille compacte */}
+                <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                   {category.modules.map((mod) => {
-                    const c = COLOR_MAP[mod.color];
                     const Icon = mod.icon;
-                    const isLocked = (mod as any).locked;
+                    const colors = COLOR_MAP[mod.color] ?? COLOR_MAP.blue;
+                    const isLocked = Boolean((mod as any).locked);
 
                     if (isLocked) {
                       return (
                         <div
-                          key={mod.label}
-                          className="relative shadow-sm bg-white/60 backdrop-blur-sm rounded-2xl p-5 border border-gray-100 cursor-not-allowed overflow-hidden"
+                          key={mod.path}
+                          aria-disabled="true"
+                          className="flex min-h-[76px] items-center gap-3 rounded-xl border border-slate-200 bg-slate-100/70 px-3 py-3 opacity-70"
                         >
-                          <span className="absolute top-3 right-3 text-[10px] font-semibold text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-200 text-slate-500">
+                            <FiLock size={17} />
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <h3 className="truncate text-sm font-semibold text-slate-600">
+                              {mod.label}
+                            </h3>
+                            <p className="mt-0.5 line-clamp-1 text-xs text-slate-500">
+                              {mod.desc}
+                            </p>
+                          </div>
+
+                          <span className="shrink-0 text-[10px] font-medium text-slate-500">
                             En cours
                           </span>
-                          <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center mb-4">
-                            <FiLock className="text-gray-300" size={16} />
-                          </div>
-                          <h3 className="text-sm font-semibold text-gray-400 mb-1">{mod.label}</h3>
-                          <p className="text-xs text-gray-300 leading-relaxed">{mod.desc}</p>
                         </div>
                       );
                     }
 
                     return (
-                      <div
+                      <button
                         key={mod.path}
-                        onClick={() => navigate(mod.path, {
-                          state: mod.defaultTab ? { targetTab: mod.defaultTab } : undefined,
-                        })}
-                        className={`
-                          group relative shadow-md shadow-blue-200/40 bg-white rounded-2xl p-5
-                          cursor-pointer border ${c.border}
-                          transition-all duration-300
-                          hover:shadow-xl hover:shadow-blue-300/50 ${c.glow} hover:-translate-y-1.5
-                          overflow-hidden
-                        `}
+                        type="button"
+                        onClick={() =>
+                          navigate(mod.path, {
+                            state: mod.defaultTab
+                              ? { targetTab: mod.defaultTab }
+                              : undefined,
+                          })
+                        }
+                        className={`group flex min-h-[76px] w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-3 text-left transition-colors duration-150 ${colors.hoverBorder} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-1`}
                       >
-                        {/* Barre colorée en haut au hover */}
-                        <div className={`absolute top-0 left-0 right-0 h-0.5 bg-linear-to-r ${c.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-t-2xl`} />
-
-                        {/* Blob décoratif */}
-                        <div className={`absolute -top-6 -right-6 w-24 h-24 bg-linear-to-br ${c.gradient} opacity-[0.1] rounded-full group-hover:scale-150 group-hover:opacity-[0.3] transition-all duration-500`} />
-
-                        <div className="relative z-10">
-                          <div className={`w-11 h-11 ${c.iconBg} rounded-xl flex items-center justify-center mb-4 transition-all duration-300 group-hover:scale-105`}>
-                            <Icon className={`${c.iconText}`} size={22} />
-                          </div>
-                          <h3 className="text-sm font-semibold text-slate-800 mb-1">{mod.label}</h3>
-                          <p className="text-xs text-slate-400 leading-relaxed mb-4">{mod.desc}</p>
-                          <div className={`flex items-center gap-1 text-xs font-medium ${c.arrow} opacity-0 group-hover:opacity-100 transition-all duration-300 -translate-x-1 group-hover:translate-x-0`}>
-                            <span>Accéder</span>
-                            <FiArrowRight size={11} />
-                          </div>
+                        <div
+                          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${colors.iconBg} ${colors.iconText}`}
+                        >
+                          <Icon size={18} />
                         </div>
-                      </div>
+
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-sm font-semibold leading-5 text-slate-800">
+                            {mod.label}
+                          </h3>
+                          <p className="mt-0.5 line-clamp-1 text-xs leading-4 text-slate-500">
+                            {mod.desc}
+                          </p>
+                        </div>
+
+                        <FiArrowRight
+                          size={15}
+                          className="shrink-0 text-white transition-colors group-hover:text-slate-700"
+                        />
+                      </button>
                     );
                   })}
                 </div>
-              </div>
+              </section>
             );
           })}
         </div>
 
-        {/* Footer */}
-        <p className="text-center text-xs text-slate-300 mt-12">
-          Copyright © 2026 ABT IT Developpement
-        </p>
+        {/* Pied de page */}
+        <footer className="mt-7 border-t border-slate-200 pt-4 text-center">
+          <p className="text-xs text-slate-400">
+            Copyright © {new Date().getFullYear()} ABT IT Développement
+          </p>
+        </footer>
       </div>
-    </div>
+    </main>
   );
 }
 

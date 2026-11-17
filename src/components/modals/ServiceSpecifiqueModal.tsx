@@ -3,6 +3,7 @@ import { useDispatch } from 'react-redux';
 import type { AppDispatch } from '../../app/store';
 import { createServiceSpecifique } from '../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
 import type { TypeService } from '../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface ServiceSpecifiqueModalProps {
   isOpen: boolean;
@@ -29,6 +30,8 @@ export default function ServiceSpecifiqueModal({ isOpen, onClose, typeService, d
       setForm((f) => ({ ...f, type: defaultType || 'SERVICE' }));
     }
   }, [isOpen, defaultType]);
+
+  useEscapeKey(isOpen, onClose);
 
   if (!isOpen) return null;
 

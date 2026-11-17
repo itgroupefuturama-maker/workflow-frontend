@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { FiX } from 'react-icons/fi';
 import type { AppDispatch, RootState } from '../../../app/store';
 import { createAttestationParam, fetchAttestationParams } from '../../../app/front_office/parametre_attestation/attestationParamsSlice';
+import { useEscapeKey } from '../../../hooks/useEscapeKey';
 
 interface Props {
   isOpen: boolean;
@@ -23,6 +24,8 @@ export default function AttestationParamModal({ isOpen, onClose }: Props) {
 
   const [form, setForm] = useState(defaultForm);
   const [formError, setFormError] = useState<string | null>(null);
+
+  useEscapeKey(isOpen, onClose);
 
   if (!isOpen) return null;
 

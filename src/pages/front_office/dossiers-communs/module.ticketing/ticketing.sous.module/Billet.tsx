@@ -37,6 +37,9 @@ import { toast } from '../../../../../components/Toast/toast';
 import { onBilletStatut } from '../../../../../service/notifications';
 import Button from '../../../../../components/ui/Button';
 import { selectServicesByType } from '../../../../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
+import ConfirmDialog from '../../../../../components/ConfirmDialog';
+import ModifierLigneModal from './components.billet/ModifierLigneModal';
+import { messageRenvoiOdoo, peutMettreAJourResa } from './components.billet/utils/billetStatuts';
 
 // Les thunks rejettent avec le message du back (string) : on l'affiche tel quel
 const messageErreur = (err: unknown, fallback: string): string =>
@@ -75,7 +78,7 @@ const Billet = () => {
   // Dans le composant Billet
   const services = useSelector(selectServicesByType('TICKET'));
 
-  const tabs = [
+  const tabs: { id: string; label: string }[] = [
     // { id: 'prospection', label: 'Listes des entête prospection' },
     // { id: 'billet', label: 'Listes des billets' }
   ];
@@ -138,15 +141,25 @@ const Billet = () => {
     }
   };
 
-  // Dans Billet.tsx, avant le return
-  const handleReprogrammer = (ligne: BilletLigne) => {
-    if (!ligne || !ligne.id) {
-      toast.error('Impossible de reprogrammer : ligne invalide');
-      return;
-    }
-
+  const ouvrirReprogrammation = (ligne: BilletLigne) => {
     setSelectedLigneForReprog(ligne);
     setShowReprogModal(true);
+  };
+
+  // Modification ou annulation sur un dossier déjà parti chez Odoo : on prévient que la ligne devra être renvoyée
+  const [confirmRenvoiOdoo, setConfirmRenvoiOdoo] = useState<{ message: string; action: () => void } | null>(null);
+  const confirmerSiRenvoiOdoo = (action: () => void) => {
+    const message = messageRenvoiOdoo(billet);
+    if (message) setConfirmRenvoiOdoo({ message: `${message} Continuer ?`, action });
+    else action();
+  };
+
+  // « Modifier » : ligne FAIT → choix réservation / reprogrammation (avertissement dans la modal de choix) ;
+  // ligne CREER ou CLOTURER → reprogrammation seule, ouverte directement après confirmation
+  const [ligneAModifier, setLigneAModifier] = useState<BilletLigne | null>(null);
+  const handleModifier = (ligne: BilletLigne) => {
+    if (peutMettreAJourResa(billet, ligne)) setLigneAModifier(ligne);
+    else confirmerSiRenvoiOdoo(() => ouvrirReprogrammation(ligne));
   };
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -267,23 +280,6 @@ const Billet = () => {
     }
   };
 
-  const billetLignes = billet?.billetLigne;
-
-  // On filtre uniquement les lignes "actives" (on ignore ANNULATION et ANNULER)
-  const lignesActives = billetLignes?.filter(
-    l => l.statusLigne !== 'ANNULATION' && l.statusLigne !== 'ANNULER'
-  ) ?? [];
-
-  // Parmi les lignes actives, on vérifie les statuts
-  const allLinesReservation = lignesActives.length > 0 &&
-    lignesActives.every(l => l.statut === 'FAIT' || l.statut === 'MODIFIER' || l.statut === 'ANNULER');
-
-  // Émission possible seulement quand toutes les lignes sont traitées (CLOTURER, MODIFIER ou ANNULER)
-  // et qu'au moins une est CLOTURER (sinon il n'y a rien à émettre)
-  const allLinesEmission = lignesActives.length > 0 &&
-    lignesActives.every(l => l.statut === 'CLOTURER' || l.statut === 'MODIFIER' || l.statut === 'ANNULER') &&
-    lignesActives.some(l => l.statut === 'CLOTURER');
-
   // Le statut n'avance plus ici : il change plus tard, quand Odoo valide. On recharge quand même
   // le billet après l'envoi (succès ou échec) pour afficher le nouvel état dans odooEnvois.
   const handleSoumettreVente = async (billetId: string) => {
@@ -376,9 +372,10 @@ const Billet = () => {
   const [ligneToAnnul, setLigneToAnnul] = useState<BilletLigne | null>(null);
 
   const handleAnnulerLigne = (ligne: BilletLigne) => {
-    setLigneToAnnul(ligne);
-    setShowAnnulModal(true);
-    // Option : setAnnulType('reservation') ou autre selon ton besoin
+    confirmerSiRenvoiOdoo(() => {
+      setLigneToAnnul(ligne);
+      setShowAnnulModal(true);
+    });
   };
 
   // if (!enteteId) return <div className="p-8 text-red-600">ID du billet manquant</div>;
@@ -439,19 +436,18 @@ const Billet = () => {
           {/* ── Colonne principale ── */}
           <div className="flex-1 min-w-0 flex flex-col min-h-0">
             <div className="shrink-0 px-4 bg-slate-200 rounded-t-xl">
-              <div className='flex items-center justify-between'>
+              <div className='flex items-center justify-between gap-4'>
                 <TicketingHeader items={billetDetailItems(billet?.numeroBillet)} />
+                {/* Infos principales du billet : carte compacte à droite du fil d'Ariane */}
+                <BilletInfoCards
+                  billet={billet}
+                  clientFacture={clientFacture}
+                  dossier={dossier}
+                />
               </div>
             </div>
 
             <div className='px-4 bg-slate-200 rounded-b-xl'>
-              {/* Infos principales */}
-              <BilletInfoCards
-                billet={billet}
-                clientFacture={clientFacture}
-                dossier={dossier}
-              />
-
               {/* Tableau groupé avec Sous-Onglets */}
               <div className="my-2 flex items-center">
                 <nav className="flex p-1 bg-slate-300 rounded-xl" aria-label="Inner Tabs">
@@ -490,12 +486,10 @@ const Billet = () => {
                   billetLignes={billet?.billetLigne || []}
                   handleOpenReservation={handleOpenReservation}
                   handleOpenEmission={handleOpenEmission}
-                  handleReprogrammer={handleReprogrammer}
+                  handleModifier={handleModifier}
                   handleRemove={handleAnnulerLigne}
                   handleReporter={handleReporter}
                   serviceById={serviceById}
-                  allLinesEmission={allLinesEmission}
-                  allLinesReservation={allLinesReservation}
                   envoiOdooEnCours={envoiOdooEnCours}
                   onApprouver={() => handleSoumettreVente(billet.id)}
                   onShowEmission={() => setShowEmissionModal(true)}
@@ -540,6 +534,32 @@ const Billet = () => {
                   />
               )}
             </div>
+
+            {ligneAModifier && (
+              <ModifierLigneModal
+                ligne={ligneAModifier}
+                billet={billet}
+                onClose={() => setLigneAModifier(null)}
+                onContinuer={(choix) => {
+                  setLigneAModifier(null);
+                  if (choix === 'RESA') handleOpenReservation(ligneAModifier);
+                  else ouvrirReprogrammation(ligneAModifier);
+                }}
+              />
+            )}
+
+            <ConfirmDialog
+              isOpen={!!confirmRenvoiOdoo}
+              title="Ligne à renvoyer à Odoo"
+              message={confirmRenvoiOdoo?.message ?? ''}
+              confirmLabel="Continuer"
+              tone="warning"
+              onClose={() => setConfirmRenvoiOdoo(null)}
+              onConfirm={() => {
+                confirmRenvoiOdoo?.action();
+                setConfirmRenvoiOdoo(null);
+              }}
+            />
 
             {/* Monté seulement à l'ouverture pour repartir de la dernière référence envoyée */}
             {showEmissionModal && (

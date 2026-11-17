@@ -4,6 +4,7 @@ import type { AppDispatch } from '../../../../../app/store';
 import { fetchVisaEnteteDetail, submitVisaLigne } from '../../../../../app/front_office/parametre_visa/visaEnteteDetailSlice';
 import VisaModal from './VisaModal';
 import VisaField from './VisaField';
+import { AlertTriangle } from 'lucide-react';
 
 interface Props {
   ligneId:          string;
@@ -149,7 +150,7 @@ const SubmitVisaLigneModal = ({
       {/* Alerte commission négative */}
       {Number(soummissionCommissionAriary) < 0 && (
         <div className="flex items-center gap-2 text-red-600 text-xs bg-red-50 border border-red-200 rounded-xl px-3 py-2">
-          ⚠️ Commission négative — le taux de change est trop élevé par rapport au prix de vente client.
+          <AlertTriangle size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Commission négative — le taux de change est trop élevé par rapport au prix de vente client.
         </div>
       )}
 
@@ -166,7 +167,7 @@ const SubmitVisaLigneModal = ({
 
       {error && (
         <p className="text-red-500 text-sm bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-          ⚠️ {error}
+          <AlertTriangle size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />{error}
         </p>
       )}
     </VisaModal>

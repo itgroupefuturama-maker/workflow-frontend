@@ -7,6 +7,7 @@ import {
   FiX, FiSearch, FiLoader, FiAward,
   FiCreditCard, FiTruck, FiUserCheck,
 } from 'react-icons/fi';
+import { useEscapeKey } from '../../../../../hooks/useEscapeKey';
 
 interface Props {
   beneficiaires: ClientBeneficiaire[];
@@ -16,6 +17,7 @@ interface Props {
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
 const ModalSearchBenef = ({ beneficiaires, onClose }: Props) => {
+  useEscapeKey(true, onClose);
   const dispatch = useAppDispatch();
   const { searchResults = [], loadingSearch } = useSelector((s: RootState) => s.compagnieClients);
 

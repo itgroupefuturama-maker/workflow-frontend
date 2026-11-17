@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { FiX, FiCheck } from 'react-icons/fi';
 import { toast } from '../../../../../components/Toast/toast';
+import { useEscapeKey } from '../../../../../hooks/useEscapeKey';
+import { AlertTriangle } from 'lucide-react';
 
 interface HotelConfirmationModalProps {
   isOpen: boolean;
@@ -95,6 +97,8 @@ const HotelConfirmationModal: React.FC<HotelConfirmationModalProps> = ({
     onSubmit(payload);
     setShowConfirmation(false);
   };
+
+  useEscapeKey(isOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -368,7 +372,7 @@ const HotelConfirmationModal: React.FC<HotelConfirmationModalProps> = ({
                   )}
                 </pre> */}
                 <div className="bg-amber-50 border border-amber-200 rounded p-3 flex items-start gap-2">
-                  <span>⚠️</span>
+                  <AlertTriangle size={14} aria-hidden="true" className="shrink-0" />
                   <p className="text-sm text-amber-800">
                     Cette action sera <strong>irréversible</strong> une fois confirmée.
                   </p>

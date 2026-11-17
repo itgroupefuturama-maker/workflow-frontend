@@ -3,6 +3,7 @@ import { FiX, FiDownload, FiEye, FiChevronDown, FiChevronRight } from 'react-ico
 import type { AttestationEnteteItem, AttestationPdfMode, AttestationPdfSelection } from '../../../module.pdf/pdf.generation/types/attestation.types';
 import type { PdfDesignId } from '../../../module.pdf/pdf.generation/types/pdf-design.types';
 import { PDF_DESIGNS } from '../../../module.pdf/pdf.generation/config/pdf-designs';
+import { useEscapeKey } from '../../../../../../hooks/useEscapeKey';
 
 interface Props {
   isOpen: boolean;
@@ -82,6 +83,8 @@ export const ModalAttestationPdfSelector: React.FC<Props> = ({
 
   const fmt = (iso: string) =>
     new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+
+  useEscapeKey(isOpen, onClose);
 
   if (!isOpen) return null;
 

@@ -6,6 +6,7 @@ import { fmtNum } from "../utils/formatters";
 import { useDispatch } from "react-redux";
 import type { AppDispatch } from "../../../../../app/store";
 import { useState } from "react";
+import { AlertTriangle } from 'lucide-react';
 
 const EMPTY_FORM = {
   tauxChangeFacture:       '',
@@ -190,7 +191,7 @@ export const FactureModal = ({
 
           {err && (
             <div className="bg-red-50 border border-red-200 text-red-600 text-xs rounded-lg px-4 py-2">
-              ⚠️ {err}
+              <AlertTriangle size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />{err}
             </div>
           )}
 

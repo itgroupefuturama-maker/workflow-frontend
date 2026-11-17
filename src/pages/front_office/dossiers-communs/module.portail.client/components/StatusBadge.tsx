@@ -1,3 +1,5 @@
+import { formatStatut } from '../../../../../utils/statut';
+
 const StatusBadge = ({ status }: { status: string }) => {
   const styles: Record<string, string> = {
     VALIDER: 'bg-green-100 text-green-700',
@@ -6,7 +8,7 @@ const StatusBadge = ({ status }: { status: string }) => {
   };
   return (
     <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${styles[status] ?? 'bg-gray-100 text-gray-600'}`}>
-      {status}
+      {formatStatut(status)}
     </span>
   );
 };

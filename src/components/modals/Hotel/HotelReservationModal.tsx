@@ -8,6 +8,8 @@ import { fetchPreferencesBeneficiaire } from '../../../app/back_office/clientFac
 import { selectServicesByType } from '../../../app/front_office/parametre_ticketing/serviceSpecifiqueSlice';
 import PreferencesInlinePanel from './PreferencesInlinePanel';
 import { toast } from '../../Toast/toast';
+import { useEscapeKey } from '../../../hooks/useEscapeKey';
+import { AlertTriangle } from 'lucide-react';
 
 interface HotelReservationModalProps {
   isOpen: boolean;
@@ -280,6 +282,8 @@ const HotelReservationModal: React.FC<HotelReservationModalProps> = ({
   for (let i = 0; i < selectedPassagers.length; i += ROWS) {
     colonnesPassagers.push(selectedPassagers.slice(i, i + ROWS));
   }
+
+  useEscapeKey(isOpen, onClose);
 
   if (!isOpen) return null;
 
@@ -1094,7 +1098,7 @@ const HotelReservationModal: React.FC<HotelReservationModalProps> = ({
                       </div> */}
 
                       <div className="bg-amber-50 border border-amber-200 rounded p-4 flex items-start gap-3">
-                        <span className="text-base">⚠️</span>
+                        <AlertTriangle size={14} aria-hidden="true" className="text-base shrink-0" />
                         <p className="text-sm text-amber-800">
                           Vérifiez attentivement toutes les valeurs. Cette action sera <strong>irréversible</strong> une fois confirmée.
                         </p>

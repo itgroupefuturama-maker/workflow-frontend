@@ -17,7 +17,7 @@ import TabContainer from '../../../../../../layouts/TabContainer';
 import { AssuranceHeader } from '../../components/AssuranceHeader';
 import { Badge, Spinner } from '../../components/atoms';
 import { fmtDate } from '../../utils/formatters';
-import { FileText, User, Phone, Briefcase, Users, Info, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, Briefcase, FileText, Info, Phone, ShieldCheck, User, Users } from 'lucide-react';
 import { useAuthorization } from '../../../../../../hooks/useAuthorization';
 import PageSkeleton from '../../../../../../components/ui/PageSkeleton';
 
@@ -198,7 +198,7 @@ const PageDetailPassager = () => {
             )}
             {actionError && (
               <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-xl px-4 py-2.5">
-                ⚠️ {actionError}
+                <AlertTriangle size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />{actionError}
               </div>
             )}
 
@@ -302,7 +302,7 @@ const PageDetailPassager = () => {
                           <tr key={doc.id} className={dIdx % 2 === 0 ? 'bg-white hover:bg-gray-50' : 'bg-slate-50/40 hover:bg-gray-50'}>
                             <td className="px-4 py-3 whitespace-nowrap">
                               <div className="flex items-center gap-2.5">
-                                <div className="h-8 w-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0 text-base">📄</div>
+                                <div className="h-8 w-8 rounded-lg bg-indigo-50 border border-indigo-100 flex items-center justify-center shrink-0 text-base"><FileText size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" /></div>
                                 <span className="text-sm font-semibold text-gray-800">{doc.nomDoc}</span>
                               </div>
                             </td>

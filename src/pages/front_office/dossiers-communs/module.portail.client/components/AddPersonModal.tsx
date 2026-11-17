@@ -4,6 +4,7 @@ import type { RootState, AppDispatch } from "../../../../../app/store";
 import { createClientPerson } from "../../../../../app/portail_client/clientFormSlice";
 import type { ClientPersonPayload } from "../../../../../app/portail_client/clientFormSlice";
 import { X, Loader2 } from "lucide-react";
+import { useEscapeKey } from '../../../../../hooks/useEscapeKey';
 
 const EMPTY_FORM: Omit<ClientPersonPayload, 'clientBeneficiaireFormId'> = {
   nom: '',
@@ -42,6 +43,7 @@ interface Props {
 }
 
 const AddPersonModal = ({ beneficiaireId, userId, beneficiaireNom, onClose }: Props) => {
+  useEscapeKey(true, onClose);
   const dispatch = useDispatch<AppDispatch>();
   const { loading, error } = useSelector((state: RootState) => state.clientForm);
 

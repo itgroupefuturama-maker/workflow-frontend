@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { fetchClientFactureById } from "../../../../app/back_office/clientFacturesSlice";
 import { fetchClientBeneficiaireInfos } from "../../../../app/portail_client/clientBeneficiaireInfosSlice";
 import BeneficiaireInfosModal from "../../../../components/modals/BeneficiaireInfosModal";
+import { formatStatut } from '../../../../utils/statut';
 
 export default function DossierCommunDetail() {
   const navigate = useNavigate();
@@ -109,7 +110,7 @@ export default function DossierCommunDetail() {
                       ? 'bg-red-100 text-red-700 border border-red-200' 
                       : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
                   }`}>
-                    {dossier.status}
+                    {formatStatut(dossier.status)}
                   </span>
                 </div>
                 <p className="text-sm text-slate-500 mt-0.5">
@@ -286,7 +287,7 @@ export default function DossierCommunDetail() {
                             <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
                               link.clientBeneficiaire.statut === 'ACTIF' ? 'bg-emerald-500' : 'bg-red-500'
                             }`}></span>
-                            {link.clientBeneficiaire.statut}
+                            {formatStatut(link.clientBeneficiaire.statut)}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right">

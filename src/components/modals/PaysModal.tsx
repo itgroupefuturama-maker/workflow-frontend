@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import type { AppDispatch, RootState } from '../../app/store';
 import { createPays } from '../../app/front_office/parametre_ticketing/paysSlice';
+import { useEscapeKey } from '../../hooks/useEscapeKey';
 
 interface PaysModalProps {
   isOpen: boolean;
@@ -18,6 +19,8 @@ export default function PaysModal({ isOpen, onClose }: PaysModalProps) {
   const [pays, setPays] = useState('');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
+
+  useEscapeKey(isOpen, onClose);
 
   if (!isOpen) return null;
 

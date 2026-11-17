@@ -4,6 +4,7 @@ import { useDispatch } from 'react-redux';
 import type { AnnivClient } from '../types';
 import type { AppDispatch } from '../../../../../app/store';
 import { sendAnnivMessage } from '../../../../../app/front_office/paramatre_anniversaire/annivClientsSlice';
+import { useEscapeKey } from '../../../../../hooks/useEscapeKey';
 
 interface Props {
   client: AnnivClient;
@@ -12,6 +13,7 @@ interface Props {
 }
 
 const ModalSendMessage = ({ client, onClose, onSuccess }: Props) => {
+  useEscapeKey(true, onClose);
   const dispatch = useDispatch<AppDispatch>();
   const [sending, setSending]   = useState(false);
   const [error,   setError]     = useState<string | null>(null);

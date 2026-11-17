@@ -1,8 +1,11 @@
+import { CircleCheck, CircleX, Receipt, Ticket, Wallet, type LucideIcon } from 'lucide-react';
 // Notifications structurées et événements socket temps réel — voir FRONTEND_PROMPT_NOTIFICATIONS_ODOO_BILLET.md
 
 export type NotificationType =
   | 'BILLET_VENTE_VALIDEE'
   | 'BILLET_ACHAT_VALIDE'
+  | 'BILLET_VENTE_REJETEE'
+  | 'BILLET_ACHAT_REJETE'
   | 'BILLET_FACTURE_EMISE'
   | 'BILLET_FACTURE_REGLEE';
 
@@ -17,7 +20,22 @@ export interface NotificationBilletData {
   numeroDossierCommun: number;
   ancienStatut: string;
   nouveauStatut: string;
+  // etatOdoo de l'entête après la réponse d'Odoo
+  etatOdoo?: string;
+  // Lignes concernées par la réponse d'Odoo ([] pour facture et règlement)
+  lignes?: NotificationBilletLigne[];
   [key: string]: unknown;
+}
+
+export interface NotificationBilletLigne {
+  billetLigneId: string;
+  referenceLigne: string;
+  decision: 'VALIDE' | 'REJETE';
+  statut: string;
+  etatOdoo: string;
+  motif: string | null;
+  odooSaleId: string | null;
+  odooPurchaseId: string | null;
 }
 
 // Les anciennes notifications (attribution de dossier, etc.) n'ont que `description` :
@@ -42,14 +60,19 @@ export interface BilletStatutEvent {
   billetEnteteId: string;
   ancienStatut: string;
   nouveauStatut: string;
+  etatOdoo?: string;
   type: NotificationType;
 }
 
-export const ICONE_NOTIFICATION: Record<string, string> = {
-  BILLET_VENTE_VALIDEE: '✅',
-  BILLET_ACHAT_VALIDE: '🎫',
-  BILLET_FACTURE_EMISE: '🧾',
-  BILLET_FACTURE_REGLEE: '💰',
+// Icône + couleur par type de notification (icônes vectorielles plutôt qu'emojis :
+// rendu identique sur tous les systèmes).
+export const ICONE_NOTIFICATION: Record<string, { icon: LucideIcon; className: string }> = {
+  BILLET_VENTE_VALIDEE: { icon: CircleCheck, className: 'text-emerald-600' },
+  BILLET_ACHAT_VALIDE: { icon: Ticket, className: 'text-indigo-600' },
+  BILLET_VENTE_REJETEE: { icon: CircleX, className: 'text-red-600' },
+  BILLET_ACHAT_REJETE: { icon: CircleX, className: 'text-red-600' },
+  BILLET_FACTURE_EMISE: { icon: Receipt, className: 'text-blue-600' },
+  BILLET_FACTURE_REGLEE: { icon: Wallet, className: 'text-amber-600' },
 };
 
 // La page Billet est routée sur le devisId (comme dans Devis.tsx). Le backend ne fournit pas d'URL
@@ -88,5 +111,20 @@ export function onBilletStatut(listener: (e: BilletStatutEvent) => void) {
   billetStatutListeners.add(listener);
   return () => {
     billetStatutListeners.delete(listener);
+  };
+}
+
+
+// ── Changements faits ailleurs (page Notifications) → la cloche resynchronise son badge ──
+const changementListeners = new Set<() => void>();
+
+export function emitNotificationsChangees() {
+  changementListeners.forEach((l) => l());
+}
+
+export function onNotificationsChangees(listener: () => void) {
+  changementListeners.add(listener);
+  return () => {
+    changementListeners.delete(listener);
   };
 }

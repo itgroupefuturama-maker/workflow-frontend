@@ -104,7 +104,8 @@ const HomePageTicketing = () => {
     // reset formulaire
     setNewEntete({
       fournisseurId: '',
-      credit: 'CREDIT_15',
+      // Pré-sélectionne le crédit par défaut du client facturé (repli : 15 jours)
+      credit: clientFacture?.creditdefault || 'CREDIT_15',
       typeVol: 'LONG_COURRIER',
     });
   };
@@ -117,7 +118,7 @@ const HomePageTicketing = () => {
   const handleCreateEntete = async () => {
     if (!prestationId) return;
     if (!newEntete.fournisseurId) {
-      toast.error("Veuillez sélectionner un fournisseur");
+      toast.error("Veuillez sélectionner une compagnie");
       return;
     }
 
@@ -163,6 +164,7 @@ const HomePageTicketing = () => {
         </Suspense>
 
         <ProspectionModals
+          terme="compagnie"
           selectedEntete={selectedEntete}
           modalCommission={modalCommission}
           setModalCommission={setModalCommission}

@@ -23,6 +23,7 @@ import type { Visa } from '../../../../../../app/front_office/parametre_visa/vis
 import SuiviTabSection from '../../../module.suivi/SuiviTabSection';
 import { useAuthorization } from '../../../../../../hooks/useAuthorization';
 import Skeleton from '../../../../../../components/ui/Skeleton';
+import { AlertTriangle, Lock, Upload, Zap } from 'lucide-react';
 
 const MODULE = 'visa';
 
@@ -105,7 +106,7 @@ const PageDetailVisa = () => {
     devise:           string;
   } | null>(null);
 
-  const tabs = [
+  const tabs: { id: string; label: string }[] = [
       // { id: 'prospection', label: 'Listes des prospections' },
       // { id: 'visa',        label: 'Listes des visa' },
   ];
@@ -180,7 +181,7 @@ const PageDetailVisa = () => {
   if (error) return (
     <div className="min-h-screen bg-neutral-50 flex items-center justify-center">
       <div className="text-center space-y-3">
-        <p className="text-red-500 font-medium">⚠️ {error}</p>
+        <p className="text-red-500 font-medium"><AlertTriangle size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />{error}</p>
         <button onClick={() => navigate(-1)} className="text-sm text-indigo-600 hover:underline">← Retour</button>
       </div>
     </div>
@@ -254,7 +255,7 @@ const PageDetailVisa = () => {
                               : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm'
                           }`}
                         >
-                          <span className={detail.visaLigne.length === 0 || detail.statutEntete === 'ASSIGNER' ? 'grayscale opacity-50' : ''}>🔐</span>
+                          <span className={detail.visaLigne.length === 0 || detail.statutEntete === 'ASSIGNER' ? 'grayscale opacity-50' : ''}><Lock size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" /></span>
                           Accès portail
                         </button>
                       )}
@@ -279,7 +280,7 @@ const PageDetailVisa = () => {
                             </>
                           ) : (
                             <>
-                              <span className={detail.visaLigne.length === 0 || detail.statutEntete === 'ASSIGNER' ? 'grayscale opacity-50' : ''}>⚡</span>
+                              <span className={detail.visaLigne.length === 0 || detail.statutEntete === 'ASSIGNER' ? 'grayscale opacity-50' : ''}><Zap size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" /></span>
                               Générer portail
                             </>
                           )}
@@ -321,7 +322,7 @@ const PageDetailVisa = () => {
                 <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-lg px-4 py-3">✓ {generateSuccess}</div>
               )}
               {generateError && (
-                <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg px-4 py-3">⚠️ {generateError}</div>
+                <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg px-4 py-3"><AlertTriangle size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />{generateError}</div>
               )}
             </div>
 
@@ -507,7 +508,7 @@ const PageDetailVisa = () => {
                                               : 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
                                           }`}
                                         >
-                                          📤 Soumettre
+                                          <Upload size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Soumettre
                                         </button>
                                       )}
 
@@ -577,7 +578,7 @@ const PageDetailVisa = () => {
 
                                       {passagers.length === 0 ? (
                                         <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                                          ⚠ Aucun passager assigné — utilisez le bouton "Accès portail"
+                                          <AlertTriangle size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />Aucun passager assigné — utilisez le bouton "Accès portail"
                                         </div>
                                       ) : (
                                         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
@@ -759,7 +760,7 @@ const PageDetailVisa = () => {
               )}
               {payError && (
                 <div className="bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg px-4 py-3">
-                  ⚠️ {payError}
+                  <AlertTriangle size={14} aria-hidden="true" className="inline -mt-0.5 mr-1 shrink-0" />{payError}
                 </div>
               )}
             </div>

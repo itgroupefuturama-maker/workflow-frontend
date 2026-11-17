@@ -11,7 +11,6 @@ interface SuiviTabSectionProps {
 const SuiviTabSection: React.FC<SuiviTabSectionProps> = ({ prestationId, moduleName = '' }) => {
   return (
     <div>
-      <h2 className="text-lg font-semibold text-slate-700 mb-4">Suivi {moduleName}</h2>
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-8">
         <CommentairesTable prestationId={prestationId} />
         <RappelsTable prestationId={prestationId} />

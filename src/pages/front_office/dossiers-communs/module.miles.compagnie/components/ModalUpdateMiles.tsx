@@ -1,6 +1,7 @@
 import React from 'react';
 import { FiX, FiAward, FiLoader, FiUserCheck } from 'react-icons/fi';
 import type { CompagnieClient } from '../../../../../app/front_office/parametre_miles_compagnie/compagnieClientsSlice';
+import { useEscapeKey } from '../../../../../hooks/useEscapeKey';
 
 interface Props {
   selectedCC: CompagnieClient;
@@ -13,6 +14,7 @@ interface Props {
 }
 
 const ModalUpdateMiles = ({ selectedCC, miles, error, loading, onChange, onSubmit, onClose }: Props) => {
+  useEscapeKey(true, onClose);
   const existing = selectedCC.milesCompagnie[0];
 
   return (

@@ -13,6 +13,7 @@ import { API_URL } from '../../service/env';
 import { FiPlus, FiX, FiLoader, FiFileText, FiCalendar, FiExternalLink, FiAlertCircle, FiArrowLeft } from 'react-icons/fi';
 import AuditModal from '../../components/AuditModal';
 import { useNavigate } from 'react-router-dom';
+import { formatStatut } from '../../utils/statut';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -188,7 +189,7 @@ const ModelesPage = () => {
                     modele.status === 'ACTIF' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
                   }`}>
                     <span className={`h-1.5 w-1.5 rounded-full ${modele.status === 'ACTIF' ? 'bg-green-500' : 'bg-red-500'}`} />
-                    {modele.status}
+                    {formatStatut(modele.status)}
                   </span>
                 </td>
                 <td className="px-6 py-4 text-right">

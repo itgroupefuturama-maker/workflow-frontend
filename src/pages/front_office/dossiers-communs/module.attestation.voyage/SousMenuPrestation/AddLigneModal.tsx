@@ -6,6 +6,7 @@ import { createAttestationLigne } from '../../../../../app/front_office/parametr
 import { fetchAttestationParams } from '../../../../../app/front_office/parametre_attestation/attestationParamsSlice';
 import { useItineraireCascade } from '../../../../../hooks/useItineraireCascade';
 import ItineraireCascadeFields from '../../../../../components/ItineraireCascadeFields';
+import { useEscapeKey } from '../../../../../hooks/useEscapeKey';
 
 type Props = {
   isOpen: boolean;
@@ -158,6 +159,8 @@ const AddLigneModal = ({
       setSubmitting(false);
     }
   };
+
+  useEscapeKey(isOpen, onClose);
 
   if (!isOpen) return null;
 

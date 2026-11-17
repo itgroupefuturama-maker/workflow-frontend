@@ -60,13 +60,13 @@ const AssuranceProspectionListe = () => {
         <div className="shrink-0 px-4 bg-slate-200 rounded-t-xl">
           <div className="flex items-center justify-between">
             <AssuranceHeader numeroassurance={prestationId} nomPassager={''} navigate={navigate} isDetail={false} isProspection={true} isDevis={false} />
+            <DossierActifCard className="ml-auto" />
             
           </div>
         </div>
 
         {/* ── Tabs sous-section ── */}
         <div className="px-4 border-b border-neutral-50 bg-slate-200 rounded-b-xl">
-          <DossierActifCard gradient="from-green-400 via-green-400 to-green-500" />
           <div className='flex justify-between'>
             <nav className="flex p-1 rounded-lg mb-2">
             {[{ id: 'lignes', label: 'Prospections assurance', count: list.length }, { id: 'suivi', label: 'Suivi' }].map(tab => (

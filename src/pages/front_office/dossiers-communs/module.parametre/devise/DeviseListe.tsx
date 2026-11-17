@@ -5,6 +5,7 @@ import type { AppDispatch, RootState } from '../../../../../app/store';
 import { createDevise, deleteDevise, fetchDevises, updateDevise, type Devise } from '../../../../../app/front_office/parametre-global/deviseSlice';
 import ModalFormParametre from '../../module.hotel/components/ModalFormParametre';
 import { toast } from '../../../../../components/Toast/toast';
+import { formatStatut } from '../../../../../utils/statut';
 
 const useAppDispatch = () => useDispatch<AppDispatch>();
 
@@ -137,7 +138,7 @@ const DeviseListe = () => {
                           ? 'bg-green-100 text-green-800'
                           : 'bg-yellow-100 text-yellow-800'
                       }`}>
-                        {devise.status}
+                        {formatStatut(devise.status)}
                       </span>
                     )}
                   </td>
